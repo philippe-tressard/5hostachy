@@ -1139,6 +1139,10 @@ jobs:
           # écrit DEUX fois, resserré et reformaté : un test d'une seule forme ne
           # dirait rien, et c'est l'angle mort d'où ils venaient.
           node scripts/lib-lecture-source.mjs --selftest
+          # Le squelette des contrôles « une notion, une source » (#779) : cas
+          # zéro, témoin, exceptions qui doivent servir, commentaires blanchis.
+          # Six contrôles le recopiaient, et `lint:type-lot` sans cas zéro.
+          node scripts/lib-source-unique.mjs --selftest
           # Le pré-remplissage du kanban par les prestataires (#605) : deux
           # boucles quasi identiques dans une page de 848 lignes, qu'aucun
           # contrôle ne touchait. Les fonctions pures vivent désormais dans
@@ -1828,6 +1832,27 @@ jobs:
       - name: Lien vers les consignes écrit une seule fois
         working-directory: front
         run: npm run lint:lien-consignes
+
+      # Les caractéristiques d'un lot (type, étage, superficie) : rendues par
+      # `CaracteristiquesLot` seul (#779, 01/10/2026) — trois copies dans
+      # « Mes lots », qui divergeaient sur les cas limites.
+      - name: Caractéristiques d'un lot écrites une seule fois
+        working-directory: front
+        run: npm run lint:caracteristiques-lot
+
+      # Une suppression définitive se confirme par `SUPPRESSION`
+      # (`$lib/confirmation`) — deux modales écrites à la main avaient survécu
+      # (bail, compte), #779.
+      - name: Suppressions confirmées par la boîte partagée
+        working-directory: front
+        run: npm run lint:suppression-confirmee
+
+      # Le libellé d'un état ne se recalcule pas depuis sa valeur brute
+      # (`statut.replace('_', ' ')`) : le bail d'un locataire sortait toujours
+      # vert, #779.
+      - name: Libellés d'état lus dans leur table
+        working-directory: front
+        run: npm run lint:statut-recalcule
 
       # Une valeur saisie se convertit en nombre par `nombreOuNull` (#1516,
       # 01/10/2026). Un champ numérique vidé rend `null` : `v === '' ? null :

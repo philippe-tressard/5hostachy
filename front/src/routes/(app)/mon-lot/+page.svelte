@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
-	import { etageLabel, lotTypeComplet, lotTypeLabel } from '$lib/utils';
+	import { lotTypeLabel } from '$lib/utils';
 	import EntetePage from '$lib/components/EntetePage.svelte';
-	import Modale from '$lib/components/Modale.svelte';
+	import CaracteristiquesLot from '$lib/components/CaracteristiquesLot.svelte';
+	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, bailleur as bailApi, type Bail, type ObjetRemis } from '$lib/api';
+	import { lots as lotsApi, bailleur as bailApi, type Bail, type MonLot } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
 		isBailleur,
@@ -18,7 +18,6 @@
 		quandAuthResolue,
 	} from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { fmtDateShort as fmt } from '$lib/date';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
@@ -27,8 +26,9 @@
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { routeOnglet, routeSousOnglet } from '$lib/routes-onglets';
-	import { bailEnCours, bailVierge, champsLocataire, nomLocataire } from '$lib/bail';
+	import { bailEnCours, champsLocataire, nomLocataire } from '$lib/bail';
 	import LotsBailleur from '$lib/components/LotsBailleur.svelte';
+	import LotsLocataire from '$lib/components/LotsLocataire.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	$: _pc = getPageConfig($configStore, 'mon-lot', defautsDePage('mon-lot'));
@@ -62,18 +62,6 @@
 		goto(routeOnglet('mon-lot', 'lots'), { replaceState: true });
 	}
 
-	// ── Types ──────────────────────────────────────────────────────────────────
-	interface LotDetail {
-		id: number;
-		numero: string;
-		type: string;
-		type_appartement: string | null;
-		superficie: number | null;
-		etage: number | null;
-		batiment_id: number;
-		batiment_nom: string | null;
-	}
-
 	//  🔴 `Objet` est devenu `ObjetRemis`, dans `$lib/api` (#806) : c'est une
 	//  réponse d'API, pas une notion de cet écran, et il était déclaré à
 	//  l'identique ici et dans le composant qui le rend.
@@ -82,13 +70,18 @@
 	let monBailData: any = null;
 
 	// ── State (lots) ──────────────────────────────────────────────────────────
-	let lots: LotDetail[] = [];
+	let lots: MonLot[] = [];
 	let loading = true;
 	/**  Non vide = on n'a PAS pu regarder. Distinct de « aucun lot associé ». */
 	let erreurLots = '';
-	let selectedLotId: number | null = null;
+	/**  Le lot choisi, en valeur de pastille (`ChoixPastilles` parle en chaînes). */
+	let lotChoisi = '';
 
-	$: selectedLot = lots.find((l) => l.id === selectedLotId) ?? null;
+	$: selectedLot = lots.find((l) => String(l.id) === lotChoisi) ?? null;
+	$: optionsLots = lots.map((l) => ({
+		val: String(l.id),
+		label: `${l.batiment_nom ?? '—'} / ${lotTypeLabel(l.type)} - ${l.numero}`,
+	}));
 	$: bailAccesLot = bailAcces
 		? (lots.find((l) => l.id === (bailAcces?.lot_id ?? -1)) ?? null)
 		: null;
@@ -97,22 +90,11 @@
 	let baux: Bail[] = [];
 	let bauxLoading = true;
 
-	// Nouveau bail
+	//  La boîte de création s'ouvre depuis l'EN-TÊTE et depuis la vue bailleur
+	//  (« + Créer un bail » sur un lot vacant) : c'est pourquoi ces deux états
+	//  restent ici. Le reste de la saisie vit dans `OngletGestionLocative`.
 	let showNewBail = false;
 	let newBailLotIds = new Set<number>();
-	let newBail = bailVierge();
-	let savingBail = false;
-	let newBailLocataireId: number | null = null;
-
-	// Terminer bail
-	let bailATerminer: Bail | null = null;
-	let dateSortie = '';
-
-	// Supprimer bail (admin)
-	let bailASupprimer: Bail | null = null;
-
-	//  🔴 L'état du retour d'objet vit dans `InventaireBail` (#806), avec les trois
-	//  autres gestes d'inventaire. La page ne tient plus que les baux.
 
 	// Edition locataire
 	let bailEdite: Bail | null = null;
@@ -134,7 +116,7 @@
 		//  il ne remplacerait pas cette nuance, il l'effacerait.
 		try {
 			lots = await lotsApi.mesList();
-			if (lots.length > 0) selectedLotId = lots[0].id;
+			if (lots.length > 0) lotChoisi = String(lots[0].id);
 		} catch (e: any) {
 			//  🔴 Sans cette variable, l'écran annonçait « Aucun lot associé » après
 			//  un échec de chargement (#816) — et la page explique alors, en trois
@@ -182,62 +164,6 @@
 		bauxLoading = false;
 	}
 
-	// ── Actions bail ───────────────────────────────────────────────────────────
-	async function creerBail() {
-		if (newBailLotIds.size === 0 || !newBail.date_entree) {
-			toast('error', "Sélectionnez au moins un lot et renseignez la date d'entrée");
-			return;
-		}
-		savingBail = true;
-		try {
-			const nouvellesBaux = await bailApi.creerBailMulti({
-				lot_ids: [...newBailLotIds],
-				...newBail,
-				locataire_id: newBailLocataireId ?? null,
-				date_sortie_prevue: newBail.date_sortie_prevue || null,
-			});
-			baux = [...nouvellesBaux, ...baux];
-			showNewBail = false;
-			newBailLotIds = new Set();
-			newBail = bailVierge();
-			//  L'état de la RECHERCHE de locataire vit dans `FormulaireBail` : il
-			//  n'a d'existence que pendant la saisie. Le formulaire est démonté par
-			//  `showNewBail = false`, donc il repart vierge — rien à réinitialiser
-			//  ici, et surtout rien à réinitialiser DEUX fois.
-			newBailLocataireId = null;
-			toast(
-				'success',
-				nouvellesBaux.length > 1 ? `${nouvellesBaux.length} baux créés` : 'Bail créé',
-			);
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			savingBail = false;
-		}
-	}
-
-	async function confirmerTerminer() {
-		if (!bailATerminer) return;
-		const cible = bailATerminer;
-		await tenter(async () => {
-			const updated = await bailApi.terminerBail(cible.id, {
-				date_sortie_reelle: dateSortie || null,
-			});
-			baux = baux.map((b) => (b.id === updated.id ? updated : b));
-			bailATerminer = null;
-		}, 'Bail terminé');
-	}
-
-	async function confirmerSupprimer() {
-		if (!bailASupprimer) return;
-		const cible = bailASupprimer;
-		await tenter(async () => {
-			await bailApi.supprimerBail(cible.id);
-			baux = baux.filter((b) => b.id !== cible.id);
-			bailASupprimer = null;
-		}, 'Bail supprimé');
-	}
-
 	function ouvrirEditionLocataire(bail: Bail) {
 		bailEdite = bail;
 		editLocataireId = bail.locataire_id ?? null;
@@ -261,16 +187,6 @@
 		}, 'Informations mises à jour');
 	}
 
-	//  `confirmerRetour` et `supprimerObjet` sont partis dans `InventaireBail`
-	//  (#806) : quatre gestes sur une sous-entité entièrement contenue dans le
-	//  bail. La page n'en apprend que le résultat, par `on:change`.
-	/**  Recoud la liste d'objets d'un bail après un geste du composant. */
-	function majObjets(bailId: number, objets: ObjetRemis[]) {
-		baux = baux.map((b) => (b.id === bailId ? { ...b, objets } : b));
-	}
-
-	// ── Recherche locataire ────────────────────────────────────────────────────
-
 	// ── Gestion accès ─────────────────────────────────────────────────────────
 
 	//  🔴 L'ouverture ne fait plus QUE désigner le bail : le chargement des
@@ -279,64 +195,6 @@
 	//  besoin de rien.
 	function ouvrirAccesBail(bail: Bail) {
 		bailAcces = bail;
-	}
-
-	async function affecterAuto(bail: Bail) {
-		try {
-			const accesAll = await bailApi.accesBail(bail.id);
-			const vigikIds: number[] = [];
-			const tcIds: number[] = [];
-			for (const a of accesAll) {
-				if (!a.eligible_transfert || a.chez_locataire || !a.recommande) continue;
-				if (a.type === 'vigik') vigikIds.push(a.id);
-				else tcIds.push(a.id);
-			}
-			if (vigikIds.length === 0 && tcIds.length === 0) {
-				toast('info', 'Aucun accès à affecter automatiquement');
-				return;
-			}
-			await bailApi.transfererAcces(bail.id, { vigik_ids: vigikIds, tc_ids: tcIds });
-			const n = vigikIds.length + tcIds.length;
-			toast('success', `${n} accès affecté${n > 1 ? 's' : ''} automatiquement`);
-			const lecture = lireBaux();
-			if (lecture) baux = await lecture;
-		} catch (e: any) {
-			toast('error', messageErreur(e, "Erreur lors de l'affectation automatique"));
-		}
-	}
-
-	// ── Helpers affichage ──────────────────────────────────────────────────────
-	//  🔴 `typeLabel`, `statutObjetBadge` et `statutObjetLabel` sont partis AVEC le
-	//  balisage qui les emploie (`InventaireBail`, #806). Les laisser ici aurait
-	//  produit un tableau nu chez le voisin — le défaut de `standards/02` §4 ter,
-	//  celui qui ne casse rien et qui se voit en production.
-
-	//  🔴 La table des libellés vivait ICI, puis descendait en prop chez
-	//  `OngletGestionLocative`, qui recomposait la TEINTE du même état en
-	//  ternaire. Le libellé et la couleur d'un état sont deux attributs d'une
-	//  même chose : ils se déclarent ensemble, dans `$lib/bail`.
-
-	//  Les lots tels que `FormulaireBail` les attend : un libellé et un état.
-	//  🔴 La préparation vit ICI, pas dans le composant : `lotLabel` s'appuie sur
-	//  `lotTypeLabel`, qui sert encore à l'affichage des accès plus bas. L'emporter
-	//  dans le composant en aurait fait une deuxième écriture.
-	$: lotsACocher = lots.map((l) => ({
-		id: l.id,
-		libelle: lotLabel(l),
-		occupe: !!bauxActifs.find((b) => b.lot_id === l.id),
-	}));
-
-	function lotLabel(lot: LotDetail): string {
-		const bat = lot.batiment_nom ?? '—';
-		const type = lotTypeLabel(lot.type);
-		const sub = lot.type_appartement ? ` ${lot.type_appartement}` : '';
-		//  ⚠️ SEPTIÈME écriture du libellé d'étage, et quatrième rendu (« Ét. 2 »).
-		//  Trouvée par `lint:etage-libelle`, pas par ma relecture : elle est dans
-		//  une fonction, pas dans le gabarit, et le relevé à la main l'avait sautée.
-		const etiquette = etageLabel(lot.etage);
-		const etage = etiquette ? ` · ${etiquette}` : '';
-		const surface = lot.superficie ? ` · ${lot.superficie} m²` : '';
-		return `${bat} — ${type}${sub} n°${lot.numero}${etage}${surface}`;
 	}
 </script>
 
@@ -388,161 +246,67 @@
 
 <!-- ── Onglet : Mes lots ────────────────────────────────────────────── -->
 {#if mainTab === 'lots'}
-	{#if loading}
-		<EtatListe chargement />
-	{:else if erreurLots}
-		<!--  L'échec AVANT le vide : « aucun lot » est une affirmation, et on ne
-		      l'a pas constatée. -->
-		<div class="empty-state">
-			<h3>Impossible d’afficher vos lots</h3>
-			<p>{erreurLots}</p>
-		</div>
-	{:else if lots.length === 0 && !$isLocataire}
-		<div class="empty-state">
-			<h3>Aucun lot associé</h3>
-			<p>Votre compte n'est pas encore lié à un lot.</p>
-			{#if $isLocataire}
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-top:.5rem">
-					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
-					son espace.
-				</p>
-			{:else}
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-top:.5rem">
+	<!--  L'échec AVANT le vide : « aucun lot » est une affirmation, et on ne
+	      l'a pas constatée (`EtatListe`). -->
+	<EtatListe chargement={loading} erreur={erreurLots} titreErreur="Impossible d’afficher vos lots">
+		{#if lots.length === 0 && !$isLocataire}
+			<div class="empty-state">
+				<h3>Aucun lot associé</h3>
+				<p>Votre compte n'est pas encore lié à un lot.</p>
+				<p class="aide-rattachement">
 					Si votre compte vient d'être validé, la liaison se fait automatiquement.<br />
 					Si aucun lot n'apparaît, contactez le gestionnaire du site ou
-					<a href="/tickets?nouveau=1" style="color:var(--color-primary)"
-						>faites une nouvelle demande</a
-					>.
+					<a href="/tickets?nouveau=1">faites une nouvelle demande</a>.
 				</p>
-			{/if}
-		</div>
-	{:else if $isLocataire}
-		<!-- ── Vue locataire : lot loué via bail ── -->
-		{#if monBailData}
-			<div class="lots-section-label">🏠 Lot loué</div>
-			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
-				<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
-					<span class="lbc-lot-badge"
-						>{monBailData.lot_batiment_nom ?? '—'} / {monBailData.lot_numero ?? '—'}</span
-					>
-					<span class="badge badge-green" style="font-size:var(--fs-2xs)"
-						>{monBailData.statut === 'actif'
-							? 'Bail actif'
-							: monBailData.statut.replace('_', ' ')}</span
-					>
-				</div>
-				<dl class="details-grid">
-					<dt>Bâtiment</dt>
-					<dd>{monBailData.lot_batiment_nom ?? '—'}</dd>
-					{#if monBailData.lot_type}<dt>Type</dt>
-						<dd style="text-transform:capitalize">
-							{lotTypeComplet(monBailData.lot_type, monBailData.lot_type_appartement)}
-						</dd>{/if}
-					{#if monBailData.lot_etage !== null && monBailData.lot_etage !== undefined}<dt>Étage</dt>
-						<dd>{etageLabel(monBailData.lot_etage)}</dd>{/if}
-					{#if monBailData.lot_superficie}<dt>Superficie</dt>
-						<dd>{monBailData.lot_superficie} m²</dd>{/if}
-					<dt>Entrée</dt>
-					<dd>{fmt(monBailData.date_entree)}</dd>
-					{#if monBailData.date_sortie_prevue}<dt>Sortie prévue</dt>
-						<dd>{fmt(monBailData.date_sortie_prevue)}</dd>{/if}
-				</dl>
-				{#if monBailData.bailleur_nom || monBailData.bailleur_prenom}
-					<div style="margin-top:.75rem;font-size:var(--fs-md);color:var(--color-text-muted)">
-						🏢 Propriétaire : <strong
-							>{nomAffiche(monBailData.bailleur_prenom, monBailData.bailleur_nom)}</strong
-						>
-						{#if monBailData.bailleur_email}<br />📬
-							<a href="mailto:{monBailData.bailleur_email}" style="color:var(--color-primary)"
-								>{monBailData.bailleur_email}</a
-							>{/if}
-						{#if monBailData.bailleur_telephone}<br />📞 {monBailData.bailleur_telephone}{/if}
-					</div>
-				{/if}
 			</div>
+		{:else if $isLocataire}
+			<!-- ── Vue locataire : lot loué via bail, et ses lots en propre ── -->
+			<LotsLocataire bail={monBailData} {lots} />
+		{:else if $isBailleur}
+			<!-- ── Vue bailleur : lots possédés + locataires ── -->
+			<LotsBailleur
+				{lots}
+				{bauxActifs}
+				routeGestion={ROUTE_BAUX_ACTIFS}
+				onCreerBail={(lotId) => {
+					newBailLotIds = new Set([lotId]);
+					showNewBail = true;
+					goto(ROUTE_BAUX_ACTIFS);
+				}}
+				onAcces={ouvrirAccesBail}
+				onModifierLocataire={ouvrirEditionLocataire}
+			/>
 		{:else}
-			<div class="empty-state">
-				<h3>Aucun bail actif</h3>
-				<p>
-					Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de
-					son espace.
-				</p>
-			</div>
-		{/if}
+			<!-- ── Vue standard (non bailleur) : sélecteur lot + carte ── -->
+			{#if lots.length > 1}
+				<ChoixPastilles
+					options={optionsLots}
+					bind:valeur={lotChoisi}
+					tous={false}
+					libelle="Lot affiché"
+				/>
+			{/if}
 
-		<!-- Lots en propre du locataire (s'il en possède aussi) -->
-		{#if lots.length > 0}
-			<div class="lots-section-label" style="margin-top:1.5rem">
-				🏢 Lots en propriété ({lots.length})
-			</div>
-			{#each lots as lot (lot.id)}
-				<div class="card largeur-saisie" style="margin-bottom:1rem">
-					<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
-						{lot.batiment_nom ?? '—'} / {lot.numero}
-					</h2>
-					<dl class="details-grid">
-						<dt>Type</dt>
-						<dd style="text-transform:capitalize">
-							{lotTypeComplet(lot.type, lot.type_appartement)}
-						</dd>
-						{#if lot.etage !== null}<dt>Étage</dt>
-							<dd>{etageLabel(lot.etage)}</dd>{/if}
-						{#if lot.superficie}<dt>Superficie</dt>
-							<dd>{lot.superficie} m²</dd>{/if}
-					</dl>
-				</div>
-			{/each}
-		{/if}
-	{:else if $isBailleur}
-		<!-- ── Vue bailleur : lots possédés + locataires ── -->
-		<LotsBailleur
-			{lots}
-			{bauxActifs}
-			routeGestion={ROUTE_BAUX_ACTIFS}
-			onCreerBail={(lotId) => {
-				newBailLotIds = new Set([lotId]);
-				showNewBail = true;
-				goto(ROUTE_BAUX_ACTIFS);
-			}}
-			onAcces={ouvrirAccesBail}
-			onModifierLocataire={ouvrirEditionLocataire}
-		/>
-	{:else}
-		<!-- ── Vue standard (non bailleur) : sélecteur lot + carte ── -->
-		{#if lots.length > 1}
-			<div class="lot-tabs" role="tablist">
-				{#each lots as lot (lot.id)}
-					<button
-						role="tab"
-						class:active={selectedLotId === lot.id}
-						on:click={() => (selectedLotId = lot.id)}
+			{#if selectedLot}
+				<div class="card largeur-saisie carte-lot">
+					<h2 class="carte-lot-titre">Caractéristiques</h2>
+					<CaracteristiquesLot
+						type={selectedLot.type}
+						typeAppartement={selectedLot.type_appartement}
+						etage={selectedLot.etage}
+						superficie={selectedLot.superficie}
 					>
-						{lot.batiment_nom ?? '—'} / {lot.type.charAt(0).toUpperCase() + lot.type.slice(1)} - {lot.numero}
-					</button>
-				{/each}
-			</div>
+						<svelte:fragment slot="avant">
+							<dt>Lot</dt>
+							<dd>{selectedLot.numero}</dd>
+							<dt>Bâtiment</dt>
+							<dd>{selectedLot.batiment_nom ?? '—'}</dd>
+						</svelte:fragment>
+					</CaracteristiquesLot>
+				</div>
+			{/if}
 		{/if}
-
-		{#if selectedLot}
-			<div class="card largeur-saisie" style="margin-bottom:1.5rem">
-				<h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem">Caractéristiques</h2>
-				<dl class="details-grid">
-					<dt>Lot</dt>
-					<dd>{selectedLot.numero}</dd>
-					<dt>Bâtiment</dt>
-					<dd>{selectedLot.batiment_nom ?? '—'}</dd>
-					<dt>Type</dt>
-					<dd style="text-transform:capitalize">
-						{lotTypeComplet(selectedLot.type, selectedLot.type_appartement)}
-					</dd>
-					{#if selectedLot.etage !== null}<dt>Étage</dt>
-						<dd>{etageLabel(selectedLot.etage)}</dd>{/if}
-					{#if selectedLot.superficie}<dt>Superficie</dt>
-						<dd>{selectedLot.superficie} m²</dd>{/if}
-				</dl>
-			</div>
-		{/if}
-	{/if}
+	</EtatListe>
 {/if}
 
 <!-- ── Onglet : Gestion locative ────────────────────────────────────── -->
@@ -552,53 +316,18 @@
 	      l'audit de l'issue l'avait annoncé. La coupe suit la frontière que la
 	      barre d'onglets dessine déjà. -->
 	<OngletGestionLocative
-		{baux}
+		bind:baux
 		{bauxActifs}
 		{bauxTermines}
 		{bauxLoading}
 		{lots}
 		{bailTab}
 		bind:showNewBail
-		bind:newBail
 		bind:newBailLotIds
-		bind:newBailLocataireId
-		{lotsACocher}
-		{savingBail}
-		{creerBail}
-		{affecterAuto}
 		{ouvrirEditionLocataire}
 		{ouvrirAccesBail}
-		{majObjets}
-		{nomLocataire}
-		bind:bailATerminer
-		bind:bailASupprimer
-		bind:dateSortie
-		{confirmerTerminer}
+		{lireBaux}
 	/>
-{/if}
-<!-- ── Modal : terminer bail ────────────────────────────────────────── -->
-
-<!-- ── Modal : supprimer bail (admin) ──────────────────────────────── -->
-{#if bailASupprimer}
-	<Modale
-		titre="Supprimer le bail"
-		styleBoite="width:min(400px,95vw)"
-		on:fermer={() => (bailASupprimer = null)}
-	>
-		<div class="modal-body">
-			<p>
-				Supprimer définitivement le bail de <strong>{nomLocataire(bailASupprimer)}</strong> et tous ses
-				objets associés ?
-			</p>
-			<p style="color:var(--color-danger);font-size:var(--fs-md);margin-top:0.5rem">
-				Cette action est irréversible.
-			</p>
-		</div>
-		<div class="modal-footer">
-			<button class="btn" on:click={() => (bailASupprimer = null)}>Annuler</button>
-			<button class="btn btn-danger" on:click={confirmerSupprimer}>Supprimer</button>
-		</div>
-	</Modale>
 {/if}
 
 <!-- ── Correction d'un bail : LE MÊME formulaire, en modale ─────────── -->
@@ -633,41 +362,24 @@
      le tableau qui l'ouvre est ailleurs aurait coupé un geste en deux fichiers. -->
 
 <style>
-	/* Lot tabs (multi-lot selector) */
-	.lot-tabs {
-		display: flex;
-		gap: 0.5rem;
+	/*  Le sélecteur de lots est `ChoixPastilles` (#779, 01/10/2026) : `.lot-tabs`
+	    repeignait des pastilles sous un autre nom, et la liste des
+	    caractéristiques (`.details-grid`) est partie avec `CaracteristiquesLot`. */
+	.carte-lot {
+		margin-bottom: 1.5rem;
+	}
+	.carte-lot-titre {
+		font-size: 1rem;
+		font-weight: 600;
 		margin-bottom: 1rem;
-		flex-wrap: wrap;
 	}
-	.lot-tabs button {
-		padding: 0.4rem 0.9rem;
-		border: 1px solid var(--color-border);
-		background: var(--color-bg);
-		border-radius: var(--radius);
-		cursor: pointer;
-		font-size: var(--fs-base);
-		color: var(--color-text);
-	}
-	.lot-tabs button.active {
-		background: var(--color-primary);
-		color: #fff;
-		border-color: var(--color-primary);
-	}
-
-	/* Lot characteristics */
-	.details-grid {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 0.4rem 0.8rem;
-		font-size: var(--fs-base);
-	}
-	.details-grid dt {
-		font-weight: 500;
+	.aide-rattachement {
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
+		margin-top: 0.5rem;
 	}
-	.details-grid dd {
-		margin: 0;
+	.aide-rattachement a {
+		color: var(--color-primary);
 	}
 	/*  🔴 DIX règles orphelines ont été retirées d'ici le 06/09/2026 (#806), et la
 	    façon dont elles sont apparues vaut d'être écrite.

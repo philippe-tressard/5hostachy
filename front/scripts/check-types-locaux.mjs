@@ -49,7 +49,6 @@ const DETTE = {
 	'routes/(app)/annuaire/+page.svelte::MembreSyndic': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingAcces': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
-	'routes/(app)/mon-lot/+page.svelte::LotDetail': '#1044',
 };
 
 /** Un `id` qui n'est pas celui d'une entité de l'API. */
