@@ -28,6 +28,7 @@ from app.models.core import (
     Copropriete,
     GenreCivilite,
     MembreCS,
+    RoleUtilisateur,
     Utilisateur,
 )
 from app.database import engine
@@ -92,7 +93,10 @@ def conseil() -> dict:
         #  Le gestionnaire du site, rattaché à AUCUN bâtiment : il doit être ajouté
         #  à tout envoi ciblé, sans quoi personne ne suit les demandes des autres
         #  bâtiments que le sien.
-        gestionnaire = Utilisateur(nom="Gest", prenom="Site", email="gest@cs.test", actif=True)
+        #  Un administrateur : le gestionnaire du site n'est lu que s'il l'est (#1505).
+        gestionnaire = Utilisateur(
+            nom="Gest", prenom="Site", email="gest@cs.test", actif=True, role=RoleUtilisateur.admin
+        )
         session.add(gestionnaire)
         session.flush()
         session.add(

@@ -277,6 +277,7 @@ distinctes** — les confondre envoie le bon message aux mauvaises personnes :
 | le CS **concerné par un périmètre** | `membres_cs_notifiables(session, batiment_ids)` (+ `batiments_du_perimetre()`) | nouvel arrivant, annonces de hall |
 | le CS **par le rôle**, sans périmètre | `membres_cs_avec_email(session)` | publications, sondages, calendrier, tickets |
 | le **syndic principal** | `syndic_principal(session)` | ci-dessous, fiche copropriété, arrivants |
+| le **gestionnaire du site** — un administrateur, ou personne (#1505) | `site_manager_user_id(session)` | ce qui renvoie à `/admin` : comptes, alertes, bogues |
 | **syndic puis CS, dédoublonnés** — qui reçoit un e-mail interne | `destinataires_syndic_cs(session, syndic=…, cs=…)` | les quatre entités qui cochent « envoyer au syndic / au CS » |
 
 🔴 La dernière ligne a existé en **quatre exemplaires identiques** (tickets,

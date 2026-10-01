@@ -4,8 +4,8 @@
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
 	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { badgeRole, badgeStatut, libelleRole } from '$lib/roles';
-	import { LIBELLES_STATUT_ABREGE } from '$lib/roles';
+	import { badgeRole, badgeStatut, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
+	import { aRole } from '$lib/stores/auth';
 	import OngletUtilisateurs from '$lib/components/OngletUtilisateurs.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
@@ -309,7 +309,7 @@
 	// ── Paramétrage site ──────────────────────────────────────────
 	let siteConfig = { ...CONFIG_SITE_DEFAUT };
 	let siteSaving = false;
-	$: siteManagerUsers = utilisateurs.filter((u) => !!u.email);
+	$: siteManagerUsers = utilisateurs.filter((u) => !!u.email && aRole(u, 'admin'));
 	function openSiteTab() {
 		onglet = 'site';
 	}

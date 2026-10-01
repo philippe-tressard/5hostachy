@@ -14,6 +14,7 @@ from app.models.core import ConfigSite, Notification, RoleUtilisateur
 from app.routers.tickets import crud
 from app.schemas import TicketCreate
 from tests.aides_badges import _compte
+from tests.aides_base import compte
 
 
 def _creer(session, auteur, **champs):
@@ -22,7 +23,8 @@ def _creer(session, auteur, **champs):
 
 
 def _avec_gestionnaire(session):
-    gestionnaire = _compte(session, "Gestionnaire")
+    #  Un administrateur : le gestionnaire du site n'est lu que s'il l'est (#1505).
+    gestionnaire = compte(session, prefixe="gestionnaire", role=RoleUtilisateur.admin)
     session.add(ConfigSite(cle="site_manager_user_id", valeur=str(gestionnaire.id)))
     session.commit()
     return gestionnaire

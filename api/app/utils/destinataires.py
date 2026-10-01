@@ -18,17 +18,36 @@ from typing import Optional
 from sqlalchemy import func
 from sqlmodel import Session, or_, select
 
-from app.models.core import ConfigSite, GenreCivilite, MembreCS, MembreSyndic, Utilisateur
+from app.models.core import (
+    ConfigSite,
+    GenreCivilite,
+    MembreCS,
+    MembreSyndic,
+    RoleUtilisateur,
+    Utilisateur,
+)
 from app.utils.perimetres import a_portee_globale, batiments_cibles
 
 
 def site_manager_user_id(session: Session) -> Optional[int]:
-    """Id utilisateur du gestionnaire du site (ConfigSite), ou None."""
+    """Id du gestionnaire du site (ConfigSite), ou None — un ADMINISTRATEUR, ou personne.
+
+    Ce qu'il reçoit renvoie à `/admin` : valider un compte, relire un import,
+    une alerte système. Le front réserve `/admin` aux administrateurs, et un
+    gestionnaire sans ce rôle y était renvoyé au tableau de bord (#1505,
+    01/10/2026). Un gestionnaire qui perd le rôle n'est donc plus lu : l'envoi
+    retombe sur l'« E-mail administrateur » (`site_email`).
+    """
     cfg = session.get(ConfigSite, "site_manager_user_id")
-    if not cfg:
+    valeur = ((cfg.valeur if cfg else "") or "").strip()
+    if not valeur.isdigit():
         return None
-    valeur = (cfg.valeur or "").strip()
-    return int(valeur) if valeur.isdigit() else None
+    return int(valeur) if peut_gerer_le_site(session.get(Utilisateur, int(valeur))) else None
+
+
+def peut_gerer_le_site(user: Optional[Utilisateur]) -> bool:
+    """Le gestionnaire du site est un administrateur — la règle, lue ici et à l'écriture."""
+    return user is not None and user.has_role(RoleUtilisateur.admin)
 
 
 def batiments_du_perimetre(perimetres: list[str]) -> Optional[set[int]]:

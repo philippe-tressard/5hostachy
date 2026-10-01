@@ -16,6 +16,7 @@ from app.auth.deps import require_admin
 from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
+from app.utils.destinataires import peut_gerer_le_site
 from app.utils.liens import base_site
 from app.utils.recuperer import ou_404
 
@@ -139,6 +140,11 @@ def save_config(
     session: Session = Depends(get_session),
 ):
     """Sauvegarde ou met à jour des clés de configuration (admin uniquement)."""
+    gestionnaire = (data.get("site_manager_user_id") or "").strip()
+    if gestionnaire and not (
+        gestionnaire.isdigit() and peut_gerer_le_site(session.get(Utilisateur, int(gestionnaire)))
+    ):
+        raise HTTPException(422, "Le gestionnaire du site doit être un administrateur.")
     for cle, valeur in data.items():
         if cle in _NORMALISEURS:
             valeur = _NORMALISEURS[cle](valeur)

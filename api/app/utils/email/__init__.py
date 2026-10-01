@@ -77,17 +77,18 @@ def _masquer(adresse: str | None) -> str:
 
 
 def get_site_manager_notification_email(session: Session) -> tuple[str, dict[str, str]]:
-    """Retourne l'email de notification du gestionnaire du site et la config lue."""
+    """Retourne l'email de notification du gestionnaire du site et la config lue.
+
+    Le gestionnaire se lit par `destinataires.site_manager_user_id` — un
+    administrateur, ou personne (#1505) ; à défaut, l'« E-mail administrateur ».
+    """
+    from app.utils.destinataires import site_manager_user_id
+
     config = config_site(session, "site_email", "site_manager_user_id")
-
     site_email = (config.get("site_email") or "").strip()
-    site_manager_email = ""
-    site_manager_user_id = (config.get("site_manager_user_id") or "").strip()
-    if site_manager_user_id.isdigit():
-        manager_user = session.get(Utilisateur, int(site_manager_user_id))
-        if manager_user and manager_user.email:
-            site_manager_email = manager_user.email.strip()
-
+    gestionnaire_id = site_manager_user_id(session)
+    gestionnaire = session.get(Utilisateur, gestionnaire_id) if gestionnaire_id else None
+    site_manager_email = (gestionnaire.email or "").strip() if gestionnaire else ""
     return site_manager_email or site_email, config
 
 
