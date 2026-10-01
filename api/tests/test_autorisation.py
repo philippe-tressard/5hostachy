@@ -110,15 +110,6 @@ _PUBLICS_ASSUMES = {
     # Télémétrie par `sendBeacon`, visiteurs anonymes inclus : rate-limité
     # (60/min), plafonné à 50 événements, champs tronqués, opt-out RGPD honoré.
     ("telemetry_collecte.py", "collect"),
-    #  Rapport de violation CSP : le NAVIGATEUR le poste, sans cookie ni en-tête
-    #  d'authentification — c'est la spécification, pas un choix. Ce point n'existe
-    #  que pour MESURER avant de poser une CSP bloquante (#536).
-    #
-    #  Ses bornes, chacune éprouvée par `test_csp_report.py` : limite de débit
-    #  60/min, plafond de 200 clés distinctes, URL tronquées, AUCUNE écriture en
-    #  base, et rien qui soit renvoyé à l'appelant. Le relevé, lui, est réservé
-    #  aux administrateurs — il expose des URL de pages visitées.
-    ("csp.py", "recevoir_rapport"),
     #  🔴 Les quatre routes de `rapports_scripts.py` ONT QUITTÉ CETTE LISTE le
     #  19/09/2026 (#1028). Elles n'étaient pas publiques : elles sont
     #  authentifiées par une **clé partagée**, et les ranger ici en faisait un

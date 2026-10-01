@@ -308,7 +308,7 @@ resterait si l'une d'elles disparaissait du `Caddyfile` : *présent* ne dit rien
 ce qu'il **contient**.
 
 `connect-src 'self'` est passée en mode bloquant le 01/09/2026 (#536), sur la foi
-du relevé (`Admin → CSP`) : aucune violation la concernant sur 104 rapports. C'est
+du relevé (`Admin → CSP`, retiré le 01/10/2026) : aucune violation la concernant sur 104 rapports. C'est
 la directive qui empêche l'**exfiltration** — même si un XSS s'exécutait, il ne
 pourrait rien envoyer vers un domaine tiers. La perdre en silence retirerait la
 moitié utile de la politique.

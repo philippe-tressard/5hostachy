@@ -169,11 +169,6 @@ export const admin = {
 	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
 	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'), //  @sans-appelant-direct idem
 
-	//  Le relevé CSP — agrégé côté serveur et PERSISTÉ dans `ConfigSite`, donc il
-	//  survit aux redémarrages. Il existait sans aucun lecteur : la donnée était
-	//  collectée depuis des semaines et personne ne pouvait la voir (#536).
-	cspViolations: () => api.get<CspReleve>('/admin/csp-violations'),
-
 	//  ── Gestes sur un utilisateur — ajoutés le 06/09/2026 (#801) ───────────────
 	//
 	//  Les six vivaient EN DUR dans `admin/+page.svelte`, et l'un d'eux —
@@ -420,18 +415,6 @@ export interface ReleveOrphelins {
 	orphelins?: number;
 	par_relation?: { table: string; colonne: string; table_parente: string; lignes: number }[];
 	erreur?: string;
-}
-
-/** Le relevé des violations CSP — voir `admin.cspViolations`. */
-export interface CspReleve {
-	/** Renseignée quand AUCUN rapport n'est arrivé : un relevé vide ne prouve rien. */
-	note: string | null;
-	recus: number;
-	/** Rapports reçus mais illisibles, ou refusés par le plafond de clés. */
-	ignores: number;
-	cles_distinctes: number;
-	plafond_atteint: boolean;
-	violations: { directive: string; bloque: string; compte: number }[];
 }
 
 /**

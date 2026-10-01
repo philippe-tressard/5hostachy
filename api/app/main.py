@@ -127,7 +127,6 @@ from app.routers import (
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
 from app.routers import partage
-from app.routers import csp
 from app.routers import assistant, config_llm
 from app.config import get_settings
 from app.seed import seed
@@ -434,9 +433,6 @@ app.include_router(telemetry_collecte.router)
 app.include_router(flux.router)
 app.include_router(signalements.router)
 app.include_router(patrimoine.router)
-#  Collecte des violations de CSP (#536) : point PUBLIC — le navigateur poste
-#  sans cookie. Borné par une limite de débit et un plafond de clés.
-app.include_router(csp.router)
 #  L'assistant IA des formulaires (#985) : retravailler une description.
 app.include_router(assistant.router)
 

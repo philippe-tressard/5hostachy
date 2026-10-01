@@ -82,7 +82,8 @@
         #
         #  `font-src` et `style-src` sont passés en mode BLOQUANT parce que le
         #  compteur persistant (`ConfigSite.csp_violations`, servi par
-        #  `GET /admin/csp`) ne leur attribue AUCUNE violation sur 404 rapports.
+        #  `GET /admin/csp-violations`, retiré le 01/10/2026) ne leur attribue
+        #  AUCUNE violation sur 404 rapports.
         #
         #  ⚠️ `img-src` reste dehors : ses trois violations viennent d'une
         #  extension de navigateur (1Password injecte `https://images/icons/…`),
@@ -105,77 +106,21 @@
         #  scripts, SvelteKit ne dit rien du reste.
         +Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self'; font-src 'self' data:; style-src 'self' 'unsafe-inline'"
 
-        #  ── L'étape suivante, en MODE OBSERVATION (#536, 28/08/2026) ──
+        #  ── Le MODE OBSERVATION a pris fin le 01/10/2026 ──
         #
-        #  `Report-Only` ne bloque RIEN. Le navigateur applique la politique
-        #  ci-dessous en pensée, et poste un rapport à chaque violation. C'est le
-        #  seul moyen de savoir ce que `script-src` casserait avant de le poser :
-        #  le site n'est accessible que derrière une connexion, et une CSP fausse
-        #  ne se voit qu'à l'exécution, dans la console de quelqu'un d'autre.
+        #  Un second en-tête `Content-Security-Policy-Report-Only` postait ici les
+        #  violations à `/api/csp-report`, lues dans `Admin → Sécurité (CSP)`
+        #  (#536). Il a servi à décider, sur relevé, chaque passage en bloquant :
+        #  `connect-src` (01/09), `font-src` et `style-src` (05/09), `script-src`
+        #  par SvelteKit (06/09). Il ne mesurait plus que `img-src`, dont les
+        #  seules violations venaient d'une extension de navigateur (1Password) —
+        #  une décision déjà prise : ce n'est pas au site de la bloquer.
         #
-        #  ⚠️ Les rapports vont à `/api/csp-report`, un point de collecte PUBLIC
-        #  — le navigateur poste sans cookie. Il est borné : limite de débit,
-        #  plafond de clés, aucune écriture en base, rien qui soit renvoyé. Le
-        #  relevé se lit sur `GET /api/admin/csp-violations` (admin).
-        #
-        #  La politique visée, et pourquoi chaque morceau :
-        #
-        #    script-src 'self'          la vraie protection contre le XSS. On
-        #                               s'attend à des violations : SvelteKit
-        #                               insère un script d'hydratation EN LIGNE.
-        #                               C'est précisément ce qu'on veut compter
-        #                               avant de choisir entre nonce et sha256.
-        #    style-src … 'unsafe-inline'  le dépôt porte plus de 700 attributs
-        #                               `style=` ; les retirer est un autre
-        #                               chantier (#607). Sans cette tolérance la
-        #                               mesure serait noyée par du bruit connu.
-        #    img-src … data: blob:      QR codes et aperçus sont produits en
-        #                               `data:`/`blob:` côté navigateur.
-        #    connect-src 'self'         l'API est servie sur la même origine.
-        #                               ✅ PASSÉE EN BLOQUANT le 01/09/2026 : le
-        #                               relevé n'a montré aucune violation. Elle
-        #                               reste écrite ici pour que la politique
-        #                               observée demeure complète — sans quoi le
-        #                               relevé cesserait de mesurer ce qu'elle
-        #                               couvre, et l'on ne verrait pas arriver un
-        #                               appel sortant nouveau.
-        #
-        #  🔴 Ne PAS passer en mode bloquant tant que le relevé n'est pas à zéro,
-        #  ni sans avoir regardé le site après. Un remède posé sans pouvoir
-        #  l'observer serait pire que le mal — c'est ce que dit #536, et c'est ce
-        #  que ce mode-ci évite.
-        #  ⚠️ `default-src` et `script-src` ONT QUITTÉ cette politique le
-        #  06/09/2026, et pas par relâchement : `script-src` est désormais
-        #  BLOQUANT (via SvelteKit), et `default-src` le couvrait par héritage.
-        #  Les garder ici ferait recompter chaque page comme une violation —
-        #  370 par semaine sur un mécanisme désormais autorisé. Un compteur qui
-        #  mesure ce qui est déjà réglé noie ce qui ne l'est pas.
-        #
-        #  ⚠️ `style-src` A QUITTÉ cette politique le 16/09/2026, pour la raison
-        #  déjà invoquée ci-dessus au sujet de `script-src` : un compteur qui
-        #  mesure ce qui ne bouge plus noie ce qui compte.
-        #
-        #  Il observait le pas suivant — `style-src` SANS `'unsafe-inline'` —
-        #  et ce pas dépendait du chantier #607 (retirer les attributs `style=`).
-        #  Ce ticket est CLOS depuis le 28/08/2026 et il en reste **603** : le
-        #  relevé ne suivait donc plus un chantier, il recomptait un état stable.
-        #
-        #  Ce qu'il coûtait : **163 rapports par page**. Le 16/09/2026, quatre
-        #  incidents de rendu (`each_key_duplicate`) se sont diagnostiqués dans la
-        #  console du navigateur — le seul endroit où ils étaient visibles, le
-        #  serveur répondant en moins de 200 ms. Il a fallu plusieurs captures
-        #  pour isoler LA ligne utile au milieu de ce bruit. Un outil de
-        #  diagnostic qu'on doit filtrer à la main est un outil qu'on n'ouvre pas.
-        #
-        #  🔴 Le rétablir le jour où #607 rouvre — c'est alors qu'il mesurera de
-        #  nouveau quelque chose. Retiré, il ne protège rien : `Report-Only` ne
-        #  bloque RIEN, et la politique bloquante garde `style-src 'self'
-        #  'unsafe-inline'`.
-        #
-        #  Ce qui reste en observation : `img-src`. Il n'est pas passé en bloquant
-        #  parce que ses trois violations viennent d'une extension de navigateur
-        #  (1Password) et d'aucune ressource du site.
-        +Content-Security-Policy-Report-Only "img-src 'self' data: blob:; report-uri /api/csp-report"
+        #  En-tête, point de collecte PUBLIC et écran sont donc retirés ensemble :
+        #  garder la collecte sans l'écran referait un contrôle sans destinataire
+        #  (`standards/04` §7). Pour mesurer un pas nouveau (`style-src` sans
+        #  `'unsafe-inline'`, le jour où #607 rouvre), les rétablir depuis
+        #  l'historique git (v2.90.3).
     }
 
     # API — proxy vers FastAPI
