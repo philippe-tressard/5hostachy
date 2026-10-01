@@ -91,7 +91,7 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
       2. Variante compacte sans espaces (ex. "dupontjean")
       3. Bigrammes consécutifs pour noms avec bruit (ex. "M. DUPONT JEAN")
       4. Chaque mot significatif (>3 car) testé contre les clés NOM
-         (gère "M. DUPONT" → "dupont", mais aussi "ABEL CARON" → "masson")
+         (gère "M. DUPONT" → "dupont", mais aussi "ABEL CARON" → "caron")
          user_keys ne contient PAS le prénom seul → pas de faux positif.
     """
     for part in _split_name_candidates(raw_name):
@@ -111,7 +111,7 @@ def _matches_user(raw_name: str, user_keys: set[str]) -> bool:
         # Tenter chaque mot significatif individuellement contre les clés NOM.
         # user_keys ne contient PAS le prénom seul → pas de faux positif
         # sur un prénom commun. Permet de matcher "ABEL CARON" → user "Christophe CARON"
-        # via la clé NOM "masson".
+        # via la clé NOM "caron".
         for w in words:
             if len(w) > 3 and w in user_keys:
                 return True
