@@ -2,16 +2,19 @@
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import AideSource from '$lib/components/AideSource.svelte';
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import BanniereResidence from '$lib/components/BanniereResidence.svelte';
 	import SectionDiagnostics from '$lib/components/SectionDiagnostics.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import ChampsIdentiteCopropriete, {
+		chargeIdentite,
+		identiteDepuis,
+	} from '$lib/components/ChampsIdentiteCopropriete.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isLocataire } from '$lib/stores/auth';
 	import {
 		copropriete as coproprieteApi,
-		uploads as uploadsApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
 	} from '$lib/api';
@@ -63,15 +66,7 @@
 	// Édition résidence
 	let editing = false;
 	let saving = false;
-	let editNom = '';
-	let editAdresse = '';
-	let editAnnee: string | number = '';
-	let editNbLots: string | number = '';
-	let editNbLotsPrincipaux: string | number = '';
-	let editImmatriculation = '';
-
-	// Photo bannière
-	let uploadingPhoto = false;
+	let identite = identiteDepuis(null);
 
 	//  Plans, règlement, CR d'AG : leur dépôt, leur correction et leur
 	//  suppression vivent dans `RubriqueDocuments` (#779) — ils y étaient écrits
@@ -174,46 +169,17 @@
 	// ── Édition résidence ──────────────────────────────────────────────────────
 	function startEdit() {
 		if (!copropriete) return;
-		editNom = copropriete.nom ?? '';
-		editAdresse = copropriete.adresse ?? '';
-		editAnnee = copropriete.annee_construction ?? '';
-		editNbLots = copropriete.nb_lots_total ?? '';
-		editNbLotsPrincipaux = copropriete.nb_lots_principaux ?? '';
-		editImmatriculation = copropriete.numero_immatriculation ?? '';
+		identite = identiteDepuis(copropriete);
 		editing = true;
 	}
 
 	async function saveEdit() {
 		saving = true;
 		await tenter(async () => {
-			copropriete = await coproprieteApi.update({
-				nom: editNom || undefined,
-				adresse: editAdresse || undefined,
-				annee_construction: editAnnee ? Number(editAnnee) : undefined,
-				nb_lots_total: editNbLots ? Number(editNbLots) : undefined,
-				nb_lots_principaux: editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
-				numero_immatriculation: editImmatriculation || undefined,
-			});
+			copropriete = await coproprieteApi.update(chargeIdentite(identite));
 			editing = false;
 		}, 'Résidence mise à jour');
 		saving = false;
-	}
-
-	// ── Photo ──────────────────────────────────────────────────────────────────
-	async function handlePhotoFile(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) return;
-		uploadingPhoto = true;
-		await tenter(
-			async () => {
-				const { url } = await uploadsApi.residence(file);
-				if (copropriete) copropriete = { ...copropriete, photo_url: url };
-			},
-			'Photo mise à jour',
-			'Erreur upload',
-		);
-		uploadingPhoto = false;
-		(e.target as HTMLInputElement).value = '';
 	}
 </script>
 
@@ -243,26 +209,7 @@
 {:else if onglet === 'fiche' && loading}
 	<EtatListe chargement />
 {:else if onglet === 'fiche' && copropriete}
-	<!-- ── Photo Bannière ─────────────────────────────────────────────────── -->
-	<figure class="photo-figure">
-		<div class="photo-banner">
-			{#if copropriete.photo_url}
-				<img src={copropriete.photo_url} alt="La résidence" />
-			{:else}
-				<div class="photo-placeholder">
-					<Icon name="building-2" size={48} />
-					<span>Aucune photo</span>
-				</div>
-			{/if}
-			{#if $isCS}
-				<label class="photo-change-btn" class:uploading={uploadingPhoto}>
-					{uploadingPhoto ? '…' : '\u{1F4F8} Changer la photo'}
-					<input type="file" accept="image/*" on:change={handlePhotoFile} style="display:none" />
-				</label>
-			{/if}
-		</div>
-		<figcaption class="photo-caption">{copropriete.nom}</figcaption>
-	</figure>
+	<BanniereResidence bind:copropriete peutModifier={$isCS} />
 
 	<!-- ── Section : Résidence ───────────────────────────────────────────── -->
 	<section style="margin-bottom:2.5rem">
@@ -283,49 +230,8 @@
 			      boutons écrites à la main, « Annuler » en bouton plein. -->
 			<FormulaireCreation titre="Modifier la fiche de la résidence" cle="fiche">
 				<form on:submit|preventDefault={saveEdit}>
-					<div class="edit-grid">
-						<div class="field">
-							<label for="e-nom">Nom</label><input id="e-nom" type="text" bind:value={editNom} />
-						</div>
-						<div class="field">
-							<label for="e-adr">Adresse</label><input
-								id="e-adr"
-								type="text"
-								bind:value={editAdresse}
-							/>
-						</div>
-						<div class="field">
-							<label for="e-ann">Année de construction</label><input
-								id="e-ann"
-								type="number"
-								bind:value={editAnnee}
-								min="1800"
-								max="2100"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-lots">Lots — total, caves et parkings compris</label><input
-								id="e-lots"
-								type="number"
-								bind:value={editNbLots}
-								min="1"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-lots-p">Dont habitation, commerces et bureaux</label><input
-								id="e-lots-p"
-								type="number"
-								bind:value={editNbLotsPrincipaux}
-								min="1"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-imm">N° immatriculation (ANAH)</label><input
-								id="e-imm"
-								type="text"
-								bind:value={editImmatriculation}
-							/>
-						</div>
+					<div class="form-grid">
+						<ChampsIdentiteCopropriete bind:valeurs={identite} />
 						<!--  🔴 Compagnie, n° de police et échéance ONT ÉTÉ RETIRÉS d'ici.
 						      Depuis #490 la fiche les lit sur le CONTRAT d'assurance, et
 						      `copropriete_lue` efface ces colonnes : les saisir ici
@@ -335,7 +241,7 @@
 						      fermé pour le nom du syndic (#535), sur trois champs cette
 						      fois — un formulaire qui survit à sa source se lit comme une
 						      commande, pas comme un vestige. -->
-						<div class="field" style="grid-column:1/-1">
+						<div class="field champ-large">
 							<AideSource
 								active
 								origine="contrat d'assurance"
@@ -447,68 +353,6 @@
 {/if}
 
 <style>
-	/* ── Photo bannière ─────────────────────────────────────────── */
-	.photo-figure {
-		margin: 0 auto 2rem;
-		max-width: 800px;
-		text-align: center;
-	}
-	.photo-caption {
-		font-size: var(--fs-base);
-		color: var(--color-text-muted);
-		padding: 0.35rem 0;
-		font-style: italic;
-	}
-	.photo-banner {
-		position: relative;
-		width: 100%;
-		border-radius: var(--radius);
-		overflow: hidden;
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-	}
-	.photo-banner img {
-		width: 100%;
-		aspect-ratio: 16 / 5;
-		object-fit: cover;
-		display: block;
-	}
-	.photo-placeholder {
-		width: 100%;
-		aspect-ratio: 16 / 5;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		color: var(--color-text-muted);
-		background: var(--color-bg);
-		font-size: var(--fs-base);
-	}
-	.photo-change-btn {
-		position: absolute;
-		bottom: 0.75rem;
-		right: 0.75rem;
-		background: rgba(0, 0, 0, 0.55);
-		color: #fff;
-		border: none;
-		border-radius: var(--radius);
-		padding: 0.35rem 0.75rem;
-		font-size: var(--fs-sm);
-		cursor: pointer;
-		backdrop-filter: blur(4px);
-		transition: background var(--duree-geste);
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.photo-change-btn:hover {
-			background: rgba(0, 0, 0, 0.75);
-		}
-	}
-	.photo-change-btn.uploading {
-		opacity: 0.6;
-		pointer-events: none;
-	}
-
 	/* ── Sections ───────────────────────────────────────────────── */
 	/*  🔴 `.section-header` est remontée dans `styles/composants.css` le
 	    06/09/2026 (#805) : elle était écrite trois fois à l'identique — ici, dans
@@ -526,13 +370,6 @@
 	/*  🔴 TOUTE la « ligne de document » vit dans `styles/composants.css` (#491) :
 	    cette page l'emploie dans SON balisage, et trois blocs en sortaient NUS.
 	    Le récit — et pourquoi `lint:classes-nues` ne le voyait pas — est là-bas. */
-
-	/* ── Edit form ──────────────────────────────────────────────── */
-	.edit-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-		gap: 0.75rem;
-	}
 
 	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
 	    site une fois cette feuille chargée — et `.badge-purple` y prenait encore

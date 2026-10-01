@@ -46,7 +46,7 @@ import { fileURLToPath } from 'node:url';
  *  `EncartAvertissement` (#1455).
  *  Puis 445 : l'annuaire de l'espace CS, extrait en deux composants (#779).
  */
-const PLAFOND = 445;
+const PLAFOND = 442;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

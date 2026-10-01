@@ -9,7 +9,9 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionContratReference from '$lib/components/SectionContratReference.svelte';
-	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import ChampsIdentiteCopropriete, {
+		chargeIdentite,
+	} from '$lib/components/ChampsIdentiteCopropriete.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { estAbsent, messageErreur } from '$lib/erreurs';
@@ -79,14 +81,8 @@
 	async function save() {
 		saving = true;
 		try {
-			const payload = { ...form };
-			//  Un champ numérique vide doit partir à `null`, jamais à `''` : Pydantic
-			//  refuse la chaîne vide sur un `Optional[int]` et l'enregistrement échoue
-			//  en silence côté écran. La règle était recopiée par champ — le troisième
-			//  ajout est le bon moment pour cesser de la recopier.
-			for (const champ of ['nb_lots_total', 'nb_lots_principaux', 'annee_construction']) {
-				payload[champ] = payload[champ] === '' ? null : Number(payload[champ]);
-			}
+			//  Un nombre vide part à `null` : la règle vit avec les champs (#779).
+			const payload = chargeIdentite(form);
 			//  ⚠️ La réponse du PATCH est RELUE, pas ignorée : changer le contrat
 			//  désigné change tout ce que les deux sections affichent. Garder
 			//  l'ancien affichage montrerait l'assureur précédent sous le nouveau
@@ -119,41 +115,7 @@
 		<form on:submit|preventDefault={save}>
 			<SectionFormulaire premiere icone="settings" titre="Identité">
 				<div class="form-grid largeur-saisie">
-					<label class="field">
-						<span>Nom de la résidence<EtoileRequis vide={!form.nom} /></span>
-						<input bind:value={form.nom} required />
-					</label>
-					<label class="field">
-						<span>Adresse</span>
-						<input bind:value={form.adresse} />
-					</label>
-					<!--  Les DEUX décomptes de la fiche du registre national (ANAH). Un seul
-			      champ obligeait à choisir lequel perdre, et le chiffre saisi ne
-			      disait pas lequel il était : 195 ou 63 pour la même résidence. Les
-			      libellés reprennent mot pour mot ceux de la fiche, pour qu'on
-			      recopie sans avoir à interpréter. -->
-					<label
-						class="field"
-						title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris."
-					>
-						<span>Nombre de lots — total, caves et parkings compris</span>
-						<input type="number" min="1" bind:value={form.nb_lots_total} />
-					</label>
-					<label
-						class="field"
-						title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici."
-					>
-						<span>Dont lots d'habitation, commerces et bureaux</span>
-						<input type="number" min="1" bind:value={form.nb_lots_principaux} />
-					</label>
-					<label class="field">
-						<span>Année de construction</span>
-						<input type="number" min="1800" max="2100" bind:value={form.annee_construction} />
-					</label>
-					<label class="field" style="grid-column:1/-1">
-						<span>N° immatriculation (ANAH)</span>
-						<input bind:value={form.numero_immatriculation} placeholder="ex : D75010800001" />
-					</label>
+					<ChampsIdentiteCopropriete bind:valeurs={form} />
 				</div>
 			</SectionFormulaire>
 
@@ -285,8 +247,8 @@
 	    carte et le titre de sous-section que `card` / `config-section-title` et
 	    `SectionFormulaire` portent déjà (anatomie v2.94.0). Deux définitions d'un
 	    même objet ne sont pas livrables — cet écran était simplement resté hors
-	    du lot qui a aligné les huit autres onglets (#501). */
-	.form-grid {
-		grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
-	}
+	    du lot qui a aligné les huit autres onglets (#501). `.form-grid` aussi :
+	    sa colonne de 220px était celle de `champs.css`, recopiée — à `auto-fill`
+	    près (tolérance de `lint:charte`), sans effet pour six champs qui
+	    remplissent leurs rangées (#779). */
 </style>

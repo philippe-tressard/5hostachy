@@ -133,7 +133,7 @@ const SELECTEURS_NATIFS = {
 	'src/lib/components/FichiersUpload.svelte': 'le composant lui-même',
 	'src/lib/components/ImageUpload.svelte': 'une image unique, remplacée sur place (avatar, logo)',
 	'src/lib/components/BarreImport.svelte': "l'import d'un tableur, qui n'est pas une pièce jointe",
-	'src/routes/(app)/residence/+page.svelte':
+	'src/lib/components/BanniereResidence.svelte':
 		'« Changer la photo » posé SUR la bannière : la photo se remplace là où on la voit',
 };
 const SELECTEUR_NATIF = /type\s*=\s*["']file["']/;
