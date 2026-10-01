@@ -7,6 +7,10 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import ChampsIdentiteCopropriete, {
+		chargeIdentite,
+		identiteDepuis,
+	} from '$lib/components/ChampsIdentiteCopropriete.svelte';
 	import { onMount } from 'svelte';
 	import { isCS, isLocataire } from '$lib/stores/auth';
 	import {
@@ -62,12 +66,7 @@
 	// Édition résidence
 	let editing = false;
 	let saving = false;
-	let editNom = '';
-	let editAdresse = '';
-	let editAnnee: string | number = '';
-	let editNbLots: string | number = '';
-	let editNbLotsPrincipaux: string | number = '';
-	let editImmatriculation = '';
+	let identite = identiteDepuis(null);
 
 	//  Plans, règlement, CR d'AG : leur dépôt, leur correction et leur
 	//  suppression vivent dans `RubriqueDocuments` (#779) — ils y étaient écrits
@@ -170,26 +169,14 @@
 	// ── Édition résidence ──────────────────────────────────────────────────────
 	function startEdit() {
 		if (!copropriete) return;
-		editNom = copropriete.nom ?? '';
-		editAdresse = copropriete.adresse ?? '';
-		editAnnee = copropriete.annee_construction ?? '';
-		editNbLots = copropriete.nb_lots_total ?? '';
-		editNbLotsPrincipaux = copropriete.nb_lots_principaux ?? '';
-		editImmatriculation = copropriete.numero_immatriculation ?? '';
+		identite = identiteDepuis(copropriete);
 		editing = true;
 	}
 
 	async function saveEdit() {
 		saving = true;
 		await tenter(async () => {
-			copropriete = await coproprieteApi.update({
-				nom: editNom || undefined,
-				adresse: editAdresse || undefined,
-				annee_construction: editAnnee ? Number(editAnnee) : undefined,
-				nb_lots_total: editNbLots ? Number(editNbLots) : undefined,
-				nb_lots_principaux: editNbLotsPrincipaux ? Number(editNbLotsPrincipaux) : undefined,
-				numero_immatriculation: editImmatriculation || undefined,
-			});
+			copropriete = await coproprieteApi.update(chargeIdentite(identite));
 			editing = false;
 		}, 'Résidence mise à jour');
 		saving = false;
@@ -243,49 +230,8 @@
 			      boutons écrites à la main, « Annuler » en bouton plein. -->
 			<FormulaireCreation titre="Modifier la fiche de la résidence" cle="fiche">
 				<form on:submit|preventDefault={saveEdit}>
-					<div class="edit-grid">
-						<div class="field">
-							<label for="e-nom">Nom</label><input id="e-nom" type="text" bind:value={editNom} />
-						</div>
-						<div class="field">
-							<label for="e-adr">Adresse</label><input
-								id="e-adr"
-								type="text"
-								bind:value={editAdresse}
-							/>
-						</div>
-						<div class="field">
-							<label for="e-ann">Année de construction</label><input
-								id="e-ann"
-								type="number"
-								bind:value={editAnnee}
-								min="1800"
-								max="2100"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-lots">Lots — total, caves et parkings compris</label><input
-								id="e-lots"
-								type="number"
-								bind:value={editNbLots}
-								min="1"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-lots-p">Dont habitation, commerces et bureaux</label><input
-								id="e-lots-p"
-								type="number"
-								bind:value={editNbLotsPrincipaux}
-								min="1"
-							/>
-						</div>
-						<div class="field">
-							<label for="e-imm">N° immatriculation (ANAH)</label><input
-								id="e-imm"
-								type="text"
-								bind:value={editImmatriculation}
-							/>
-						</div>
+					<div class="form-grid">
+						<ChampsIdentiteCopropriete bind:valeurs={identite} />
 						<!--  🔴 Compagnie, n° de police et échéance ONT ÉTÉ RETIRÉS d'ici.
 						      Depuis #490 la fiche les lit sur le CONTRAT d'assurance, et
 						      `copropriete_lue` efface ces colonnes : les saisir ici
@@ -295,7 +241,7 @@
 						      fermé pour le nom du syndic (#535), sur trois champs cette
 						      fois — un formulaire qui survit à sa source se lit comme une
 						      commande, pas comme un vestige. -->
-						<div class="field" style="grid-column:1/-1">
+						<div class="field champ-large">
 							<AideSource
 								active
 								origine="contrat d'assurance"
@@ -424,13 +370,6 @@
 	/*  🔴 TOUTE la « ligne de document » vit dans `styles/composants.css` (#491) :
 	    cette page l'emploie dans SON balisage, et trois blocs en sortaient NUS.
 	    Le récit — et pourquoi `lint:classes-nues` ne le voyait pas — est là-bas. */
-
-	/* ── Edit form ──────────────────────────────────────────────── */
-	.edit-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-		gap: 0.75rem;
-	}
 
 	/*  Trois couleurs de badge réécrites ici en `:global(…)`, donc pour tout le
 	    site une fois cette feuille chargée — et `.badge-purple` y prenait encore

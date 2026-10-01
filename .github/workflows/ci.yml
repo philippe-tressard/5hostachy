@@ -1814,6 +1814,14 @@ jobs:
         working-directory: front
         run: npm run lint:type-lot
 
+      # Nom, adresse, décomptes de lots, année et immatriculation de la
+      # copropriété : saisis par `ChampsIdentiteCopropriete` seul (#779,
+      # 01/10/2026). La copie de la page Résidence ne savait pas effacer un
+      # nombre — un champ vidé n'était pas envoyé.
+      - name: Identité de la copropriété saisie une seule fois
+        working-directory: front
+        run: npm run lint:identite-copropriete
+
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
       # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle
