@@ -75,10 +75,10 @@ def scene():
         session.add(bat)
         session.flush()
         proprio = compte(
-            session, prefixe=f"p-{marque}", prenom="Alix", nom="RIVANT", roles_json="propriétaire"
+            session, prefixe=f"p-{marque}", prenom="Alix", nom="MERCIER", roles_json="propriétaire"
         )
         locataire = compte(
-            session, prefixe=f"l-{marque}", prenom="Camille", nom="BERNAERT", roles_json="résident"
+            session, prefixe=f"l-{marque}", prenom="Camille", nom="COLLARD", roles_json="résident"
         )
         for objet in (copro, bat, proprio, locataire):
             session.refresh(objet)
@@ -100,7 +100,7 @@ def scene():
         session.commit()
 
 
-def _import(bat, numero: str, occupants: list[dict], nom="RIVANT") -> LotImport:
+def _import(bat, numero: str, occupants: list[dict], nom="MERCIER") -> LotImport:
     return LotImport(
         batiment_id=bat.id,
         numero=numero,
@@ -212,13 +212,13 @@ def test_le_garde_fou_ANTI_POLLUTION_vaut_pour_les_deux_voies(scene, voie):
     « Audit des lots » existe pour nettoyer après coup.
     """
     session, bat, proprio, locataire = scene
-    #  Le classeur dit RIVANT ; `utilisateurs_json` désigne BERNAERT.
+    #  Le classeur dit MERCIER ; `utilisateurs_json` désigne COLLARD.
     session.add(
         _import(
             bat,
             "A301",
             [{"user_id": locataire.id, "type_lien": "propriétaire"}],
-            nom="RIVANT",
+            nom="MERCIER",
         )
     )
     session.commit()
@@ -248,7 +248,7 @@ def test_un_lien_devenu_faux_est_SUPPRIME_pas_seulement_ignore(scene):
             bat,
             "A401",
             [{"user_id": locataire.id, "type_lien": "propriétaire"}],
-            nom="RIVANT",
+            nom="MERCIER",
         )
     )
     session.commit()
@@ -295,7 +295,7 @@ def test_le_rapprochement_ne_regresse_JAMAIS_un_import_deja_lie(scene):
             batiment_id=bat.id,
             numero="A601",
             type_raw="AP",
-            nom_coproprietaire="RIVANT",
+            nom_coproprietaire="MERCIER",
             statut=StatutLotImport.en_attente,
             utilisateurs_json="[]",
         )

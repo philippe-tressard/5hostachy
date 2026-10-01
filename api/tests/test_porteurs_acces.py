@@ -244,10 +244,10 @@ def test_plusieurs_parkings_le_premier_est_retenu(session):
 
 
 def test_le_nom_complet_departage_des_homonymes(session):
-    _copro_du_fichier(session, "DUBREUIL FRANCOIS", _lot(session, TELECOMMANDE, "451"))
+    _copro_du_fichier(session, "PERRIN FRANCOIS", _lot(session, TELECOMMANDE, "451"))
     sylvie = _lot(session, TELECOMMANDE, "452")
-    _copro_du_fichier(session, "DUBREUIL Sylvie", sylvie)
-    ligne = _ligne(session, TELECOMMANDE, nom="DUBREUIL SYLVIE", code="T3")
+    _copro_du_fichier(session, "PERRIN Sylvie", sylvie)
+    ligne = _ligne(session, TELECOMMANDE, nom="PERRIN SYLVIE", code="T3")
     assert trouveur_de_lot(TELECOMMANDE, session)(ligne) is True
     assert ligne.lot_id == sylvie.id
 

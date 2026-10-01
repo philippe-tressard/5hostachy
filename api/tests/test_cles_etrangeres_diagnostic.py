@@ -331,7 +331,7 @@ def _membre_cs_orphelin(session) -> int:
     compte = Utilisateur(
         email="christine.test@example.org",
         prenom="Christine",
-        nom="LONGUEVE",
+        nom="VERDIERE",
         hashed_password="x",
         actif=True,
     )
@@ -341,7 +341,7 @@ def _membre_cs_orphelin(session) -> int:
     membre = MembreCS(
         genre=GenreCivilite.mme,
         prenom="Christine",
-        nom="LONGUEVE",
+        nom="VERDIERE",
         etage=3,
         ordre=5,
         user_id=compte.id,
@@ -368,7 +368,7 @@ def test_une_cle_NULLABLE_se_delie_et_ne_supprime_PAS_la_ligne(admin_et_ticket):
     """🔴 LE TEST QUI MANQUAIT — et son absence a coûté un membre du CS.
 
     Le 31/08/2026, la purge livrée la veille a effacé la ligne `membre_cs` de
-    Christine LONGUÈVE : elle pointait vers un `utilisateur` supprimé de longue
+    Christine VERDIÈRE : elle pointait vers un `utilisateur` supprimé de longue
     date, et l'outil en a conclu qu'il fallait supprimer la **membre**.
 
     C'était le **lien** qui était cassé, pas la membre. `membre_cs.user_id` est

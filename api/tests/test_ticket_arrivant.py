@@ -53,7 +53,7 @@ def arrivant() -> Utilisateur:
             session,
             prefixe="arrivant",
             prenom="Alix",
-            nom="Rivant",
+            nom="Mercier",
             role=RoleUtilisateur.résident,
             statut=StatutUtilisateur.locataire,
         )
@@ -237,7 +237,7 @@ def test_la_description_ECHAPPE_ce_que_l_utilisateur_a_saisi():
     seule des deux barrières laisse passer le jour où l'autre change.
     """
     corps = corps_demarches(
-        "Alix Rivant",
+        "Alix Mercier",
         "Bât. <script>",
         '"><img src=x onerror=alert(1)>',
         ["• Étiquette BAL"],

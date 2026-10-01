@@ -129,7 +129,7 @@ for (const [quoi, obtenu] of [
 //
 //  🔴 Signalé à l'écran le 15/09/2026 : « le classement des badges &
 //  télécommandes par Nom doit se faire sur le nom et pas le prénom ». La table
-//  triait sur `porteur_nom`, qui vaut « Alain GARCIA » — donc sur le prénom. Et
+//  triait sur `porteur_nom`, qui vaut « Alain FAURE » — donc sur le prénom. Et
 //  `FormulaireTicket` comparait littéralement le prénom suivi du nom.
 //
 //  ⚠️ La règle juste existait déjà, écrite TROIS fois (annuaire, administration,

@@ -51,7 +51,7 @@ def _modele(texte):
 
 def _transfert_du_syndic(adresse_syndic: str) -> str:
     return (
-        "Mme Longuève,\n\nPS : demain je serai à Lyon.\n\ncdlmt\nC S / 06 00 00 00 00\n\n"
+        "Mme Verdière,\n\nPS : demain je serai à Lyon.\n\ncdlmt\nC S / 06 00 00 00 00\n\n"
         "Début du message réexpédié :\n\n"
         f"De : G S <{adresse_syndic}>\n"
         "Objet : Affaire #TK-121048 — Porte\n"

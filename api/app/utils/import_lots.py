@@ -8,7 +8,7 @@ Structure attendue du fichier (première ligne = en-tête ignorée) :
   Colonne D : étage             (RDC, 1ER, 2EME, 1SS, 2SS)
   Colonne E : numéro de porte   (optionnel, ignoré)
   Colonne F : N° copropriétaire (ex. 408920)
-  Colonne G : Nom copropriétaire (ex. ALIF MASSON)
+  Colonne G : Nom copropriétaire (ex. ABEL CARON)
 
 Règles métier :
   - PS (parking)  : batiment_id = None (le parking n'est pas rattaché à un bâtiment)

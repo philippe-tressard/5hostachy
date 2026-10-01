@@ -143,10 +143,10 @@ def test_non_correspondances(saisie):
 
 def test_un_occupant_est_trouve_dans_une_cellule_partagee():
     """Cas courant : deux noms dans la même cellule d'un lot en indivision."""
-    cles = _user_keys("Masson", "Christophe")
-    assert _matches_user("ALIF; MASSON", cles)
-    assert _matches_user("DUPONT ET MASSON", cles)
-    assert _matches_user("ALIF MASSON", cles)
+    cles = _user_keys("Caron", "Christophe")
+    assert _matches_user("ABEL; CARON", cles)
+    assert _matches_user("DUPONT ET CARON", cles)
+    assert _matches_user("ABEL CARON", cles)
 
 
 def test_un_homonyme_de_prenom_n_est_pas_apparie():

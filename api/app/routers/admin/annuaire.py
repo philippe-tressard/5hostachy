@@ -159,7 +159,7 @@ def put_composition_cs(
     #
     #  🔴 CE BLOC SUPPRIMAIT LES SEPT LIGNES ET LES RECRÉAIT, à chaque
     #  enregistrement. Signalé le 31/08/2026 : *« je n'ai modifié que Christine
-    #  LONGUÈVE et ça a ajouté tous les membres du CS qui n'ont pas été
+    #  VERDIÈRE et ça a ajouté tous les membres du CS qui n'ont pas été
     #  modifiés »* — sept entrées « Nouveau membre du conseil syndical » au fil
     #  d'actualité, pour une correction d'étage.
     #

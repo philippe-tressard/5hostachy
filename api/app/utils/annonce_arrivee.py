@@ -8,8 +8,8 @@ Demandé le 07/09/2026, capture à l'appui :
 > disposition : bâtiment, étage… Par contre sois vigilant de ne pas communiquer
 > des infos personnelles comme l'email. »*
 
-L'exemple montrait : « Bienvenue à Mme Mr ITMI-VÉRITÉ nouveaux arrivants au
-Bâtiment 1 », corps « Remplace Mme BERNAERT ». Deux civilités collées, et trois
+L'exemple montrait : « Bienvenue à Mme Mr MORIN-LEGRAND nouveaux arrivants au
+Bâtiment 1 », corps « Remplace Mme COLLARD ». Deux civilités collées, et trois
 mots de contenu.
 
 ## 🔴 Ce qui NE sort jamais d'ici — et pourquoi c'est une liste, pas une intention
@@ -95,10 +95,10 @@ def _nom_batiment(session: Session, batiment_id: int | None) -> str:
 
 
 def titre_annonce(nom_complet: str, nom_batiment: str) -> str:
-    """« Bienvenue à Alix RIVANT — Bâtiment 3 ».
+    """« Bienvenue à Alix MERCIER — Bâtiment 3 ».
 
     ⚠️ UN seul nom, et pas de civilité accolée : l'exemple d'origine affichait
-    « Mme Mr ITMI-VÉRITÉ », deux civilités que rien ne séparait. `Utilisateur`
+    « Mme Mr MORIN-LEGRAND », deux civilités que rien ne séparait. `Utilisateur`
     n'en porte d'ailleurs pas — le nom d'affichage suffit, et il est le même
     partout ailleurs dans le produit (`nom_affiche`).
     """

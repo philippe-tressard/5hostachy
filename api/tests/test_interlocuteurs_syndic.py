@@ -2,7 +2,7 @@
 
 Le cabinet fonctionne en binôme : l'assistante de gestion supplée la gestionnaire
 en son absence, et les deux partagent la même boîte. La formule d'appel de la
-relance n'en nommait qu'une (« Madame Céline Mariette »). Elle nomme désormais
+relance n'en nommait qu'une (« Madame Élise Lambert »). Elle nomme désormais
 les deux, sans prénom.
 
 **Les personnes sont choisies par leur FONCTION, jamais par leur nom.** C'est la
@@ -35,27 +35,27 @@ def test_l_annuaire_reel_donne_la_formule_attendue(session):
     session.add_all(
         [
             _membre(
-                "Mariette", "Gestionnaire de Copropriétés", prenom="Céline", ordre=0, principal=True
+                "Lambert", "Gestionnaire de Copropriétés", prenom="Élise", ordre=0, principal=True
             ),
-            _membre("THAUVIN", "Assistante de gestion", prenom="Océane", ordre=1),
-            _membre("belyn", "Comptable de copropriété", prenom="Agnès", ordre=2),
+            _membre("ROUSSEL", "Assistante de gestion", prenom="Inès", ordre=1),
+            _membre("vasseur", "Comptable de copropriété", prenom="Nadia", ordre=2),
         ]
     )
     session.commit()
 
-    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Mariette, Madame Thauvin"
+    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Lambert, Madame Roussel"
 
 
 def test_la_comptable_est_exclue(session):
     """Elle traite les appels de fonds, pas les signalements techniques."""
     session.add_all(
         [
-            _membre("Mariette", "Gestionnaire de copropriété", ordre=0),
-            _membre("Belyn", "Comptable de copropriété", ordre=1),
+            _membre("Lambert", "Gestionnaire de copropriété", ordre=0),
+            _membre("Vasseur", "Comptable de copropriété", ordre=1),
         ]
     )
     session.commit()
-    assert [m.nom for m in interlocuteurs_syndic(session)] == ["Mariette"]
+    assert [m.nom for m in interlocuteurs_syndic(session)] == ["Lambert"]
 
 
 @pytest.mark.parametrize(
@@ -81,12 +81,12 @@ def test_l_ordre_de_l_annuaire_est_respecte(session):
     """La gestionnaire d'abord : c'est elle l'interlocutrice principale."""
     session.add_all(
         [
-            _membre("Thauvin", "Assistante de gestion", ordre=5),
-            _membre("Mariette", "Gestionnaire de copropriété", ordre=1),
+            _membre("Roussel", "Assistante de gestion", ordre=5),
+            _membre("Lambert", "Gestionnaire de copropriété", ordre=1),
         ]
     )
     session.commit()
-    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Mariette, Madame Thauvin"
+    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Lambert, Madame Roussel"
 
 
 def test_un_homme_est_appele_monsieur(session):
@@ -114,12 +114,12 @@ def test_repli_si_aucune_fonction_ne_correspond(session):
     """
     session.add_all(
         [
-            _membre("Mariette", "Responsable de secteur", principal=True),
-            _membre("Belyn", "Comptable de copropriété"),
+            _membre("Lambert", "Responsable de secteur", principal=True),
+            _membre("Vasseur", "Comptable de copropriété"),
         ]
     )
     session.commit()
-    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Mariette"
+    assert formule_appel(interlocuteurs_syndic(session)) == "Madame Lambert"
 
 
 def test_aucun_nom_de_personne_n_est_ecrit_en_dur_dans_le_code():
@@ -135,7 +135,7 @@ def test_aucun_nom_de_personne_n_est_ecrit_en_dur_dans_le_code():
     )
     #: Les personnes actuellement à l'annuaire. Ce test ne prétend pas détecter
     #: tout nom propre : il verrouille le cas concret qui a motivé la règle.
-    interdits = ("Mariette", "Thauvin", "Belyn")
+    interdits = ("Lambert", "Roussel", "Vasseur")
     fautifs = [f"{m.rel} → {nom}" for m in fichiers for nom in interdits if nom in m.source]
     assert not fautifs, (
         "Des noms de personnes du syndic sont écrits en dur dans le code : "

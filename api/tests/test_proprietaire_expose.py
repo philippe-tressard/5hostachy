@@ -2,7 +2,7 @@
 
 ## Le défaut (21/09/2026, #1104, signalé à l'écran capture à l'appui)
 
-La carte de TK-417640 affichait « Philippe TRESSARD », celui qui avait tapé, pour
+La carte de TK-417640 affichait « Paul DELMAS », celui qui avait tapé, pour
 une affaire saisie **pour** quelqu'un d'autre. Le même composant employait
 pourtant le bon nom dans la case « Envoyer une copie à … » : un écran, deux
 noms, et celui qu'on lit était le mauvais.

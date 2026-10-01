@@ -126,17 +126,17 @@ def test_cas_zero_une_commande_acceptee_sans_code_ne_cree_rien(session):
     assert session.exec(select(VIGIK.modele)).first() is None
 
 
-# ── 11. Retours du 23/09/2026 : PARIS, STOCK, l'accès, le nom affiché ──────
+# ── 11. Retours du 23/09/2026 : LYON, STOCK, l'accès, le nom affiché ──────
 
 
 def test_un_nom_de_famille_seul_designe_le_bon_copropriétaire(session):
-    """« PARIS » est un propriétaire, pas la BANQUE NATIONALE DE PARIS."""
-    _copro_du_fichier(session, "BANQUE NATIONALE DE PARIS", _lot(session, TELECOMMANDE, "460"))
-    francis = _lot(session, TELECOMMANDE, "461")
-    _copro_du_fichier(session, "PARIS FRANCIS", francis)
-    ligne = _ligne(session, TELECOMMANDE, nom="PARIS", code="T4")
+    """« LYON » est un propriétaire, pas la BANQUE POPULAIRE DE LYON."""
+    _copro_du_fichier(session, "BANQUE POPULAIRE DE LYON", _lot(session, TELECOMMANDE, "460"))
+    marcel = _lot(session, TELECOMMANDE, "461")
+    _copro_du_fichier(session, "LYON MARCEL", marcel)
+    ligne = _ligne(session, TELECOMMANDE, nom="LYON", code="T4")
     assert trouveur_de_lot(TELECOMMANDE, session)(ligne) is True
-    assert ligne.lot_id == francis.id
+    assert ligne.lot_id == marcel.id
 
 
 def test_une_ligne_STOCK_entre_au_parc_sans_lot(session):

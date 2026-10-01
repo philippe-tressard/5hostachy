@@ -81,9 +81,9 @@ def _dns_pour(domaine: str, cle) -> object:
 
 
 def test_un_message_signe_par_le_domaine_de_l_expediteur_est_authentique(cle):
-    brut = _signer(_message("Céline <gestion@syndic.fr>"), "syndic.fr", cle[0])
+    brut = _signer(_message("Élise <gestion@syndic.fr>"), "syndic.fr", cle[0])
     ok, motif = verifier_expediteur(
-        brut, "Céline <gestion@syndic.fr>", dnsfunc=_dns_pour("syndic.fr", cle)
+        brut, "Élise <gestion@syndic.fr>", dnsfunc=_dns_pour("syndic.fr", cle)
     )
     assert ok, motif
     assert "syndic.fr" in motif
@@ -232,7 +232,7 @@ def test_alignement(signataire, expediteur, attendu):
 
 
 def test_domaine_de():
-    assert domaine_de("Céline MARIETTE <C.Mariette@IFF-Gestion.fr>") == "iff-gestion.fr"
+    assert domaine_de("Élise LAMBERT <E.Lambert@Syndic-Exemple.fr>") == "syndic-exemple.fr"
     assert domaine_de("") == ""
 
 

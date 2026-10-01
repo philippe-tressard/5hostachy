@@ -138,7 +138,7 @@ def _remedes(conn, lignes):
     🔴 CETTE DISTINCTION A COÛTÉ UN MEMBRE DU CONSEIL SYNDICAL, LE 31/08/2026.
 
     La première version supprimait uniformément. Elle a effacé la ligne
-    `membre_cs` de Christine LONGUÈVE : elle pointait vers un `utilisateur`
+    `membre_cs` de Christine VERDIÈRE : elle pointait vers un `utilisateur`
     supprimé depuis longtemps, et l'outil en a conclu qu'il fallait supprimer la
     membre. C'était le LIEN qui était cassé, pas la MEMBRE — un autre membre du
     CS vit très bien avec `user_id` à NULL.
