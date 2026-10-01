@@ -106,6 +106,15 @@ fois, quand l'utilisateur est connu. L'`onMount` reste pour ce qui ne dépend de
 personne. 🔒 `npm run lint:gardes-auth` refuse un rôle lu dans un `onMount`, et
 son e2e type est `e2e/role-au-chargement-direct.spec.ts`.
 
+### Un nombre saisi : `nombreOuNull`, jamais une conversion à la main
+
+🔴 Un `<input type="number" bind:value>` **vidé rend `null`**, pas `''`. Une
+conversion `v === '' ? null : Number(v)` l'envoie donc à **0** — un relevé de
+consommation enregistré à 0 m³, un nombre de lots à 0 (#1516, #779) ; et
+`v ? Number(v) : null` efface un 0 réellement saisi. La règle vit dans
+`nombreOuNull` (`$lib/utils`) ; 🔒 `npm run lint:nombre-saisi` refuse la forme
+recopiée, et `e2e/nombre-saisi` tient le comportement.
+
 ### Gestion d'erreurs API
 
 Un message d'erreur ne se rédige pas dans un écran : il vient de

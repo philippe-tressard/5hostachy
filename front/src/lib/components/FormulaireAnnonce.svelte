@@ -60,7 +60,7 @@
 	import { annonces as annoncesApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { perimetreDefautListe } from '$lib/utils';
+	import { perimetreDefautListe, nombreOuNull } from '$lib/utils';
 	import type { Etat } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
 	import { pliageDe, requisDe } from '$lib/pliage';
@@ -167,7 +167,7 @@
 		//  recherche, et la valeur doit disparaître avec lui. Sans cette remise à
 		//  zéro, passer une vente en don garderait le montant en base — la carte
 		//  n'afficherait plus « Gratuit » mais l'ancien prix.
-		const prixEnvoye = typeAnnonce === 'vente' && prix ? parseFloat(prix) : null;
+		const prixEnvoye = typeAnnonce === 'vente' ? nombreOuNull(prix) : null;
 		submitting = true;
 		try {
 			const charge = {

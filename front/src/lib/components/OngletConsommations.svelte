@@ -16,6 +16,7 @@
   que le choix de l'onglet.
 -->
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { prestataires as prestApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { isCS } from '$lib/stores/auth';
@@ -136,7 +137,7 @@
 			const payload = {
 				type_compteur: typeCompteur,
 				date_releve: releveForm.date_releve,
-				index: releveForm.index !== '' ? Number(releveForm.index) : null,
+				index: nombreOuNull(releveForm.index),
 				note: releveForm.note.trim() || null,
 				prestataire_id: currentCompteur?.prestataire_id ?? null,
 			};

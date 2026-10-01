@@ -22,6 +22,7 @@
  * suivie, le 🛡️ d'une affaire devenue actualité) — sinon l'objet garderait en
  * base une valeur qu'aucun écran ne montre plus.
  */
+import { nombreOuNull } from '$lib/utils';
 import type { Ticket } from '$lib/api';
 import type { ConditionInactive, Etat, IdSection, NatureAffaire } from '$lib/entites/types';
 import { motifInactif } from '$lib/entites/types';
@@ -189,7 +190,7 @@ export function chargeUtileAffaire(
 		contrat_id: estBati(s.categorie) ? s.contratId : null,
 		equipement: estBati(s.categorie) ? s.equipement || null : null,
 		frequence_type: entretien && s.frequenceType ? s.frequenceType : null,
-		frequence_valeur: entretien && s.frequenceType ? Number(s.frequenceValeur) || null : null,
+		frequence_valeur: entretien && s.frequenceType ? nombreOuNull(s.frequenceValeur) : null,
 	});
 	if (actualite) {
 		//  Pas de suivi : ni état ni kanban — effacés s'ils venaient d'une

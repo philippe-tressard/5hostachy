@@ -18,7 +18,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { EQUIPEMENTS as equipements, contratDepuis, contratVierge } from '$lib/prestataires';
 	import { minuitDuJour, typeEquipementDuContrat } from '$lib/reporting';
-	import { relire } from '$lib/utils';
+	import { relire, nombreOuNull } from '$lib/utils';
 	import CarteContrat from '$lib/components/CarteContrat.svelte';
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -208,14 +208,12 @@
 			...contratForm,
 			type_equipement: resolvedType,
 			prestataire_id: Number(contratForm.prestataire_id),
-			duree_initiale_valeur: contratForm.duree_initiale_valeur
-				? Number(contratForm.duree_initiale_valeur)
-				: null,
+			duree_initiale_valeur: nombreOuNull(contratForm.duree_initiale_valeur),
 			duree_initiale_unite: contratForm.duree_initiale_valeur
 				? contratForm.duree_initiale_unite
 				: null,
 			frequence_type: contratForm.frequence_type || null,
-			frequence_valeur: contratForm.frequence_valeur ? Number(contratForm.frequence_valeur) : null,
+			frequence_valeur: nombreOuNull(contratForm.frequence_valeur),
 			prochaine_visite: contratForm.prochaine_visite || null,
 		};
 		//  🔴 Lu AVANT la fermeture, qui remet `editContratId` à `null`. Le message
