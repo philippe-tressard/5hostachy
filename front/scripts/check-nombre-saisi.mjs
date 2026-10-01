@@ -20,11 +20,7 @@
  *
  *  Lancer : node scripts/check-nombre-saisi.mjs [--selftest]
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
-
-const RACINE = 'src';
-const SOURCE = 'src/lib/utils.ts';
+import { controler } from './lib-source-unique.mjs';
 
 /**  Écarts déclarés, avec leur raison. Une entrée qui ne sert plus fait échouer. */
 const EXCEPTIONS = {
@@ -41,15 +37,6 @@ const COPIES = [
 	//  `Number(v) || null`
 	new RegExp(String.raw`${CONV}[^()]*\)\s*\|\|\s*(?:null|undefined)\b`),
 ];
-
-function fichiers(dir, acc = []) {
-	for (const e of readdirSync(dir)) {
-		const p = join(dir, e);
-		if (statSync(p).isDirectory()) fichiers(p, acc);
-		else if (e.endsWith('.svelte') || e.endsWith('.ts')) acc.push(p);
-	}
-	return acc;
-}
 
 export function fautes(source) {
 	//  Une expression coupée par Prettier se relit sur une ligne.
@@ -70,72 +57,34 @@ export function fautes(source) {
 	return trouvees;
 }
 
-function selftest() {
-	const cas = [
-		["\t\tindex: releveForm.index !== '' ? Number(releveForm.index) : null,", 1],
-		["\t\tprestataireId = choix === '' ? null : Number(choix);", 1],
-		['\t\tlot_id: editLot ? Number(editLot) : null,', 1],
-		['\t\tannee: s.annee ? Number(s.annee) : undefined,', 1],
-		["\t\tconst prixEnvoye = typeAnnonce === 'vente' && prix ? parseFloat(prix) : null;", 1],
-		['\t\tfrequence_valeur: entretien ? Number(s.frequenceValeur) || null : null,', 1],
-		//  Coupée par Prettier sur trois lignes.
-		['\t\tduree: f.duree\n\t\t\t? Number(f.duree)\n\t\t\t: null,', 1],
-		//  Entière sur la ligne qui suit un `...(cond` : comptée une fois.
-		['\t\t...(avecAg\n\t\t\t? { annee: s.annee ? Number(s.annee) : undefined }\n\t\t\t: {}),', 1],
-		//  La forme voulue, jamais signalée.
-		['\t\tindex: nombreOuNull(releveForm.index),', 0],
-		//  Une configuration lue avec repli : hors portée.
-		["\t\tsmtpConfig.port = parseInt(lues['smtp_port'] ?? '587') || 587;", 0],
-		['\t$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;', 0],
-		//  Un commentaire qui cite la forme refusée.
-		["\t// on écrivait v === '' ? null : Number(v)", 0],
-	];
-	let ko = 0;
-	for (const [source, attendu] of cas) {
-		const obtenu = fautes(source).length;
-		console.log(`${obtenu === attendu ? 'PASS' : 'FAIL'}  ${source.trim().split('\n')[0]}`);
-		if (obtenu !== attendu) ko = 1;
-	}
-	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
-	return ko;
-}
-
-function main() {
-	if (process.argv.includes('--selftest')) return selftest();
-	const trouves = [];
-	const servies = new Set();
-	let lus = 0;
-	for (const f of fichiers(RACINE)) {
-		lus++;
-		const rel = f.split(sep).join('/');
-		if (rel === SOURCE) continue;
-		const n = fautes(readFileSync(f, 'utf8'));
-		if (rel in EXCEPTIONS) {
-			if (n.length) servies.add(rel);
-			continue;
-		}
-		for (const l of n) trouves.push(`${rel}:${l}`);
-	}
-	const mortes = Object.keys(EXCEPTIONS).filter((r) => !servies.has(r));
-	if (mortes.length) {
-		console.error(`✗ Exception(s) qui ne servent plus — les retirer : ${mortes.join(', ')}`);
-		return 1;
-	}
-	//  Cas zéro (standards/04 §2) : aucun fichier lu n'est pas « aucune copie ».
-	if (!lus) {
-		console.error(`✗ Aucun fichier lu sous ${RACINE} : contrôle INCONNU.`);
-		return 1;
-	}
-	if (!trouves.length) {
-		console.log(`✓ Nombres saisis : convertis par nombreOuNull seulement (${lus} fichiers lus).`);
-		return 0;
-	}
-	console.error(`\n✗ ${trouves.length} conversion(s) de saisie en nombre écrite(s) à la main :`);
-	for (const t of trouves) console.error(`   ${t}`);
-	console.error(
-		"\n  Employer `nombreOuNull(v)` (`$lib/utils`) : '', null et undefined donnent null, 0 reste 0.\n",
-	);
-	return 1;
-}
-
-process.exit(main());
+process.exit(
+	controler({
+		extensions: ['.svelte', '.ts'],
+		sources: ['src/lib/utils.ts'],
+		exceptions: EXCEPTIONS,
+		fautes,
+		cas: [
+			["\t\tindex: releveForm.index !== '' ? Number(releveForm.index) : null,", 1],
+			["\t\tprestataireId = choix === '' ? null : Number(choix);", 1],
+			['\t\tlot_id: editLot ? Number(editLot) : null,', 1],
+			['\t\tannee: s.annee ? Number(s.annee) : undefined,', 1],
+			["\t\tconst prixEnvoye = typeAnnonce === 'vente' && prix ? parseFloat(prix) : null;", 1],
+			['\t\tfrequence_valeur: entretien ? Number(s.frequenceValeur) || null : null,', 1],
+			//  Coupée par Prettier sur trois lignes.
+			['\t\tduree: f.duree\n\t\t\t? Number(f.duree)\n\t\t\t: null,', 1],
+			//  Entière sur la ligne qui suit un `...(cond` : comptée une fois.
+			['\t\t...(avecAg\n\t\t\t? { annee: s.annee ? Number(s.annee) : undefined }\n\t\t\t: {}),', 1],
+			//  La forme voulue, jamais signalée.
+			['\t\tindex: nombreOuNull(releveForm.index),', 0],
+			//  Une configuration lue avec repli : hors portée.
+			["\t\tsmtpConfig.port = parseInt(lues['smtp_port'] ?? '587') || 587;", 0],
+			['\t$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;', 0],
+			//  Un commentaire qui cite la forme refusée.
+			["\t// on écrivait v === '' ? null : Number(v)", 0],
+		],
+		ok: 'Nombres saisis : convertis par nombreOuNull seulement',
+		ko: 'conversion(s) de saisie en nombre écrite(s) à la main',
+		conseil:
+			"Employer `nombreOuNull(v)` (`$lib/utils`) : '', null et undefined donnent null, 0 reste 0.",
+	}),
+);
