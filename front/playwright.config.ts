@@ -94,7 +94,12 @@ export default defineConfig({
 	retries: 0,
 	//  ⚠️ Le rapport HTML ne s'ouvre PAS tout seul : en session non interactive il
 	//  bloquerait sur un serveur qui attend une touche.
-	reporter: [['list'], ['html', { open: 'never', outputFolder: 'e2e-rapport' }]],
+	//  `rapport-hydratation` : le bilan des durées d'hydratation du passage (#1475).
+	reporter: [
+		['list'],
+		['html', { open: 'never', outputFolder: 'e2e-rapport' }],
+		['./e2e/rapport-hydratation.ts'],
+	],
 	use: {
 		baseURL: BASE,
 		//  La trace n'est gardée que sur échec : c'est là qu'elle sert, et elle
