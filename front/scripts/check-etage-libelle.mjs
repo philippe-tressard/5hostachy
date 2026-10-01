@@ -71,6 +71,12 @@ function fautes(source) {
 			//  qu'`etageLabel` : une exclusion enfouie dans un motif se lit mal et
 			//  se contourne sans qu'on s'en aperçoive.
 			.filter(([l]) => !/\bapi\.(get|post|patch|put|delete)\b/.test(l))
+			//  Une PROP n'est pas un libellé non plus : `etage={lot.etage}` passe la
+			//  valeur au composant qui la rend (`CaracteristiquesLot`, #779) — le mot
+			//  y précède une accolade qui contient « etage », d'où la forme d'une
+			//  interpolation. On retire l'attribut avant de chercher, pour que le
+			//  reste de la ligne soit toujours lu.
+			.map(([l, n]) => [l.replace(/\betage=\{[^}]*\}/g, ''), n])
 			.filter(([l]) => COMPARAISON.test(l) || (INTERPOLATION.test(l) && !/etageLabel\s*\(/.test(l)))
 			.map(([, n]) => n)
 	);
@@ -90,6 +96,11 @@ function selftest() {
 		//  utile : les deux dans les trente caractères, donc la forme d'une
 		//  interpolation. Ce n'est pas un libellé (09/09/2026, #835).
 		['	majEtage: (id, etage) => api.patch(`/lots/${id}/etage`, { etage }),', 0],
+		//  Une prop passée au composant qui rend l'étage (#779, 01/10/2026).
+		['\t\t\t\tetage={lot.etage}', 0],
+		['\t<CaracteristiquesLot type={l.type} etage={l.etage} />', 0],
+		//  …mais une prop ne masque pas un libellé écrit sur la même ligne.
+		["\t<X etage={l.etage} /> Étage {l.etage === 0 ? 'RDC' : l.etage}", 1],
 	];
 	let ko = 0;
 	for (const [src, attendu] of cas) {

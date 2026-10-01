@@ -354,7 +354,8 @@ for (const f of tous) {
 //  le précède pas — le laisser au-dessus rendrait le cas zéro permanent.
 //  ⬇️ « terminer un bail » s'ouvre dans la carte (12/09/2026, #889). Le plancher SUIT le relevé.
 //  ⬇️ « noter un prestataire » s'ouvre dans la carte (12/09/2026, #889).
-const PLANCHER_MODALES = 7;
+//  ⬇️ 7 → 6 le 01/10/2026 : la suppression d'un bail passe par `confirmer(SUPPRESSION(…))` (#779).
+const PLANCHER_MODALES = 6;
 if (modalesLues < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${modalesLues} <Modale> recensée(s) dans routes/ et lib/components/, ${PLANCHER_MODALES} ` +

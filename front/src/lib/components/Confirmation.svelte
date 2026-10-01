@@ -34,14 +34,16 @@
       elle-même. Posés à nu, le message et les boutons touchaient les bords de
       la boîte — dans les quarante confirmations du site, au bureau comme au
       téléphone. Les modales écrites à la main, elles, avaient leur marge : c'est
-      en leur faisant prendre CE composant que l'écart est apparu. -->
+      en leur faisant prendre CE composant que l'écart est apparu.
+      ⚠️ Le pied garde `.form-actions` : c'est elle que `lint:soumission` lit pour
+      exiger « Annuler » avant l'action, et elle donne la cible de 44 px au doigt. -->
 <Modale {titre} on:fermer={() => onReponse(false)}>
 	<div class="modal-body">
 		<p class="confirmation-message">{message}</p>
 	</div>
 	<!--  « Annuler » AVANT la validation — la norme du 18/08/2026, vérifiée par
 	      `lint:soumission` sur les formulaires. La même main, le même ordre. -->
-	<div class="modal-footer">
+	<div class="modal-footer form-actions">
 		<button type="button" class="btn btn-outline" on:click={() => onReponse(false)}>
 			{libelleAnnuler}
 		</button>

@@ -934,6 +934,12 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	padding: 1rem 1.25rem;
 	border-top: 1px solid var(--color-border);
 }
+/*  Un pied de boîte qui est AUSSI une rangée d'actions (`Confirmation`, #779) :
+    `.form-actions` lui apporte l'ordre vérifié et la cible au doigt, mais sa
+    marge haute s'ajouterait au padding du pied. */
+.modal-footer.form-actions {
+	margin-top: 0;
+}
 @keyframes fadeIn {
 	from {
 		opacity: 0;
