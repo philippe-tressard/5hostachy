@@ -109,7 +109,6 @@
 	export let statutLabels: Record<string, string> = {};
 	/** Statut actuel de l'objet parent (badge à droite de l'intitulé) */
 	export let currentStatut = '';
-	/** Afficher les cases de partage (WhatsApp / syndic / CS) */
 	/**  🔴 L'ENTITÉ dont ce fil est le quatrième état (#463) : c'est ELLE qui dit
 	 *   quelles sections existent, plus les cinq écrans chacun de son côté (trois
 	 *   recopiaient `sectionPresente(TICKET, 'evolution', …)`, deux passaient `true`
@@ -149,19 +148,9 @@
 	export let avecInterne = false;
 	/** Lié par le parent : lui seul sait ce qu'une entrée interne change chez lui. */
 	export let interne = false;
-	/**
-	 * Section 7 — Photos. Séparée de la 8 le 28/08/2026 (#463) : une prop
-	 * unique ouvrait les DEUX sections d'un coup, ce que le cadre interdit
-	 * (« une section ne se fusionne JAMAIS avec une autre »). Un écran ne
-	 * pouvait donc pas déclarer les Photos présentes et les Documents absents.
-	 */
-	/**  Mode CORRECTION d'une entrée : pré-remplit ce qu'elle porte. Toutes les
-	 *   sections y restent, Suivi compris (01/10/2026) — sauf la Diffusion : la
-	 *   Suite est déjà partie (`sectionsDeLaSuite`). */
+	/** CORRECTION d'une entrée : toutes les sections, sans Diffusion (`sectionsDeLaSuite`). */
 	export let editMode = false;
-	/**  L'état que l'entrée corrigée avait enregistré — vide si c'était un
-	 *   commentaire. `currentStatut` est alors l'état d'AVANT elle : le choisir
-	 *   refait de l'entrée un commentaire (`app/utils/suivi_fil.py`). */
+	/** L'état qu'elle avait enregistré ; `currentStatut` est alors celui d'AVANT elle. */
 	export let initialStatut = '';
 	/** Contenu initial (mode édition) */
 	export let initialContenu = '';
@@ -202,11 +191,10 @@
 				cs: boolean;
 		  }) => Promise<ApercuDiffusion>)
 		| null = null;
-	/** Contrôlé par le parent : est-ce que la sauvegarde API est en cours */
 	/**  Le nom de l'auteur de l'OBJET commenté, jamais celui du commentaire —
 	 *   la règle vit dans `CanauxNotification.svelte`. */
 	export let auteurNom = '';
-
+	/** Contrôlé par le parent : la sauvegarde API est-elle en cours ? */
 	export let saving = false;
 
 	/**  L'assistant IA du Commentaire (#985) : le contexte de l'objet PORTEUR, composé
@@ -255,8 +243,7 @@
 	//  seulement s'il y a un état à proposer : un choix à un seul choix n'est pas
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
-	//  🔄 Le Suivi se CORRIGE aussi (01/10/2026, arbitré à l'écran) : il n'est
-	//  plus réservé à la saisie.
+	//  🔄 Le Suivi se corrige aussi (01/10/2026) : `app/utils/suivi_fil.py`.
 	$: sectionWorkflow = statutOptions.length > 0;
 	//  Ce que la Suite offre — la déclaration ET le droit : `$lib/evolutions`.
 	$: sections = sectionsDeLaSuite(entite, conditions, {
@@ -346,7 +333,6 @@
 			type: evolType,
 			contenu,
 			nouveau_statut: evolType === 'etat' ? nouveauStatut : undefined,
-			//  Une correction ne touche au Suivi que s'il était à l'écran.
 			corrige_suivi: editMode && sectionWorkflow ? true : undefined,
 			fichiers_urls: allFichiersUrls,
 			affaires_liees: affairesLiees.length ? affairesLiees.map((a) => a.id) : undefined,

@@ -34,7 +34,7 @@
 	import { supprimerDocument } from '$lib/gestes-document';
 	import { promouvoirActualite } from '$lib/gestes-actualite';
 	import { currentUser, isCS } from '$lib/stores/auth';
-	import { ticketUrgent, type GestesTicket } from '$lib/tickets';
+	import { OPTIONS_TICKET, ticketUrgent, type GestesTicket } from '$lib/tickets';
 	import ActionsActualite from './ActionsActualite.svelte';
 	import CarteActualite from './CarteActualite.svelte';
 	import SuiteAffaire from './SuiteAffaire.svelte';
@@ -61,9 +61,9 @@
 	export let gestes: GestesTicket;
 	export let correspondance: CorrespondanceAffaire | null = null;
 
-	//  Mise en avant d'une actualité : épinglage et urgence (#1096). Copie de
+	//  Mise en avant d'une actualité : épinglage et urgence (#1096) — les options
+	//  d'une affaire, `OPTIONS_TICKET` (elles y étaient recopiées). Copie de
 	//  travail — on n'écrit dans l'affaire qu'après la réponse du serveur.
-	const OPTIONS: ('epingle' | 'urgente')[] = ['epingle', 'urgente'];
 	const optionsInitiales = () => ({
 		epingle: ticket.epingle ?? false,
 		urgente: ticketUrgent(ticket),
@@ -143,7 +143,7 @@
 			{/key}
 		{:else if mode === 'options'}
 			<PanneauOptionsPublication
-				optionsRendues={OPTIONS}
+				optionsRendues={OPTIONS_TICKET}
 				perimetreCible={ticket.perimetre_cible ?? []}
 				dejaEpingle={ticket.epingle ?? false}
 				bind:options
