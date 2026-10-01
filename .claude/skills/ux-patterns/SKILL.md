@@ -242,6 +242,16 @@ l'ordre dans `EvolForm`, `test_creneaux_suite.py` le créneau chez chaque hôte.
 **L'édition corrige** — une erreur, un oubli, un complément. Le `PATCH` écrit une
 **correction**, jamais une transition.
 
+🔄 **La correction d'une SUITE rouvre toutes ses sections, Suivi compris** (arbitré
+le 01/10/2026 : *« l'édition d'une suite doit permettre de modifier toutes les
+sections éditables et surtout le suivi »*). Elle corrige **l'entrée**, à sa date —
+jamais une étape de plus — ; reprendre l'état d'avant (`statut_avant`, calculé par
+le serveur) en refait un commentaire, et l'affaire ne suit que si c'est sa dernière
+transition (`api/app/utils/suivi_fil.py`). **Sans Diffusion** : la Suite est déjà
+partie. Un seul montage pour la Suite et sa correction, sur les trois cartes —
+`SuiteAffaire` ; côté serveur, `routers/tickets/suite_sections.py` sert l'ajout ET
+la correction. 🔒 `test_correction_suite.py`, `e2e/correction-suite.spec.ts`.
+
 🔴 **La Diffusion a rouvert à l'édition le 18/08/2026**, sur arbitrage : *le CS
 doit pouvoir décider d'envoyer au syndic un objet déjà saisi*. Ce qui rend la
 réouverture sûre n'est **pas** l'interface mais le **serveur** — seule la

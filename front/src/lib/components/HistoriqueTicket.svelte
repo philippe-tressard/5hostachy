@@ -29,64 +29,25 @@
 -->
 <script lang="ts">
 	import { SUITE } from '$lib/gestes';
-	import type { ContexteAssistant } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EtatListe from './EtatListe.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
-	import EvolForm from './EvolForm.svelte';
-	import OptionsEvolutionTicket from './OptionsEvolutionTicket.svelte';
+	import SuiteAffaire from './SuiteAffaire.svelte';
 	import type { Ticket } from '$lib/api';
-	import SectionsSuiteConseil from './SectionsSuiteConseil.svelte';
-	import SuiteConseilEquipement from './SuiteConseilEquipement.svelte';
-	import { equipementDansLaSuite } from '$lib/suite-conseil';
 	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
-	import { fichiersDepuisUrls } from '$lib/fichiers';
-	import { STATUT_TICKET_LABELS, STATUT_TICKET_OPTIONS, optionsVersTicket } from '$lib/tickets';
-	import { evolutionIcone } from '$lib/evolutions';
-	import { destinatairesParDefautDuTicket } from '$lib/lecture-ticket';
-	import { TICKET } from '$lib/entites/ticket';
-	import { conditionsDeLaSuite } from '$lib/formulaire-affaire';
+	import { STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { chargeCorrection, evolutionIcone, type ChargeUtileEvolution } from '$lib/evolutions';
 
 	export let ticketId: number;
-	/** L'affaire : la Suite du conseil en lit la catégorie et les valeurs (#1207). */
+	/**  L'affaire : la Suite et sa correction en DÉRIVENT tout — état, périmètre,
+	 *   options, assistant, motif WhatsApp (`SuiteAffaire`, 01/10/2026). La fiche
+	 *   les calculait et les passait un à un, la liste les recalculait : deux
+	 *   écritures de chaque, qui avaient divergé (l'adresse externe). */
 	export let ticket: Ticket | null = null;
-	/**  Le contexte de l'assistant IA (#985) — composé par la fiche, seule à
-	 *   tenir le ticket entier (`contexteCommentaire`). `null` = pas d'assistant. */
-	export let assistant: ContexteAssistant | null = null;
-	/**  Le nom de l'auteur du TICKET — il nomme le destinataire de « Envoyer une
-	 *   copie à … ». Reçu de la page : ce composant ne tient que le fil. */
-	export let auteurNom = '';
-	export let statutCourant = '';
-	/**  Périmètre courant du ticket — affiché en badge dans le formulaire, pour
-	     qu'on voie d'où l'on part avant de le préciser (#497). */
-	export let perimetreCourant: string[] = [];
-	/**  Motif interdisant le groupe WhatsApp — relayé tel quel jusqu'à
-	 *   `CanauxNotification`. Calculé par la fiche, qui tient le ticket : ce
-	 *   composant ne reçoit que des primitives, et recalculer la règle ici en
-	 *   ferait une deuxième écriture. */
-	export let whatsappInterdit = '';
-	/**  🔴 LES OPTIONS DE PUBLICATION DU TICKET, à l'état où elles sont
-	 *   (05/09/2026) : le formulaire de commentaire les montre, et ce qu'on
-	 *   enregistre DEVIENT l'état — comme sur une actualité.
-	 *
-	 *   La fiche les calcule avec `optionsDuTicket()` : ce composant ne reçoit que
-	 *   des primitives, et refaire le pont ici en ferait une deuxième écriture. */
-	export let optionsInitiales = {
-		epingle: false,
-		urgente: false,
-		brouillon: false,
-		suiviKanban: false,
-	};
-
-	//  Une COPIE : ce que l'utilisateur coche ne doit pas modifier le ticket avant
-	//  l'enregistrement. Remontée à chaque ouverture du formulaire, pour repartir
-	//  de l'état réel plutôt que de la dernière saisie abandonnée.
-	let options = { ...optionsInitiales };
-	$: if (ouvert) options = { ...optionsInitiales };
 	export let evolutions: TicketEvolution[] = [];
 	/** Le fil n'a pas pu être chargé : on le DIT, au lieu d'un fil vide. */
 	export let erreurSuivi = '';
@@ -99,40 +60,13 @@
 	let enregistre = false;
 	let corrige = false;
 
-	//  L'aperçu d'un commentaire : le message part avec l'HISTORIQUE du ticket
-	//  derrière lui, et c'est justement ce que personne ne relit avant d'envoyer
-	//  (#498). Le brouillon est composé par le serveur, avec les fonctions de
-	//  l'envoi — l'écran n'en fabrique aucune partie.
-	//
-	//  La saisie vient du formulaire lui-même : lui seul la tient, et une lecture
-	//  depuis ici rendrait des valeurs vides.
-	function apercuDuCommentaire(saisie: {
-		contenu: string;
-		fichiers_urls: string[];
-		whatsapp: boolean;
-		syndic: boolean;
-		cs: boolean;
-	}) {
-		return ticketsApi.apercuDiffusion({
-			ticket_id: ticketId,
-			commentaire: saisie.contenu,
-			fichiers_urls: saisie.fichiers_urls,
-			destinataire_syndic: saisie.syndic,
-			destinataire_cs: saisie.cs,
-			partager_whatsapp: saisie.whatsapp,
-		});
-	}
-
-	async function ajouter(e: CustomEvent) {
+	async function ajouter(e: CustomEvent<ChargeUtileEvolution>) {
 		enregistre = true;
 		try {
-			//  Les options voyagent AVEC l'entrée : c'est le serveur qui les applique
-			//  au ticket (`commun.appliquer_options`), pas un second appel qui pourrait
+			//  Les options voyagent AVEC l'entrée (`SuiteAffaire` les y a mises) :
+			//  c'est le serveur qui les applique, pas un second appel qui pourrait
 			//  réussir à moitié.
-			await ticketsApi.addEvolution(ticketId, {
-				...e.detail,
-				...optionsVersTicket(options),
-			});
+			await ticketsApi.addEvolution(ticketId, e.detail);
 			ouvert = false;
 			dispatch('change');
 			toast('success', e.detail?.nouveau_statut ? 'Statut mis à jour' : 'Commentaire ajouté');
@@ -143,22 +77,14 @@
 		}
 	}
 
-	//  🔴 Ni `type` ni `nouveau_statut` : une CORRECTION n'est pas une transition.
-	//  Les envoyer ferait apparaître dans le fil une étape que le ticket n'a jamais
-	//  franchie (`test_correction_pas_transition.py`).
-	async function corriger(e: CustomEvent) {
+	//  🔄 TOUTES les sections se corrigent, Suivi compris (01/10/2026) — la
+	//  correction reste sur l'entrée, à sa date, sans ajouter d'étape au fil
+	//  (`app/utils/suivi_fil.py`). La charge : `chargeCorrection`, seule écriture.
+	async function corriger(e: CustomEvent<ChargeUtileEvolution>) {
 		if (enEdition === null) return;
 		corrige = true;
 		try {
-			await ticketsApi.updateEvolution(ticketId, enEdition, {
-				contenu: e.detail?.contenu ?? '',
-				fichiers_urls: e.detail?.fichiers_urls,
-				assiste_ia: e.detail?.assiste_ia,
-				//  🔴 La correction du périmètre part AUSSI (01/09/2026). Sans cette
-				//  ligne, le sélectionneur s'affiche et n'envoie rien — la case
-				//  cochée qui ne fait rien, exactement le défaut de la veille.
-				perimetre_cible: e.detail?.perimetre_cible,
-			});
+			await ticketsApi.updateEvolution(ticketId, enEdition, chargeCorrection(e.detail));
 			enEdition = null;
 			dispatch('change');
 			toast('success', 'Entrée corrigée');
@@ -211,72 +137,33 @@
 		</svelte:fragment>
 
 		<svelte:fragment slot="edition" let:evol>
-			{#key enEdition}
-				<EvolForm
-					entrees={evolutions}
-					idPrefixe="tk-evol-edit-{evol.id}"
-					{auteurNom}
-					titre={SUITE.libelleModifier}
-					editMode={true}
-					initialContenu={evol.contenu || ''}
-					initialFichiers={fichiersDepuisUrls(evol.fichiers_urls)}
-					entite={TICKET}
-					{assistant}
-					peutPreciserPerimetre={$isCS}
-					{perimetreCourant}
-					initialPerimetre={evol.perimetre_cible ?? []}
-					saving={corrige}
-					on:submit={corriger}
-					on:cancel={() => (enEdition = null)}
-				/>
-			{/key}
+			{#if ticket}
+				{#key enEdition}
+					<SuiteAffaire
+						{ticket}
+						{evol}
+						entrees={evolutions}
+						peutSuivre={$isCS}
+						saving={corrige}
+						on:submit={corriger}
+						on:cancel={() => (enEdition = null)}
+					/>
+				{/key}
+			{/if}
 		</svelte:fragment>
 	</RubriqueHistorique>
 
-	{#if ouvert}
+	{#if ouvert && ticket}
 		<div class="evol-form card">
 			{#key ouvert}
-				<EvolForm
+				<SuiteAffaire
+					{ticket}
 					entrees={evolutions}
-					idPrefixe="tk-evol"
-					{auteurNom}
-					titre={SUITE.libelle}
-					demanderApercu={apercuDuCommentaire}
-					statutOptions={STATUT_TICKET_OPTIONS}
-					statutLabels={STATUT_TICKET_LABELS}
-					currentStatut={statutCourant}
-					entite={TICKET}
-					affaireLiable={$isCS ? ticketId : null}
-					initialDestinataires={ticket?.public_cible ?? []}
-					destinatairesParDefaut={ticket ? destinatairesParDefautDuTicket(ticket) : null}
-					bind:confidentiel={options.brouillon}
-					conditions={conditionsDeLaSuite(ticket)}
-					{assistant}
-					peutPreciserPerimetre={$isCS}
-					{perimetreCourant}
-					peutDiffuser={$isCS}
-					{whatsappInterdit}
-					showEmail={$isCS}
+					peutSuivre={$isCS}
 					saving={enregistre}
-					avantSuivi={!!ticket && equipementDansLaSuite(ticket, $isCS)}
 					on:submit={ajouter}
 					on:cancel={() => (ouvert = false)}
-				>
-					<!--  Les MÊMES composants que la liste des tickets, chacun à son
-					      rang (#1326) : Équipement, puis Quand et Intervenant, puis
-					      la Mise en avant. -->
-					<svelte:fragment slot="avant_suivi" let:partage>
-						{#if ticket}<SuiteConseilEquipement {ticket} {partage} />{/if}
-					</svelte:fragment>
-					<svelte:fragment slot="specifiques" let:premiere let:partage>
-						{#if ticket}
-							<SectionsSuiteConseil {ticket} {premiere} {partage} bind:options />
-						{/if}
-					</svelte:fragment>
-					<svelte:fragment slot="mise_en_avant">
-						<OptionsEvolutionTicket bind:options />
-					</svelte:fragment>
-				</EvolForm>
+				/>
 			{/key}
 		</div>
 	{/if}

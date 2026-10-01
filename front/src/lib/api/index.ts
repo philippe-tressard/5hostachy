@@ -7,6 +7,7 @@ import type {
 	AffaireVisee,
 	AnnonceHallPrefill,
 	ApercuDiffusion,
+	CorrectionEvolution,
 	CorrespondanceAffaire,
 	EpinglesCompte,
 	FluxResponse,
@@ -164,15 +165,11 @@ export const tickets = {
 	updateEvolution: (
 		id: number,
 		evolId: number,
-		//  `perimetre_cible` : la CORRECTION d'une erreur d'affectation
-		//  (01/09/2026). Le serveur ne la propage au ticket que si cette entrée
-		//  est la dernière à avoir précisé — `app/utils/perimetre_fil.py`.
-		data: {
-			contenu?: string;
-			fichiers_urls?: string[];
-			perimetre_cible?: string[];
-			assiste_ia?: boolean;
-		},
+		//  Toutes les sections d'une Suite se corrigent (01/10/2026), Suivi
+		//  compris. Le serveur ne propage au ticket le périmètre et l'état que si
+		//  cette entrée est la dernière à les avoir posés — `perimetre_fil.py`,
+		//  `suivi_fil.py`.
+		data: CorrectionEvolution,
 	) => api.patch<TicketEvolution>(`/tickets/${id}/evolutions/${evolId}`, data),
 	//  Réservé à l'ADMIN côté serveur (`require_admin`) : effacer une trace que
 	//  d'autres ont pu lire n'est pas corriger son propre texte.

@@ -8,6 +8,10 @@ pas pour une simple parole.
 
 Ce test lit chaque `<EvolForm … entite={TICKET} …>` du front qui n'est pas une
 CORRECTION (`editMode`) et exige `statutOptions`.
+
+Depuis le 01/10/2026 (#1520), la Suite ET sa correction passent par UN montage,
+`SuiteAffaire` : la carte, la fiche et l'actualité le rendent, et c'est lui qui
+porte les pastilles. Le test l'exige de lui, et exige des hôtes qu'ils le rendent.
 """
 
 from __future__ import annotations
@@ -23,6 +27,13 @@ _PAS_UNE_SUITE = {
     "lib/components/FilMessagesTicket.svelte": "« Répondre » poste un MESSAGE (`POST …/messages`), qui ne change aucun état",
 }
 _BALISE = re.compile(r"<EvolForm\b(.*?)>", re.S)
+#: Le montage unique de la Suite d'affaire, et les écrans qui le rendent.
+_MONTAGE = "lib/components/SuiteAffaire.svelte"
+_HOTES = (
+    "lib/components/CarteTicket.svelte",
+    "lib/components/HistoriqueTicket.svelte",
+    "lib/components/ActualiteEnListe.svelte",
+)
 
 
 def _suites_sans_pastilles(texte: str) -> int:
@@ -34,18 +45,24 @@ def _suites_sans_pastilles(texte: str) -> int:
     return manques
 
 
+def test_le_montage_unique_porte_les_pastilles_et_les_hotes_le_rendent():
+    montage = (_FRONT / _MONTAGE).read_text(encoding="utf-8")
+    balises = _BALISE.findall(montage)
+    assert len(balises) == 1, f"{_MONTAGE} : {len(balises)} EvolForm, un attendu."
+    assert "statutOptions=" in balises[0] and "STATUT_TICKET_OPTIONS" in balises[0], (
+        f"{_MONTAGE} ne propose plus les pastilles d'état (#1094)."
+    )
+    for hote in _HOTES:
+        texte = (_FRONT / hote).read_text(encoding="utf-8")
+        assert "<SuiteAffaire" in texte, f"{hote} ne rend plus la Suite par `SuiteAffaire`."
+        assert not [a for a in _BALISE.findall(texte) if "entite={TICKET}" in a], (
+            f"{hote} remonte un EvolForm à côté de `SuiteAffaire` : deux montages divergent."
+        )
+
+
 def test_chaque_suite_d_affaire_porte_les_pastilles():
+    """Tout AUTRE `EvolForm` d'affaire, hors correction, porte les pastilles."""
     fichiers = [p for p in _FRONT.rglob("*.svelte")]
-    trouvees = sum(
-        1
-        for p in fichiers
-        for a in _BALISE.findall(p.read_text(encoding="utf-8"))
-        if "entite={TICKET}" in a and "editMode" not in a
-    )
-    #  Cas zéro : la carte et la fiche, au moins.
-    assert trouvees >= 2, (
-        f"{trouvees} Suite(s) d'affaire relevée(s) — le motif de lecture est cassé."
-    )
     fautes = {
         p.relative_to(_FRONT).as_posix()
         for p in fichiers

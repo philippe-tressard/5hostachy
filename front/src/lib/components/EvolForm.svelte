@@ -155,8 +155,14 @@
 	 * (« une section ne se fusionne JAMAIS avec une autre »). Un écran ne
 	 * pouvait donc pas déclarer les Photos présentes et les Documents absents.
 	 */
-	/** Mode édition : masque le statut, pré-remplit contenu+fichiers */
+	/**  Mode CORRECTION d'une entrée : pré-remplit ce qu'elle porte. Toutes les
+	 *   sections y restent, Suivi compris (01/10/2026) — sauf la Diffusion : la
+	 *   Suite est déjà partie (`sectionsDeLaSuite`). */
 	export let editMode = false;
+	/**  L'état que l'entrée corrigée avait enregistré — vide si c'était un
+	 *   commentaire. `currentStatut` est alors l'état d'AVANT elle : le choisir
+	 *   refait de l'entrée un commentaire (`app/utils/suivi_fil.py`). */
+	export let initialStatut = '';
 	/** Contenu initial (mode édition) */
 	export let initialContenu = '';
 	/** Fichiers initiaux (mode édition) */
@@ -214,7 +220,7 @@
 	// ── State ─────────────────────────────────────────────────────────────────
 	let contenu = initialContenu;
 	let assisteIA = false; // une proposition de l'assistant a été appliquée (#985)
-	let nouveauStatut = '';
+	let nouveauStatut = initialStatut;
 	let evolType: 'commentaire' | 'etat' = 'commentaire';
 	let partagerWhatsapp = defaultPartagerWhatsapp;
 	let envoyerSyndic = defaultEnvoyerSyndic;
@@ -249,13 +255,16 @@
 	//  seulement s'il y a un état à proposer : un choix à un seul choix n'est pas
 	//  un choix. Elle ne porte plus la NATURE de l'entrée — c'est l'appelant qui
 	//  la décide (#426).
-	$: sectionWorkflow = !editMode && statutOptions.length > 0;
+	//  🔄 Le Suivi se CORRIGE aussi (01/10/2026, arbitré à l'écran) : il n'est
+	//  plus réservé à la saisie.
+	$: sectionWorkflow = statutOptions.length > 0;
 	//  Ce que la Suite offre — la déclaration ET le droit : `$lib/evolutions`.
 	$: sections = sectionsDeLaSuite(entite, conditions, {
 		perimetre: peutPreciserPerimetre,
 		piecesJointes: avecPiecesJointes,
-		affairesLiees: affaireLiable !== null && !editMode,
+		affairesLiees: affaireLiable !== null,
 		diffusion: peutDiffuser,
+		correction: editMode,
 		creneaux: {
 			avant_suivi: !!$$slots.avant_suivi && avantSuivi,
 			specifiques: !!$$slots.specifiques,
@@ -290,7 +299,7 @@
 	//  Les trois règles du fil vivent dans `$lib/evolutions` depuis le 05/09/2026 :
 	//  « quel geste ? », « le texte est-il requis ? », « y a-t-il quelque chose à
 	//  enregistrer ? » se posent pareil sur les trois entités qui portent un fil.
-	$: evolType = typeDeLEntree(editMode, nouveauStatut, currentStatut);
+	$: evolType = typeDeLEntree(nouveauStatut, currentStatut);
 	//  Le commentaire est REQUIS quand l'entrée n'apporte que lui : sans texte ni
 	//  changement d'état, l'entrée ne dirait rien. Pas de mention « (optionnel) » :
 	//  l'absence d'astérisque suffit (`ux-patterns` §9).
@@ -334,9 +343,11 @@
 		if (!canSubmit) return;
 		refDiffusion?.fermerApercu();
 		dispatch('submit', {
-			type: editMode ? 'commentaire' : evolType,
+			type: evolType,
 			contenu,
-			nouveau_statut: !editMode && evolType === 'etat' ? nouveauStatut : undefined,
+			nouveau_statut: evolType === 'etat' ? nouveauStatut : undefined,
+			//  Une correction ne touche au Suivi que s'il était à l'écran.
+			corrige_suivi: editMode && sectionWorkflow ? true : undefined,
 			fichiers_urls: allFichiersUrls,
 			affaires_liees: affairesLiees.length ? affairesLiees.map((a) => a.id) : undefined,
 			partager_whatsapp: sections.diffusion ? partagerWhatsapp : undefined,
@@ -377,7 +388,7 @@
 			idTitre="{idPrefixe}-workflow-titre"
 			options={statutOptions}
 			valeur={nouveauStatut || currentStatut}
-			badge={libelleStatutActuel}
+			badge={editMode ? '' : libelleStatutActuel}
 			on:choisir={(e) => (nouveauStatut = e.detail)}
 		/>
 	{/if}
