@@ -33,7 +33,8 @@ RPI2="${RPI2:-ptressard@192.168.1.223}"
 
 #: Seuils, tous nommés — un nombre nu dans un test est un seuil qu'on ne peut pas
 #: discuter. Cf. socle 04 §18 : un seuil se règle sur le RÉGIME de ce qu'il surveille.
-CACHE_BUILD_MAX_GB=40      # régime stationnaire ≈ 29 Go (plafond 10 + 6 nuits × 3,1)
+CACHE_BUILD_MAX_GB=40      # régime : le cache servi dans les 24 h, 10 à 11 Go mesurés (#1524) ;
+                           # 40 Go = une purge qui ne retire plus rien, comme le 01/10/2026
 LOG_MAX_MO=5
 BATTEMENT_DEPLOY_MIN=20    # auto-deploy écrit ~12 lignes/h sur le standby
 
