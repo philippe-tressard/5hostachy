@@ -22,7 +22,8 @@ va dans `PAS_DES_NOMS`. Une entrée qui ne sert plus fait échouer le contrôle.
 Formes repérées :
 - une civilité suivie d'un nom (« Mme DUPONT »), partout ;
 - « Prénom NOM » ou « NOM Prénom » en littéral entier ou entre guillemets
-  français, partout ;
+  français, partout — et un prénom composé suivi d'un nom à casse mixte
+  (« Jean-Hervé ForT »), qui avait échappé au premier passage ;
 - la valeur d'un champ de nom (`nom=`, `prenom=`, `auteur_nom:`…), dans les
   tests et l'e2e — dans l'application, ces champs portent des libellés.
 
@@ -81,7 +82,13 @@ _MAJ = "A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜ"
 _MIN = "a-zàâäçéèêëîïôöùûü"
 _PRENOM = rf"[{_MAJ}][{_MIN}]+(?:-[{_MAJ}][{_MIN}]+)?"
 _NOM = rf"[{_MAJ}][{_MAJ}'-]+[{_MAJ}]"
-_PERSONNE = rf"(?:{_PRENOM}\**\s+{_NOM})|(?:{_NOM}\s+{_PRENOM})"
+#: Un prénom COMPOSÉ annonce une personne même quand le nom suit à casse mixte
+#: (« Jean-Hervé ForT ») : la forme exacte d'une saisie signalée à l'écran.
+_PRENOM_COMPOSE = rf"[{_MAJ}][{_MIN}]+-[{_MAJ}][{_MIN}]+"
+_PERSONNE = (
+    rf"(?:{_PRENOM}\**\s+{_NOM})|(?:{_NOM}\s+{_PRENOM})"
+    rf"|(?:{_PRENOM_COMPOSE}\s+[{_MAJ}][{_MAJ}{_MIN}'-]+)"
+)
 
 CIVILITE = re.compile(
     rf"\b(?:M\.|Mme|Madame|Monsieur)\s+((?:{_PRENOM}\s+)?(?:{_NOM}|[{_MAJ}][{_MIN}]+))"
@@ -151,6 +158,9 @@ def test_chaque_forme_est_reperee():
     assert noms_dans("Monsieur Zorglub,", donnees=False) == ["ZORGLUB"]
     assert noms_dans("const A = 'Hélène ZORGLUB';", donnees=False) == ["HELENE", "ZORGLUB"]
     assert noms_dans("« ZORGLUB Hélène » à la lettre Z", donnees=False) == ["ZORGLUB", "HELENE"]
+    #  Prénom composé + nom à casse mixte : la forme d'un signalement à l'écran,
+    #  « Prénom NomMalSaisi » — elle avait échappé au premier passage (01/10/2026).
+    assert noms_dans("« Jean-Hervé ZorgluB », signalé", donnees=False) == ["JEAN-HERVE", "ZORGLUB"]
 
 
 def test_aucun_nom_reel_dans_le_code_ni_les_tests():
