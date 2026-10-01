@@ -12,8 +12,7 @@
  *  un descriptif d'onglet identique. Ce test lit ce qu'on VOIT : les deux textes
  *  sont administrables, et seul l'écran rendu dit ce qui s'affiche.
  */
-import { expect, test } from '@playwright/test';
-import { simulerApi } from './aides';
+import { expect, simulerApi, test } from './aides';
 
 const PHRASE_RESIDENCE = 'Informations, plans et documents de la copropriété.';
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { confirmer } from '$lib/confirmation';
 	import { messageErreur } from '$lib/erreurs';
 	import { nomAffiche } from '$lib/noms';
@@ -143,7 +144,7 @@
 				.filter((o) => o.user_id)
 				.map((o) => ({ user_id: Number(o.user_id), type_lien: o.type_lien }));
 			await lotsApi.patchImport(editId, {
-				lot_id: editLot ? Number(editLot) : null,
+				lot_id: nombreOuNull(editLot),
 				utilisateurs,
 				notes_admin: editNotes || null,
 			});

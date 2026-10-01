@@ -527,6 +527,13 @@ les modules source `/src/lib/api/…` et la page tombe en 500 (`standards/05` §
 Cette ligne disait jusqu'au 27/09/2026 que ces tests « s'arrêtent aux écrans
 publics » : c'était vrai, et ce n'est plus une limite.
 
+🔒 **Un spec prend `test` et `expect` dans `./aides`**, jamais dans
+`@playwright/test` (`npm run lint:e2e-test`) : ce `test`-là fait échouer toute
+**exception de la page**. Une réponse simulée qui ne se devine pas au chemin se
+déclare dans `REPONSES_PAR_DEFAUT` (`e2e/aides.ts`), avec le type qu'elle imite.
+Pourquoi — un titre figé par une exception que personne n'écoutait, et quatre
+specs verts qui en cachaient une : `standards/05` §13, #1475.
+
 Lancer en local : `cd front && npm run e2e`.
 Un délai d'hydratation dépassé se lit avec le bilan **⏱ hydratation** en fin de
 sortie (et `test-results/hydratation.json`) : la durée du test fautif comparée à

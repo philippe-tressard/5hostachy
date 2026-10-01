@@ -18,6 +18,7 @@
   « Vigik », ni « télécommande », ni un chemin d'API.
 -->
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { acces as accesApi, admin as adminApi } from '$lib/api';
 	import { nomAffiche } from '$lib/noms';
@@ -154,10 +155,10 @@
 			//  champ vidé depuis #1194.
 			() =>
 				modele.api.patch(id, {
-					lot_id: editLot ? Number(editLot) : null,
+					lot_id: nombreOuNull(editLot),
 					chez_locataire: editChezLoc,
 					//  Le locataire qui l'a en main : il en devient porteur (#1194).
-					user_locataire_id: editChezLoc && editLocataire ? Number(editLocataire) : null,
+					user_locataire_id: editChezLoc ? nombreOuNull(editLocataire) : null,
 					notes_admin: editNotes || null,
 					...editBooleens,
 				}),

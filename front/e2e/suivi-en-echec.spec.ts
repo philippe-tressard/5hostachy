@@ -10,8 +10,8 @@
  *  `api/tests/test_recherche_affaires.py`. Ce test tient l'ÉCRAN : quelle que
  *  soit la cause d'un échec, la fiche et la carte le disent.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const AFFAIRE = {
 	id: 7,

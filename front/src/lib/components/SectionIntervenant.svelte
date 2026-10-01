@@ -18,6 +18,7 @@
   (`ux-patterns` §0, seuil des listes courtes).
 -->
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
@@ -81,7 +82,7 @@
 	let choix = '';
 	$: choix = prestataireId === null ? '' : String(prestataireId);
 	const choisir = () => {
-		prestataireId = choix === '' ? null : Number(choix);
+		prestataireId = nombreOuNull(choix);
 		//  Un autre intervenant n'a pas ce contrat : le serveur l'effacerait.
 		if (!contratsDuPrestataire(contrats, prestataireId).some((c) => c.id === contratId))
 			contratId = null;
@@ -91,7 +92,7 @@
 	$: siens = contratsDuPrestataire(contrats, prestataireId);
 	let choixContrat = '';
 	$: choixContrat = contratId === null ? '' : String(contratId);
-	const choisirContrat = () => (contratId = choixContrat === '' ? null : Number(choixContrat));
+	const choisirContrat = () => (contratId = nombreOuNull(choixContrat));
 	$: cadre = contratId !== null ? 'sous contrat' : siens.length ? 'hors contrat' : '';
 </script>
 

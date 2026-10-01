@@ -21,8 +21,8 @@
  *  ⚠️ Les deux assertions de taille sont opposées, comme dans
  *  `cible-tactile.spec.ts` : 44 px au doigt, et rien de changé à la souris.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 /** Rend l'écran Résidence et ouvre « Ajouter un plan ». */
 async function ouvrirAjoutPlan(page: Page) {

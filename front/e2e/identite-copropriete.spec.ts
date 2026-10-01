@@ -8,8 +8,8 @@
  *  sur la requête réellement envoyée, ce que la factorisation devait corriger
  *  — un nombre vidé part à `null`, des deux écrans.
  */
-import { expect, test, type Page, type Request } from '@playwright/test';
-import { attendreHydratation, MEMBRE_CS, simulerApi } from './aides';
+import type { Page, Request } from '@playwright/test';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 const FICHE = {

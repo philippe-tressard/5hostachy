@@ -26,7 +26,7 @@
  *  Sans le second cas, élargir la cible pour tout le monde passerait au vert et
  *  détruirait la densité des rangées d'actions au bureau.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test } from './aides';
 
 //  Une page publique quelconque : on ne s'intéresse qu'à ses feuilles de style.
 const PAGE = '/auth/connexion';

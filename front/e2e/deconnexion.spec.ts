@@ -10,8 +10,7 @@
  *  l'utilisateur ; la session est révoquée AVANT de quitter la page ; on arrive
  *  sur la mire.
  */
-import { expect, test } from '@playwright/test';
-import { MEMBRE_CS, attendreHydratation, simulerApi } from './aides';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 test('la déconnexion révoque, puis quitte sans passer par un écran vidé', async ({ page }) => {
 	const ordre: string[] = [];

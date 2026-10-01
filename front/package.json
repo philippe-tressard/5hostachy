@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.90.0",
+	"version": "2.90.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -107,6 +107,7 @@
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:type-lot": "node scripts/check-type-lot.mjs --selftest && node scripts/check-type-lot.mjs",
 		"lint:identite-copropriete": "node scripts/check-identite-copropriete.mjs --selftest && node scripts/check-identite-copropriete.mjs",
+		"lint:nombre-saisi": "node scripts/check-nombre-saisi.mjs --selftest && node scripts/check-nombre-saisi.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
 		"lint:entete-carte": "node scripts/check-entete-carte.mjs --selftest && node scripts/check-entete-carte.mjs",
 		"lint:pictogrammes": "node scripts/check-pictogrammes.mjs --selftest && node scripts/check-pictogrammes.mjs",
@@ -131,6 +132,7 @@
 		"lint:vocabulaire-ecran": "node scripts/check-vocabulaire-ecran.mjs",
 		"lint:choix-requis": "node scripts/check-choix-requis.mjs",
 		"lint:onglet-local": "node scripts/check-onglet-local.mjs",
+		"lint:e2e-test": "node scripts/check-e2e-test.mjs",
 		"lint:intitules-section": "node scripts/check-intitules-section.mjs",
 		"lint:section-lue": "node scripts/check-section-lue.mjs",
 		"e2e": "playwright test",

@@ -10,6 +10,7 @@
   et la catégorie choisie, liées.
 -->
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { prestataires as prestApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { slug } from '$lib/texte';
@@ -42,7 +43,7 @@
 	async function saveCompteurPrestataire(cfg: any) {
 		try {
 			const updated = await prestApi.updateCompteurConfig(cfg.id, {
-				prestataire_id: editCompteurPrestId ? Number(editCompteurPrestId) : null,
+				prestataire_id: nombreOuNull(editCompteurPrestId),
 			});
 			compteurConfigs = compteurConfigs.map((c) => (c.id === cfg.id ? updated : c));
 			editCompteurId = null;

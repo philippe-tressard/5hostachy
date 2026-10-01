@@ -22,7 +22,7 @@
  */
 import { readFileSync } from 'node:fs';
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './aides';
 
 const SOURCES = ['../docs/manuel-utilisateur.html', '../api/app/seed/contenus_legaux.py'];
 

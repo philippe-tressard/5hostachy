@@ -13,6 +13,8 @@
   `.form-grid`, à côté de ce qui lui est propre.
 -->
 <script context="module" lang="ts">
+	import { nombreOuNull } from '$lib/utils';
+
 	/** Ce que `CoproprieteUpdate` accepte de l'identité ; un nombre vide vaut `''`
 	 *  ou `null` le temps de la saisie (cf. `chargeIdentite`). */
 	export type IdentiteCopropriete = {
@@ -45,15 +47,11 @@
 	 *  jamais à `''` — Pydantic refuse la chaîne vide sur un `Optional[int]` — ni
 	 *  omis : omis, il ne s'effacerait pas. Les autres clés passent telles quelles.
 	 *
-	 *  🔴 « Vide » vaut `''` OU `null` : un `<input type="number">` vidé rend
-	 *  `null` par `bind:value` (Svelte). Ne tester que `''` envoyait `Number(null)`,
-	 *  soit ZÉRO lot — le défaut de l'administration jusqu'au 01/10/2026, trouvé
-	 *  par `e2e/identite-copropriete`. */
+	 *  La règle du vide est celle de `nombreOuNull` (#1516) : `''` ET `null`. */
 	export function chargeIdentite<T extends IdentiteCopropriete>(valeurs: T) {
 		const charge: Record<string, unknown> = { ...valeurs };
 		for (const champ of NUMERIQUES) {
-			const v = valeurs[champ];
-			charge[champ] = v === '' || v === null || v === undefined ? null : Number(v);
+			charge[champ] = nombreOuNull(valeurs[champ]);
 		}
 		return charge;
 	}

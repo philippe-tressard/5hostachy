@@ -15,8 +15,8 @@
  *  suit les CONTRATS servis (et non un champ de la fiche), et le filtre trie
  *  les cartes réellement rendues.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 const OTIS = {
 	id: 1,

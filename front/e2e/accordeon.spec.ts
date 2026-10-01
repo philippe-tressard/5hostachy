@@ -12,8 +12,7 @@
  *  2. les `<details>` natifs, que le layout coordonne par un seul écouteur —
  *     sans replier celui qui contient le bloc qu'on ouvre.
  */
-import { expect, test } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 test('Nouvelle affaire : déplier une section replie celle qu’on avait dépliée', async ({
 	page,

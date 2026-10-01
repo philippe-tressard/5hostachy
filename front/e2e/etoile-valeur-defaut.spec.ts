@@ -18,8 +18,8 @@
  *  qui n'a pas de défaut, reste rouge tant qu'il est vide — sans quoi un test
  *  qui ne verrait jamais de rouge passerait sur n'importe quoi.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 /** L'étoile du titre de section qui porte ce libellé. */
 const etoile = (page: Page, libelle: string) =>

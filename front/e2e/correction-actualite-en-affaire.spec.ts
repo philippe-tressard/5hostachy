@@ -13,8 +13,7 @@
  *  Ce test-ci tient l'autre moitié du contrat : ce que l'écran envoie vraiment,
  *  et qu'il dit « modifiée » sans message d'erreur.
  */
-import { expect, test } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const ACTUALITE = {
 	id: 50,

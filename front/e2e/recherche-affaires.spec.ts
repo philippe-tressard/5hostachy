@@ -7,8 +7,8 @@
  *  l'ordre du serveur, « Trouvé dans … » et le passage surligné sur la carte,
  *  les Archives tues puis ajoutées sur demande — au bureau comme au téléphone.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
 const affaire = (id: number, titre: string, archivee = false) => ({
 	id,

@@ -8,8 +8,8 @@
  *  pas tenir : le lien a un nom, une adresse, s'active au clavier — et la carte
  *  entière reste cliquable, sur bureau comme au doigt.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const URGENCE = {
 	id: 'tk_7',

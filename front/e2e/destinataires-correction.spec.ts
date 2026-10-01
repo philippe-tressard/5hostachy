@@ -23,8 +23,8 @@
  *  liste (la fiche n'offre pas « Modifier ») : aucun gel, 3 à 9 ms par clic.
  *  Sa FORME est reprise ci-dessous, anonymisée.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const QUESTION = {
 	id: 50,
@@ -74,8 +74,9 @@ async function repond(page: Page) {
 	).resolves.toBe(true);
 }
 
-async function corrigerEnEtude(page: Page, erreurs: string[]) {
-	page.on('pageerror', (e) => erreurs.push(e.message));
+//  Une exception de la page fait échouer le test : c'est la règle de tous les
+//  specs (`test` de `./aides`, #1475), plus besoin de l'écouter ici.
+async function corrigerEnEtude(page: Page) {
 	await simulerApi(page, (chemin) => {
 		if (chemin === '/api/tickets') return [QUESTION];
 		if (chemin === '/api/tickets/50') return QUESTION;
@@ -91,8 +92,7 @@ async function corrigerEnEtude(page: Page, erreurs: string[]) {
 test('Étude & travaux en correction : ajouter puis retirer un destinataire ne fige pas l’écran', async ({
 	page,
 }) => {
-	const erreurs: string[] = [];
-	await corrigerEnEtude(page, erreurs);
+	await corrigerEnEtude(page);
 
 	await pastille(page, /Copropriétaires occupants/).click();
 	await repond(page);
@@ -110,5 +110,4 @@ test('Étude & travaux en correction : ajouter puis retirer un destinataire ne f
 	await repond(page);
 	await expect(pastille(page, /Conseil syndical/)).toHaveClass(/active/);
 	await expect(section(page).locator('button.active')).toHaveCount(1);
-	expect(erreurs).toEqual([]);
 });

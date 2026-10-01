@@ -21,7 +21,7 @@
  *
  *  Couvrir le lien lui-même demande une session : voir `e2e/README.md`.
  */
-import { test, expect } from '@playwright/test';
+import { expect, test } from './aides';
 
 test.describe('Squelette et accessibilité au clavier', () => {
 	test('la racine mène à la page de connexion', async ({ page }) => {
@@ -70,8 +70,9 @@ test.describe('Squelette et accessibilité au clavier', () => {
 	}
 
 	test('aucune erreur de SCRIPT au chargement', async ({ page }) => {
+		//  Les exceptions de la page sont refusées par le `test` de `./aides` (#1475) ;
+		//  ce test-ci y ajoute les `console.error` de l'application.
 		const erreurs: string[] = [];
-		page.on('pageerror', (e) => erreurs.push(String(e)));
 		page.on('console', (m) => {
 			if (m.type() !== 'error') return;
 			//  ⚠️ Les échecs de CHARGEMENT DE RESSOURCE sont écartés, et il faut le

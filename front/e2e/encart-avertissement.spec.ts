@@ -10,8 +10,7 @@
  *  L'écran est public (connexion) : aucune API à simuler. Le verrouillage des
  *  majuscules se déclare sur l'événement, comme le navigateur le fait.
  */
-import { expect, test } from '@playwright/test';
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 //  Les jetons de `socle.css`, tels que le navigateur les calcule.
 const FOND = 'rgb(253, 243, 224)'; //  --color-warning-fond

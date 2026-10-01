@@ -1822,6 +1822,13 @@ jobs:
         working-directory: front
         run: npm run lint:identite-copropriete
 
+      # Une valeur saisie se convertit en nombre par `nombreOuNull` (#1516,
+      # 01/10/2026). Un champ numérique vidé rend `null` : `v === '' ? null :
+      # Number(v)` l'envoyait à 0 — un relevé de consommation à 0 m³.
+      - name: Nombres saisis convertis par une seule règle
+        working-directory: front
+        run: npm run lint:nombre-saisi
+
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
       # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle
@@ -2102,6 +2109,20 @@ jobs:
       - name: Le contrôle des onglets s'éprouve lui-même
         working-directory: front
         run: node scripts/check-onglet-local.mjs --selftest
+
+      # ──────────────────────────────────────────────────────────────────────
+      # Une exception de la page fait échouer le test e2e (01/10/2026)
+      # `deconnexion.spec` tombait au hasard : une exception — l'API simulée
+      # rendait `[]` pour le fil — figeait le titre, et personne ne l'écoutait.
+      # Le `test` de `e2e/aides.ts` la refuse ; un spec qui prendrait celui de
+      # Playwright y échapperait (#1475).
+      - name: Les tests de navigateur prennent le test qui refuse les exceptions
+        working-directory: front
+        run: npm run lint:e2e-test
+
+      - name: Le contrôle du test e2e s'éprouve lui-même
+        working-directory: front
+        run: node scripts/check-e2e-test.mjs --selftest
 
       # ──────────────────────────────────────────────────────────────────────
       # Un intitulé de section du cadre ne s'écrit pas en dur (22/09/2026)

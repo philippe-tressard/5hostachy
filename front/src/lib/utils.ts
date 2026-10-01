@@ -386,3 +386,17 @@ export function localisationMembre(m: {
 	if (m.etage != null) parts.push(etageLabel(m.etage, { suffixe: true }));
 	return parts.join(' — ');
 }
+
+/**
+ * Une valeur SAISIE en nombre, ou `null` si le champ est vide (#1516).
+ *
+ * 🔴 Un `<input type="number" bind:value>` vidé rend `null` (Svelte), pas `''` :
+ * `v === '' ? null : Number(v)` envoyait alors `Number(null)`, soit **0** — un
+ * relevé à 0 m³, un nombre de lots à 0. Et `v ? Number(v) : null` effaçait un
+ * **0** réellement saisi. Vide (`''`, `null`, `undefined`, blancs) → `null` ;
+ * tout le reste → `Number(v)`, 0 compris. 🔒 `npm run lint:nombre-saisi`.
+ */
+export function nombreOuNull(v: unknown): number | null {
+	if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return null;
+	return Number(v);
+}

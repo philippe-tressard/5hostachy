@@ -27,9 +27,7 @@
  *  porte l'astérisque. Le texte lu doit donc finir par `EMAIL*` — sans espace,
  *  et en capitales, les deux règles du même lot.
  */
-import { expect, test } from '@playwright/test';
-
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 test.describe("L'astérisque des champs obligatoires", () => {
 	test('est collée au libellé, sans espace', async ({ page }) => {

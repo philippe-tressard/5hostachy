@@ -21,8 +21,7 @@
  *  être tenu est ce que l'utilisateur LIT dans le bandeau. Un contrôle statique
  *  verrait que `messageErreur` est appelée ; il ne verrait pas la phrase.
  */
-import { test, expect } from '@playwright/test';
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 const REFUS = 'Identifiants incorrects.';
 

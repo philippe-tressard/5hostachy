@@ -9,8 +9,8 @@
  *  d'assemblée (et ne part pas sans elles), le règlement ne décrit aucun
  *  périmètre. La copie du plan avait déjà divergé une fois (#470).
  */
-import { expect, test, type Page, type Request } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page, Request } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const CATEGORIES = [
 	{ id: 11, code: 'plan_residence', nom: 'Plans' },

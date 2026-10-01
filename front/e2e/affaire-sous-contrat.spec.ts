@@ -10,8 +10,8 @@
  *  Le test rend le vrai formulaire, API simulée : c'est l'écran qui décide
  *  d'offrir le choix, et de taire la fréquence — aucun test unitaire ne le voit.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const OTIS = { id: 1, nom: 'Otis', specialite: 'ascenseur', actif: true };
 const MARTIN = { id: 2, nom: 'Plomberie Martin', specialite: 'plomberie', actif: true };

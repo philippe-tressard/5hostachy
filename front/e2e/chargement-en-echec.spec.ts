@@ -10,8 +10,8 @@
  *  `lint:catch-vide` refuse la forme dans le code ; ce test tient l'ÉCRAN, sur
  *  les cas où le silence coûtait une donnée.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, MEMBRE_CS, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 
@@ -77,4 +77,29 @@ test('Communauté : la file de modération illisible le dit au conseil', async (
 	await attendreHydratation(page);
 
 	await expect(page.locator('.etat-erreur').first()).toBeVisible();
+});
+
+test('Admin : la réception des réponses illisible ne s’offre pas en formulaire vide (#1475)', async ({
+	page,
+}) => {
+	await simulerApi(page, (chemin) => (chemin === '/api/auth/me' ? ADMIN : undefined));
+	await page.goto('/admin?onglet=smtp');
+	await attendreHydratation(page);
+	//  Les sections s'imbriquent : la plus profonde qui porte le titre est la bonne.
+	const section = page
+		.locator('section')
+		.filter({ hasText: 'Réception des réponses aux affaires' })
+		.last();
+	await expect(section.getByRole('button', { name: 'Enregistrer' })).toBeVisible();
+
+	//  La page a lu le paramétrage. On quitte l'onglet, la lecture tombe en panne,
+	//  on revient : la section se remonte et RELIT pour elle seule — la page, non.
+	//  Avant #1475, elle restait un formulaire de valeurs par défaut, « Enregistrer »
+	//  actif, et l'échec partait en exception non rattrapée.
+	await page.getByRole('button', { name: 'Pages légales', exact: true }).click();
+	await enEchec(page, '/api/config/admin');
+	await page.getByRole('button', { name: 'SMTP', exact: true }).click();
+
+	await expect(section.getByText('Paramétrage illisible — rien n’a été modifié')).toBeVisible();
+	await expect(section.getByRole('button', { name: 'Enregistrer' })).toHaveCount(0);
 });

@@ -19,6 +19,7 @@
   jour SA liste, sans aiguillage par mode.
 -->
 <script lang="ts">
+	import { nombreOuNull } from '$lib/utils';
 	import { documents as documentsApi } from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { supprimerDocument } from '$lib/gestes-document';
@@ -111,7 +112,7 @@
 			//  en `résidence` côté DROITS, les périmètres dans `perimetre_cible`.
 			...(avecPerimetre ? { perimetreCible: s.perimetre } : {}),
 			...(avecAg
-				? { annee: s.annee ? Number(s.annee) : undefined, dateAg: s.dateAg || undefined }
+				? { annee: nombreOuNull(s.annee) ?? undefined, dateAg: s.dateAg || undefined }
 				: {}),
 		});
 	}
@@ -143,7 +144,7 @@
 				//  et que le serveur n'acceptait pas non plus.
 				description: correction.description,
 				perimetre_cible: correction.perimetre,
-				annee: correction.annee ? Number(correction.annee) : null,
+				annee: nombreOuNull(correction.annee),
 				date_ag: correction.dateAg || null,
 			});
 			documents = documents.map((d) => (d.id === docId ? corrige : d));

@@ -7,8 +7,8 @@
  *  ce qui part au serveur, ce que la page affiche ensuite, et le titre de
  *  catégorie passé par un slot, qui doit garder le style de la page.
  */
-import { expect, test, type Page } from '@playwright/test';
-import { attendreHydratation, simulerApi } from './aides';
+import type { Page } from '@playwright/test';
+import { attendreHydratation, expect, simulerApi, test } from './aides';
 
 const QUESTIONS = [
 	{

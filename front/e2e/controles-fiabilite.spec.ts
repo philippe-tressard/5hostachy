@@ -12,8 +12,7 @@
  *    rapport de chaque nœud, pas tous ;
  *  - aucune ligne qui déborde au doigt (profil mobile).
  */
-import { expect, test } from '@playwright/test';
-import { MEMBRE_CS, simulerApi } from './aides';
+import { expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 

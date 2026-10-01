@@ -18,9 +18,7 @@
  *  connexion, donc le témoin se pose dans une page publique
  *  (`standards/05-tests-et-garde-fous.md` §13).
  */
-import { expect, test } from '@playwright/test';
-
-import { attendreHydratation } from './aides';
+import { attendreHydratation, expect, test } from './aides';
 
 type Temoin = { overflow: string; fermees: string[] };
 
