@@ -23,6 +23,7 @@ from tests.aides_liens_email import (
     liens_des_modeles_email,
 )
 from tests.aides_routes_front import _page_du_lien
+from tests.aides_sources import modules_app
 
 _API_DIR = pathlib.Path(__file__).resolve().parents[1]
 _RACINE = _API_DIR.parent
@@ -63,11 +64,20 @@ def _pages_gardees() -> set[pathlib.Path]:
     (`/espace-cs/annonces-hall`) sans avoir de dossier, et la comparer à
     `/espace-cs` la laissait passer. Le lien est résolu vers la page qui le rend
     (`aides_routes_front._page_du_lien`, `reroute` compris), puis confronté ici.
+
+    Une garde posée par un `+layout.svelte` vaut pour toutes les pages de son
+    dossier : c'est ainsi que `/admin` est réservé, et le balayage des seules
+    pages ne le voyait pas (#1505, 01/10/2026).
     """
+
+    def garde(fichier: pathlib.Path) -> bool:
+        return bool(_MOTIF_GARDE.search(fichier.read_text(encoding="utf-8-sig")))
+
+    layouts = [layout.parent for layout in _ROUTES.rglob("+layout.svelte") if garde(layout)]
     return {
         page
         for page in _ROUTES.rglob("+page.svelte")
-        if _MOTIF_GARDE.search(page.read_text(encoding="utf-8-sig"))
+        if garde(page) or any(page.parent.is_relative_to(dossier) for dossier in layouts)
     }
 
 
@@ -83,6 +93,20 @@ def _vers_une_page_reservee(
         if page in gardees:
             fautifs[lien] = page
     return fautifs
+
+
+#: Modèles qui visent `/admin` ET n'ont qu'un destinataire : le gestionnaire du
+#: site, administrateur par construction (`destinataires.site_manager_user_id`),
+#: ou à défaut l'« E-mail administrateur ». Arbitré le 01/10/2026 (#1505) : le
+#: bouton mène au geste à faire, et seul un administrateur peut le faire.
+#: Chaque entrée est tenue dans les deux sens : elle doit encore viser une page
+#: réservée, et ne partir que par `get_site_manager_notification_email`.
+_RESERVES_AU_GESTIONNAIRE = {
+    "alerte_systeme": "alerte du contrôle de santé — à traiter dans Admin",
+    "compte_en_attente": "un compte à valider — Admin › Utilisateurs",
+    "etage_divergent": "un étage qui contredit le lot — Admin › Audit des lots",
+    "acces_apparies_auto": "des badges créés à relire — Admin › Import",
+}
 
 
 @pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
@@ -107,6 +131,7 @@ def test_aucun_modele_email_ne_vise_une_route_reservee():
     fautifs = [
         f"modèle « {lien.modele} » → {lien.adresse}  (gardée : {page.relative_to(_ROUTES)})"
         for lien, page in _vers_une_page_reservee(liens_des_modeles_email(), gardees).items()
+        if lien.modele not in _RESERVES_AU_GESTIONNAIRE
     ]
     assert not fautifs, (
         "modèle(s) d'e-mail visant une page que le front réserve à un rôle — "
@@ -142,6 +167,45 @@ def test_le_controle_lit_les_liens_des_boutons():
     assert not manquants, (
         f"lien(s) de bouton non relevés : {manquants} — l'extraction ne voit plus "
         "les ancres composées par `fragments.bouton()`"
+    )
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_les_exceptions_servent_encore():
+    """Une exception qui ne vise plus de page réservée est un oubli : on la retire."""
+    reserves = {
+        lien.modele for lien in _vers_une_page_reservee(liens_des_modeles_email(), _pages_gardees())
+    }
+    mortes = sorted(set(_RESERVES_AU_GESTIONNAIRE) - reserves)
+    assert not mortes, f"exception(s) qui ne servent plus — à retirer : {mortes}"
+
+
+def test_les_exceptions_ne_partent_qu_au_gestionnaire():
+    """La raison déclarée doit rester VRAIE : l'envoi lit le gestionnaire du site.
+
+    Un module qui envoie l'un de ces modèles sans passer par
+    `get_site_manager_notification_email` l'adresserait à quelqu'un d'autre —
+    un résident, le CS — que le bouton renverrait au tableau de bord.
+    """
+    fautifs = []
+    for modele in _RESERVES_AU_GESTIONNAIRE:
+        envoyeurs = [m for m in modules_app() if f'code="{modele}"' in m.source]
+        if not envoyeurs:
+            fautifs.append(f"{modele} : aucun envoi trouvé (cas zéro)")
+        fautifs += [
+            f"{modele} : {m.rel} ne passe pas par get_site_manager_notification_email"
+            for m in envoyeurs
+            if "get_site_manager_notification_email(" not in m.source
+        ]
+    assert not fautifs, "\n  ".join(["envoi(s) hors du gestionnaire du site :", *fautifs])
+
+
+@pytest.mark.skipif(not _ROUTES.is_dir(), reason="front/ absent de ce checkout")
+def test_une_garde_de_layout_couvre_ses_pages():
+    """`/admin` n'a aucune garde dans sa page : elle vit dans `admin/+layout.svelte`."""
+    assert _page_du_lien("/admin") in _pages_gardees(), (
+        "/admin n'est pas vue comme réservée — les gardes posées par un "
+        "`+layout.svelte` ne sont plus lues (#1505)"
     )
 
 
