@@ -51,6 +51,7 @@
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import TransfertsVerses from './TransfertsVerses.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import { fichiersDepuisUrls } from '$lib/fichiers';
@@ -155,6 +156,7 @@
 		supprimer: void;
 		annuler: void;
 		evoluer: unknown;
+		transfert_defait: void;
 	}>();
 
 	$: dateAffichee = ticket.mis_a_jour_le ?? ticket.cree_le;
@@ -343,6 +345,13 @@
 					</svelte:fragment>
 				</FicheLecture>
 
+				<!--  Défaire un transfert de courriel, comme sur la fiche (#1482) : la
+				      carte n'ouvre pas la fiche, et c'était le seul endroit du geste. -->
+				<TransfertsVerses
+					ticketId={ticket.id}
+					encadre={false}
+					on:change={() => dispatch('transfert_defait')}
+				/>
 				<EtatListe compact erreur={erreurSuivi} />
 				{#if evolutions.length > 0}
 					<div class="tk-fil">

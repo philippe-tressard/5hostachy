@@ -110,6 +110,17 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	max-width: var(--largeur-saisie);
 }
 
+/*  La colonne de LECTURE d'une fiche (01/10/2026) — en-tête, fil de messages,
+    transferts, Historique : un même bord droit. 720 px y était écrit quatre
+    fois, dont une sur `.messages` dans la page, que l'extraction de
+    `FilMessagesTicket` avait rendue morte (le style d'une page n'atteint pas
+    un composant enfant) : la barre « Répondre » s'étalait jusqu'au bord de
+    l'écran, seule de la fiche. Une classe portée par l'élément lui-même ne
+    se perd pas au découpage suivant. */
+.colonne-lecture {
+	max-width: 720px;
+}
+
 /* ── Norme UX : carte de liste expansible ─────────────────────────────────
 
    Actualités, tickets et calendrier affichent la même carte. Les trois la

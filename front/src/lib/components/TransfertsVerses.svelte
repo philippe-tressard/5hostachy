@@ -13,9 +13,15 @@
     depuis), et les boutons disparaissent : on ne propose pas un geste refusé ;
   - `peut_deplacer` : déplacer exige de modérer.
 
-  ⚠️ Rendu sur la FICHE de l'affaire seulement, pas dans la carte de la liste :
-  c'est là que mène la notification « Transfert versé », et un geste de
-  réparation n'a pas à peser sur chaque carte dépliée.
+  🔴 Rendu sur la fiche ET dans la carte dépliée de la liste (01/10/2026). Il
+  n'était que sur la fiche, « là que mène la notification » — et la carte n'a
+  aucun lien vers la fiche : son 🔗 COPIE l'adresse. Un transfert versé par
+  erreur sur TK-109008 ne se défaisait donc que si l'on retrouvait la
+  notification ou le journal des relèves. Le coût est une lecture par
+  dépliage, comme le fil ; vide, le bloc ne rend rien.
+
+  `encadre={false}` dans la carte : pas de carte dans la carte (#425), le titre
+  descend d'un cran sous celui de la carte.
 -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -30,6 +36,8 @@
 	import { messageErreur } from '$lib/erreurs';
 
 	export let ticketId: number;
+	/** `false` dans la carte d'une liste : pas de carte dans la carte (#425). */
+	export let encadre = true;
 
 	/** L'affaire a changé sous les yeux : la page recharge ce qu'elle montre. */
 	const dispatch = createEventDispatcher<{ change: void }>();
@@ -119,8 +127,14 @@
 </script>
 
 {#if transferts.length > 0}
-	<section class="card transferts" aria-labelledby="transferts-titre">
-		<h2 id="transferts-titre" class="transferts-titre">
+	<section
+		class="transferts"
+		class:card={encadre}
+		class:colonne-lecture={encadre}
+		class:dans-carte={!encadre}
+		aria-labelledby="transferts-titre-{ticketId}"
+	>
+		<h2 id="transferts-titre-{ticketId}" class="transferts-titre">
 			<Icon name="inbox" size={16} /> Transferts de courriel
 		</h2>
 		{#each transferts as t (t.id)}
@@ -178,8 +192,17 @@
 
 <style>
 	.transferts {
-		max-width: 720px;
 		margin-bottom: 1rem;
+	}
+	/*  Dans la carte : posé comme le fil qu'il précède (`.tk-fil`), un filet
+	    au-dessus au lieu d'un cadre, et le titre au corps d'une section. */
+	.dans-carte {
+		margin: 0.9rem 0 0;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.dans-carte .transferts-titre {
+		font-size: var(--fs-md);
 	}
 	.transferts-titre {
 		display: flex;

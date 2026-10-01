@@ -9,7 +9,13 @@
  *  - aucun bloc quand il n'y a rien à défaire ;
  *  - un transfert bloqué dit pourquoi, et ne propose aucun geste ;
  *  - « Annuler » demande confirmation, puis appelle la bonne route ;
- *  - « Déplacer » ne propose ni l'affaire ouverte, ni une affaire close.
+ *  - « Déplacer » ne propose ni l'affaire ouverte, ni une affaire close ;
+ *  - le bloc est AUSSI dans la carte dépliée de la liste, et un geste y relit
+ *    l'affaire (01/10/2026 : il n'était que sur la fiche, que la carte n'ouvre
+ *    pas — TK-109008 ne se défaisait qu'en retrouvant la notification) ;
+ *  - la fiche n'a qu'un bord droit : la barre « Répondre » s'étalait jusqu'au
+ *    bord de l'écran, sa largeur posée par la page sur une classe que
+ *    l'extraction du fil avait emportée.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { simulerApi } from './aides';
@@ -51,8 +57,27 @@ const CHOIX = [
 	{ id: 9, numero: 'TK-200002', titre: 'Portillon ancien', statut: 'résolu' },
 ];
 
+/** Les gestes du bloc, interceptés : ce qu'ils appellent, et rien d'autre. */
+async function intercepterGestes(page: Page): Promise<string[]> {
+	const appels: string[] = [];
+	//  Déclarée APRÈS `simulerApi` : Playwright essaie d'abord la dernière route.
+	await page.route(
+		(url) => url.pathname.startsWith('/api/tickets/7/transferts/'),
+		(route) => {
+			appels.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
+			return route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ ticket_id: 7, numero: 'TK-109008' }),
+			});
+		},
+	);
+	return appels;
+}
+
 async function simuler(page: Page, transferts: unknown[]) {
 	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/tickets') return [AFFAIRE];
 		if (chemin === '/api/tickets/7') return AFFAIRE;
 		if (chemin === '/api/tickets/7/transferts') return transferts;
 		if (chemin === '/api/tickets/choix') return CHOIX;
@@ -68,19 +93,7 @@ test('rien à défaire : aucun bloc', async ({ page }) => {
 
 test('un transfert se défait d’un geste, un transfert bloqué dit pourquoi', async ({ page }) => {
 	await simuler(page, [DEFAISABLE, BLOQUE]);
-	const appels: string[] = [];
-	//  Déclarée APRÈS `simulerApi` : Playwright essaie d'abord la dernière route.
-	await page.route(
-		(url) => url.pathname.startsWith('/api/tickets/7/transferts/'),
-		(route) => {
-			appels.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
-			return route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ ticket_id: 7, numero: 'TK-109008' }),
-			});
-		},
-	);
+	const appels = await intercepterGestes(page);
 
 	await page.goto('/tickets/7');
 	const bloc = page.locator('section.transferts');
@@ -110,4 +123,55 @@ test('un transfert se défait d’un geste, un transfert bloqué dit pourquoi', 
 	await expect(boite).toContainText('quitteront cette affaire');
 	await boite.getByRole('button', { name: 'Annuler le transfert' }).click();
 	await expect.poll(() => appels).toEqual(['POST /api/tickets/7/transferts/11/annuler']);
+});
+
+test('la carte dépliée de la liste offre le même geste, et relit l’affaire', async ({ page }) => {
+	await simuler(page, [DEFAISABLE]);
+	const appels = await intercepterGestes(page);
+	const relectures: string[] = [];
+	page.on('request', (r) => {
+		const chemin = new URL(r.url()).pathname;
+		if (chemin === '/api/tickets/7' || chemin === '/api/tickets/7/evolutions')
+			relectures.push(chemin);
+	});
+
+	await page.goto('/tickets');
+	const carte = page.locator('.carte-liste', { hasText: 'Portillon bloqué' });
+	await carte.click();
+	const bloc = carte.locator('section.transferts');
+	await expect(bloc.getByText('Transferts de courriel')).toBeVisible();
+	//  Pas de carte dans la carte (#425) : le bloc n'y porte pas `.card`.
+	await expect(bloc).not.toHaveClass(/(^|\s)card(\s|$)/);
+	await carte.screenshot({ path: `test-results/transferts-carte-${test.info().project.name}.png` });
+
+	relectures.length = 0;
+	await bloc.getByRole('button', { name: 'Annuler le transfert' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Annuler le transfert' }).click();
+	await expect.poll(() => appels).toEqual(['POST /api/tickets/7/transferts/11/annuler']);
+	//  Le geste a pu changer le statut, retirer des Suites, archiver : la liste relit les deux.
+	await expect
+		.poll(() => [...new Set(relectures)].sort())
+		.toEqual(['/api/tickets/7', '/api/tickets/7/evolutions']);
+});
+
+test('la fiche n’a qu’un bord droit — la barre « Répondre » comprise', async ({ page }) => {
+	await simuler(page, [DEFAISABLE]);
+	await page.goto('/tickets/7');
+	const blocs = {
+		'en-tête': page.locator('.ticket-header'),
+		Répondre: page.locator('.carte-repondre'),
+		transferts: page.locator('section.transferts'),
+		Historique: page.locator('.bloc-historique'),
+	};
+	const bords: Record<string, number> = {};
+	for (const [nom, bloc] of Object.entries(blocs)) {
+		//  Cas zéro : un bloc absent ne prouverait rien sur sa largeur.
+		await expect(bloc, `le bloc « ${nom} » n’est pas rendu`).toBeVisible();
+		const boite = await bloc.boundingBox();
+		bords[nom] = Math.round((boite?.x ?? 0) + (boite?.width ?? 0));
+	}
+	const reference = bords['en-tête'];
+	for (const [nom, bord] of Object.entries(bords)) {
+		expect(bord, `le bloc « ${nom} » ne s’arrête pas au bord de l’en-tête`).toBe(reference);
+	}
 });

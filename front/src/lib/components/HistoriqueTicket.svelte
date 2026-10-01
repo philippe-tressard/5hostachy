@@ -183,7 +183,7 @@
 	}
 </script>
 
-<div class="bloc-historique">
+<div class="bloc-historique colonne-lecture">
 	<EtatListe compact erreur={erreurSuivi} />
 	<RubriqueHistorique
 		avecFiltre
@@ -287,7 +287,6 @@
 	    page ne serait pas atteinte (panne des pastilles nues, v2.67.11). */
 	.bloc-historique {
 		margin-top: 1.5rem;
-		max-width: 720px;
 	}
 	.evol-form {
 		margin-top: 1rem;
