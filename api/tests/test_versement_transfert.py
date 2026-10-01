@@ -3,7 +3,8 @@
 Demandé le 30/09/2026 : *« annuler ces ajouts (en une fois), et/ou réaffecter à
 une autre affaire, et/ou créer une nouvelle affaire »*. Arbitré le même jour :
 celui qui a transféré et l'administrateur ; aucun délai, mais plus dès qu'un
-autre a écrit une Suite après le transfert.
+autre a écrit une Suite après le transfert. Resserré le 01/10/2026 : plus dès
+qu'une Suite a été écrite, la sienne comprise, ni sous un transfert suivant.
 
 Les scènes sont celles de `test_courriel_transfert.py`, écrites dans
 `aides_courriel.py` : le fil du portillon (Jean le 26/09, Jean le 29/09, puis
@@ -256,13 +257,15 @@ def test_une_suite_d_un_AUTRE_apres_le_transfert_eteint_le_geste(lieu):
     )
     session.commit()
 
-    assert "quelqu'un d'autre" in versements.motif_bloquant(session, v)
+    assert "depuis ce transfert" in versements.motif_bloquant(session, v)
     with pytest.raises(HTTPException) as e:
         versements.annuler(session, v)
     assert e.value.status_code == 409
 
 
-def test_une_suite_de_celui_qui_a_transfere_ne_l_eteint_pas(lieu):
+def test_une_suite_de_celui_qui_a_transfere_l_eteint_aussi(lieu):
+    """Arbitré le 01/10/2026 : sa réponse s'appuie sur ce qui a été versé.
+    L'annulation restait offerte après elle — c'est le défaut signalé."""
     session, ticket, syndic, cs, objet, _ = lieu
     v = _dans_le_ticket(session, cs, ticket, syndic, objet)
     session.add(
@@ -270,7 +273,32 @@ def test_une_suite_de_celui_qui_a_transfere_ne_l_eteint_pas(lieu):
     )
     session.commit()
 
-    assert versements.motif_bloquant(session, v) is None
+    assert "depuis ce transfert" in versements.motif_bloquant(session, v)
+
+
+def test_seul_le_transfert_le_plus_recent_se_defait(lieu):
+    """Deux transferts du même fil dans une affaire proposaient chacun
+    « Annuler » (01/10/2026) : on défait du plus récent au plus ancien."""
+    session, ticket, syndic, cs, objet, _ = lieu
+    premier = _dans_le_ticket(session, cs, ticket, syndic, objet)
+    avant = versements.etat_avant(session, ticket, premier.cle_fil)
+    second = versements.ouvrir_versement(session, cs, ticket, avant, objet, creee=False)
+    session.add(
+        TicketEvolution(
+            ticket_id=ticket.id,
+            type="commentaire",
+            contenu="J'approuve également.",
+            auteur_id=cs.id,
+            versement_id=second.id,
+        )
+    )
+    session.commit()
+
+    assert "annulez-le d'abord" in versements.motif_bloquant(session, premier)
+    assert versements.motif_bloquant(session, second) is None
+    versements.annuler(session, second)
+    session.commit()
+    assert versements.motif_bloquant(session, premier) is None
 
 
 # ── Qui ───────────────────────────────────────────────────────────────────────
