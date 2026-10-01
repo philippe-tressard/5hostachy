@@ -249,5 +249,6 @@
 	    même objet ne sont pas livrables — cet écran était simplement resté hors
 	    du lot qui a aligné les huit autres onglets (#501). `.form-grid` aussi :
 	    sa colonne de 220px était celle de `champs.css`, recopiée — à `auto-fill`
-	    près, sans effet pour six champs qui remplissent leurs rangées (#779). */
+	    près (tolérance de `lint:charte`), sans effet pour six champs qui
+	    remplissent leurs rangées (#779). */
 </style>

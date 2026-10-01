@@ -65,8 +65,9 @@ export const TOLERANCES = {
 	//  espacement — jamais la règle entière ». C'est exactement ce qu'ils font.
 	'lib/components/ChampsPrestataire.svelte::form-grid':
 		'colonnes de 180 px et gap resserré, même raison',
-	'lib/components/OngletCopropriete.svelte::form-grid':
-		'`auto-fill` et non `auto-fit` — les champs ne s’étirent pas quand il en manque',
+	//  `OngletCopropriete` en portait une (`auto-fill`), retirée le 01/10/2026
+	//  (#779) : ses six champs remplissent leurs rangées, la différence ne se
+	//  voyait jamais — et ils sont désormais ceux de `ChampsIdentiteCopropriete`.
 	'lib/components/AnnuaireConseil.svelte::form-grid':
 		'colonnes de 150 px et gap resserré — la fiche d’un membre du CS tient des champs très courts',
 	//  ✅ La « pile » de `FormulaireFaq` (la dette nommée ici depuis le 31/08) est

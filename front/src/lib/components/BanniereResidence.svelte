@@ -16,9 +16,9 @@
 	export let peutModifier = false;
 
 	let envoi = false;
+	let champ: HTMLInputElement;
 
-	async function remplacerPhoto(e: Event) {
-		const champ = e.target as HTMLInputElement;
+	async function remplacerPhoto() {
 		const fichier = champ.files?.[0];
 		if (!fichier) return;
 		envoi = true;
@@ -46,10 +46,18 @@
 			</div>
 		{/if}
 		{#if peutModifier}
-			<label class="photo-change-btn" class:uploading={envoi}>
+			<!--  Un vrai BOUTON qui ouvre le sélecteur masqué : une étiquette autour d'un
+			      champ en `display:none` ne s'atteignait qu'à la souris (#779). -->
+			<button
+				type="button"
+				class="photo-change-btn"
+				class:uploading={envoi}
+				disabled={envoi}
+				on:click={() => champ.click()}
+			>
 				{envoi ? '…' : '\u{1F4F8} Changer la photo'}
-				<input type="file" accept="image/*" on:change={remplacerPhoto} class="sr-only" />
-			</label>
+			</button>
+			<input bind:this={champ} type="file" accept="image/*" on:change={remplacerPhoto} hidden />
 		{/if}
 	</div>
 	<figcaption class="photo-caption">{copropriete.nom}</figcaption>
@@ -109,14 +117,11 @@
 			background var(--duree-geste),
 			transform var(--duree-geste) var(--ease-out);
 	}
-	/*  Le champ est masqué À L'ŒIL (`sr-only`), pas au clavier : il garde le
-	    focus, et l'étiquette le montre. En `display: none`, la photo ne se
-	    changeait qu'à la souris (#779, 01/10/2026). */
-	.photo-change-btn:focus-within {
+	.photo-change-btn:focus-visible {
 		outline: 2px solid var(--color-primary);
 		outline-offset: 2px;
 	}
-	.photo-change-btn:active {
+	.photo-change-btn:active:not(:disabled) {
 		transform: scale(0.97);
 	}
 	@media (hover: hover) and (pointer: fine) {
