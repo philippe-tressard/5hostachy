@@ -79,8 +79,27 @@ export const copropriete = {
 		api.get<ContratCandidat[]>(`/copropriete/contrats-candidats/${section}`),
 };
 
+/**
+ *  Un de MES lots — `LotRead` (`api/app/routers/lots.py`).
+ *
+ *  Déclaré dans « Mes lots » sous le nom `LotDetail` jusqu'au 01/10/2026 (#779,
+ *  #1044) : le client rendait `any[]`, l'écran retypait. Le jour où la vue de la
+ *  gestion locative en a eu besoin aussi, il aurait fallu une deuxième copie.
+ */
+export interface MonLot {
+	id: number;
+	numero: string;
+	type: string;
+	type_appartement: string | null;
+	etage: number | null;
+	superficie: number | null;
+	batiment_id: number | null;
+	batiment_nom: string | null;
+	est_logement_de_reference: boolean;
+}
+
 export const lots = {
-	mesList: () => api.get<any[]>('/lots/mes-lots'),
+	mesList: () => api.get<MonLot[]>('/lots/mes-lots'),
 	//  🔴 `get` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint : les écrans
 	//  tiennent leurs lots par `mesList()` / `tous()` et travaillent dessus.
 	//  Relire un lot seul donnait un second exemplaire du même objet, libre de

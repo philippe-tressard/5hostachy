@@ -29,11 +29,21 @@
 	export let onReponse: (ok: boolean) => void;
 </script>
 
+<!--  🔴 Le corps et le pied dans `.modal-body` / `.modal-footer` (01/10/2026,
+      #779) : la boîte `.modal` porte son padding dans ces deux blocs, pas sur
+      elle-même. Posés à nu, le message et les boutons touchaient les bords de
+      la boîte — dans les quarante confirmations du site, au bureau comme au
+      téléphone. Les modales écrites à la main, elles, avaient leur marge : c'est
+      en leur faisant prendre CE composant que l'écart est apparu.
+      ⚠️ Le pied garde `.form-actions` : c'est elle que `lint:soumission` lit pour
+      exiger « Annuler » avant l'action, et elle donne la cible de 44 px au doigt. -->
 <Modale {titre} on:fermer={() => onReponse(false)}>
-	<p class="confirmation-message">{message}</p>
+	<div class="modal-body">
+		<p class="confirmation-message">{message}</p>
+	</div>
 	<!--  « Annuler » AVANT la validation — la norme du 18/08/2026, vérifiée par
 	      `lint:soumission` sur les formulaires. La même main, le même ordre. -->
-	<div class="form-actions">
+	<div class="modal-footer form-actions">
 		<button type="button" class="btn btn-outline" on:click={() => onReponse(false)}>
 			{libelleAnnuler}
 		</button>
@@ -49,7 +59,7 @@
 
 <style>
 	.confirmation-message {
-		margin: 0 0 1.25rem;
+		margin: 0;
 		font-size: var(--fs-lg);
 		line-height: 1.5;
 		white-space: pre-line;

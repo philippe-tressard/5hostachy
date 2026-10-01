@@ -47,8 +47,11 @@ import { fileURLToPath } from 'node:url';
  *  Puis 445 : l'annuaire de l'espace CS, extrait en deux composants (#779).
  *  Puis 438 : le lien vers les consignes de la copropriété, écrit trois fois
  *  et deux fois en `style="…"`, devenu `LienConsignes` (#779).
+ *  Puis 419 : « Mes lots » — la vue locataire extraite (`LotsLocataire`), les
+ *  caractéristiques d'un lot (`CaracteristiquesLot`), deux modales de
+ *  suppression remplacées par `SUPPRESSION` (#779).
  */
-const PLAFOND = 438;
+const PLAFOND = 419;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

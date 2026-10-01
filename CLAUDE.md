@@ -494,6 +494,10 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   (la fixture `session` vient du conftest), comptes, migrations, horloge, scripts
   shell. Une aide partagée vit dans un `tests/aides_*.py`, **jamais** dans un
   fichier de tests qu'un autre importerait. Il y en avait 162 copies.
+- **Un contrôle front « une notion, une source »** — la forme d'une copie refusée
+  hors du fichier qui porte la notion — s'écrit sur `front/scripts/lib-source-unique.mjs`
+  (cas zéro, témoin qui doit servir, exceptions déclarées, commentaires blanchis) :
+  six contrôles en recopiaient le squelette, et l'un n'avait pas de cas zéro (#779).
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)

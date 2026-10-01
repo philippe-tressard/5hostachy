@@ -13,81 +13,39 @@
  *  remplacement du soulignement d'un champ `type` / `lot_type`. Un `replace('_')`
  *  sur une autre valeur n'est pas concerné.
  *
+ *  01/10/2026 : une copie qui avait échappé au motif — `lot.type.charAt(0)
+ *  .toUpperCase() + lot.type.slice(1)`, le sélecteur de lots de « Mes lots », qui
+ *  écrivait « Local_commercial ». Le motif couvre désormais cette forme aussi.
+ *
  *  Lancer : node scripts/check-type-lot.mjs [--selftest]
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { controler, lignesPortant } from './lib-source-unique.mjs';
 
-const RACINE = 'src';
-const SOURCE = 'src/lib/utils.ts';
+/**  `lot.type.replace('_', ' ')`, `lot.type.charAt(0).toUpperCase()`… : le
+ *   libellé d'un TYPE de lot recomposé à la main. */
+const COPIE =
+	/\b(?:lot_)?type\s*\.\s*(?:replace(?:All)?\(\s*(?:['"`]_['"`]|\/_\/g?)|charAt\(\s*0\s*\)\s*\.\s*toUpperCase)/;
 
-/**  `lot.type.replace('_', ' ')`, `monBailData.lot_type.replace(/_/g, ' ')`… :
- *   le soulignement d'un TYPE de lot remplacé à la main. */
-const COPIE = /\b(?:lot_)?type\s*\.\s*replace(?:All)?\(\s*(?:['"`]_['"`]|\/_\/g?)/;
-
-function fichiers(dir, acc = []) {
-	for (const e of readdirSync(dir)) {
-		const p = join(dir, e);
-		if (statSync(p).isDirectory()) fichiers(p, acc);
-		else if (e.endsWith('.svelte') || e.endsWith('.ts')) acc.push(p);
-	}
-	return acc;
-}
-
-export function fautes(source) {
-	return (
-		source
-			.split('\n')
-			.map((ligne, i) => [ligne, i + 1])
-			//  Un commentaire ne pose pas de libellé — celui-ci cite la forme refusée.
-			.filter(([l]) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
-			.filter(([l]) => COPIE.test(l))
-			.map(([, n]) => n)
-	);
-}
-
-function selftest() {
-	const cas = [
-		["\t\t\t\t>{lot.type.replace('_', ' ')}{lot.type_appartement", 1],
-		["\t\t{monBailData.lot_type.replace('_', ' ')}{monBailData.lot_type_appartement", 1],
-		['\t\tconst t = lot.type.replaceAll(/_/g, " ");', 1],
-		//  La forme voulue, jamais signalée.
-		['\t\t\t{lotTypeComplet(lot.type, lot.type_appartement)}', 0],
-		//  Un `replace('_')` sur autre chose qu'un type de lot : hors portée.
-		["\t\t\t{statut.replace('_', ' ')}", 0],
-		//  Un commentaire qui cite la forme refusée.
-		["\t// on écrivait lot.type.replace('_', ' ') ici", 0],
-	];
-	let ko = 0;
-	for (const [ligne, attendu] of cas) {
-		const obtenu = fautes(ligne).length;
-		console.log(`${obtenu === attendu ? 'PASS' : 'FAIL'}  ${ligne.trim()}`);
-		if (obtenu !== attendu) ko = 1;
-	}
-	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
-	return ko;
-}
-
-function main() {
-	if (process.argv.includes('--selftest')) return selftest();
-	const trouves = [];
-	for (const f of fichiers(RACINE)) {
-		const rel = f.split(sep).join('/');
-		if (rel === SOURCE) continue;
-		for (const n of fautes(readFileSync(f, 'utf8'))) trouves.push(`${rel}:${n}`);
-	}
-	if (!trouves.length) {
-		console.log(
-			'✓ Type de lot : aucun libellé recalculé hors de `lotTypeLabel` / `lotTypeComplet`.',
-		);
-		return 0;
-	}
-	console.error(`\n✗ ${trouves.length} libellé(s) de type de lot recalculé(s) à la main :`);
-	for (const t of trouves) console.error(`   ${t}`);
-	console.error(
-		'\n  Employer `lotTypeComplet(type, typeAppartement)` ou `lotTypeLabel(type)` (`$lib/utils`).\n',
-	);
-	return 1;
-}
-
-process.exit(main());
+process.exit(
+	controler({
+		extensions: ['.svelte', '.ts'],
+		sources: ['src/lib/utils.ts'],
+		fautes: lignesPortant(COPIE),
+		cas: [
+			["\t\t\t\t>{lot.type.replace('_', ' ')}{lot.type_appartement", 1],
+			["\t\t{monBailData.lot_type.replace('_', ' ')}{monBailData.lot_type_appartement", 1],
+			['\t\tconst t = lot.type.replaceAll(/_/g, " ");', 1],
+			['\t\t{lot.type.charAt(0).toUpperCase() + lot.type.slice(1)} - {lot.numero}', 1],
+			//  La forme voulue, jamais signalée.
+			['\t\t\t{lotTypeComplet(lot.type, lot.type_appartement)}', 0],
+			//  Un `replace('_')` sur autre chose qu'un type de lot : hors portée.
+			["\t\t\t{statut.replace('_', ' ')}", 0],
+			//  Un commentaire qui cite la forme refusée.
+			["\t// on écrivait lot.type.replace('_', ' ') ici", 0],
+		],
+		ok: 'Type de lot : aucun libellé recalculé hors de `lotTypeLabel` / `lotTypeComplet`',
+		ko: 'libellé(s) de type de lot recalculé(s) à la main',
+		conseil:
+			'Employer `lotTypeComplet(type, typeAppartement)` ou `lotTypeLabel(type)` (`$lib/utils`).',
+	}),
+);

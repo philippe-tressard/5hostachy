@@ -61,8 +61,10 @@ import { fileURLToPath } from 'node:url';
  *  (deux bleus hors charte) devient `--color-primary-light` dans `LienConsignes`.
  *  01/10/2026 : 128 tailles. L’onglet « Sécurité (CSP) » de l’administration
  *  est retiré avec la collecte qu’il lisait (`OngletCsp`, `1.4rem`).
+ *  Puis 169 couleurs : le sélecteur de lots de « Mes lots », qui repeignait des
+ *  pastilles (`#fff` sur le bleu), passe par `ChoixPastilles` (#779).
  */
-const PLAFOND = { couleurs: 170, tailles: 128 };
+const PLAFOND = { couleurs: 169, tailles: 128 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

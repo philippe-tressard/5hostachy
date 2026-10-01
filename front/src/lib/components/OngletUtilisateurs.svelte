@@ -25,6 +25,7 @@
 	import Modale from '$lib/components/Modale.svelte';
 	import ModaleAccueilArrivant from '$lib/components/ModaleAccueilArrivant.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
+	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 
 	/** La liste des comptes — chargée par la page (l'onglet Site la lit aussi). */
 	export let utilisateurs: any[] = [];
@@ -42,7 +43,6 @@
 	let roleEnCours: { user: any; role: string; action: 'ajouter' | 'retirer' } | null = null;
 	let editUser: any | null = null;
 	let editForm = formulaireCompte();
-	let deleteConfirm: any | null = null;
 
 	async function relancerAutoMatch(userId: number, userNom: string) {
 		try {
@@ -107,17 +107,19 @@
 		}
 	}
 
-	async function confirmerDelete() {
-		if (!deleteConfirm) return;
-		const target = deleteConfirm;
-		deleteConfirm = null;
-		try {
-			await adminApi.supprimerUtilisateur(target.id);
-			utilisateurs = utilisateurs.filter((u) => u.id !== target.id);
-			toast('success', `${nomAffiche(target)} supprimé.`);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
+	/**  Supprimer un compte — confirmé par `SUPPRESSION`, comme toute suppression
+	 *   définitive (`lint:suppression-confirmee`, #779). La modale écrite ici à la
+	 *   main disait la même chose autrement, et rendait « Erreur » là où l'API
+	 *   expliquait pourquoi : `confirmerPuis` passe par `messageErreur`. */
+	function supprimerUtilisateur(u: any) {
+		return confirmerPuis(
+			SUPPRESSION(`Le compte de ${nomAffiche(u)} (${u.email}).`),
+			`${nomAffiche(u)} supprimé.`,
+			async () => {
+				await adminApi.supprimerUtilisateur(u.id);
+				utilisateurs = utilisateurs.filter((x) => x.id !== u.id);
+			},
+		);
 	}
 
 	async function toggleBanCommunaute(u: any) {
@@ -342,7 +344,7 @@
 										class="btn-icon-danger"
 										aria-label="Supprimer"
 										title="Supprimer"
-										on:click={() => (deleteConfirm = u)}>&#x1F5D1;️</button
+										on:click={() => void supprimerUtilisateur(u)}>&#x1F5D1;️</button
 									>
 								</div>
 							</td>
@@ -402,26 +404,6 @@
 		{batimentsMap}
 		on:fermer={() => (accueilPour = null)}
 	/>
-{/if}
-
-{#if deleteConfirm}
-	<Modale
-		titre="Supprimer l'utilisateur ?"
-		classeBoite="modal-box card modal-sm"
-		on:fermer={() => (deleteConfirm = null)}
-	>
-		<p style="font-size:var(--fs-base);margin-bottom:1rem">
-			Vous êtes sur le point de supprimer définitivement le compte de
-			<strong>{nomAffiche(deleteConfirm)}</strong> ({deleteConfirm.email}).
-			<br /><span style="color:var(--color-danger);font-size:var(--fs-sm)"
-				>Cette action est irréversible.</span
-			>
-		</p>
-		<div class="modal-footer">
-			<button class="btn btn-outline" on:click={() => (deleteConfirm = null)}>Annuler</button>
-			<button class="btn btn-danger" on:click={confirmerDelete}>Supprimer définitivement</button>
-		</div>
-	</Modale>
 {/if}
 
 <style>

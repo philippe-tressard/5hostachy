@@ -293,7 +293,10 @@ if (fichiersAvecModale < 2) {
 //  permanent, et un contrôle qui échoue toujours finit par être désarmé.
 //  ⬇️ idem — la fenêtre de fin de bail est partie. Le plancher SUIT le relevé.
 //  ⬇️ « noter un prestataire » s'ouvre dans la carte (12/09/2026, #889).
-const PLANCHER_MODALES = 18;
+//  ⬇️ 18 → 16 le 01/10/2026 (#779) : les confirmations de suppression d'un bail
+//  et d'un compte passent par `confirmer(SUPPRESSION(…))` — deux modales
+//  écrites à la main de moins (`lint:suppression-confirmee`).
+const PLANCHER_MODALES = 16;
 if (titresRendus < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +
