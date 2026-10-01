@@ -56,29 +56,41 @@ BUILD_CACHE_KEEP=10737418240        # 10 Go
 BUILD_CACHE_MAX_AGE_H=168           # dimanche : 7 j, périmé pour tous les projets
 BUILD_CACHE_APRES_BUILD_H=24        # après un build : ce que celui-ci n'a pas réutilisé
 
-# ── La taille brute, telle que `docker system df` la rend (« 1.369GB ») ──────
-#  Vide si docker ne répond pas : le bilan le dira INCONNU, jamais OK.
-cache_build_taille() {
-    docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null \
-        | grep -i "^Build Cache" | cut -d"|" -f2 | tr -d " " || true
+# ── La mesure, telle que `docker system df` la rend : « 11.2GB|10.54GB » ──────
+#  La taille, puis sa part récupérable. Vide si docker ne répond pas : le bilan
+#  le dira INCONNU, jamais OK.
+cache_build_mesure() {
+    docker system df --format "{{.Type}}|{{.Size}}|{{.Reclaimable}}" 2>/dev/null \
+        | grep -i "^Build Cache" | cut -d"|" -f2,3 | tr -d " " || true
 }
 
 # ── Le bilan d'une purge (PURE — testable) ───────────────────────────────────
-#  $1 avant · $2 après · $3 âge (h) · $4 passes refusées par docker (vide si aucune)
+#  $1 taille avant · $2 taille après · $3 part récupérable après · $4 âge (h)
+#  · $5 passes refusées par docker (vide si aucune)
 #  Une ligne, préfixée de « ⚠ » dès que la purge n'a pas prouvé son effet.
+#
+#  Le plafond se juge sur CHAQUE part, jamais sur le total. Le total mélange ce
+#  que le plafond borne (la part récupérable) et ce que seule la purge par âge
+#  atteint (la part partagée avec les images, #1524) : sur rpi2, le 01/10/2026,
+#  11,2 Go dont 10,54 récupérables et 0,66 partagés, tout servi dans les 24 h —
+#  comparé au total, le bilan criait au dépassement à chaque build.
+#  - part récupérable au-dessus du plafond : le plafonnement n'a pas pris ;
+#  - part partagée au-dessus du plafond : c'est le défaut de #1524 (30 Go).
 cache_build_bilan() {
-    local avant="$1" apres="$2" age="$3" refus="${4:-}" plafond_go go
+    local avant="$1" apres="$2" recup="$3" age="$4" refus="${5:-}" plafond_go go rgo
     #  `docker system df` parle en Go DÉCIMAUX, le plafond est en octets (10 Gio,
-    #  soit 10,74 Go) : comparés en Gio, 10,43 Go passaient pour un dépassement.
-    #  `cache_go` tronque, d'où la comparaison stricte : on alerte dès 11 Go.
+    #  soit 10,74 Go). `cache_go` tronque, d'où les comparaisons strictes.
     plafond_go=$(( BUILD_CACHE_KEEP / 1000000000 ))
     go=$(cache_go "$apres")
-    if [ "$go" -lt 0 ]; then
-        echo "⚠ Cache de build : taille illisible après purge (avant : ${avant:-?}) — effet INCONNU."
+    rgo=$(cache_go "$recup")
+    if [ "$go" -lt 0 ] || [ "$rgo" -lt 0 ]; then
+        echo "⚠ Cache de build : mesure illisible après purge (${apres:-?}, récupérable ${recup:-?}) — effet INCONNU."
     elif [ -n "$refus" ]; then
         echo "⚠ Cache de build : purge $refus refusée par docker — ${avant:-?} → $apres."
-    elif [ "$go" -gt "$plafond_go" ]; then
-        echo "⚠ Cache de build : ${avant:-?} → $apres, toujours au-dessus du plafond de ${plafond_go} Go."
+    elif [ "$rgo" -gt "$plafond_go" ]; then
+        echo "⚠ Cache de build : ${avant:-?} → $apres, dont $recup récupérables — au-dessus du plafond de ${plafond_go} Go."
+    elif [ $(( go - rgo )) -gt "$plafond_go" ]; then
+        echo "⚠ Cache de build : ${avant:-?} → $apres, dont $(( go - rgo )) Go partagés avec les images — la purge ne les atteint pas (#1524)."
     else
         echo "Cache de build : ${avant:-?} → $apres (inutilisé depuis plus de ${age} h retiré, plafond ${plafond_go} Go)."
     fi
@@ -88,13 +100,13 @@ cache_build_bilan() {
 #  $1 = âge maximal en heures. Écrit le bilan mesuré sur la sortie standard.
 cache_build_borner() {
     local age="$1" avant apres refus=""
-    avant=$(cache_build_taille)
+    avant=$(cache_build_mesure)
     docker builder prune -af --filter "until=${age}h" >/dev/null 2>&1 \
         || refus="par âge"
     docker builder prune -af --max-used-space "$BUILD_CACHE_KEEP" >/dev/null 2>&1 \
         || refus="${refus:+$refus et }au plafond"
-    apres=$(cache_build_taille)
-    cache_build_bilan "$avant" "$apres" "$age" "$refus"
+    apres=$(cache_build_mesure)
+    cache_build_bilan "${avant%%|*}" "${apres%%|*}" "${apres#*|}" "$age" "$refus"
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -112,18 +124,19 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
         fi
     }
     echo "== self-test : bilan de la purge du cache de build =="
-    attendu "sous le plafond → bilan sans alerte"      '^Cache de build : 40.02GB → 1.2GB'  40.02GB 1.2GB 24 ""
-    attendu "sous le gigaoctet → bilan sans alerte"   '^Cache de build : '                  2GB 980MB 24 ""
-    #  Le cas du 01/10/2026 : docker répond 0, rien ne bouge. L'ancienne ligne
-    #  disait « ramené sous 10 Go » ; celle-ci doit le refuser.
-    attendu "purge sans effet au-dessus du plafond"   '^⚠ .*toujours au-dessus'             40.02GB 40.02GB 24 ""
-    #  rpi2, 01/10/2026 : 10,43 Go, sous les 10 Gio du plafond. Comparé en Gio,
-    #  le bilan criait au dépassement — sur un cache tout entier servi la veille.
-    attendu "10,43 Go sous un plafond de 10 Gio → sans alerte" '^Cache de build : '           11.31GB 10.43GB 24 ""
-    attendu "11 Go → alerte"                          '^⚠ .*toujours au-dessus'             12GB 11.2GB 24 ""
-    attendu "taille illisible → INCONNU, jamais OK"   '^⚠ .*INCONNU'                        40GB "" 24 ""
-    attendu "passe refusée par docker → dite"         '^⚠ .*par âge refusée'                3GB 2GB 24 "par âge"
-    attendu "avant illisible, après mesuré → ?"       '^Cache de build : \? → '             "" 1GB 168 ""
+    attendu "sous le plafond → bilan sans alerte"      '^Cache de build : 40.02GB → 1.2GB'  40.02GB 1.2GB 900MB 24 ""
+    attendu "sous le gigaoctet → bilan sans alerte"   '^Cache de build : '                  2GB 980MB 500MB 24 ""
+    #  rpi1, 01/10/2026 : la purge sans `-a` ne bouge rien, 30 Go partagés.
+    #  L'ancienne ligne disait « ramené sous 10 Go » ; celle-ci doit le refuser.
+    attendu "part partagée hors d'atteinte (#1524)"   '^⚠ .*30 Go partagés'                 40.02GB 40.02GB 10.62GB 24 ""
+    #  rpi2, 01/10/2026 : 11,2 Go dont 10,54 récupérables, tout servi dans les
+    #  24 h. Comparé au total, le bilan criait au dépassement à chaque build.
+    attendu "rpi2 du 01/10 : chaque part sous le plafond" '^Cache de build : 11.44GB → 11.2GB' 11.44GB 11.2GB 10.54GB 24 ""
+    attendu "part récupérable au-dessus → alerte"     '^⚠ .*récupérables — au-dessus'       14GB 13GB 12.5GB 24 ""
+    attendu "taille illisible → INCONNU, jamais OK"   '^⚠ .*INCONNU'                        40GB "" "" 24 ""
+    attendu "récupérable illisible → INCONNU"         '^⚠ .*INCONNU'                        40GB 2GB "" 24 ""
+    attendu "passe refusée par docker → dite"         '^⚠ .*par âge refusée'                3GB 2GB 1GB 24 "par âge"
+    attendu "avant illisible, après mesuré → ?"       '^Cache de build : \? → '             "" 1GB 500MB 168 ""
 
     echo "== self-test : la purge garde -a sur ses deux passes =="
     #  Sans `-a`, la part partagée avec les images n'est jamais retirée : c'est
