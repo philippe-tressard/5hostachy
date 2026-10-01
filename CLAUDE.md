@@ -528,6 +528,9 @@ Cette ligne disait jusqu'au 27/09/2026 que ces tests « s'arrêtent aux écrans
 publics » : c'était vrai, et ce n'est plus une limite.
 
 Lancer en local : `cd front && npm run e2e`.
+Un délai d'hydratation dépassé se lit avec le bilan **⏱ hydratation** en fin de
+sortie (et `test-results/hydratation.json`) : la durée du test fautif comparée à
+celle des tests verts du même passage (#1475).
 
 🔒 **Aucun rechargement de Vite pendant les tests** (#1421, 28/09/2026). Une
 dépendance chargée par un `import()` dynamique (`dompurify`, l'éditeur `@tiptap`)
