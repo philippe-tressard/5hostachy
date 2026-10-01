@@ -5,7 +5,7 @@
   ## Pourquoi ce composant (16/08/2026)
 
   La rangée d'onglets de l'administration mélange **deux mécanismes**, et c'est
-  légitime : « Comptes en attente » bascule un panneau **dans** la page, « Fiche
+  légitime : « À traiter » bascule un panneau **dans** la page, « Fiche
   copropriété » **navigue** vers une autre route. Un `<button>` d'un côté, un
   `<a>` de l'autre — on ne peut pas faire autrement sans perdre le clic milieu et
   l'ouverture dans un nouvel onglet, ni sans aveugler

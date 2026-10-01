@@ -31,10 +31,23 @@
 	export let compte: number | null = null;
 	/** Déplié ? Lié, pour que l'appelant puisse charger au premier dépliage. */
 	export let ouvert = false;
+	/**  Le clic, quand c'est l'APPELANT qui décide de l'ouverture : plusieurs
+	 *   sections voisines en accordéon (`$lib/accordeon`, règle 17) — une seule
+	 *   dépliée à la fois. Absent : la section bascule seule, comme avant. */
+	export let surBascule: (() => void) | null = null;
+	/**  La section fait partie d'une SÉRIE de bandeaux qui forment tout un écran
+	 *   (Admin › À traiter) : pas de filet ni de grande marge au-dessus. Le filet
+	 *   sépare une section d'Archives de la liste qui la précède ; entre trois
+	 *   bandeaux qui se suivent, il en ferait trois blocs détachés (01/10/2026). */
+	export let enSerie = false;
 </script>
 
-<div class="sr-section">
-	<button class="sr-entete" on:click={() => (ouvert = !ouvert)} aria-expanded={ouvert}>
+<div class="sr-section" class:en-serie={enSerie}>
+	<button
+		class="sr-entete"
+		on:click={() => (surBascule ? surBascule() : (ouvert = !ouvert))}
+		aria-expanded={ouvert}
+	>
 		<span class="sr-titre">{titre}</span>
 		{#if compte !== null}<span class="sr-compte">{compte}</span>{/if}
 		<span class="sr-chevron">{ouvert ? '▲' : '▼'}</span>
@@ -88,6 +101,11 @@
 		margin-top: 2rem;
 		padding-top: 1.5rem;
 		border-top: 2px solid var(--color-border);
+	}
+	.sr-section.en-serie {
+		margin-top: 0.6rem;
+		padding-top: 0;
+		border-top: none;
 	}
 	.sr-entete {
 		display: flex;

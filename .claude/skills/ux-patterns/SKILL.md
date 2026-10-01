@@ -1319,6 +1319,15 @@ inatteignable ; sans rendu, il affiche une page vide ; employé hors de la liste
 s’ouvre pas par l’URL. **Les trois sont silencieux** — `npm run lint:routes` les
 refuse, et il a été vu échouer sur chacun.
 
+🔴 **Ce qui attend un geste de l’admin est UN onglet, « À traiter »** (01/10/2026) —
+comptes en attente, commandes d’accès, demandes de profil, en `SectionRepliee`
+`enSerie` et en accordéon (`surBascule` + `basculer`) : la pastille de l’onglet
+additionne les trois, la première section non vide s’ouvre seule. Une quatrième
+file s’y ajoute comme section, jamais comme onglet. Pas de redirection des
+anciennes clés (`comptes`, `acces`, `demandes_profil`) : arbitré, les liens
+émis par l’API ont été corrigés à la place. La Télémétrie est rangée sous
+« Gestion utilisateurs ».
+
 ⚠️ **Un lien vers un écran d’admin s’écrit `/admin?onglet=<clé>`.** Un modèle
 d’e-mail pointait encore vers `/admin/telecommandes-import` : `test_liens_front.py`
 l’a attrapé — sans lui, le destinataire du message « Vérifier les imports » serait

@@ -135,7 +135,7 @@ def rattacher_au_bailleur(user: Utilisateur, session: Session) -> int:
             corps=f"{nom_affiche(user.prenom, user.nom)} a été rattaché au {quoi} de "
             f"{nom_affiche(bailleur.prenom, bailleur.nom)}, "
             "d'après le nom de propriétaire déclaré. À défaire s'il s'agit d'un homonyme.",
-            lien="/admin?onglet=comptes",
+            lien="/admin?onglet=a_traiter",
         )
     return 1
 

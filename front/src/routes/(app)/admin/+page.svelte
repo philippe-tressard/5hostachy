@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
 	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
-	import { badgeRole, badgeStatut, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
 	import OngletUtilisateurs from '$lib/components/OngletUtilisateurs.svelte';
 	import { essayer, messagePartiel, TITRE_PARAMETRAGE_ILLISIBLE } from '$lib/chargement';
@@ -36,17 +34,13 @@
 	import OngletImportAcces from '$lib/components/OngletImportAcces.svelte';
 	import { IMPORT_TELECOMMANDES, IMPORT_VIGIK } from '$lib/imports-acces';
 	import Onglet from '$lib/components/Onglet.svelte';
-	import AccepterRefuser from '$lib/components/AccepterRefuser.svelte';
-	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
-	import { validerCompte } from '$lib/comptes';
-	import { messageErreur } from '$lib/erreurs';
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletIA from '$lib/components/OngletIA.svelte';
 	import OngletDescriptifPages from '$lib/components/OngletDescriptifPages.svelte';
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
+	import OngletATraiter from '$lib/components/OngletATraiter.svelte';
 	import OngletModelesEmail from '$lib/components/OngletModelesEmail.svelte';
-	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import { trackTabView } from '$lib/telemetry';
 
 	//  Onglets
@@ -60,11 +54,9 @@
 	//  divergeraient au premier onglet ajouté, et c’est l’adressage direct qui
 	//  cesserait de fonctionner en silence.
 	const ONGLETS = [
-		'comptes',
-		'acces',
+		'a_traiter',
 		'emails',
 		'utilisateurs',
-		'demandes_profil',
 		'site',
 		'pages',
 		'legal',
@@ -81,7 +73,7 @@
 		'import_vigik',
 	] as const;
 	type OngletAdmin = (typeof ONGLETS)[number];
-	let onglet: OngletAdmin = 'comptes';
+	let onglet: OngletAdmin = 'a_traiter';
 	$: trackTabView(onglet);
 
 	//  Bâtiments (pour affichage)
@@ -108,16 +100,6 @@
 		comptesLoading = false;
 	}
 
-	async function refuserCompte(id: number, motif: string) {
-		try {
-			await adminApi.traiterCompte(id, { action: 'refuser', motif });
-			toast('info', 'Compte refusé.');
-			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
 	//  Commandes d'acces
 	let commandes: any[] = [];
 	let commandesLoading = true;
@@ -128,26 +110,6 @@
 		commandesLoading = true;
 		[commandes, erreurCommandes] = await essayer(adminApi.commandesAccesEnAttente(), []);
 		commandesLoading = false;
-	}
-
-	async function accepterCommande(id: number) {
-		try {
-			if (!(await accepterCommandeAcces(id))) return;
-			toast('success', 'Commande acceptée.');
-			commandes = commandes.filter((c) => c.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	async function refuserCommande(id: number, motif: string) {
-		try {
-			await refuserCommandeAcces(id, motif);
-			toast('info', 'Commande refusee.');
-			commandes = commandes.filter((c) => c.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
 	}
 
 	//  Le sous-onglet Maintenance ne charge plus rien lui-même : `TachesPlanifiees`
@@ -161,45 +123,6 @@
 	let utilisateurs: any[] = [];
 	let utilisateursLoading = true;
 	let batimentsList: { id: number; numero: string }[] = [];
-
-	// Validation modal (comptes en attente + Nouvel Arrivant)
-	let cvModal: { user: any; lotsPrevus: number } | null = null;
-	let cvNewArrivant = false;
-	let cvBatiment = '';
-	let cvAncienResident = '';
-	let cvSubmitting = false;
-
-	function openCompteValidation(item: any) {
-		const u = item.user ?? item;
-		cvModal = { user: u, lotsPrevus: item.lots_prevus ?? 0 };
-		cvNewArrivant = false;
-		cvBatiment = u.batiment_id ? (batimentsMap[u.batiment_id] ?? '') : '';
-		cvAncienResident = '';
-	}
-
-	//  🔴 Le compte rendu de la validation vit dans `$lib/comptes` depuis le
-	//  12/09/2026 : l'espace CS en portait une version plus PAUVRE, qui taisait
-	//  les lots résolus et l'avertissement sur un copropriétaire aidé introuvable.
-	//  `standards/02` §4 bis — entre deux implémentations, la plus disante.
-	async function confirmerCompteValidation() {
-		if (!cvModal) return;
-		const u = cvModal.user;
-		cvSubmitting = true;
-		try {
-			const annonces = await validerCompte(u, {
-				nouvelArrivant: cvNewArrivant,
-				batiment: cvBatiment,
-				ancienResident: cvAncienResident,
-			});
-			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== u.id);
-			for (const a of annonces) toast(a.ton, a.texte);
-			cvModal = null;
-		} catch (e: any) {
-			toast('error', messageErreur(e));
-		} finally {
-			cvSubmitting = false;
-		}
-	}
 
 	//  🔴 L'échec se DIT (#1459) : ce chargement était un `try/finally` sans
 	//  `catch` — un refus laissait la liste vide, sans un mot, et `lint:catch-vide`
@@ -239,29 +162,6 @@
 		//  du défaut : l'échec était écrit, lu, et jeté.
 		[demandesProfil, erreurDemandesProfil] = await essayer(adminApi.demandesProfil(), []);
 		demandesProfilLoading = false;
-	}
-
-	async function approuverDemande(id: number) {
-		try {
-			await adminApi.traiterDemandeProfil(id, { action: 'approuver' });
-			toast('success', 'Demande approuvée.');
-			demandesProfil = demandesProfil.filter((d) => d.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
-	}
-
-	async function rejeterDemande(id: number, motif: string) {
-		try {
-			await adminApi.traiterDemandeProfil(id, {
-				action: 'rejeter',
-				motif_refus: motif || null,
-			});
-			toast('info', 'Demande rejetée.');
-			demandesProfil = demandesProfil.filter((d) => d.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
-		}
 	}
 
 	//  Montage
@@ -343,7 +243,6 @@
 	let smtpValeurs: Record<string, string> = {};
 
 	import { getPageConfig, configStore, siteNomStore, loadSiteConfig } from '$lib/stores/pageConfig';
-	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 	$: _pc = getPageConfig($configStore, 'admin', defautsDePage('admin'));
 	$: _siteNom = $siteNomStore;
 </script>
@@ -369,29 +268,20 @@
 	<div class="tabs-group-label">&#x1F465; Gestion utilisateurs</div>
 	<div class="tabs">
 		<Onglet
-			actif={onglet === 'comptes'}
-			compte={comptes.length}
-			on:click={() => (onglet = 'comptes')}
+			actif={onglet === 'a_traiter'}
+			compte={comptes.length + commandes.length + demandesProfil.length}
+			on:click={() => (onglet = 'a_traiter')}
 		>
-			Comptes en attente
-		</Onglet>
-		<Onglet
-			actif={onglet === 'acces'}
-			compte={commandes.length}
-			on:click={() => (onglet = 'acces')}
-		>
-			Commandes d'accès
+			À traiter
 		</Onglet>
 		<Onglet actif={onglet === 'utilisateurs'} on:click={() => (onglet = 'utilisateurs')}>
 			Utilisateurs
 		</Onglet>
-		<Onglet
-			actif={onglet === 'demandes_profil'}
-			compte={demandesProfil.length}
-			on:click={() => (onglet = 'demandes_profil')}
+		<!--  La télémétrie dit qui utilise quoi : c'est de la gestion des
+		      utilisateurs, pas un réglage du site (01/10/2026). -->
+		<Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}
+			>Télémétrie</Onglet
 		>
-			Demandes profil
-		</Onglet>
 		<Onglet actif={onglet === 'emails'} on:click={() => (onglet = 'emails')}>Modèles e-mail</Onglet>
 		<Onglet actif={onglet === 'import_lots'} on:click={() => (onglet = 'import_lots')}
 			>Import Lots</Onglet
@@ -427,168 +317,25 @@
 		<Onglet actif={onglet === 'whatsapp'} on:click={() => (onglet = 'whatsapp')}>WhatsApp</Onglet>
 		<Onglet actif={onglet === 'smtp'} on:click={() => (onglet = 'smtp')}>SMTP</Onglet>
 		<Onglet actif={onglet === 'ia'} on:click={() => (onglet = 'ia')}>Assistant IA</Onglet>
-		<Onglet actif={onglet === 'telemetry'} on:click={() => (onglet = 'telemetry')}
-			>Télémétrie</Onglet
-		>
 		<Onglet actif={onglet === 'maintenance'} on:click={() => (onglet = 'maintenance')}
 			>Maintenance</Onglet
 		>
 	</div>
 </div>
 
-{#if onglet === 'comptes'}
-	{#if comptesLoading || erreurComptes || comptes.length === 0}
-		<EtatListe
-			chargement={comptesLoading}
-			erreur={erreurComptes}
-			vide={comptes.length === 0}
-			titreErreur="Impossible d’afficher les comptes en attente"
-			titreVide="Aucun compte en attente"
-			messageVide="Tous les comptes ont été traités."
-		/>
-	{:else}
-		<div class="card" style="overflow:hidden">
-			<table class="table">
-				<thead>
-					<tr>
-						<th>Nom</th><th>Statut</th><th>Rôle(s)</th><th>Bât.</th><th>Lots import</th><th
-							>Inscription</th
-						><th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each comptes as item ((item.user ?? item).id)}
-						{@const u = item.user ?? item}
-						<tr>
-							<td style="font-weight:500"
-								>{nomAffiche(u)}
-								{#if u.statut === 'locataire' && u.nom_proprietaire}
-									<div
-										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-									>
-										&#x1F464; Prop. : {u.nom_proprietaire}
-									</div>
-								{/if}
-								{#if (u.statut === 'aidant' || u.statut === 'mandataire') && u.nom_aide}
-									<div
-										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-									>
-										&#x1F464; Aidé : {u.prenom_aide}
-										{u.nom_aide}
-									</div>
-								{/if}
-							</td>
-							<td
-								><span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)"
-									>{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut}</span
-								></td
-							>
-							<td>
-								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
-									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
-										<span class="badge {badgeRole(r)}" style="font-size:var(--fs-xs)"
-											>{libelleRole(r)}</span
-										>
-									{/each}
-								</div>
-							</td>
-							<td style="color:var(--color-text-muted)"
-								>{u.batiment_id ? (batimentsMap[u.batiment_id] ?? `#${u.batiment_id}`) : '—'}</td
-							>
-							<td>
-								{#if item.lots_prevus > 0}
-									<span
-										class="badge badge-green"
-										title="{item.lots_prevus} lot(s) trouvé(s) dans l'import"
-										>✓ {item.lots_prevus}</span
-									>
-								{:else if u.statut?.startsWith('copropriétaire')}
-									<span class="badge badge-orange" title="Pas trouvé dans l'import Lots">⚠ 0</span>
-								{:else}
-									<span style="color:var(--color-text-muted)">—</span>
-								{/if}
-							</td>
-							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)">{fmt(u.cree_le)}</td>
-							<td>
-								<div class="action-row">
-									<AccepterRefuser
-										libelleAccepter="Valider →"
-										onAccepter={() => openCompteValidation(item)}
-										onRefuser={(motif) => refuserCompte(u.id, motif)}
-									/>
-								</div>
-							</td>
-						</tr>
-						<!--  🔴 Le formulaire s'ouvre SOUS la ligne du compte, pas dans une
-						      fenêtre (#889, arbitrage du 11/09/2026). Dans un tableau, « à la
-						      place du corps de la carte » se dit en une ligne de plus qui
-						      s'étend sur toutes les colonnes : l'objet ne bouge pas, et le
-						      formulaire reste attaché à lui.
-
-						      C'est le MÊME composant que l'espace CS — les deux écrans en
-						      portaient chacun une copie, qui avait déjà dérivé. -->
-						{#if cvModal?.user?.id === u.id}
-							<tr class="ligne-formulaire">
-								<td colspan="7">
-									<ValidationCompte
-										utilisateur={u}
-										precision={(cvModal?.lotsPrevus ?? 0) > 0
-											? `${cvModal?.lotsPrevus} lot(s) détecté(s) dans l'import`
-											: ''}
-										enCours={cvSubmitting}
-										bind:nouvelArrivant={cvNewArrivant}
-										bind:batiment={cvBatiment}
-										bind:ancienResident={cvAncienResident}
-										onAnnuler={() => (cvModal = null)}
-										onValider={confirmerCompteValidation}
-									/>
-								</td>
-							</tr>
-						{/if}
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
-{:else if onglet === 'acces'}
-	{#if commandesLoading || erreurCommandes || commandes.length === 0}
-		<EtatListe
-			chargement={commandesLoading}
-			erreur={erreurCommandes}
-			vide={commandes.length === 0}
-			titreErreur="Impossible d’afficher les commandes d’accès"
-			titreVide="Aucune commande en attente"
-			messageVide="Toutes les demandes d’accès ont été traitées."
-		/>
-	{:else}
-		<div class="card" style="overflow:hidden">
-			<table class="table">
-				<thead>
-					<tr><th>Utilisateur</th><th>Type</th><th>Lot</th><th>Date</th><th>Actions</th></tr>
-				</thead>
-				<tbody>
-					{#each commandes as cmd (cmd.id)}
-						<tr>
-							<td style="font-weight:500">#{cmd.user_id}</td>
-							<td><span class="badge badge-blue">{cmd.type}</span></td>
-							<td style="color:var(--color-text-muted)">{cmd.lot_id ?? ''}</td>
-							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)"
-								>{fmt(cmd.cree_le)}</td
-							>
-							<td>
-								<div class="action-row">
-									<AccepterRefuser
-										onAccepter={() => accepterCommande(cmd.id)}
-										onRefuser={(motif) => refuserCommande(cmd.id, motif)}
-									/>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
+{#if onglet === 'a_traiter'}
+	<OngletATraiter
+		bind:comptes
+		{comptesLoading}
+		{erreurComptes}
+		bind:commandes
+		{commandesLoading}
+		{erreurCommandes}
+		bind:demandesProfil
+		{demandesProfilLoading}
+		{erreurDemandesProfil}
+		{batimentsMap}
+	/>
 {:else if onglet === 'utilisateurs'}
 	<OngletUtilisateurs
 		bind:utilisateurs
@@ -598,76 +345,6 @@
 		{batimentsMap}
 		recharger={loadUtilisateurs}
 	/>
-{:else if onglet === 'demandes_profil'}
-	{#if demandesProfilLoading || erreurDemandesProfil || demandesProfil.length === 0}
-		<EtatListe
-			chargement={demandesProfilLoading}
-			erreur={erreurDemandesProfil}
-			vide={demandesProfil.length === 0}
-			titreErreur="Impossible d’afficher les demandes de profil"
-			titreVide="Aucune demande en attente"
-			messageVide="Toutes les demandes de modification de profil ont été traitées."
-		/>
-	{:else}
-		<div class="card" style="overflow:hidden">
-			<table class="table">
-				<thead>
-					<tr
-						><th>Résident</th><th>Statut actuel</th><th>Bâtiment actuel</th><th
-							>Changement souhaité</th
-						><th>Motif</th><th>Date</th><th>Actions</th></tr
-					>
-				</thead>
-				<tbody>
-					{#each demandesProfil as d (d.id)}
-						<tr>
-							<td>
-								<div style="font-weight:600">{d.utilisateur_nom}</div>
-								<div style="font-size:var(--fs-sm);color:var(--color-text-muted)">
-									{d.utilisateur_email}
-								</div>
-							</td>
-							<td
-								><span style="font-size:var(--fs-md)"
-									>{LIBELLES_STATUT_ABREGE[d.statut_actuel] ?? d.statut_actuel ?? '—'}</span
-								></td
-							>
-							<td><span style="font-size:var(--fs-md)">{d.batiment_actuel ?? '—'}</span></td>
-							<td>
-								{#if d.statut_souhaite}
-									<div style="font-size:var(--fs-md)">
-										Type : <strong
-											>{LIBELLES_STATUT_ABREGE[d.statut_souhaite] ?? d.statut_souhaite}</strong
-										>
-									</div>
-								{/if}
-								{#if d.batiment_nom_souhaite}
-									<div style="font-size:var(--fs-md)">
-										Bât. : <strong>{d.batiment_nom_souhaite}</strong>
-									</div>
-								{/if}
-							</td>
-							<td
-								style="font-size:var(--fs-md);color:var(--color-text-muted);max-width:140px;white-space:pre-wrap"
-								>{d.motif ?? '—'}</td
-							>
-							<td style="font-size:var(--fs-md);color:var(--color-text-muted)">{fmt(d.cree_le)}</td>
-							<td>
-								<div class="action-row">
-									<AccepterRefuser
-										libelleAccepter="✓ Approuver"
-										libelleRefuser="✗ Rejeter"
-										onAccepter={() => approuverDemande(d.id)}
-										onRefuser={(motif) => rejeterDemande(d.id, motif)}
-									/>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
 {:else if onglet === 'maintenance'}
 	<OngletMaintenance />
 {:else if onglet === 'emails'}
@@ -733,16 +410,6 @@
 {/if}
 
 <style>
-	/*  La ligne qui accueille le formulaire de validation, sous celle du compte.
-	    Elle n'a ni bordure haute ni fond propre : les deux lignes doivent se lire
-	    comme un seul objet, sinon le formulaire semble concerner le compte
-	    suivant. */
-	.ligne-formulaire > td {
-		border-top: none;
-		background: var(--color-bg-alt, #fafafa);
-		padding: 1rem;
-	}
-
 	/* `.sticky-head`, `.config-section`, `.config-section-title` et `.muted` sont
    passées dans `app.css` le 11/08/2026 : scopées ici, elles ne suivaient pas les
    composants extraits de cette page. (`.backup-header` y était aussi, et en est
@@ -777,8 +444,4 @@
 	/*  🔴 `.badge-orange` et `.badge-purple` retirees le 28/08/2026 (#607) :
     la charte les porte, et cet ecran en donnait une TROISIEME teinte —
     `delegations` en avait une deuxieme. Meme notion, trois couleurs. */
-	.ref-meta {
-		font-size: var(--fs-sm);
-		white-space: nowrap;
-	}
 </style>

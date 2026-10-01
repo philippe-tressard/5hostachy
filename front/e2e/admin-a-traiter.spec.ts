@@ -1,0 +1,79 @@
+/*
+ *  **Admin › À traiter : trois sections pliables, une seule ouverte (01/10/2026).**
+ *
+ *  Demandé : « regroupe en 3 sections pliables Comptes en attente, Commandes
+ *  d'accès et Demandes profil ; Télémétrie, c'est plus de la gestion
+ *  utilisateurs que de la configuration ». Ce test rend le VRAI écran, API
+ *  simulée, et vérifie ce que l'administrateur voit : la pastille de l'onglet
+ *  additionne les trois files, la première section qui a quelque chose à
+ *  montrer s'ouvre seule, en ouvrir une autre la replie (accordéon), et la
+ *  Télémétrie est rangée sous « Gestion utilisateurs ».
+ */
+import { expect, MEMBRE_CS, simulerApi, test } from './aides';
+
+const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
+
+const COMMANDES = [
+	{ id: 1, user_id: 7, type: 'badge', lot_id: 12, cree_le: '2026-09-30T10:00:00' },
+	{ id: 2, user_id: 8, type: 'télécommande', lot_id: 14, cree_le: '2026-09-30T11:00:00' },
+];
+const DEMANDES = [
+	{
+		id: 3,
+		utilisateur_nom: 'Alice Dupont',
+		utilisateur_email: 'alice@example.org',
+		statut_actuel: 'locataire',
+		statut_souhaite: 'copropriétaire_résident',
+		cree_le: '2026-09-29T09:00:00',
+	},
+];
+
+test('Admin › À traiter : trois sections en accordéon, Télémétrie en gestion', async ({ page }) => {
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/auth/me') return ADMIN;
+		if (chemin === '/api/admin/comptes-en-attente/enrichis') return [];
+		if (chemin === '/api/admin/commandes-acces') return COMMANDES;
+		if (chemin === '/api/admin/demandes-profil') return DEMANDES;
+		return undefined;
+	});
+	await page.goto('/admin');
+
+	const onglet = page.locator('.tabs button', { hasText: 'À traiter' });
+	await expect(onglet).toHaveClass(/active/);
+	await expect(onglet.locator('.badge-count')).toHaveText('3');
+
+	const entete = (titre: string) => page.locator('.sr-entete', { hasText: titre });
+	//  Les comptes sont vides : c'est la section suivante, la première qui a
+	//  quelque chose à montrer, qui s'ouvre.
+	await expect(entete('Comptes en attente')).toHaveAttribute('aria-expanded', 'false');
+	await expect(entete('Comptes en attente').locator('.sr-compte')).toHaveText('0');
+	await expect(entete("Commandes d'accès")).toHaveAttribute('aria-expanded', 'true');
+	await expect(entete("Commandes d'accès").locator('.sr-compte')).toHaveText('2');
+	await expect(entete('Demandes de profil')).toHaveAttribute('aria-expanded', 'false');
+	await expect(page.getByRole('cell', { name: '#7' })).toBeVisible();
+
+	//  Accordéon : ouvrir les demandes replie les commandes.
+	await entete('Demandes de profil').click();
+	await expect(entete('Demandes de profil')).toHaveAttribute('aria-expanded', 'true');
+	await expect(entete("Commandes d'accès")).toHaveAttribute('aria-expanded', 'false');
+	await expect(page.getByText('Alice Dupont')).toBeVisible();
+	await expect(page.getByRole('cell', { name: '#7' })).toHaveCount(0);
+
+	//  Un second clic replie : plus rien d'ouvert.
+	await entete('Demandes de profil').click();
+	await expect(page.locator('.sr-entete[aria-expanded="true"]')).toHaveCount(0);
+
+	//  Les anciens onglets ont disparu, la Télémétrie a changé de groupe.
+	const gestion = page.locator('.tabs-group', { hasText: 'Gestion utilisateurs' });
+	await expect(gestion.locator('.tabs button', { hasText: 'Télémétrie' })).toHaveCount(1);
+	const configuration = page.locator('.tabs-group', { hasText: 'Configuration' });
+	await expect(configuration.locator('.tabs button', { hasText: 'Télémétrie' })).toHaveCount(0);
+	for (const ancien of ['Comptes en attente', "Commandes d'accès", 'Demandes profil']) {
+		await expect(page.locator('.tabs button', { hasText: ancien })).toHaveCount(0);
+	}
+
+	const deborde = await page.evaluate(
+		() => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+	);
+	expect(deborde).toBe(false);
+});
