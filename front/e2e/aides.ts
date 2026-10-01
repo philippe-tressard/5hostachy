@@ -1,7 +1,7 @@
 /*
  *  Aides partagées des tests de navigateur.
  */
-import type { Page } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 
 /**
  * **Attendre que la page soit HYDRATÉE**, et pas seulement affichée.
@@ -20,8 +20,21 @@ import type { Page } from '@playwright/test';
  * divergerait au premier renommage.
  */
 export async function attendreHydratation(page: Page): Promise<void> {
-	await page.locator('html[data-images-surveillees="oui"]').waitFor({ timeout: 10000 });
+	const debut = Date.now();
+	try {
+		await page.locator('html[data-images-surveillees="oui"]').waitFor({ timeout: 10000 });
+	} finally {
+		//  La durée est notée réussite OU échec (#1475) : un dépassement sous la
+		//  charge d'un rejeu complet ne se diagnostique qu'en le comparant aux
+		//  durées des tests verts du même rejeu. Bilan : `e2e/rapport-hydratation.ts`.
+		test
+			.info()
+			.annotations.push({ type: TYPE_HYDRATATION, description: String(Date.now() - debut) });
+	}
 }
+
+/** Le type de l'annotation que lit `rapport-hydratation.ts` — écrit une fois. */
+export const TYPE_HYDRATATION = 'hydratation-ms';
 
 /**
  * Un membre du conseil syndical — le compte simulé des écrans authentifiés.
