@@ -120,6 +120,13 @@ test('supprimer un bail : confirmation partagée, rien n’est envoyé sans elle
 	const boite = page.getByRole('dialog');
 	await expect(boite).toContainText('Cette action est irréversible.');
 	await expect(boite).toContainText('Paul');
+	//  Le message et les boutons ne touchent pas les bords de la boîte : la
+	//  confirmation partagée les posait à nu, sans `.modal-body`.
+	const cadre = await boite.boundingBox();
+	const message = await boite.locator('.confirmation-message').boundingBox();
+	const annuler = await boite.getByRole('button', { name: 'Annuler' }).boundingBox();
+	expect(message!.x - cadre!.x, 'marge gauche du message').toBeGreaterThanOrEqual(12);
+	expect(annuler!.x - cadre!.x, 'marge gauche des boutons').toBeGreaterThanOrEqual(12);
 	await boite.getByRole('button', { name: 'Annuler' }).click();
 	await expect(boite).toHaveCount(0);
 	expect(ecritures).toEqual([]);
