@@ -157,6 +157,18 @@ def taches_rattrapables() -> tuple[TacheRattrapable, ...]:
     )
 
 
+def identifiants_rattrapage() -> frozenset[str]:
+    """Les identifiants de job que `planifier_rattrapages` pose — et eux seuls.
+
+    Le contrôle des tâches planifiées (`utils/taches`) les exclut de ses écarts.
+    Il le faisait par un motif recopié, `startswith("rattrapage")`, qui ne
+    correspondait à aucun identifiant réel : deux WARNING « NON DECLAREE » à
+    chaque démarrage (#1589). L'ensemble EXACT, lu dans la table, ne peut ni
+    diverger d'elle ni avaler une tâche qu'un motif aurait reconnue.
+    """
+    return frozenset(tache.job_id for tache in taches_rattrapables())
+
+
 def planifier_rattrapages(scheduler, differe_minutes: int = 1) -> list[str]:
     """Programme un rattrapage par tâche, peu après le démarrage.
 

@@ -31,10 +31,15 @@ qu'une condition saute à l'exécution, et le contrôle au démarrage ne se lit 
 si quelqu'un regarde les journaux.
 
 ⚠️ Les tâches de **rattrapage** (`utils/rattrapage.py`) n'y figurent pas : elles
-sont de type `date`, créées à la volée pour rejouer un passage manqué, et leur
-nombre dépend de l'état du système. Les exiger ici rendrait le contrôle rouge sur
-une installation saine.
+sont de type `date`, posées à chaque démarrage et retirées du planificateur une
+fois jouées — ce ne sont pas des tâches permanentes. Le contrôle les exclut par
+leur identifiant EXACT, lu dans `rattrapage.identifiants_rattrapage()`, jamais
+par un motif : le motif recopié ici (`startswith("rattrapage")`) ne reconnaissait
+aucun identifiant réel (`telemetry_rattrapage`, `backup_rattrapage`), et chaque
+démarrage journalisait deux faux écarts (#1589).
 """
+
+from app.utils.rattrapage import identifiants_rattrapage
 
 #: Les tâches permanentes, par identifiant — et ce que leur disparition coûte.
 #:
@@ -81,9 +86,7 @@ def verifier_taches_enregistrees(scheduler, logger) -> list[str]:
         )
     #  L'inverse compte aussi : une tâche qui tourne sans être déclarée n'a pas
     #  de coût écrit, donc personne ne saura quoi faire le jour où elle tombe.
-    for identifiant in sorted(enregistrees - set(TACHES_PERMANENTES)):
-        #  Les rattrapages sont attendus et non déclarés (voir l'en-tête).
-        if identifiant.startswith("rattrapage"):
-            continue
+    #  Les rattrapages sont attendus et non déclarés (voir l'en-tête).
+    for identifiant in sorted(enregistrees - set(TACHES_PERMANENTES) - identifiants_rattrapage()):
         logger.warning("tache planifiee NON DECLAREE : %s", identifiant)
     return manquantes

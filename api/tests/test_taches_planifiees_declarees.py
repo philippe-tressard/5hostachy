@@ -68,12 +68,11 @@ def test_aucune_tache_permanente_non_declaree():
     Le jour où elle tombe, personne ne sait ce qu'on vient de perdre — c'est
     précisément ce qui rendait la disparition indolore.
     """
-    #  Les rattrapages sont créés à la volée, de type `date` : leur nombre dépend
-    #  de l'état du système, et les déclarer rendrait le contrôle rouge sur une
-    #  installation saine.
-    non_declarees = sorted(
-        i for i in _ids_enregistres() - set(TACHES_PERMANENTES) if not i.startswith("rattrapage")
-    )
+    #  Les rattrapages ne sont pas des tâches permanentes : exclus par leur
+    #  identifiant exact, la même source que le contrôle au démarrage (#1589).
+    from app.utils.rattrapage import identifiants_rattrapage
+
+    non_declarees = sorted(_ids_enregistres() - set(TACHES_PERMANENTES) - identifiants_rattrapage())
     assert not non_declarees, (
         f"Tâche(s) enregistrée(s) sans déclaration : {non_declarees}\n"
         f"Les inscrire dans `utils/taches.TACHES_PERMANENTES` **avec ce qu'on perd** "
