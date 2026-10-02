@@ -15,7 +15,6 @@ echo "  Répertoire    : $COURANT"
 echo "  Dépôt/branche : $(git config --get remote.origin.url 2>/dev/null) [$(git branch --show-current 2>/dev/null)]"
 [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] \
   || echo "  Mémoire       : ~/.claude/projects/C--Dev-5hostachy/memory/"
-echo "  Autre projet  : List-dons → C:\\Dev\\List-dons (NE PAS y toucher depuis ici)"
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   # Session CLOUD (claude.ai/code) — le répertoire attendu n'y a pas de sens.
   # Ce bloc est le contrôle de `.claude/cloud/setup.sh` : il relit à CHAQUE
