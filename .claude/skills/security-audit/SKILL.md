@@ -238,6 +238,11 @@ l'historique git la garde (`standards/14`). Trente-trois fichiers en portaient l
   inventés : un nom de personne hors de la liste fait échouer la CI. Une liste
   noire republierait les vrais noms, compilés. Ses limites — formes repérées et
   ce qu'il ne voit pas — sont écrites dans son en-tête.
+- Sa portée : code, tests, **migrations** (`api/alembic`) et **documents**
+  (`docs/`, `specs/`, `infra/`, `.claude/skills/`, `.github/`, `.md` de la
+  racine). Les deux derniers n'y sont que depuis #1544 : la docstring d'une
+  migration recopiait une formule d'appel avec deux noms du syndic. Un dossier
+  public qui n'y figure pas n'est **pas** contrôlé — l'ajouter à `PORTEE`.
 - Un nom se cherche et se remplace **sans tenir compte de la casse** : le premier
   passage (v2.89.2) a laissé deux clés en minuscules et un nom à casse mixte,
   trouvés à la vérification sur `main`, pas avant.

@@ -2,8 +2,9 @@
 
 Le cabinet fonctionne en binôme — l'assistante supplée la gestionnaire en son
 absence — et les deux partagent la même boîte. La formule d'appel n'en nommait
-qu'une : « Madame Céline Mariette, ». Elle nomme désormais les deux, sans prénom :
-« Madame Mariette, Madame Thauvin, ».
+qu'une — la gestionnaire, par sa civilité, son prénom et son nom. Elle nomme
+désormais les deux, sans prénom : la gestionnaire et son assistante, chacune par
+sa civilité et son nom.
 
 Les personnes ne sont **pas** écrites en dur : `interlocuteurs_syndic()` les lit
 dans l'annuaire en sélectionnant les fonctions « gestionnaire » et « assistant »
