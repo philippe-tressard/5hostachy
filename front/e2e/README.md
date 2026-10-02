@@ -25,7 +25,7 @@ Le serveur de développement démarre tout seul (`webServer` dans
    session, et le test lit ce qu'un visiteur lit (`squelette.spec.ts`).
 2. **Les écrans authentifiés, sur une API simulée.** Tout le site applicatif est
    derrière une connexion, et un test qui chercherait l'écran sans compte serait
-   *sauté* — un faux vert. On rend donc le VRAI écran, avec le VRAI navigateur et
+   _sauté_ — un faux vert. On rend donc le VRAI écran, avec le VRAI navigateur et
    le VRAI CSS, en interceptant `/api/*` : `simulerApi` (`e2e/aides.ts`) répond
    `MEMBRE_CS` à `/api/auth/me`, la forme déclarée dans `REPONSES_PAR_DEFAUT` pour
    les chemins dont la forme ne se devine pas, un objet vide pour une
