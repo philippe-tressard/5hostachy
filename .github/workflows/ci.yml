@@ -210,9 +210,9 @@ jobs:
         # l'instant de la base `horloge.maintenant()`. Ruff ne voit que les
         # appels : `default_factory=date.today` est refusé par `test_horloge.py`.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003,DTZ005,DTZ006,DTZ011
-          ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
-          ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003,DTZ005,DTZ006,DTZ011,W605
+          ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731,W605
+          ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731,W605
 
       - name: Ruff format (API)
         # Depuis le 24/09/2026 (#1048) : aucun formateur n'était en usage côté
