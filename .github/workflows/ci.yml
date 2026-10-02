@@ -111,9 +111,18 @@ jobs:
         # dans le PATH d'un poste Windows, et le rejeu local rendait INCONNU —
         # c'est-à-dire ni vert ni rouge, donc un contrôle qu'on ne peut pas
         # relire avant de pousser. Le module, lui, s'appelle partout pareil.
+        #
+        # ÉPINGLÉ le 02/10/2026 (#1543) : l'étape suivante lit `reuse lint --json`,
+        # dont le format suit la version de l'outil.
         run: |
-          python -m pip install reuse
+          python -m pip install reuse==6.2.0
           python -m reuse lint
+
+      # `reuse lint` vérifie qu'une licence est DÉCLARÉE pour chaque fichier, pas
+      # qu'elle est vraie : les tracés Lucide recopiés passaient sous la licence
+      # du projet (#1543). Le détail : l'en-tête de `scripts/ci/contenus_tiers.py`.
+      - name: Contenus tiers attribués à leur licence (REUSE)
+        run: python scripts/ci/contenus_tiers.py
 
       - name: Run Ruff
         # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
