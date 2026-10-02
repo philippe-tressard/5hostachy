@@ -2279,6 +2279,14 @@ sa réponse dans le produit. C'est la **sixième** fois — voir la mémoire
 `project_le_composant_existait_deja`. Le réflexe reste le même : chercher la
 **notion** (« corriger un objet d'une liste »), jamais le nom de l'écran.
 
+🔒 **Depuis le 02/10/2026 (#1539), ce squelette a UN composant : `CarteModifiable`**
+— conteneur, `EnteteCarte`, 🔗 ✏️ 📦 (↩️ aux Archives, #1538), corps qui cède la place à
+`FormulaireCreation` (`encadre={false}`), titre inerte pendant la correction.
+`CarteContrat` et `CartePrestataire` le recopiaient l'une sur l'autre ; une carte
+neuve qui se corrige en place le monte et remplit ses emplacements (`tags`,
+`apercu`, `gestes`, `edition`, `detail`). ⚠️ `AnnonceCard` et `CarteActualite`
+portent encore leur propre `formulaireOuvert` : même notion, pas encore migrée.
+
 🔴 **Et ce n'était toujours pas fini : le formulaire DÉFILAIT.** Troisième
 signalement du même symptôme — *« le contrat édité remonte en haut »* — alors que
 la carte, elle, ne bougeait plus d'une ligne. Ce n'était pas un déplacement dans
