@@ -86,13 +86,15 @@ rapporter 0a "$(verdict_clone "${RETARD:-}" "$IDENT" "$AMONT" "$REECR0A")" "Clon
 #      Ajouté le 08/08/2026 : trois pushes sont partis alors que le job CI
 #      `test-scripts` les rejetait (email.py 656 → 663). Le contrôle existait,
 #      il n'était simplement pas dans le chemin qui précède le push.
-MOD=$(bash scripts/poste/scripts-ci-modularite.sh origin/main 2>&1)
+#      Plafond ABSOLU depuis le 02/10/2026 (#779) : plus de base à comparer.
+MOD=$(bash scripts/poste/scripts-ci-modularite.sh 2>&1)
 case "$?" in
   0) V0B=OK ;;
   1) V0B=FAIL ;;
   *) V0B=INCONNU ;;
 esac
-rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)"           "$(echo "$MOD" | grep -oE '[a-z_/.]+\.(py|sh|ts|svelte) : [0-9]+ → [0-9]+ lignes' | head -1 || echo 'aucun fichier n a grossi')"
+D0B=$(echo "$MOD" | grep -oE '[^ ]+ : [0-9]+ lignes \(plafond [0-9]+\)' | head -1)
+rapporter 0b "$V0B" "Modularité (ce que la CI vérifiera)" "${D0B:-aucun fichier au-dessus de son plafond}"
 
 # 0c — la CI de la BRANCHE, pas seulement celle de la PR
 #      Ajouté le 09/08/2026 : j'ai annoncé « CI verte » en ne consultant que les
