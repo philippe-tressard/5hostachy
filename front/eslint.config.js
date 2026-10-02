@@ -18,9 +18,9 @@
 // est un contrôle qui ment (`standards/04`). Chaque règle coupée l'est NOMMÉMENT,
 // avec son compte et son motif, et la dette est suivie en #549 et #550.
 //
-// ⚠️ `npm run lint` — qui enchaîne prettier — reste hors CI : sans `.prettierrc`,
-// prettier ne charge pas `prettier-plugin-svelte` et IGNORE EN SILENCE tous les
-// `.svelte`, donc l'essentiel du front. C'est le point 3 de #419, encore ouvert.
+// ✅ Prettier est lui aussi en CI : l'étape « Formatage » lance `npm run lint:format`
+// (#419 est fermé, `.prettierrc` charge `prettier-plugin-svelte`). `npm run lint`,
+// qui enchaîne les deux, n'est qu'un agrégat de poste : la CI nomme chaque étape.
 
 import js from '@eslint/js';
 import ts from 'typescript-eslint';
