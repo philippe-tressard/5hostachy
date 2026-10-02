@@ -393,12 +393,18 @@ d'autorisation ne doit être définie ailleurs : une règle locale à un routeur
 | Dépendance | Rôle requis |
 |------------|-------------|
 | `get_current_user` | Tout utilisateur authentifié |
-| `get_acting_user` | Utilisateur effectif (délégation via en-tête `X-Acting-As`) |
 | `require_proprietaire` | Propriétaire, conseil syndical ou admin |
 | `require_cs_or_admin` | Conseil syndical ou admin |
 | `require_admin` | Admin uniquement |
-| `require_role(*roles)` | Rôles arbitraires |
+| `ma_notification` | Destinataire de la notification (appartenance d'un objet) |
 | `x-maintenance-key` | En-tête à secret partagé (cron machine-à-machine, hors système de rôles) |
+
+> **Corrigé le 02/10/2026 (#1534).** Ce tableau documentait `get_acting_user`
+> (« délégation via en-tête `X-Acting-As` ») et `require_role(*roles)`. Aucune
+> route n'avait jamais pris l'une ni l'autre : l'aidant qui choisissait « Agir
+> pour… » écrivait sous sa propre identité. Les deux sont retirées, et la
+> délégation est en **lecture seule** (`utils/delegations_actives`).
+> `test_autorisation.py` refuse désormais une dépendance qu'aucune route ne prend.
 
 > **Corrigé le 26/07/2026.** Ce tableau documentait `_require_bailleur`, une
 > dépendance définie **localement** dans `routers/bailleur.py` et doublon exact de
