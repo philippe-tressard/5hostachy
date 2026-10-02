@@ -199,6 +199,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
 | 0b | Modularité — ce que la CI vérifiera | OK · FAIL |
 | 0c | **CI de la branche**, hors échecs que ce lot corrige | OK · FAIL · INCONNU |
 | 0d | **Un seul bump de version dans le lot** | OK · ÉCART · FAIL |
+| 0g | **Rang du bump conforme** à ce que le lot apporte (lu dans les préfixes de commit) | OK · ÉCART · FAIL |
 | 0f | **Titre et descriptif de PR préparés** (`.git/pr-brief.md`) | OK · FAIL · INCONNU |
 | 15 | Aucun endpoint orphelin | OK · FAIL |
 | 16 | **CI rejouée en local sur ce commit** (`scripts/poste/rejouer-ci.sh`) | OK · FAIL · INCONNU |
@@ -217,6 +218,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
 | 13 | Canal d'alerte non muet | OK · FAIL |
 | 14 | Hygiène disque sur les **2** nœuds | OK · FAIL |
 | 17 | **Points d'entrée conformes au dépôt** (crons, unité systemd) | OK · FAIL · INCONNU |
+| 18 | **Images du standby bâties sur son code** — le point 10 compare deux HEAD, pas ce qu'un failover démarre (#511) | OK · FAIL · INCONNU |
 | 19 | **Liens des courriels servis par la production** | OK · ÉCART · FAIL · INCONNU |
 | 20 | **Ordre du menu servi** (`pages_order`) — un fantôme rend ÉCART, une répétition FAIL (#1114) | OK · ÉCART · FAIL · INCONNU |
 
@@ -234,7 +236,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
   serait un faux rouge. Elle reste à nettoyer en administration — c'est la
   donnée sale dont onze lecteurs ont hérité.
 
-- **ÉCART** (points 10 et 0d) → toléré, mais à lire. Point 10 : le standby se
+- **ÉCART** (points 10, 0d et 0g) → toléré, mais à lire. Point 10 : le standby se
   aligne seul sous 5 minutes (`auto-deploy.sh`, #448 — depuis le 19/08/2026 ;
   avant, la bascule de 02:00 n'alignait que le nœud ENTRANT, donc le standby
   accumulait le retard après chaque déploiement). Point 0d : un lot
@@ -244,7 +246,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
   échec est dépassé s'il est suivi d'un succès plus récent, **ou** si HEAD
   descend du commit fautif. Sans cette nuance, le push qui corrige une CI rouge
   était refusé par le contrôle même qui constatait le rouge — et la seule issue
-  était `SKIP_PRECHECK=1`, donc désarmer les vingt points pour en contourner un
+  était `SKIP_PRECHECK=1`, donc désarmer tous les points pour en contourner un
   (#318, corrigé le 12/08/2026). Les **deux** conditions sont nécessaires : les
   PR étant fusionnées en squash puis `dev` réaligné, l'ascendance seule disparaît
   au premier réalignement.
@@ -457,12 +459,11 @@ verrouille.
 
 > 🔒 **Pourquoi ne pas exposer la version dans `/api/health`** (question posée le
 > 03/08/2026). L'endpoint est public et porte déjà un champ `version`, mais figé à
-> `"0.2.0"` — un littéral codé en dur **deux fois** (`main.py` L166 et L261), sans
-> aucun rapport avec l'application. Le rendre exact donnerait un P3 en une ligne, au
+> `"0.2.0"` — une constante (`API_VERSION`, `main.py`) sans aucun rapport avec
+> l'application. Le rendre exact donnerait un P3 en une ligne, au
 > prix d'une **divulgation publique de la version déployée** que rien n'impose
-> aujourd'hui. Décision : on ne l'a pas fait. Lire le bundle coûte trois requêtes et
-> n'expose rien de plus qu'aujourd'hui. Le littéral dupliqué reste un défaut de
-> factorisation à traiter séparément, sans changer ce qui est publié.
+> aujourd'hui. Décision : on ne l'a pas fait, et elle reste vraie. Lire le bundle
+> coûte trois requêtes et n'expose rien de plus qu'aujourd'hui.
 
 **P7 — pourquoi :** c'est le seul contrôle qui teste ce que la MEP était censée
 apporter. Le 26/07, le bug du mois en anglais n'a été trouvé par **aucun** contrôle
@@ -536,9 +537,19 @@ le français n'est pas reconnu par GitHub, donc cette mention ne ferme rien, et
 c'est très bien ainsi. Les tickets **ouverts** par le lot se listent aussi, pour
 qu'un relecteur voie ce qui a été découvert sans être traité.
 
-**Rollback si P1–P6 échoue :** `cd /opt/5hostachy && git reset --hard <commit-précédent>
-&& docker compose build && docker compose up -d`. Réversible et dans le cycle normal
-— ce n'est pas une violation de la règle d'or (aucune ouverture de `app.db`).
+**Rollback si P1–P6 échoue :** le retour arrière classique est de ramener l'actif
+au commit précédent (`git reset --hard <commit-précédent>`), puis `docker compose
+build && docker compose up -d` — aucune ouverture de `app.db` : ce n'est pas une
+violation de la règle d'or.
+
+🔴 **Mais ce geste ne se lance pas de sa propre initiative.** Le hook global
+`garde-git-destructif.py` le **refuse** depuis l'outil Bash — y compris glissé dans
+un `ssh … '… && git reset --hard …'` —, parce que rien n'en défait l'effet et qu'il
+a déjà détruit du travail non committé. **L'accord de Philippe se demande**, dans
+la conversation, avant le geste ; sans lui, on ne cherche pas à contourner le
+hook. La voie qui ne détruit rien : une PR `revert` vers `main`, qui suit le cycle
+normal (CI, fusion, `auto-deploy.sh`) — plus lente, et c'est le prix d'un geste que
+personne ne peut défaire.
 
 **P10 — bilan mémoire du lot (🟡 priorité 3, ajouté le 03/08/2026).** Une MEP réussie
 n'est pas une MEP close : ce qui a été appris pendant le lot disparaît si personne ne
