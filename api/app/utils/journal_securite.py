@@ -76,6 +76,10 @@ _NIVEAUX: dict[str, int] = {
     "delegation_creee": logging.WARNING,
     "delegation_acceptee": logging.WARNING,
     "delegation_revoquee": logging.WARNING,
+    #  L'adresse d'un compte qui va changer, puis qui a changé (#1549) : le
+    #  chemin d'un détournement — nouvelle adresse, puis « mot de passe oublié ».
+    "adresse_changement_demande": logging.WARNING,
+    "adresse_changee": logging.WARNING,
 }
 
 

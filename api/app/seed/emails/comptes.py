@@ -30,6 +30,23 @@ MODELES = [
         False,
     ),
     (
+        #  L'avis à l'ANCIENNE adresse quand l'adresse d'un compte va changer (#1549) :
+        #  c'est elle qu'un détournement ferait taire, c'est donc elle qu'on prévient.
+        #  Il ne contient AUCUN lien : il n'y a rien à cliquer pour qui n'a rien
+        #  demandé, et un courriel d'alerte qui porte un bouton ressemble à
+        #  l'hameçonnage qu'il dénonce.
+        "adresse_changement_avis",
+        "Changement d’adresse demandé",
+        "Changement d’adresse demandé pour votre compte — {{ residence.nom }}",
+        '<h2 style="margin:0 0 16px;font-family:Georgia,serif;font-size:20px;color:#1E3A5F">Changement d’adresse demandé</h2>'
+        '<p style="margin:0 0 12px">Bonjour {{ destinataire.prenom }},</p>'
+        '<p style="margin:0 0 12px">Une demande a été faite pour que l’adresse de votre compte sur <strong>{{ residence.nom }}</strong> devienne <strong>{{ nouvelle_adresse }}</strong>.'
+        "{% if par_un_administrateur %} Elle vient d’un administrateur du site.{% endif %}</p>"
+        '<p style="margin:0 0 12px">Rien ne change tant que ce changement n’est pas confirmé par le lien envoyé à cette nouvelle adresse : d’ici là, vous continuez à vous connecter avec l’adresse qui reçoit ce message.</p>'
+        '<p style="margin:0;font-size:13px;color:#5A6070">Si vous n’êtes pas à l’origine de cette demande, changez votre mot de passe sans attendre et prévenez le conseil syndical.</p>',
+        False,
+    ),
+    (
         "compte_en_attente",
         "Compte en attente",
         "Nouvelle demande de compte — {{ residence.nom }}",

@@ -78,6 +78,9 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     # On informe, sans rien attendre en retour.
     "compte_active": "information",
     "compte_refuse": "information",
+    #  Rien n'est demandé à qui a fait la demande ; qui ne l'a pas faite trouve
+    #  dans le corps ce qu'il doit faire.
+    "adresse_changement_avis": "information",
     "ticket_statut_change": "information",
     "ticket_nouveau_message": "information",
     "ticket_partage": "information",

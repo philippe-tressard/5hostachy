@@ -53,3 +53,8 @@ class EmailVerificationToken(SQLModel, table=True):
     token: str = Field(unique=True, index=True)
     expires_at: NaiveDatetime
     used: bool = False
+    #: La nouvelle adresse que ce lien CONFIRME (#1549, migration 0247) — `None`
+    #: pour le lien de l'inscription, qui vérifie l'adresse du compte. Tant que le
+    #: lien n'est pas servi, l'ancienne adresse reste celle du compte :
+    #: `utils/verification_adresse.py`.
+    nouvelle_adresse: Optional[str] = None

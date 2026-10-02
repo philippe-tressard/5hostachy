@@ -47,8 +47,11 @@ from app.seed import EMAIL_TEMPLATES
 #: la production en enverrait une autre, ce que ce test existe pour empêcher.
 #: ⬇️ Mise à jour le 23/09/2026 : le bouton de `publication_syndic` suit le lien
 #: fourni par l'appelant (`publication.lien`) — migration **0208**.
-EMPREINTE = "b5f8b1b14433f50e37db3b5afe0cc43fd4a711e74b23cd4b06edf9b565cadc2a"
-NOMBRE_ATTENDU = 29  # + ticket_partage, lien_partage (#1357), posés par le seed
+#: ⬇️ Mise à jour le 02/10/2026 (#1549) : un modèle AJOUTÉ, `adresse_changement_avis`,
+#: posé par le seed ; l'empreinte des 29 autres est inchangée (vérifié en
+#: l'écartant du calcul : b5f8b1b1…).
+EMPREINTE = "71c659c3ad514dd769b2d8b2efe2ee65f978188ace8d07382a52d2583d16ec68"
+NOMBRE_ATTENDU = 30  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549)
 
 
 def _empreinte() -> str:

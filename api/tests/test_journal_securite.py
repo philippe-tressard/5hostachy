@@ -72,9 +72,11 @@ GESTES_SENSIBLES = {
     ("routers/delegations.py", "accepter_delegation"): "une délégation acceptée — "
     "c'est à cet instant que la lecture au nom d'autrui commence",
     ("routers/delegations.py", "revoquer_delegation"): "une délégation révoquée",
-    #  ⚠️ Le changement de SA PROPRE adresse (`auth_profil.update_me`) n'est pas
-    #  ici : il est porté par le lot de l'adresse du compte (#1549/#1550), qui
-    #  le journalise avec le reste de ce geste.
+    ("utils/verification_adresse.py", "demander_changement_adresse"): "un changement "
+    "d'adresse demandé, par le titulaire ou l'administrateur — le premier geste d'un "
+    "détournement de compte, que rien ne traçait (#1549)",
+    ("utils/verification_adresse.py", "_confirmer_changement"): "une nouvelle adresse "
+    "confirmée : c'est désormais elle qui reçoit le mot de passe oublié (#1549)",
 }
 
 #: Ce qui reconnaît un geste sur un compte dans un routeur — le relevé mécanique
