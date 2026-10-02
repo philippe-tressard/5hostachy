@@ -59,13 +59,3 @@ export const BlocDepliable = Node.create({
 	parseHTML: () => [{ tag: 'details' }],
 	renderHTML: ({ HTMLAttributes }) => ['details', HTMLAttributes, 0],
 });
-
-/**
- *  Les deux balises que ces nœuds introduisent dans le contenu riche.
- *
- *  🔴 Nommée ici et lue par le contrôle de concordance : la liste blanche de
- *  `sanitize.ts`, la consigne donnée au modèle et ce fichier doivent parler des
- *  mêmes balises. Trois listes qui se recopient divergent au premier ajout, et
- *  la divergence ne se verrait qu'à l'écran, sur un extrait aplati.
- */
-export const BALISES_DEPLIABLES = ['details', 'summary'] as const;

@@ -49,9 +49,6 @@ import {
  * corrigé en silence.
  */
 
-/** Les trois types que porte une entrée de fil, côté serveur comme côté écran. */
-export type TypeEvolution = 'commentaire' | 'etat' | 'reponse';
-
 /**
  * Icône d'une entrée de fil.
  *

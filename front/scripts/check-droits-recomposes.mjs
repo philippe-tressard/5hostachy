@@ -69,7 +69,7 @@ const FORMES = [
 		nom: 'cascade de rôles écrite en clair',
 		motif: /\[[^\]]*'(?:propriétaire|conseil_syndical|résident)'[^\]]*\]\s*\.includes/,
 		remede:
-			'appeler un store dérivé (`$isProprio`, `$isCS`…) ou `aRole(user, …)` de ' +
+			'appeler un store dérivé (`$isProprioOuCS`, `$isCS`…) ou `aRole(user, …)` de ' +
 			'`stores/auth.ts`. Une liste de rôles recopiée dérive de sa jumelle.',
 	},
 	{

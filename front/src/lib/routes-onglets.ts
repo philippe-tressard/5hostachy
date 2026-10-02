@@ -23,11 +23,6 @@
 
 import { PAGES } from '$lib/pages';
 
-/** Toutes les routes déclarées, onglets et sous-onglets confondus. */
-export const ROUTES_ONGLETS: string[] = PAGES.flatMap((p) =>
-	(p.onglets ?? []).flatMap((o) => [o.route, ...(o.sous ?? []).map((s) => s.route)]),
-);
-
 /** Retire la barre oblique finale, sauf pour la racine. */
 function normaliserChemin(chemin: string): string {
 	return chemin.length > 1 && chemin.endsWith('/') ? chemin.slice(0, -1) : chemin;

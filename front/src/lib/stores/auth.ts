@@ -50,9 +50,6 @@ export const hasResidentRole = derived(
 	($u) => aRole($u, 'propriétaire', 'résident') || $u?.statut === 'aidant',
 );
 
-// Vrai si l'utilisateur a le rôle propriétaire
-export const isProprio = derived(currentUser, ($u) => aRole($u, 'propriétaire'));
-
 /**
  * Copropriétaire, conseil syndical ou administration.
  *

@@ -184,8 +184,6 @@ export function formulaireCompte(u?: Record<string, any> | null): FormulaireComp
  * types de lots du compte. Ici, les mots. Les quatre blocs étaient recopiés
  * dans la page, sans info-bulle : un rouge ne disait pas de quoi il manquait.
  */
-export type EtatEtiquette = 'ok' | 'manque' | 'sans_objet';
-
 export const ETIQUETTES_COMPTE: readonly {
 	cle: 'loti' | 'tc' | 'vigik' | 'bail';
 	libelle: string;

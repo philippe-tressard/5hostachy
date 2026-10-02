@@ -15,14 +15,6 @@ export function stripHtml(html: string): string {
 }
 
 /**
- * Génère un aperçu texte tronqué depuis un contenu HTML.
- */
-export function htmlPreview(html: string, maxLength = 150): string {
-	const text = stripHtml(html);
-	return text.length > maxLength ? text.slice(0, maxLength) + '…' : text;
-}
-
-/**
  * Montant en euros — format français unique de l'application.
  *
  * `1234` → `1 234 €` · `1234.5` → `1 234,50 €` · `null` → `—`

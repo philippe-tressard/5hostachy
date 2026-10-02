@@ -94,19 +94,6 @@ export function fmtDatetime(d: string | null | undefined): string {
 	});
 }
 
-/** "02 avr. 2026, 14:30" */
-export function fmtDatetime2d(d: string | null | undefined): string {
-	if (!d) return '—';
-	return new Date(d).toLocaleString(LOCALE, {
-		day: '2-digit',
-		month: 'short',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-		timeZone: TZ,
-	});
-}
-
 /** "10/04/2026 14:30" */
 export function fmtDatetimeShort(d: string | null | undefined): string {
 	if (!d) return '—';

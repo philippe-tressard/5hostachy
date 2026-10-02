@@ -333,9 +333,13 @@ export const agitPourAutrui = (p: PorteurDeStatut): boolean =>
 /**  Les clés sur lesquelles ces prédicats se prononcent.
  *
  *  🔒 Lue par `npm run lint:statuts`, qui vérifie qu'aucune n'est inconnue de
- *  `LIBELLES_STATUT`. Un prédicat bâti sur une chaîne fautive — un accent
- *  oublié dans « copropriétaire_résident » — serait **toujours faux**, et rien
- *  ne le signalerait : l'écran afficherait simplement moins de choses. */
+ *  `LIBELLES_STATUT` ET que cette liste est exactement l'ensemble des chaînes
+ *  que les prédicats ci-dessus comparent (`statutDe(p) === '…'`) : ajouter un
+ *  prédicat, c'est donc l'ajouter ici. Un prédicat bâti sur une chaîne fautive —
+ *  un accent oublié dans « copropriétaire_résident » — serait **toujours faux**,
+ *  et rien ne le signalerait : l'écran afficherait simplement moins de choses.
+ *  (Rétabli le 02/10/2026, #1577 : ce commentaire l'affirmait déjà, et plus
+ *  aucun contrôle ne lisait la liste.) */
 export const STATUTS_TESTES = [
 	'locataire',
 	'copropriétaire_bailleur',
