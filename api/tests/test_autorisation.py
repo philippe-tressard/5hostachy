@@ -60,10 +60,11 @@ def _fichiers_routers() -> list[pathlib.Path]:
 # `deps.py` plutôt que dans son routeur : il ne reconnaît une autorisation qu'au
 # module où elle est écrite, et c'est précisément le point (audit du 26/07/2026,
 # `_require_bailleur` posé hors du module central avec 17 endpoints dessus).
+#
+# `get_acting_user` et `require_role` en sont sortis le 02/10/2026 (#1534) :
+# aucune route ne les prenait, et le cas zéro plus bas le refuse désormais.
 _DEPS_AUTORISATION = {
     "get_current_user",
-    "get_acting_user",
-    "require_role",
     "require_proprietaire",
     "require_cs_or_admin",
     "require_admin",

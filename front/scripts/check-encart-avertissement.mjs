@@ -26,10 +26,6 @@ const PORTE = 'lib/components/EncartAvertissement.svelte';
 const EMPRUNTS = {
 	'lib/components/AlerteRelanceSyndic.svelte': [1, 'le SURVOL d’une carte de relance'],
 	'lib/components/RaccourcisRapides.svelte': [1, 'le SURVOL de la pastille du conseil'],
-	'lib/components/BandeauDelegation.svelte': [
-		1,
-		'le bandeau « vous agissez pour… » du menu : une ligne de navigation, sans filet',
-	],
 	'lib/components/LienConsignes.svelte': [
 		1,
 		'la CARTE des consignes mise en avant, venue de l’accueil (#779)',

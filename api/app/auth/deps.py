@@ -1,9 +1,8 @@
 from collections.abc import Iterable
 
-from fastapi import Depends, HTTPException, Cookie, Header, status
+from fastapi import Depends, HTTPException, Cookie, status
 from sqlmodel import Session
 
-from app.utils.delegations_actives import delegations_de_l_aidant
 from app.auth.jwt import decode_token, empreinte_secret
 from app.database import get_session
 from app.utils.nature_affaire import est_actualite
@@ -54,40 +53,19 @@ def get_current_user(user: Utilisateur = Depends(_get_current_user)) -> Utilisat
     return user
 
 
-def get_acting_user(
-    x_acting_as: int | None = Header(default=None, alias="X-Acting-As"),
-    user: Utilisateur = Depends(get_current_user),
-    session: Session = Depends(get_session),
-) -> Utilisateur:
-    """Retourne l'utilisateur effectif : le mandant si l'aidant agit en délégation,
-    sinon l'utilisateur connecté lui-même."""
-    if x_acting_as is None or x_acting_as == user.id:
-        return user
-
-    #  La condition « active » vit dans `utils/delegations_actives` (#1303).
-    delegation = next(iter(delegations_de_l_aidant(session, user.id, mandant_id=x_acting_as)), None)
-
-    if not delegation:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Aucune délégation active pour cet utilisateur",
-        )
-
-    mandant = session.get(Utilisateur, x_acting_as)
-    if not mandant or not mandant.actif:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Mandant introuvable ou inactif"
-        )
-    return mandant
-
-
-def require_role(*roles: RoleUtilisateur):
-    def checker(user: Utilisateur = Depends(get_current_user)):
-        if not user.has_role(*roles):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Droits insuffisants")
-        return user
-
-    return checker
+#  🔴 `get_acting_user` A ÉTÉ RETIRÉE le 02/10/2026 (#1534). Elle lisait
+#  l'en-tête `X-Acting-As` que le front posait pour « Agir pour… », et AUCUNE
+#  route ne l'a jamais prise : l'aidant écrivait sous sa propre identité
+#  pendant que l'écran disait « Vous agissez pour ». Arbitré : la délégation
+#  est en LECTURE SEULE — l'aidant lit ce que lit la personne qu'il aide, par
+#  `utils/delegations_actives` (#1303), sans en-tête ni commutateur.
+#  L'action déléguée pourra revenir comme fonctionnalité : elle devra alors
+#  dire QUELS gestes elle couvre, et être prise par leurs routes —
+#  `test_autorisation.py` refuse une dépendance qu'aucune route ne prend.
+#
+#  `require_role`, fabrique qu'aucune route n'a jamais appelée, est partie le
+#  même jour pour la même raison : une règle d'accès qui ne s'applique nulle
+#  part n'est qu'une promesse.
 
 
 def require_proprietaire(user: Utilisateur = Depends(get_current_user)) -> Utilisateur:

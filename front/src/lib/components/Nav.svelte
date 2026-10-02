@@ -7,7 +7,6 @@
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
-	import BandeauDelegation from '$lib/components/BandeauDelegation.svelte';
 	import {
 		HREFS_DEFAUT,
 		HREF_VERS_PAGE,
@@ -56,8 +55,8 @@
 	//  affichés. Sur un réseau lent, c'est ce qu'on voyait en se déconnectant.
 	//
 	//  La navigation complète vide aussi tout ce que l'onglet tenait de la
-	//  session : utilisateur, délégation en cours (`X-Acting-As`), listes
-	//  chargées. Une navigation interne les laissait en mémoire.
+	//  session : utilisateur, listes chargées. Une navigation interne les
+	//  laissait en mémoire.
 	//
 	//  Rien à conserver : on se déconnecte volontairement, d'où `CHEMIN_CONNEXION`
 	//  et non `urlDeConnexion()`.
@@ -162,7 +161,6 @@
 	</div>
 
 	<div class="nav-footer">
-		<BandeauDelegation />
 		<a href="/profil" class="nav-item" class:active={isActive('/profil')}>
 			<span class="nav-icon"><Icon name="user" size={18} /></span>
 			<span class="nav-label">{$currentUser?.prenom ?? t['/profil']}</span>
@@ -218,7 +216,6 @@
 			{/each}
 		</div>
 		<div class="overlay-footer">
-			<BandeauDelegation compact />
 			<a href="/profil" class="overlay-item" class:active={isActive('/profil')}>
 				<span class="nav-icon"><Icon name="user" size={20} /></span>
 				<span>{$currentUser?.prenom ?? t['/profil']}</span>
@@ -476,10 +473,6 @@
 		}
 	}
 
-	/*  Les règles `.aidant-*` sont parties avec leur balisage dans
-	    `BandeauDelegation` (14/09/2026, #779) : Svelte scope le style au
-	    composant qui REND le balisage, les laisser ici les aurait rendues
-	    inertes — c'est la panne des pastilles nues de la v2.67.11. */
 	/*  Les deux règles ci-dessous ne sont PAS des redéfinitions : elles rendent
 	    applicables au composant enfant celles que la page porte déjà. Bornées à
 	    l'enveloppe, elles ne fuient nulle part. */

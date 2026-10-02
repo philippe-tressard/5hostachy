@@ -12,14 +12,10 @@ import { detailLisible } from '$lib/detail-erreur';
 
 export const BASE = '/api';
 
-/** ID du mandant si l'aidant agit en délégation (null = agit pour soi-même) */
-let _actingAsId: number | null = null;
-export function setActingAs(mandantId: number | null) {
-	_actingAsId = mandantId;
-}
-export function getActingAs(): number | null {
-	return _actingAsId;
-}
+//  🔴 Le mandant « Agir pour… » (`setActingAs`, en-tête `X-Acting-As`) A ÉTÉ
+//  RETIRÉ le 02/10/2026 (#1534) : aucune route ne lisait l'en-tête, l'aidant
+//  écrivait donc sous sa propre identité. La délégation est en lecture seule,
+//  et `npm run lint:en-tetes-lus` refuse un en-tête qu'aucune route ne lit.
 
 export class ApiError extends Error {
 	constructor(
@@ -180,7 +176,6 @@ async function echecApi(
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const headers: Record<string, string> = {};
 	if (body) headers['Content-Type'] = 'application/json';
-	if (_actingAsId !== null) headers['X-Acting-As'] = String(_actingAsId);
 
 	const opts: RequestInit = {
 		method,

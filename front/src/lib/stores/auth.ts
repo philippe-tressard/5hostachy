@@ -1,7 +1,6 @@
 import { onMount } from 'svelte';
 import { writable, derived } from 'svelte/store';
 import type { User } from '$lib/api';
-import { setActingAs } from '$lib/api';
 import {
 	estBailleur,
 	estCoproprietaire,
@@ -11,14 +10,6 @@ import {
 } from '$lib/roles';
 
 export const currentUser = writable<User | null>(null);
-
-/** Mandant actif si l'aidant agit en délégation (null = soi-même) */
-export const actingAs = writable<{ mandant_id: number; mandant_nom: string } | null>(null);
-
-// Synchroniser le header API quand actingAs change
-actingAs.subscribe(($a) => setActingAs($a?.mandant_id ?? null));
-
-export const isActingAsAidant = derived(actingAs, ($a) => $a !== null);
 
 export const isAuthenticated = derived(currentUser, ($u) => $u !== null);
 

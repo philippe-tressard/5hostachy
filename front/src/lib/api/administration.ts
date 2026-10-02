@@ -41,7 +41,8 @@ export const delegations = {
 	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
 	//  🔴 `mesMandants` A ÉTÉ RETIRÉE (#801) : le front lit
 	//  `$currentUser.delegations_aidant`, qui arrive avec l'utilisateur — c'est
-	//  ce que `Nav.svelte` emploie pour son sélecteur « agir au nom de ».
+	//  ce que `Nav.svelte` emploie pour montrer l'entrée « Délégations » à un
+	//  aidant (le sélecteur « agir au nom de » a été retiré, #1534).
 	//  L'endpoint reste ; la seconde voie de lecture disparaît.
 };
 

@@ -6,6 +6,10 @@ quelqu'un) et `utils/lecture_utilisateur` (le profil qui liste les personnes
 aidées) —, et #1303 en demandait une troisième : l'aidant qui LIT ce que lit
 la personne qu'il aide. Trois copies d'une condition de droit divergent sur la
 borne de date au premier ajustement.
+
+Depuis le 02/10/2026 (#1534), la délégation est en LECTURE SEULE : le premier
+appelant, `get_acting_user`, a été retiré — aucune route ne l'avait jamais
+pris. Restent le profil et l'héritage de lecture (`utils/statuts_lus`).
 """
 
 from __future__ import annotations

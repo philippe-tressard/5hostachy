@@ -207,7 +207,11 @@ def revoquer_delegation(
     return _to_read(d, session)
 
 
-# ── « Agir en tant que » ────────────────────────────────────────────────────
+# ── « Agir en tant que » — retiré (#1534) ───────────────────────────────────
+#
+#  Le commutateur « Agir pour… » du menu et la dépendance `get_acting_user`
+#  sont partis le 02/10/2026 : aucune route ne prenait la dépendance, l'aidant
+#  agissait donc sous sa propre identité. La délégation est en lecture seule.
 
 #  🔴 `GET /delegations/mes-mandants` A ÉTÉ SUPPRIMÉ le 06/09/2026 (#801).
 #
