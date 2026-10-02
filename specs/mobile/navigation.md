@@ -1,5 +1,7 @@
 # Navigation et arborescence — Application mobile (PWA)
 
+> ⚠️ **Arborescence d'origine, périmée** : des pages décrites ici ont été fusionnées ou retirées (Accès & badges, Transparence & gouvernance, publications, calendrier). Le [manuel utilisateur](../../docs/manuel-utilisateur.html) et `front/src/lib/pages.ts` font foi.
+
 > Structure des écrans et navigation principale de la PWA mobile.  
 > Sur mobile (≤ 767 px), la navigation s'organise autour d'un **menu hamburger** (topbar fixe en haut de l'écran) qui ouvre un overlay plein écran listant toutes les sections.  
 > Sur desktop (≥ 768 px), la navigation reste une **sidebar latérale fixe** de 220 px.

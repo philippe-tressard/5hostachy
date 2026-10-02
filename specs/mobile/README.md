@@ -1,5 +1,7 @@
 # Spécifications — Application mobile (PWA)
 
+> ⚠️ **Spécification d'origine** — le site a évolué depuis, le [manuel utilisateur](../../docs/manuel-utilisateur.html) fait foi (voir [`specs/README.md`](../README.md)).
+
 ## Sommaire
 
 - [Exigences fonctionnelles](exigences-fonctionnelles.md)

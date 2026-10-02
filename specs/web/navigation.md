@@ -1,5 +1,7 @@
 # Navigation et arborescence — Site web
 
+> ⚠️ **Arborescence d'origine, périmée** : des pages décrites ici ont été fusionnées ou retirées (Accès & badges, Transparence & gouvernance, publications, calendrier). Le [manuel utilisateur](../../docs/manuel-utilisateur.html) et `front/src/lib/pages.ts` font foi.
+
 > Structure des pages et navigation principale du site web (SvelteKit SSR/SPA).  
 > La navigation s'adapte à la taille d'écran :
 > - **Desktop (≥ 768 px)** : sidebar latérale fixe (220 px).
