@@ -36,6 +36,11 @@
 #  collectes et sa décision, que les messages de C30 ci-dessous emploient.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-apt.sh"
 
+#  Les paquets HORS sécurité (en attente, retenus) et la parité de docker,
+#  containerd et cloudflared entre les nœuds (#1591) : même question que C30,
+#  autre module — celui-ci approchait le plafond de 500 lignes.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-paquets.sh"
+
 # ── La collecte, exécutée sur CHAQUE nœud (ajoutée à COLLECT) ────────────────
 #  Même contrainte que `lib-collecte.sh` : chaîne entre guillemets SIMPLES, donc
 #  AUCUNE apostrophe en dessous, même en commentaire. Tout ce qui s'explique
@@ -87,6 +92,7 @@ fi
 '
 }
 COLLECT_MAJ="$COLLECT_MAJ$(collecte_etrangers "$CONTENEURS_ETRANGERS")"
+COLLECT_MAJ="$COLLECT_MAJ$COLLECT_PAQUETS"
 
 # ── Décisions PURES (aucun effet de bord) ────────────────────────────────────
 
@@ -275,6 +281,7 @@ mises_a_jour_verdicts() {
             *)        warn "Noyau candidat de $n INCONNU (tourne='${actif:-vide}' dépôt='${cand:-vide}') — ni vert ni rouge" ;;
         esac
     done
+    paquets_verdicts   # lib-paquets.sh : hors sécurité, retenus, parité docker/containerd/cloudflared (#1591)
     [ "$PEER_OK" -eq 0 ] || return 0
     case "$(verdict_noyaux_parite "${S_noyau_actif:-}" "${P_noyau_actif:-}")" in
         OK)         ok   "Même noyau sur les 2 nœuds (${S_noyau_actif%%+*})" ;;
@@ -376,7 +383,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "#1610 : passage en cours → AUCUN WARN (donc pas de digest)" 0 \
       eval 'mises_a_jour_verdicts | grep -c "^WARN"'
     t "#1610 : …dit INCONNU et nomme son nœud" 1 \
-      eval 'mises_a_jour_verdicts | grep -c "^OK .*sur rpi1 : un passage .*EN COURS.*INCONNU, revérifié au prochain passage"'
+      eval 'mises_a_jour_verdicts | grep -c "^OK Mises à jour système sur rpi1 : un passage .*EN COURS.*INCONNU, revérifié au prochain passage"'
     S_apt_passage_s=10800
     t "#1610 : « en cours » depuis 3 h → le WARN revient (pas de masque permanent)" 1 \
       eval 'mises_a_jour_verdicts | grep -c "^WARN 3 correctif(s) de sécurité en attente sur rpi1"'

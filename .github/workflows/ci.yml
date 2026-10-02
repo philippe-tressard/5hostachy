@@ -545,6 +545,10 @@ jobs:
           bash scripts/lib/lib-rapport.sh           --selftest
           bash scripts/lib/lib-rotation.sh          --selftest
           bash scripts/lib/lib-apt.sh               --selftest
+          # C30 élargi (#1591) : paquets hors sécurité, paquets retenus, parité de
+          # docker / containerd / cloudflared — la collecte exécutée sur apt et
+          # dpkg simulés, et le cas zéro de chaque mesure.
+          bash scripts/lib/lib-paquets.sh           --selftest
           bash scripts/lib/lib-mises-a-jour.sh      --selftest
           bash scripts/lib/lib-notification.sh      --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
