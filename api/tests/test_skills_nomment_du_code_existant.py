@@ -165,6 +165,17 @@ FAMILLES = (
         re.compile(r"\b([A-Z][A-Za-z0-9]*\.svelte)\b"),
         lambda nom: nom in _composants_existants(),
     ),
+    #  Un composant cité SANS extension, entre accents graves (#1555) :
+    #  `CarteEvenement` et `FormulaireEvenement` étaient présentés comme vivants
+    #  dans les deux skills du front, un mois après leur suppression (#1092),
+    #  et la forme `X.svelte` seule ne les voyait pas. Préfixes des familles de
+    #  composants du dépôt — un mot en majuscule de la prose n'y entre pas.
+    Famille(
+        "composant sans extension",
+        _documents_front,
+        re.compile(r"`((?:Carte|Formulaire|Section|Onglet|Liste)[A-Z][A-Za-z0-9]*)`"),
+        lambda nom: f"{nom}.svelte" in _composants_existants(),
+    ),
     Famille(
         "linter",
         _documents_front,
