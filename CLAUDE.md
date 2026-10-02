@@ -517,6 +517,10 @@ importe les gestes du transport.
       `test_routes_masquees.py` le tient pour `acces`
 - [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
+- [ ] …**y compris pour une adresse** — lien de téléchargement, `src` d'image : le
+      client la rend (`documents.downloadUrl`, `manuel.pdfUrl`), et aucune chaîne
+      `/api` ne s'écrit dans un écran (`npm run lint:client-api` ; il en manquait
+      cinq, qu'il ne voyait pas, avant #1578)
 - [ ] …et il **rend le type** de ce que le serveur renvoie, déclaré à côté de lui —
       jamais `any` qu'un écran retype. Un type d'entité (champ `id`) déclaré dans un
       écran est refusé (`npm run lint:types-locaux`, #1044 ; l'existant y est déclaré)
