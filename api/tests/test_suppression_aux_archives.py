@@ -30,7 +30,14 @@ _COMPOSANTS = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "l
 _QUI_SUPPRIMENT = ["ActionsTicket.svelte", "ActionsActualite.svelte"]
 
 #: Toute carte qui offre le geste 📦. Une entité qu'on archive s'ajoute ici.
-_QUI_ARCHIVENT = _QUI_SUPPRIMENT + ["CartePrestataire.svelte", "CarteContrat.svelte"]
+#: Depuis #1539 (02/10/2026), le prestataire et le contrat tiennent ce geste de
+#: `CarteModifiable`, qui porte leur squelette commun : c'est lui qu'on lit, et
+#: `_MONTENT_CARTE_MODIFIABLE` vérifie que les deux cartes passent bien par lui.
+_QUI_ARCHIVENT = _QUI_SUPPRIMENT + ["CarteModifiable.svelte"]
+
+#: Les cartes dont le geste 📦 vit dans `CarteModifiable` — elles doivent la
+#: monter, sans quoi le contrôle ci-dessus lirait un fichier qu'elles n'emploient plus.
+_MONTENT_CARTE_MODIFIABLE = ["CartePrestataire.svelte", "CarteContrat.svelte"]
 
 #: La corbeille et le carton, littéraux ou en entité HTML.
 _CORBEILLE = re.compile(r"🗑|&#x1F5D1;", re.IGNORECASE)
@@ -94,4 +101,16 @@ def test_la_liste_offre_l_archivage(fichier):
     assert _CARTON.search(bouton) and not _CORBEILLE.search(bouton), (
         f"{fichier} : le bouton « Archiver » ne montre pas 📦 — l'icône dit "
         "« supprimer » quand la boîte dit « archiver »"
+    )
+
+
+@pytest.mark.parametrize("fichier", _MONTENT_CARTE_MODIFIABLE)
+def test_les_cartes_archivables_passent_par_carte_modifiable(fichier):
+    """Le prestataire et le contrat montent `CarteModifiable`, et lui transmettent
+    l'état d'archive et le geste — sinon 📦 / ↩️ ne s'y rendraient pas (#1539)."""
+    source = _sans_commentaires((_COMPOSANTS / fichier).read_text(encoding="utf-8"))
+    assert "<CarteModifiable" in source, f"{fichier} : ne monte plus `CarteModifiable`"
+    assert "{archive}" in source and "onArchiver={" in source, (
+        f"{fichier} : `archive` ou `onArchiver` n'est plus transmis à `CarteModifiable` — "
+        "📦 et ↩️ ne suivraient plus l'état de la fiche"
     )

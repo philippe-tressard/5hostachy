@@ -37,10 +37,9 @@
 	import { frequenceLabel } from '$lib/prestataires';
 	import { fmtDateShort } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
-	import FormulaireCreation from './FormulaireCreation.svelte';
+	import { CONTRAT } from '$lib/entites/contrat';
+	import CarteModifiable from './CarteModifiable.svelte';
 	import ListeDocuments from './ListeDocuments.svelte';
-	import BoutonLien from './BoutonLien.svelte';
-	import EnteteCarte from './EnteteCarte.svelte';
 	import FormulaireContrat from './FormulaireContrat.svelte';
 	import GesteEnPlace from './GesteEnPlace.svelte';
 	import NoteEtoiles from './NoteEtoiles.svelte';
@@ -110,261 +109,204 @@
 
 <!--  L'ancre `contrat-{id}` : le carnet d'entretien y renvoie (#870 → carnet,
      10/09/2026), et `test_liens_front` refuse un lien vers une ancre qu'aucun
-     onglet ne rend — il a attrapé celui-ci avant la production. -->
-<div
-	class="carte-liste"
-	class:expanded={expanded || enEdition}
-	class:urgent={enRetard}
-	class:attenue={archive && !expanded}
-	id="contrat-{contrat.id}"
-	role="presentation"
-	on:click={() => {
-		if (!expanded && !enEdition) onBasculer(contrat.id);
-	}}
+     onglet ne rend — il a attrapé celui-ci avant la production.
+
+     🔴 L'en-tête passe par `EnteteCarte` (12/09/2026) — comme les ONZE autres
+     cartes du site. Écrit à la main ici, il en portait les deux défauts que ce
+     composant existe pour supprimer : le TITRE partageait sa ligne avec le
+     prestataire, le n° de contrat, l'échéance, la fréquence et quatre icônes
+     (réduit à trois points sur un téléphone), et le geste était SYMÉTRIQUE.
+
+     Le squelette — conteneur, en-tête, 🔗 ✏️ 📦, corps qui cède la place au
+     formulaire — vit dans `CarteModifiable` depuis le 02/10/2026 (#1539) :
+     `CartePrestataire` le recopiait. La règle « pendant la correction, la
+     ligne de titre ne replie pas », écrite ici, y est montée pour les deux. -->
+<CarteModifiable
+	entite={CONTRAT}
+	ancreId="contrat-{contrat.id}"
+	quoi="le contrat"
+	titre={contrat.libelle}
+	date={contrat.prochaine_visite ? '' : fmtDateShort(contrat.date_debut)}
+	{expanded}
+	{enEdition}
+	urgent={enRetard}
+	{peutModifier}
+	{archive}
+	titreRestaurer="Restaurer — le contrat revient dans la liste"
+	teinte
+	onBasculer={() => onBasculer(contrat.id)}
+	onModifier={() => onModifier(contrat)}
+	{onAnnuler}
+	onArchiver={(archivee) => onArchiver(contrat.id, archivee)}
 >
-	<!--  🔴 L'en-tête passe par `EnteteCarte` (12/09/2026) — comme les ONZE autres
-	      cartes du site. Écrit à la main ici, il en portait les deux défauts que
-	      ce composant existe pour supprimer :
+	<svelte:fragment slot="tags">
+		{#if prest}
+			<span class="contrat-meta">{prest.nom}</span>
+		{:else}
+			<!--  Un contrat sans intervenant avait sa propre section, qui le rendait
+			      une SECONDE fois : le groupement par équipement retombe déjà sur
+			      `type_equipement` quand le prestataire manque. Le fait se dit ici,
+			      sur la ligne (#603). -->
+			<span class="badge badge-gray">sans intervenant</span>
+		{/if}
+		{#if contrat.numero_contrat}<span class="contrat-meta">🔖 {contrat.numero_contrat}</span>{/if}
+		<!--  L'échéance reste un TAG et non la `date` de l'en-tête : elle porte
+		      son état de retard, donc sa couleur, et `date` ne rend qu'un texte. -->
+		{#if contrat.prochaine_visite}
+			<span class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
+				{enRetard ? '⚠️' : '🗓'}
+				{fmtDateShort(contrat.prochaine_visite)}
+			</span>
+		{/if}
+		{#if contrat.frequence_type}
+			<span class="badge badge-blue">{frequenceLabel(contrat)}</span>
+		{/if}
+		<span class="badge">📄 {documents?.length ?? 0}</span>
+	</svelte:fragment>
 
-	        • le TITRE partageait sa ligne avec le prestataire, le n° de contrat,
-	          l'échéance, la fréquence et quatre icônes. Sur un téléphone, la ligne
-	          étant en `flex`, les éléments de largeur fixe gagnent et le titre se
-	          réduit à trois points — on lit une liste de contrats sans savoir
-	          lesquels.
-	        • le geste était SYMÉTRIQUE (`role="button"` sur la rangée). La norme
-	          du 18/08 est asymétrique : repliée, toute la carte ouvre ; dépliée,
-	          seul le titre referme, pour qu'on puisse lire et copier son corps.
+	<svelte:fragment slot="gestes">
+		{#if contrat.synthese_disponible}
+			<!--  ✨ avant ✏️ : du moins destructeur au plus. Proposer un texte
+			      l'est moins qu'ouvrir la correction, qui l'est moins qu'archiver. -->
+			<button
+				class="btn-icon"
+				aria-label="Proposer une synthèse de ce contrat"
+				title={syntheseEnCoursId === contrat.id ? 'Rédaction en cours…' : 'Proposer une synthèse'}
+				disabled={syntheseEnCoursId !== null}
+				on:click|stopPropagation={() => onSynthetiser(contrat)}
+				>{syntheseEnCoursId === contrat.id ? '⏳' : '✨'}</button
+			>
+		{/if}
+	</svelte:fragment>
 
-	      ⚠️ Le `!enEdition` est CONSERVÉ, et c'est une règle propre à cet écran :
-	      pendant la correction, la ligne de titre ne replie pas — le corps montre
-	      le formulaire quoi qu'il arrive, et basculer un état invisible ferait
-	      croire à un geste mort. On sort de l'édition par le crayon ou par
-	      « Annuler ». -->
-	<EnteteCarte
-		titre={contrat.libelle}
-		date={contrat.prochaine_visite ? '' : fmtDateShort(contrat.date_debut)}
-		basculable
-		on:toggle={() => !enEdition && onBasculer(contrat.id)}
-	>
-		<svelte:fragment slot="tags">
-			{#if prest}
-				<span class="contrat-meta">{prest.nom}</span>
-			{:else}
-				<!--  Un contrat sans intervenant avait sa propre section, qui le rendait
-				      une SECONDE fois : le groupement par équipement retombe déjà sur
-				      `type_equipement` quand le prestataire manque. Le fait se dit ici,
-				      sur la ligne (#603). -->
-				<span class="badge badge-gray">sans intervenant</span>
-			{/if}
-			{#if contrat.numero_contrat}<span class="contrat-meta">🔖 {contrat.numero_contrat}</span>{/if}
-			<!--  L'échéance reste un TAG et non la `date` de l'en-tête : elle porte
-			      son état de retard, donc sa couleur, et `date` ne rend qu'un texte. -->
-			{#if contrat.prochaine_visite}
-				<span class="contrat-echeance" class:contrat-echeance--retard={enRetard}>
-					{enRetard ? '⚠️' : '🗓'}
-					{fmtDateShort(contrat.prochaine_visite)}
-				</span>
-			{/if}
-			{#if contrat.frequence_type}
-				<span class="badge badge-blue">{frequenceLabel(contrat)}</span>
-			{/if}
-			<span class="badge">📄 {documents?.length ?? 0}</span>
-		</svelte:fragment>
+	<svelte:fragment slot="edition">
+		<FormulaireContrat
+			bind:contratForm
+			{prestataires}
+			{equipements}
+			contratId={contrat.id}
+			{documents}
+			onSupprimer={onSupprimerDoc}
+			onAjoute={onAjouteDoc}
+			{submitting}
+			{onAnnuler}
+			{onEnregistrer}
+		/>
+	</svelte:fragment>
 
-		<svelte:fragment slot="actions">
-			<!--  🔗 d'abord : c'est le seul geste que TOUT le monde a, et l'ordre
-			      🔗 ✏️ 📦 est celui de toutes les cartes (`ux-patterns` §3).
-			      Il manquait ici alors que l'ancre existait déjà et que le carnet
-			      d'entretien y renvoie — le lien était donc utilisable par tous SAUF
-			      depuis l'écran qui le porte. -->
-			<BoutonLien ancre="contrat-{contrat.id}" quoi="le contrat" />
-			{#if peutModifier && !archive}
-				{#if contrat.synthese_disponible}
-					<!--  ✨ avant ✏️ : du moins destructeur au plus. Proposer un texte
-					      l'est moins qu'ouvrir la correction, qui l'est moins qu'archiver. -->
+	<svelte:fragment slot="detail">
+		<div class="contrat-section">
+			<!--  🔴 « Le contrat », comme en édition — et non « Infos contrat ».
+				      Signalé le 12/09/2026 : *« la zone en lecture n'a pas les mêmes
+				      noms que l'édition »*. C'est R3 du cadre, appliqué entre DEUX
+				      RENDUS du même objet : un champ garde son libellé qu'on le lise
+				      ou qu'on le corrige. L'intitulé vient de la déclaration
+				      (`entites/contrat`, `titreEcran`), pas d'un choix local. -->
+			<div class="contrat-section-title">Le contrat</div>
+			<div class="detail-grid">
+				<div>
+					<span class="detail-label">Début</span>📅 {fmtDateShort(contrat.date_debut)}
+				</div>
+				{#if contrat.duree_initiale_valeur}<div>
+						<span class="detail-label">Durée initiale</span>{contrat.duree_initiale_valeur}
+						{contrat.duree_initiale_unite}
+					</div>{/if}
+				{#if contrat.frequence_type}
+					<div><span class="detail-label">Fréquence</span>{frequenceLabel(contrat)}</div>
+				{/if}
+				{#if contrat.prochaine_visite}<div>
+						<span class="detail-label">Prochaine visite</span><span
+							style="color:var(--color-primary);font-weight:600"
+							>🗓 {fmtDateShort(contrat.prochaine_visite)}</span
+						>
+					</div>{/if}
+			</div>
+		</div>
+		{#if contrat.notes}
+			<div class="contrat-section">
+				<!--  « Description », comme en édition — c'est le MÊME champ
+			      (`contrat.notes`), et il portait deux noms selon qu'on le lisait ou
+			      qu'on le corrigeait (signalé le 12/09/2026). Que la synthèse IA
+			      atterrisse ici est vrai, mais c'est ce que le champ CONTIENT
+			      souvent, pas ce qu'il EST : le nommer par son contenu le rendait
+			      introuvable depuis l'écran de saisie. -->
+				<div
+					class="contrat-section-title clickable"
+					role="button"
+					tabindex="0"
+					on:click|stopPropagation={() => (notesOuvertes = !notesOuvertes)}
+					on:keydown|stopPropagation={(e) =>
+						(e.key === 'Enter' || e.key === ' ') && (notesOuvertes = !notesOuvertes)}
+				>
+					Description {notesOuvertes ? '▲' : '▼'}
+				</div>
+				{#if notesOuvertes}
+					<div class="rich-content" style="font-size:var(--fs-base)">
+						{@html safeHtml(contrat.notes)}
+					</div>
+				{/if}
+			</div>
+		{/if}
+		<!--  🔴 Les documents sont rendus par `ListeDocuments` — le rendu des
+		      tickets, pastilles « PDF: nom », et rien d'autre (12/09/2026).
+
+		      Cette liste était écrite ICI **et** dans `DocumentsContrat`, avec
+		      les mêmes styles en ligne au caractère près : une duplication
+		      invisible à tout contrôle inter-fichiers, puisque chacune vivait
+		      chez elle. Elles auraient divergé à la première retouche — c'est
+		      exactement ce qui est arrivé au titre, présent deux fois à
+		      l'écran en édition. -->
+		<div class="contrat-section">
+			<div class="contrat-section-title">Documents ({documents?.length ?? 0})</div>
+			<ListeDocuments
+				{documents}
+				peutSupprimer={peutModifier}
+				onSupprimer={(docId) => onSupprimerDoc(contrat.id, docId)}
+			/>
+		</div>
+		{#if peutModifier}
+			<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
+				<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
+				      seul onglet Visites : retirer cet onglet sans porter le geste
+				      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
+				      saisir, alors que la fiche et le reporting continuaient d'en
+				      afficher la moyenne. Un affichage sans son geste de saisie ne
+				      se voit pas — rien ne lève, la note reste simplement à jamais
+				      celle d'hier (#603).
+				      Sans intervenant, il n'y a personne à noter : le bouton
+				      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
+				{#if contrat.prestataire_id}
 					<button
-						class="btn-icon"
-						aria-label="Proposer une synthèse de ce contrat"
-						title={syntheseEnCoursId === contrat.id
-							? 'Rédaction en cours…'
-							: 'Proposer une synthèse'}
-						disabled={syntheseEnCoursId !== null}
-						on:click|stopPropagation={() => onSynthetiser(contrat)}
-						>{syntheseEnCoursId === contrat.id ? '⏳' : '✨'}</button
+						class="btn btn-sm btn-outline contrat-noter"
+						aria-pressed={noteEnCours}
+						on:click|stopPropagation={() =>
+							noteEnCours ? onAnnulerNote() : onNoter(contrat.prestataire_id, contrat.id)}
+						>⭐ Noter</button
 					>
 				{/if}
-				<!--  Le mode se lit sur l'icône qui a ouvert le formulaire, jamais sur un
-				      titre au-dessus (`ux-patterns` §13 bis) : elle est déjà là, déjà
-				      regardée, et son inversion se lit sans être lue. -->
-				<button
-					class="btn-icon-edit"
-					aria-label="Modifier ce contrat"
-					title="Modifier"
-					aria-pressed={enEdition}
-					on:click|stopPropagation={() => (enEdition ? onAnnuler() : onModifier(contrat))}
-					>&#x270F;&#xFE0F;</button
-				>
-				<!--  📦 et non 🗑️ (#1538) : la corbeille disait « supprimer » pour un
-				      geste qui range — et le contrat se retrouve aux Archives. -->
-				<button
-					class="btn-icon"
-					aria-label="Archiver"
-					title="Archiver — rejoint les Archives, en bas de la liste"
-					on:click|stopPropagation={() => onArchiver(contrat.id, true)}>&#x1F4E6;</button
-				>
-			{:else if peutModifier && archive}
-				<button
-					class="btn-icon"
-					aria-label="Restaurer"
-					title="Restaurer — le contrat revient dans la liste"
-					on:click|stopPropagation={() => onArchiver(contrat.id, false)}>&#x21A9;&#xFE0F;</button
-				>
-			{/if}
-		</svelte:fragment>
-	</EnteteCarte>
-	{#if enEdition}
-		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic dans
-		      le formulaire remonterait à la ligne de titre et replierait ce qu'on est
-		      en train de corriger (`ux-patterns` §3). -->
-		<div
-			class="contrat-detail-body"
-			role="presentation"
-			on:click|stopPropagation
-			on:keydown|stopPropagation
-		>
-			<!--  `encadre={false}` : la carte EST le cadre, et sa ligne de titre en est
-			      l'en-tête. Une carte dans une carte, c'est deux bordures pour un seul
-			      objet (#425). -->
-			<FormulaireCreation titre="Modifier le contrat" encadre={false}>
-				<FormulaireContrat
-					bind:contratForm
-					{prestataires}
-					{equipements}
-					contratId={contrat.id}
-					{documents}
-					onSupprimer={onSupprimerDoc}
-					onAjoute={onAjouteDoc}
-					{submitting}
-					{onAnnuler}
-					{onEnregistrer}
-				/>
-			</FormulaireCreation>
-		</div>
-	{:else if expanded}
-		<div class="contrat-detail-body">
-			<div class="contrat-section">
-				<!--  🔴 « Le contrat », comme en édition — et non « Infos contrat ».
-					      Signalé le 12/09/2026 : *« la zone en lecture n'a pas les mêmes
-					      noms que l'édition »*. C'est R3 du cadre, appliqué entre DEUX
-					      RENDUS du même objet : un champ garde son libellé qu'on le lise
-					      ou qu'on le corrige. L'intitulé vient de la déclaration
-					      (`entites/contrat`, `titreEcran`), pas d'un choix local. -->
-				<div class="contrat-section-title">Le contrat</div>
-				<div class="detail-grid">
-					<div>
-						<span class="detail-label">Début</span>📅 {fmtDateShort(contrat.date_debut)}
-					</div>
-					{#if contrat.duree_initiale_valeur}<div>
-							<span class="detail-label">Durée initiale</span>{contrat.duree_initiale_valeur}
-							{contrat.duree_initiale_unite}
-						</div>{/if}
-					{#if contrat.frequence_type}
-						<div><span class="detail-label">Fréquence</span>{frequenceLabel(contrat)}</div>
-					{/if}
-					{#if contrat.prochaine_visite}<div>
-							<span class="detail-label">Prochaine visite</span><span
-								style="color:var(--color-primary);font-weight:600"
-								>🗓 {fmtDateShort(contrat.prochaine_visite)}</span
-							>
-						</div>{/if}
-				</div>
-			</div>
-			{#if contrat.notes}
-				<div class="contrat-section">
-					<!--  « Description », comme en édition — c'est le MÊME champ
-				      (`contrat.notes`), et il portait deux noms selon qu'on le lisait ou
-				      qu'on le corrigeait (signalé le 12/09/2026). Que la synthèse IA
-				      atterrisse ici est vrai, mais c'est ce que le champ CONTIENT
-				      souvent, pas ce qu'il EST : le nommer par son contenu le rendait
-				      introuvable depuis l'écran de saisie. -->
-					<div
-						class="contrat-section-title clickable"
-						role="button"
-						tabindex="0"
-						on:click|stopPropagation={() => (notesOuvertes = !notesOuvertes)}
-						on:keydown|stopPropagation={(e) =>
-							(e.key === 'Enter' || e.key === ' ') && (notesOuvertes = !notesOuvertes)}
-					>
-						Description {notesOuvertes ? '▲' : '▼'}
-					</div>
-					{#if notesOuvertes}
-						<div class="rich-content" style="font-size:var(--fs-base)">
-							{@html safeHtml(contrat.notes)}
-						</div>
-					{/if}
-				</div>
-			{/if}
-			<!--  🔴 Les documents sont rendus par `ListeDocuments` — le rendu des
-			      tickets, pastilles « PDF: nom », et rien d'autre (12/09/2026).
-
-			      Cette liste était écrite ICI **et** dans `DocumentsContrat`, avec
-			      les mêmes styles en ligne au caractère près : une duplication
-			      invisible à tout contrôle inter-fichiers, puisque chacune vivait
-			      chez elle. Elles auraient divergé à la première retouche — c'est
-			      exactement ce qui est arrivé au titre, présent deux fois à
-			      l'écran en édition. -->
-			<div class="contrat-section">
-				<div class="contrat-section-title">Documents ({documents?.length ?? 0})</div>
-				<ListeDocuments
-					{documents}
-					peutSupprimer={peutModifier}
-					onSupprimer={(docId) => onSupprimerDoc(contrat.id, docId)}
-				/>
-			</div>
-			{#if peutModifier}
-				<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
-					<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
-					      seul onglet Visites : retirer cet onglet sans porter le geste
-					      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
-					      saisir, alors que la fiche et le reporting continuaient d'en
-					      afficher la moyenne. Un affichage sans son geste de saisie ne
-					      se voit pas — rien ne lève, la note reste simplement à jamais
-					      celle d'hier (#603).
-					      Sans intervenant, il n'y a personne à noter : le bouton
-					      n'apparaît pas plutôt que d'ouvrir une modale sans cible. -->
-					{#if contrat.prestataire_id}
-						<button
-							class="btn btn-sm btn-outline contrat-noter"
-							aria-pressed={noteEnCours}
-							on:click|stopPropagation={() =>
-								noteEnCours ? onAnnulerNote() : onNoter(contrat.prestataire_id, contrat.id)}
-							>⭐ Noter</button
+				<!--  🔴 Le geste s'ouvre DANS la carte (#889) : il était en fenêtre, pour
+				      cinq étoiles et un commentaire. Les étoiles viennent de
+				      `NoteEtoiles` en mode saisie — saisir et lire une note sont deux
+				      rendus du même objet (R3), pas deux composants. -->
+				{#if noteEnCours}
+					<div role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
+						<GesteEnPlace
+							enCours={noteSaving}
+							onAnnuler={onAnnulerNote}
+							onValider={onEnregistrerNote}
 						>
-					{/if}
-					<!--  🔴 Le geste s'ouvre DANS la carte (#889) : il était en fenêtre, pour
-					      cinq étoiles et un commentaire. Les étoiles viennent de
-					      `NoteEtoiles` en mode saisie — saisir et lire une note sont deux
-					      rendus du même objet (R3), pas deux composants. -->
-					{#if noteEnCours}
-						<div role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-							<GesteEnPlace
-								enCours={noteSaving}
-								onAnnuler={onAnnulerNote}
-								onValider={onEnregistrerNote}
-							>
-								<NoteEtoiles saisie bind:note={noteValeur} />
-								<label class="field">
-									Commentaire
-									<textarea bind:value={noteCommentaire} rows="3"></textarea>
-								</label>
-							</GesteEnPlace>
-						</div>
-					{/if}
-				</div>
-			{/if}
-		</div>
-	{/if}
-</div>
+							<NoteEtoiles saisie bind:note={noteValeur} />
+							<label class="field">
+								Commentaire
+								<textarea bind:value={noteCommentaire} rows="3"></textarea>
+							</label>
+						</GesteEnPlace>
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</svelte:fragment>
+</CarteModifiable>
 
 <style>
 	/*  Ces règles ont SUIVI le balisage (10/09/2026). Svelte scope les styles au
@@ -382,11 +324,8 @@
 	.contrat-noter {
 		color: var(--color-warning-texte);
 	}
-	.contrat-detail-body {
-		padding: 0.75rem 1rem 1rem;
-		border-top: 1px solid var(--color-border);
-		background: var(--color-bg-secondary, #f8f9fa);
-	}
+	/*  `.contrat-detail-body` est partie avec le corps, dans `CarteModifiable`
+	    (`teinte`, #1539). */
 	.contrat-section {
 		margin-bottom: 1rem;
 	}
