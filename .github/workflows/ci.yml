@@ -2065,6 +2065,14 @@ jobs:
         working-directory: front
         run: npm run lint:tables-statuts
 
+      # Les statuts d'un accès ne s'écrivent que dans `$lib/types-acces` (#1575,
+      # 02/10/2026) : le formulaire en gardait une table à lui, « ✅ Actif » où
+      # tous les autres écrans disaient « Actif ». Le contrôle précédent ne
+      # compare que deux tables d'un même fichier ; celle-ci était seule.
+      - name: Statuts d'accès écrits une seule fois
+        working-directory: front
+        run: npm run lint:statuts-acces
+
       # 🔴 LE LOCK MENTAIT SUR DEUX DÉPENDANCES DEPUIS QUINZE VERSIONS (15/09/2026).
       #
       # `prosemirror-transform` y suivait le numéro de version de l'APPLICATION —

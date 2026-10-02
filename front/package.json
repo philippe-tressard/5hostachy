@@ -131,6 +131,7 @@
 		"lint:section-nommee": "node scripts/check-section-nommee.mjs --selftest && node scripts/check-section-nommee.mjs",
 		"lint:bouton-icone": "node scripts/lib-balises.mjs --selftest && node scripts/check-bouton-icone.mjs --selftest && node scripts/check-bouton-icone.mjs",
 		"lint:tables-statuts": "node scripts/check-tables-statuts.mjs",
+		"lint:statuts-acces": "node scripts/check-statuts-acces.mjs --selftest && node scripts/check-statuts-acces.mjs",
 		"lint:lock": "node scripts/check-lock-coherent.mjs",
 		"lint:texte": "node --experimental-strip-types scripts/check-texte.mjs",
 		"lint:identite": "node scripts/check-identite-membre.mjs",
