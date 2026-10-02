@@ -92,6 +92,11 @@ services:
       dockerfile: Dockerfile
     container_name: hostachy_whatsapp
     restart: unless-stopped
+    # Arrêt propre (#1590) : le bridge ferme son socket et finit ses écritures
+    # d'état d'authentification sur SIGTERM, bornées à 8 s (`arret.js`). Sans ce
+    # délai, Docker tuait à 10 s (exit 137) ; ici, il laisse le bridge sortir.
+    # Strictement SUPÉRIEUR au minuteur du bridge : `tests/livraison.test.js`.
+    stop_grace_period: 20s
     logging:
       driver: "json-file"
       options:
