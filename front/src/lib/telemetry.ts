@@ -7,9 +7,12 @@
  *
  * Aucun impact sur la latence utilisateur.
  *
- * 🔴 ANONYME (#1545, 02/10/2026) : le serveur n'enregistre aucun identifiant et
- * ne lit pas la session (`routers/telemetry_collecte.py`). Le refus du profil
- * s'applique donc ICI — qui refuse n'envoie plus rien.
+ * Ce que le serveur fait de ces lots — rattachés au compte s'il y en a un, refus
+ * du profil honoré une seconde fois — se lit dans `api/app/routers/telemetry_collecte.py`,
+ * pas ici. 🔴 Cet en-tête l'a décrit « anonyme » après la migration 0247, qui
+ * rattachait de nouveau la mesure au compte (#1635) : un commentaire qui
+ * raconte un autre fichier diverge sans bruit. Ce qui est vrai ICI : le refus
+ * du profil s'applique aussi dans le navigateur — qui refuse n'envoie plus rien.
  */
 
 const FLUSH_INTERVAL = 30_000; // 30 secondes
