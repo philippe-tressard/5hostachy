@@ -121,16 +121,6 @@ class UserRead(BaseModel):
         return data
 
 
-class UserUpdate(BaseModel):
-    nom: Optional[str] = None
-    prenom: Optional[str] = None
-    telephone: Optional[str] = None
-    societe: Optional[str] = None
-    photo_url: Optional[str] = None
-    preferences_notifications: Optional[str] = None
-    restreindre_a_mes_batiments: Optional[bool] = None
-
-
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -139,11 +129,6 @@ class LoginRequest(BaseModel):
     @classmethod
     def lowercase_email(cls, v: str) -> str:
         return normaliser_adresse(v)
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
