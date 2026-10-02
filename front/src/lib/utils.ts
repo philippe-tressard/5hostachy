@@ -45,6 +45,65 @@ export function fmtMontant(
 }
 
 /**
+ * Nombre groupé à la française — format unique de tout nombre affiché.
+ *
+ * `1234567` → `1 234 567` · `0.5` → `0,5` · `null` → `—`
+ *
+ * Trois écrans (`BlocUsageIA`, `OngletConsommations`, `ConsommationIA`) écrivaient
+ * chacun leur `toLocaleString('fr-FR')`, et un quatrième format de nombre n'avait
+ * aucune raison de ne pas suivre (#1576). Le `—` pour une valeur absente suit
+ * `fmtMontant` et `lib/date.ts`. 🔒 `npm run lint:dates` refuse la forme à la main.
+ */
+const NOMBRE = new Intl.NumberFormat('fr-FR');
+export function fmtNombre(v: number | null | undefined): string {
+	if (v == null) return '—';
+	return NOMBRE.format(v);
+}
+
+const UNE_DECIMALE = new Intl.NumberFormat('fr-FR', {
+	minimumFractionDigits: 1,
+	maximumFractionDigits: 1,
+});
+const DEUX_DECIMALES = new Intl.NumberFormat('fr-FR', {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+});
+
+/**
+ * Taille en octets — échelle unique de l'application : o · Ko · Mo · Go (base 1024).
+ *
+ * `512` → `512 o` · `51 200` → `50 Ko` · `1 258 291` → `1,2 Mo` · `3 435 973 837` → `3,20 Go`
+ *
+ * Deux formateurs écrits à la main disaient la même grandeur de deux façons
+ * (#1576) : `taches-colonnes.ts` en Mo / Go (`toFixed(1)` puis `toFixed(2)`, seuil
+ * 1024 Mo) et `HistoriqueAnnoncesHall` en Ko / Mo (`Math.round` puis `toFixed(1)`,
+ * seuil 1 Mo). L'échelle retenue est leur réunion, et elle rend **le même texte**
+ * dans le cas courant de chacun : un Mo ou un Go se lit comme avant (une décimale
+ * sous le Go, deux au-delà), un Ko est arrondi à l'entier.
+ *
+ * Ce qui change, volontairement (autorisé par l'utilisateur, 02/10/2026) :
+ * - le séparateur est la **virgule** (« 1,2 Mo », et non « 1.2 Mo ») ;
+ * - sous 1 Mo, l'historique des tâches disait « 0,3 Mo » : il dit « 300 Ko » ;
+ * - sous 1 Ko, les deux disaient « 0 » : c'est « 512 o » ;
+ * - une valeur absente est `—`, comme `fmtMontant`. Le « rien à dire » d'un
+ *   poids absent ou nul (`''` dans l'historique des annonces) reste le choix de
+ *   l'appelant : ce n'est pas un format.
+ *
+ * 🔒 `npm run lint:dates` refuse `toFixed(` et une division par 1024 hors d'ici.
+ */
+export function fmtOctets(n: number | null | undefined): string {
+	if (n == null) return '—';
+	if (n < 1024) return `${fmtNombre(Math.round(n))} o`;
+	//  Les seuils sont ceux de l'ARRONDI : 1 048 000 octets s'écrivent « 1 023 Ko »
+	//  et 1 048 500 « 1,0 Mo », jamais « 1 024 Ko » ni « 1 024,0 Mo ».
+	const ko = n / 1024;
+	if (ko < 1023.5) return `${fmtNombre(Math.round(ko))} Ko`;
+	const mo = ko / 1024;
+	if (mo < 1023.95) return `${UNE_DECIMALE.format(mo)} Mo`;
+	return `${DEUX_DECIMALES.format(mo / 1024)} Go`;
+}
+
+/**
  * Périmètres — la table a disparu d'ici, et de partout ailleurs.
  *
  * `PERIMETRE_LABELS` vivait juste en dessous : sept clés écrites en dur, arrêtées

@@ -16,7 +16,7 @@
   que le choix de l'onglet.
 -->
 <script lang="ts">
-	import { nombreOuNull } from '$lib/utils';
+	import { fmtNombre, nombreOuNull } from '$lib/utils';
 	import { prestataires as prestApi } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { isCS } from '$lib/stores/auth';
@@ -256,9 +256,7 @@
 					<span class="releve-date">Relevé {fmtReleve(r)}</span>
 					{#if r.note}<span class="releve-note">{r.note}</span>{/if}
 					{#if r.index != null}
-						<span class="releve-index"
-							>Index : <strong>{r.index.toLocaleString('fr-FR')}</strong></span
-						>
+						<span class="releve-index">Index : <strong>{fmtNombre(r.index)}</strong></span>
 					{/if}
 					{#if r.photo_url}
 						<a href={r.photo_url} target="_blank" rel="noopener">

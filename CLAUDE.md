@@ -103,7 +103,7 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    raison, sinon la règle devient « sauf quand on a jugé que ça allait ».
 2. **Dates et montants** : ne jamais réimplémenter un format dans une page.
    `$lib/date.ts` (`fmtDate`, `fmtDatetime`, `fmtMonthYear`…), `$lib/utils.ts`
-   (`fmtMontant`, `perimetreLabel`), et côté API `app/utils/dates_fr.py`. Deux
+   (`fmtMontant`, `fmtOctets`, `fmtNombre`, `perimetreLabel`), et côté API `app/utils/dates_fr.py`. Deux
    garde-fous échouent en CI : `api/tests/test_dates_fr.py` et `npm run lint:dates`.
 3. **Accessibilité** : tout élément cliquable non-`<button>` porte `role="button"`,
    `tabindex="0"` et `on:keydown` (Enter/Space) ; `aria-label` sur les boutons
@@ -174,6 +174,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   listes se déclarent dans `utils/archivage.REGLES` — la règle unique, avec son
   test de concordance. La plupart des tables n'ont ni `actif` ni `archivee`, et
   c'est voulu : un booléen ajouté à côté ferait une seconde façon de disparaître.
+  🔒 `test_archivage_colonnes_booleennes.py` : toute colonne `actif`/`active`/`archivee`
+  est couverte par `REGLES` ou déclarée référentiel avec son sens (#1568).
 - Lire un objet ou rendre 404 : `utils/recuperer.ou_404(session, Modele, id,
   "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`. Les
   404 bruts qui restent sont un **plafond décroissant**, `PLAFOND_404_BRUTS` dans
@@ -594,6 +596,8 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   hors du fichier qui porte la notion — s'écrit sur `front/scripts/lib-source-unique.mjs`
   (cas zéro, témoin qui doit servir, exceptions déclarées, commentaires blanchis) :
   six contrôles en recopiaient le squelette, et l'un n'avait pas de cas zéro (#779).
+- 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
+  **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)
@@ -696,7 +700,7 @@ les minutes y sont **décalées** exprès, et une cadence recopiée dans cette t
 | `bascule.sh` (quotidien, de nuit) | bascule active/standby, puis le nouveau standby pose sa **révision** de noyau et redémarre (`noyau-standby.sh`, #1395) — une nouvelle **série** reste manuelle, C30 la signale avec la commande |
 | `maintenance.sh` (hebdomadaire) | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée ; sur les **deux** nœuds, images de base re-tirées (#1379) et rotation des logs |
 | `health-watch.sh` (toutes les quelques minutes) | failover automatique si le site est HS — et une ligne datée à **chaque** sonde, site OK compris : son battement, que **C31** mesure sur les deux nœuds (#1586). Il se taisait quand tout allait bien, donc rien ne distinguait ce calme d'un failover mort |
-| `check-reliability.sh` (quart d'heure) | contrôles de fiabilité **C1 à C31** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
+| `check-reliability.sh` (quart d'heure) | contrôles de fiabilité numérotés (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
 
 **Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
 `app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si

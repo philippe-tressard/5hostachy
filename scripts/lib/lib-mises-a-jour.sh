@@ -36,6 +36,11 @@
 #  collectes et sa décision, que les messages de C30 ci-dessous emploient.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-apt.sh"
 
+#  Les paquets HORS sécurité (en attente, retenus) et la parité de docker,
+#  containerd et cloudflared entre les nœuds (#1591) : même question que C30,
+#  autre module — celui-ci approchait le plafond de 500 lignes.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-paquets.sh"
+
 # ── La collecte, exécutée sur CHAQUE nœud (ajoutée à COLLECT) ────────────────
 #  Même contrainte que `lib-collecte.sh` : chaîne entre guillemets SIMPLES, donc
 #  AUCUNE apostrophe en dessous, même en commentaire. Tout ce qui s'explique
@@ -87,6 +92,7 @@ fi
 '
 }
 COLLECT_MAJ="$COLLECT_MAJ$(collecte_etrangers "$CONTENEURS_ETRANGERS")"
+COLLECT_MAJ="$COLLECT_MAJ$COLLECT_PAQUETS"
 
 # ── Décisions PURES (aucun effet de bord) ────────────────────────────────────
 
@@ -235,14 +241,19 @@ mises_a_jour_verdicts() {
     local n p v
     for n in "$SELF" "$PEER"; do
         if [ "$n" = "$SELF" ]; then p=S; else [ "$PEER_OK" -eq 0 ] || continue; p=P; fi
-        local err age secu vu pas proch actif inst cand
+        local err age secu vu pas proch actif inst cand enc
         eval "err=\${${p}_apt_erreurs:-} age=\${${p}_apt_listes_j:-} secu=\${${p}_apt_secu:-}"
-        eval "vu=\${${p}_apt_secu_vu_s:-} pas=\${${p}_apt_passage_s:-} proch=\${${p}_apt_prochain:-}"
+        eval "vu=\${${p}_apt_secu_vu_s:-} pas=\${${p}_apt_passage_s:-} proch=\${${p}_apt_prochain:-} enc=\${${p}_apt_en_cours:-}"
         eval "actif=\${${p}_noyau_actif:-} inst=\${${p}_noyau_installe:-} cand=\${${p}_noyau_candidat:-}"
-        v=$(verdict_apt "$err" "$age" "$secu" "$vu" "$pas")
+        v=$(verdict_apt "$err" "$age" "$secu" "$vu" "$pas" "$enc")
         case "$v" in
             OK)        ok   "Mises à jour système sur $n : listes apt de ${age} j, aucun correctif de sécurité en attente" ;;
             ATTENTE)   ok   "Mises à jour système sur $n : $secu correctif(s) de sécurité publié(s) depuis le dernier passage d'installation, posé(s) au prochain (${proch:-heure illisible})" ;;
+            #  EN_COURS : INCONNU par nature (le relevé va changer), dit en `ok` PARCE QUE
+            #  tout `warn` part au digest quotidien — et c'est ce digest, pour un fait
+            #  résolu vingt secondes plus tard, que #1610 supprime. Jamais un vert qui
+            #  masque : la borne `APT_EN_COURS_MAX_S` rend la main au verdict habituel.
+            EN_COURS)  ok   "Mises à jour système sur $n : un passage d'installation apt est EN COURS ($secu correctif(s) de sécurité en attente) — INCONNU, revérifié au prochain passage (#1610)" ;;
             ILLISIBLE) warn "Configuration apt ILLISIBLE sur $n ($err erreur(s)) — apt-daily échoue chaque jour en silence, AUCUNE mise à jour n'arrive (#1377) : 'apt-config dump' pour voir la ligne fautive" ;;
             PERIMEES)  warn "Listes apt périmées sur $n : ${age} j (seuil ${APT_LISTES_MAX_J} j) — le nœud ne voit plus les correctifs ; vérifier 'systemctl status apt-daily' et /etc/apt/apt.conf.d/20auto-upgrades" ;;
             SECURITE)  warn "$secu correctif(s) de sécurité en attente sur $n, vus par le passage d'installation d'il y a $(( pas / 3600 )) h sans être posés — 'sudo unattended-upgrade -v' dit pourquoi (fichier de configuration modifié, paquet retenu)" ;;
@@ -270,6 +281,7 @@ mises_a_jour_verdicts() {
             *)        warn "Noyau candidat de $n INCONNU (tourne='${actif:-vide}' dépôt='${cand:-vide}') — ni vert ni rouge" ;;
         esac
     done
+    paquets_verdicts   # lib-paquets.sh : hors sécurité, retenus, parité docker/containerd/cloudflared (#1591)
     [ "$PEER_OK" -eq 0 ] || return 0
     case "$(verdict_noyaux_parite "${S_noyau_actif:-}" "${P_noyau_actif:-}")" in
         OK)         ok   "Même noyau sur les 2 nœuds (${S_noyau_actif%%+*})" ;;
@@ -358,6 +370,25 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "la cause SSH termine le message" "nœuds. (clé non épinglée)" \
       eval 'pair_injoignable_emettre "(clé non épinglée)" | grep -o "nœuds\..*"'
     t "sans cause : le message s'arrête" "nœuds." eval 'pair_injoignable_emettre "" | grep -o "nœuds\..*"'
+    #  #1610 — le constat de C30 pendant un passage d'installation : la boucle par
+    #  nœud, exécutée sur les champs S_* de rpi1 (le relevé du 01/10 à 06:21).
+    ok() { echo "OK $*"; }
+    SELF=rpi1 PEER=rpi2 PEER_OK=1
+    S_apt_erreurs=0 S_apt_listes_j=0 S_apt_secu=3 S_apt_secu_vu_s=86400 S_apt_passage_s=6
+    S_noyau_actif=6.12.75+rpt-rpi-2712 S_noyau_installe=6.12.75+rpt-rpi-2712 S_noyau_candidat=1:6.12.75-1+rpt1
+    S_apt_en_cours=non
+    t "#1610 : le relevé du 01/10 sans passage en cours → WARN (le défaut reste vu)" 1 \
+      eval 'mises_a_jour_verdicts | grep -c "^WARN 3 correctif(s) de sécurité en attente sur rpi1"'
+    S_apt_en_cours=oui
+    t "#1610 : passage en cours → AUCUN WARN (donc pas de digest)" 0 \
+      eval 'mises_a_jour_verdicts | grep -c "^WARN"'
+    t "#1610 : …dit INCONNU et nomme son nœud" 1 \
+      eval 'mises_a_jour_verdicts | grep -c "^OK Mises à jour système sur rpi1 : un passage .*EN COURS.*INCONNU, revérifié au prochain passage"'
+    S_apt_passage_s=10800
+    t "#1610 : « en cours » depuis 3 h → le WARN revient (pas de masque permanent)" 1 \
+      eval 'mises_a_jour_verdicts | grep -c "^WARN 3 correctif(s) de sécurité en attente sur rpi1"'
+    unset S_apt_erreurs S_apt_listes_j S_apt_secu S_apt_secu_vu_s S_apt_passage_s S_apt_en_cours S_noyau_actif S_noyau_installe S_noyau_candidat SELF PEER PEER_OK
+
     t "commande manuelle : les paquets de la liste" \
       "ssh -t ptressard@192.168.1.223 'sudo apt-get update && sudo apt-get install --only-upgrade $NOYAU_PAQUETS && sudo reboot'" \
       commande_montee_noyau 192.168.1.223

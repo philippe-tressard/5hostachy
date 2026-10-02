@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  lib-conformite.sh — les contrôles de CONFORMITÉ de `check-reliability.sh`
-#                      (C20 à C25, C30)
+#                      (C20 à C25, C30, C32 à C34)
 #
 #  Extrait le 20/08/2026, au fil de l'eau : `check-reliability.sh` a dépassé son
 #  plafond en recevant C23 (les en-têtes de sécurité réellement servis), et le
@@ -16,6 +16,10 @@
 #    C23  les en-têtes de sécurité sont-ils réellement servis ?
 #    C25  un script TIERS est-il servi dans la page publique ?
 #    C30  le nœud reçoit-il ses correctifs système ? (`lib-mises-a-jour.sh`)
+#    C32  quels ports écoutent sur toutes les interfaces ? (`lib-ports-ecoute.sh`)
+#    C33  des copies de `.env` traînent-elles à côté de l'original ?
+#    C34  le volume de données porte-t-il d'autres bases que celle de l'API ?
+#         (C33 et C34 : `lib-fichiers-parasites.sh`)
 #
 #  Les contrôles restés dans `check-reliability.sh` posent l'autre question :
 #  *le service fonctionne-t-il ?* — la base, le rôle actif, le tunnel, la
@@ -196,4 +200,14 @@ conformite_verdicts() {
   #  rpi2 n'en recevait plus depuis cinq mois, et aucun des contrôles ci-dessus ne
   #  pouvait le voir (#1377). Collecte, décisions et messages : `lib-mises-a-jour.sh`.
   mises_a_jour_verdicts
+
+  # ── C32. Quels ports écoutent sur TOUTES les interfaces ? (#1593) ────────────
+  #  rpcbind écoutait sur rpi1 seul, et aucun contrôle ne comparait les ports.
+  #  Mesure, liste blanche et constats : `lib-ports-ecoute.sh`.
+  ports_ecoute_verdicts
+
+  # ── C33 et C34. Des copies laissées à côté de l'original ? (#1609, #1592) ────
+  #  Des `.env*` à la racine du dépôt déployé, des bases autres que celle de l'API
+  #  dans le volume de données. Mesure et constats : `lib-fichiers-parasites.sh`.
+  fichiers_parasites_verdicts
 }

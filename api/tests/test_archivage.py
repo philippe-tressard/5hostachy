@@ -35,15 +35,14 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.models.annonce_hall import AnnonceHall
-from app.models.communaute import Idee, PetiteAnnonce, Sondage, StatutAnnonce
-from app.models.prestataires import ContratEntretien, Prestataire
+from app.models.communaute import StatutAnnonce
 from app.models.tickets import StatutTicket
 from app.utils.archivage import (
     ARCHIVAGE_DELAI_JOURS,
     REGLES,
     est_archivable,
 )
+from tests.aides_archivage import MODELES
 
 #  Une horloge FIXE : sans elle, un test qui passe à 23 h 59 échoue à 0 h 01, et
 #  personne ne comprend pourquoi. L'horloge dépréciée de `datetime` n'apparaît nulle part ici.
@@ -190,28 +189,6 @@ def test_le_jour_pile_du_seuil_archive():
 
 
 #  ── 3. 🔴 LA CONCORDANCE AVEC LES MODÈLES RÉELS ─────────────────────────────
-
-#: Quel modèle porte quel type. Une entrée manquante ici fait échouer le test de
-#: couverture ci-dessous — on ne peut pas déclarer une règle sans dire sur quoi
-#: elle s'applique.
-MODELES = {
-    "ticket": None,  # renseigné plus bas : import tardif, cf. commentaire
-    "annonce": PetiteAnnonce,
-    "idee": Idee,
-    "sondage": Sondage,
-    "annonce_hall": AnnonceHall,
-    "prestataire": Prestataire,
-    "contrat": ContratEntretien,
-}
-
-#  `Ticket` vit dans `models.core` mais son énumération dans `models.tickets` :
-#  l'import direct au sommet crée un cycle selon l'ordre de chargement. Résolu
-#  ici, à l'usage, plutôt qu'en réorganisant les modules pour un test.
-from app.models.core import Ticket  # noqa: E402
-
-MODELES["ticket"] = Ticket
-#  Une affaire de catégorie « Actualité » (#1091) : même modèle, autre règle.
-MODELES["actualite"] = Ticket
 
 #: Les valeurs de statut possibles, par type. `Idee` n'a **pas** d'énumération
 #: côté serveur — son champ est un `str` libre, et `PATCH /idees/{id}/statut`
