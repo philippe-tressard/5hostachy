@@ -212,6 +212,35 @@
 	}
 </script>
 
+<!--  🔴 LE FORMULAIRE D'UN OBJET, écrit UNE fois (#1539, 02/10/2026).
+
+      Il était rendu deux fois dans ce fichier — la création en tête, la
+      correction dans la rangée de l'objet —, douze lignes identiques au titre
+      près. Les deux places sont voulues (`ux-patterns` §14 ter) ; la double
+      écriture ne l'était pas. Un `snippet` et non un composant : le formulaire
+      ne vit qu'ici, et ses six champs sont l'état de CE composant — un fichier
+      à part les aurait fait voyager en six `bind:` à chaque appel, c'est-à-dire
+      recopié la duplication dans le câblage (`standards/02` §4 quinquies).
+
+      `largeur` : la création se pose dans la page et prend la largeur de
+      saisie ; la correction remplit sa rangée de tableau. -->
+{#snippet formulaireObjet(titre: string, largeur: boolean)}
+	<CadreFormulaire encadre={false} {titre} on:fermer={() => (saisie = null)}>
+		<form class:largeur-saisie={largeur} on:submit|preventDefault={enregistrer}>
+			<ChampsObjetRemis
+				types={TYPES}
+				bind:fType
+				bind:fLibelle
+				bind:fQuantite
+				bind:fReference
+				bind:fRemisLe
+				bind:fNotes
+			/>
+			<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
+		</form>
+	</CadreFormulaire>
+{/snippet}
+
 <div>
 	<div class="inv-entete">
 		<div class="inv-titre">
@@ -239,20 +268,7 @@
 	      §14 ter, #889). Il n'y a plus rien à ramener : la boîte est là où l'on a
 	      cliqué. L'ajout, lui, reste ici — son geste « + » est juste au-dessus. -->
 	{#if saisie && saisie.id === null}
-		<CadreFormulaire encadre={false} titre="Nouvel objet remis" on:fermer={() => (saisie = null)}>
-			<form class="largeur-saisie" on:submit|preventDefault={enregistrer}>
-				<ChampsObjetRemis
-					types={TYPES}
-					bind:fType
-					bind:fLibelle
-					bind:fQuantite
-					bind:fReference
-					bind:fRemisLe
-					bind:fNotes
-				/>
-				<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
-			</form>
-		</CadreFormulaire>
+		{@render formulaireObjet('Nouvel objet remis', true)}
 	{/if}
 
 	{#if objets.length === 0}
@@ -339,24 +355,7 @@
 							      navigateur. -->
 							<tr class="ligne-saisie">
 								<td colspan={modifiable ? 8 : 7}>
-									<CadreFormulaire
-										encadre={false}
-										titre="Corriger l’objet"
-										on:fermer={() => (saisie = null)}
-									>
-										<form on:submit|preventDefault={enregistrer}>
-											<ChampsObjetRemis
-												types={TYPES}
-												bind:fType
-												bind:fLibelle
-												bind:fQuantite
-												bind:fReference
-												bind:fRemisLe
-												bind:fNotes
-											/>
-											<PiedFormulaire enCours={enregistrement} on:annule={() => (saisie = null)} />
-										</form>
-									</CadreFormulaire>
+									{@render formulaireObjet('Corriger l’objet', false)}
 								</td>
 							</tr>
 						{:else if objetRetour?.id === objet.id}

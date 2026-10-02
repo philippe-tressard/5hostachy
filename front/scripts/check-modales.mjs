@@ -296,7 +296,11 @@ if (fichiersAvecModale < 2) {
 //  ⬇️ 18 → 16 le 01/10/2026 (#779) : les confirmations de suppression d'un bail
 //  et d'un compte passent par `confirmer(SUPPRESSION(…))` — deux modales
 //  écrites à la main de moins (`lint:suppression-confirmee`).
-const PLANCHER_MODALES = 16;
+//  ⬇️ 16 → 15 le 02/10/2026 (#1539) : `InventaireBail` rendait le formulaire
+//  d'un objet remis DEUX fois (création, correction), donc deux
+//  `<CadreFormulaire>` ; il l'écrit une fois (`{#snippet formulaireObjet}`).
+//  Un cadre de moins, une écriture de moins — les quinze autres sont vus.
+const PLANCHER_MODALES = 15;
 if (titresRendus < PLANCHER_MODALES) {
 	console.error(
 		`✗ Cas zéro : ${titresRendus} modale(s) recensée(s), ${PLANCHER_MODALES} attendues au minimum. ` +
