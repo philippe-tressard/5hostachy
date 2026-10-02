@@ -180,6 +180,20 @@ INTERDITS_SANS_EXCEPTION = (
         "passer par une route in-process (`POST /admin/maintenance/purges`, "
         "`/admin/db/checkpoint`…)",
     ),
+    #  Aucun interpréteur Python lancé DANS le conteneur de l'API par un script
+    #  (#1562). Le dernier survivant lisait seulement la TAILLE du fichier
+    #  (`os.path.getsize`), sans ouvrir la base — mais c'est la forme que #1232 a
+    #  bannie, et un motif qu'on tolère « parce que celui-ci est inoffensif »
+    #  est celui où le prochain ajoutera une requête. La taille d'un fichier se lit
+    #  depuis l'hôte (`rapport_taille_fichier`, `lib-rapport.sh`) ; le reste passe
+    #  par une route in-process.
+    (
+        re.compile(r"docker\s+(?:compose\s+)?exec\b[^\n#]*\bpython\d*\b"),
+        scripts_shell_versionnes,
+        "interpréteur Python lancé dans le conteneur de l'API depuis un process "
+        "tiers — lire la taille du fichier depuis l'hôte (`rapport_taille_fichier`), "
+        "le reste par une route in-process",
+    ),
     #  Aucune sauvegarde côté hôte : retirée de `setup-rpi5.sh` le 04/08/2026, où
     #  elle avait survécu à la haute disponibilité parce que personne n'avait
     #  relu ce fichier depuis mars 2026. ⚠️ Ce contrôle ne visait QUE ce script
@@ -209,3 +223,27 @@ def test_aucun_geste_interdit_sans_exception():
                         f"(« {trouve.group(0)} ») : {message}\n    {ligne.strip()}"
                     )
     assert not fautes, "Geste interdit sans exception sur la base :\n" + "\n".join(fautes)
+
+
+def test_motif_python_dans_le_conteneur_voit_et_ne_voit_que_lui():
+    """Cas zéro du motif « interpréteur dans le conteneur » (#1562).
+
+    Le motif a été prouvé sur la ligne réelle qu'il devait refuser — elle a disparu
+    avec le correctif, donc le test du dessus ne le prouverait plus. Il garde ici un
+    témoin qui doit être refusé, et les gestes voisins, légitimes, qui ne le sont pas.
+    """
+    motif = next(m for m, _portee, msg in INTERDITS_SANS_EXCEPTION if "Python lancé" in msg)
+    refuses = (
+        "DB_SIZE=$(docker exec hostachy_api python -c \\",
+        "docker exec -i hostachy_api python3 script.py",
+        "docker compose exec api python -m app.x",
+    )
+    permis = (
+        "docker exec hostachy_api curl -sf http://localhost:8000/health",
+        "docker exec hostachy_api sh -lc 'cd /app && alembic upgrade head'",
+        "docker stop hostachy_api",
+    )
+    for ligne in refuses:
+        assert motif.search(ligne), f"le motif devrait refuser : {ligne}"
+    for ligne in permis:
+        assert not motif.search(ligne), f"le motif refuse à tort : {ligne}"
