@@ -53,8 +53,8 @@ from typing import Any, Callable
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.auth.deps import est_moderateur
-from app.models.core import LocationBail, Utilisateur
+from app.auth.deps import est_moderateur, est_rattache_au_lot
+from app.models.core import LocationBail, Lot, Utilisateur
 from app.utils.recuperer import ou_404
 
 
@@ -73,6 +73,36 @@ def exiger_bail_du_bailleur(session: Session, bail_id: int, user: Utilisateur) -
     if bail.bailleur_id != user.id and not est_moderateur(user):
         raise HTTPException(status_code=403, detail="Accès interdit")
     return bail
+
+
+def exiger_lot_du_bailleur(session: Session, lot_id: int, user: Utilisateur) -> Lot:
+    """Le lot, si ce compte peut le donner à bail — **403** sinon (#1535).
+
+    La question d'AVANT le bail, jumelle de `exiger_bail_du_bailleur` et de même
+    décision : 403, le conseil syndical et l'administration admis. Le lien exigé
+    est ACTIF et de nature copropriétaire (`TYPES_COPROPRIETAIRES`) — le
+    locataire d'un lot n'en est pas le bailleur.
+
+    🔴 Elle manquait : `creer-multi` relisait le lot (« existe-t-il ? ») sans
+    demander s'il était le vôtre. Tout propriétaire posait un bail sur le lot
+    d'un voisin en s'en désignant locataire, et devenait ainsi porteur des
+    badges remis à ce lot (`utils/porteurs_acces`) et bailleur du bail — que
+    `exiger_bail_du_bailleur` lui laissait ensuite gérer. L'écran ne proposait
+    que « mes lots » : un écran masqué n'est pas un accès refusé.
+
+    Le refus est journalisé : il n'arrive pas par l'écran, c'est une requête
+    forgée ou un compte détaché depuis la page ouverte, deux choses à relire.
+    """
+    from app.utils.journal_securite import journaliser_securite
+    from app.utils.resolution_lots import TYPES_COPROPRIETAIRES
+
+    lot = ou_404(session, Lot, lot_id, "Lot")
+    if not est_moderateur(user) and not est_rattache_au_lot(
+        user, lot_id, comme=TYPES_COPROPRIETAIRES
+    ):
+        journaliser_securite("bail_hors_de_ses_lots", acteur_id=user.id, detail=f"lot={lot_id}")
+        raise HTTPException(status_code=403, detail=f"Le lot {lot.numero} n'est pas le vôtre")
+    return lot
 
 
 def exiger_aidant_de_la_delegation(delegation, user: Utilisateur) -> None:

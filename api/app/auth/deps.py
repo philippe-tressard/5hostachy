@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from fastapi import Depends, HTTPException, Cookie, Header, status
 from sqlmodel import Session
 
@@ -5,6 +7,7 @@ from app.utils.delegations_actives import delegations_de_l_aidant
 from app.auth.jwt import decode_token, empreinte_secret
 from app.database import get_session
 from app.utils.nature_affaire import est_actualite
+from app.utils.valeurs import valeur
 from app.models.core import (
     Notification,
     RoleUtilisateur,
@@ -166,8 +169,17 @@ def est_moderateur(user: Utilisateur) -> bool:
 #  rend vérifiables sans monter d'application.
 
 
-def est_rattache_au_lot(user: Utilisateur, lot_id: int) -> bool:
+def est_rattache_au_lot(
+    user: Utilisateur, lot_id: int, *, comme: Iterable[str] | None = None
+) -> bool:
     """Ce lot est-il rattaché à cet utilisateur par une association ACTIVE ?
+
+    `comme` restreint la NATURE du lien (`TypeLien`, en valeurs) : « rattaché
+    comme copropriétaire » n'est pas « rattaché ». Donner un lot à bail l'exige
+    (#1535) — le locataire d'un lot n'en est pas le bailleur. Sans lui, tout lien
+    actif répond oui, ce que veulent l'étage du lot et la commande d'un badge.
+    Un paramètre et non une seconde fonction : deux écritures de la question
+    divergeraient sur `actif`, et c'est exactement le défaut de #1028.
 
     🔴 La question était écrite **deux fois** avant le 19/09/2026 (#1028), et les
     deux écritures divergeaient sur le cas qui compte : `routers/lots.py` exigeait
@@ -191,7 +203,11 @@ def est_rattache_au_lot(user: Utilisateur, lot_id: int) -> bool:
     L'appelant choisit son code d'erreur, parce que 403 et 404 ne disent pas la
     même chose de ce que le demandeur a le droit de savoir.
     """
-    return lot_id in [ul.lot_id for ul in user.user_lots if ul.actif]
+    natures = None if comme is None else set(comme)
+    return any(
+        ul.lot_id == lot_id and ul.actif and (natures is None or valeur(ul.type_lien) in natures)
+        for ul in user.user_lots
+    )
 
 
 def est_auteur(objet, user: Utilisateur) -> bool:

@@ -10,7 +10,7 @@ réponse, libres de diverger au premier champ ajouté.
 
 from datetime import date
 from app.utils import horloge
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -20,7 +20,6 @@ from app.database import get_session
 from app.models.core import (
     LocationBail,
     RemiseObjet,
-    Lot,
     StatutBail,
     StatutUtilisateur,
     Utilisateur,
@@ -30,7 +29,7 @@ from pydantic import BaseModel
 
 from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate
 from app.utils.acces_bail import rendre_au_bailleur
-from app.auth.appartenance import exiger_bail_du_bailleur
+from app.auth.appartenance import exiger_bail_du_bailleur, exiger_lot_du_bailleur
 
 router = APIRouter()
 
@@ -87,6 +86,21 @@ def supprimer_bail(
 #  `lot_ids`. Une seule garde, une seule construction.
 
 
+def _exiger_locataire(session: Session, locataire_id: Optional[int]) -> None:
+    """Le compte désigné comme locataire existe — **404** sinon (#1535).
+
+    C'est la seule contrainte, et elle est délibérée. Le locataire d'un bail
+    devient porteur des badges remis à CE lot : un identifiant libre ferait du
+    futur compte de ce numéro le porteur des badges, sans que personne l'ait
+    choisi. Au-delà, désigner son locataire est le geste du bailleur — la
+    recherche d'un compte (`search-locataire`) est ouverte à cette fin, et le
+    lot, lui, est déjà le sien (`exiger_lot_du_bailleur`) : il ne confie que
+    ses propres badges.
+    """
+    if locataire_id is not None:
+        ou_404(session, Utilisateur, locataire_id, "Locataire")
+
+
 @router.post("/baux/creer-multi", response_model=List[BailOut], status_code=201)
 def creer_bail_multi(
     data: BailCreateMulti,
@@ -97,15 +111,17 @@ def creer_bail_multi(
     if not data.lot_ids:
         raise HTTPException(status_code=422, detail="Au moins un lot est requis")
 
+    #  🔒 « Ce lot est-il le vôtre ? » AVANT toute écriture, pour TOUS les lots :
+    #  la demande est refusée entière, jamais un bail posé à moitié (#1535).
+    lots = [exiger_lot_du_bailleur(session, lot_id, user) for lot_id in data.lot_ids]
+    _exiger_locataire(session, data.locataire_id)
+
     created: List[LocationBail] = []
     now = horloge.maintenant()
-    for lot_id in data.lot_ids:
-        lot = session.get(Lot, lot_id)
-        if not lot:
-            raise HTTPException(status_code=404, detail=f"Lot {lot_id} introuvable")
+    for lot in lots:
         bail_actif = session.exec(
             select(LocationBail).where(
-                LocationBail.lot_id == lot_id,
+                LocationBail.lot_id == lot.id,
                 LocationBail.statut.in_([StatutBail.actif, StatutBail.en_cours_sortie]),
             )
         ).first()
@@ -115,7 +131,7 @@ def creer_bail_multi(
                 detail=f"Le lot {lot.numero} a déjà un bail en cours",
             )
         bail = LocationBail(
-            lot_id=lot_id,
+            lot_id=lot.id,
             bailleur_id=user.id,
             locataire_id=data.locataire_id,
             locataire_nom=data.locataire_nom,
@@ -154,6 +170,7 @@ def update_bail(
     session: Session = Depends(get_session),
 ):
     bail = exiger_bail_du_bailleur(session, bail_id, user)
+    _exiger_locataire(session, data.locataire_id)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(bail, k, v)
     bail.mis_a_jour_le = horloge.maintenant()
