@@ -86,7 +86,8 @@ class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     mis_a_jour_le: Optional[NaiveDatetime] = None
-    archivee: bool = False
+    #  La colonne `archivee` est retirée (#1568, migration 0250) : l'archivage des
+    #  événements est parti avec leur passage en affaires (#1092), rien ne la lisait.
     statut_kanban: Optional[str] = Field(default=None)  # ag|cs|syndic|fournisseur|termine|annule
     prestataire_id: Optional[int] = Field(default=None, foreign_key="prestataire.id")
     #  🔴 La SOURCE de la visite, quand elle vient du pré-remplissage du kanban
