@@ -22,7 +22,9 @@
  *
  * RESTE AUTORISÉ :
  *   - `toISOString()` seul → sérialisation UTC des payloads d'API, c'est correct ;
- *   - `toLocaleString()` sur un NOMBRE (index de compteur, montants) → pas une date ;
+ *   - `toLocaleString()` sur un NOMBRE → pas une date, et pas ce contrôle : un nombre
+ *     ou une taille passe par `fmtNombre` / `fmtOctets` (`scripts/check-formats.mjs`,
+ *     lancé avec celui-ci par `npm run lint:dates`) ;
  *   - tout appel épinglant explicitement `timeZone`.
  *
  * Usage : npm run lint:dates   (exit 1 si violation)
