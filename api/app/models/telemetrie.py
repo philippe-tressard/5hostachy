@@ -30,16 +30,16 @@ from pydantic import NaiveDatetime
 class TelemetryEvent(SQLModel, table=True):
     """Événement brut de télémétrie — conservé 30 jours puis agrégé.
 
-    🔴 SANS IDENTIFIANT DE PERSONNE depuis le 02/10/2026 (#1545, migration
-    0246) : la colonne `user_id` est retirée, et `cree_le` n'est posé qu'à
-    l'heure près (`routers/telemetry_collecte.py`). La mesure d'audience est
-    collectée sans consentement parce qu'elle ne sait pas QUI — `standards/14`
-    §4. 🔒 `test_politique_confidentialite_couvre_le_code.py` refuse qu'une
-    colonne d'identité ou une clé étrangère y revienne.
+    ⚠️ `user_id` a été retirée par la 0246 (#1545) puis RÉTABLIE par la 0247 le
+    même jour : son retrait supprimait les statistiques par utilisateur sans
+    l'accord de l'utilisateur du produit. Elle revient en colonne simple, SANS
+    clé étrangère — SQLite refuse d'en ajouter une à une table existante, et
+    déclarer `foreign_key` ici ferait diverger base neuve et base migrée.
     """
 
     __tablename__ = "telemetry_event"
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = None
     page: str = Field(index=True)  # ex: /actualites, /tickets
     action: str = "view"  # view | click | submit
     detail: Optional[str] = None  # ex: bouton cliqué, id ticket
@@ -47,13 +47,7 @@ class TelemetryEvent(SQLModel, table=True):
 
 
 class TelemetryDaily(SQLModel, table=True):
-    """Agrégation journalière — conservée 12 mois.
-
-    ⚠️ `utilisateurs_uniques` n'est plus calculé depuis le 02/10/2026 (#1545) :
-    l'événement ne porte plus de quoi compter des personnes distinctes. La
-    colonne garde l'historique des jours antérieurs — un compte, anonyme — et
-    vaut 0 ensuite ; aucun écran ne la lit plus.
-    """
+    """Agrégation journalière — conservée 12 mois."""
 
     __tablename__ = "telemetry_daily"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -65,8 +59,7 @@ class TelemetryDaily(SQLModel, table=True):
 
 
 class TelemetryMonthly(SQLModel, table=True):
-    """Agrégation mensuelle — conservée 10 ans. Même remarque que
-    `TelemetryDaily` sur `utilisateurs_uniques`."""
+    """Agrégation mensuelle — conservée 10 ans."""
 
     __tablename__ = "telemetry_monthly"
     id: Optional[int] = Field(default=None, primary_key=True)

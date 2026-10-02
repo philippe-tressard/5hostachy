@@ -149,7 +149,7 @@ def _imp_row(imp: LotImport, session: Session) -> dict:
         "statut": valeur(imp.statut),
         "lot_id": imp.lot_id,
         "lot_label": (
-            f"{libelle_batiment(lot.batiment)} — {lot.numero} ({lot.type.value})"
+            f"{libelle_batiment(lot.batiment)} — {lot.numero} ({valeur(lot.type)})"
             if lot and lot.batiment
             else (f"#{imp.lot_id}" if imp.lot_id else None)
         ),

@@ -45,6 +45,7 @@ from app.models.core import (
     StatutLotImport,
     Utilisateur,
 )
+from app.models.telemetrie import TelemetryEvent
 from app.utils.limiter import limiter
 from tests.aides_base import compte, moteur_memoire
 
@@ -130,10 +131,9 @@ def test_regles_le_conseil_syndical_cree_modifie_supprime(moteur):
 
 # ── auth_telemetrie ─────────────────────────────────────────────────────────
 
-#  L'export et l'effacement de « sa » télémétrie sont retirés le 02/10/2026 :
-#  l'événement ne porte plus d'identifiant, il n'y a plus de télémétrie à soi
-#  (#1545). Le refus reste — une préférence du compte.
 ROUTES_TELEMETRIE = [
+    ("GET", "/auth/me/telemetrie"),
+    ("DELETE", "/auth/me/telemetrie"),
     ("PATCH", "/auth/me/opt-out-telemetrie"),
 ]
 
@@ -144,12 +144,30 @@ def test_telemetrie_refuse_un_anonyme(moteur, methode, route):
     assert _appeler(http, methode, route).status_code == 401
 
 
-@pytest.mark.parametrize("methode", ["GET", "DELETE"])
-def test_telemetrie_plus_rien_a_exporter_ni_a_effacer(moteur, methode):
-    """Les deux routes sont parties avec l'identifiant (#1545) : une route qui
-    survivrait rendrait une liste vide en prétendant répondre à un droit."""
-    http, _ = _client(moteur, RoleUtilisateur.résident)
-    assert http.request(methode, "/auth/me/telemetrie").status_code in (404, 405)
+def test_telemetrie_chacun_n_exporte_et_n_efface_que_la_sienne(moteur):
+    """Articles 15 et 17 : l'accès et l'effacement portent sur SES données — un
+    `where` oublié exporterait, ou effacerait, celles de tout le monde."""
+    http, moi = _client(moteur, RoleUtilisateur.résident)
+    with Session(moteur) as s:
+        autre_id = compte(
+            s,
+            prefixe="autre",
+            nom="A",
+            prenom="A",
+            roles_json=RoleUtilisateur.résident.value,
+        ).id
+        s.add(TelemetryEvent(user_id=moi, page="/actualites"))
+        s.add(TelemetryEvent(user_id=autre_id, page="/tickets"))
+        s.commit()
+
+    export = http.get("/auth/me/telemetrie")
+    assert export.status_code == 200
+    assert [e["page"] for e in export.json()] == ["/actualites"]
+
+    assert http.delete("/auth/me/telemetrie").status_code == 204
+    with Session(moteur) as s:
+        restants = s.exec(select(TelemetryEvent)).all()
+    assert [(e.user_id, e.page) for e in restants] == [(autre_id, "/tickets")]
 
 
 def test_telemetrie_l_opposition_est_enregistree(moteur):

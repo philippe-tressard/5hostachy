@@ -3,13 +3,6 @@
 La COLLECTE (`POST /telemetry/collect`, publique) vit dans `telemetry_collecte.py`
 depuis le 28/09/2026 (#779) : écrire et lire sont deux notions, et ce fichier
 dépassait 500 lignes.
-
-🔴 DES VUES, PLUS DES PERSONNES (#1545, 02/10/2026). L'événement ne porte plus
-d'identifiant : les indicateurs « utilisateurs actifs », « utilisateurs
-uniques », la colonne « Utilisateurs » des pages, le tableau « Utilisateurs les
-plus actifs » et la route `GET /telemetry/users-active` sont retirés — ils
-n'avaient plus de matière, et les garder aurait affiché des zéros comme une
-mesure. Le jour le plus actif et les records se jugent désormais aux vues.
 """
 
 from datetime import datetime, timedelta
@@ -21,13 +14,19 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin
 from app.database import get_session
+from app.utils.noms import nom_affiche
 from app.models.core import (
     TelemetryEvent,
     TelemetryDaily,
     TelemetryMonthly,
     Utilisateur,
 )
-from app.utils.telemetrie_calculs import _cumul_par_page, record
+from app.utils.telemetrie_calculs import (
+    _palmares,
+    _cumul_par_page,
+    uniques_par_page,
+    vues_non_attribuees,
+)
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -35,32 +34,57 @@ router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 # ── Dashboard admin ───────────────────────────────────────────────────────────
 
 
-def _vues_par_heure(session: Session, depuis: datetime):
-    """(heure UTC, vues) depuis `depuis`, triés par heure."""
-    return session.exec(
+def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
+    """Qui sont ces gens — nom, dernière visite, statut, bâtiment.
+
+    🔴 Ce relevé était écrit TROIS fois dans ce fichier (14/09/2026, #779) :
+    deux fois en entier (jour, mois) et une fois en abrégé (le palmarès). Les
+    quatorze lignes de la version longue étaient identiques au caractère près.
+
+    🔴 Et les trois composaient le nom À LA MAIN — `f"{prenom} {nom}"` — alors
+    que la règle d'affichage est arbitrée depuis le 31/08/2026 et vit dans
+    `utils/noms.nom_affiche` : le prénom garde sa casse, le nom passe en
+    capitales. L'écran de télémétrie affichait donc « Jean-Baptiste ForT » là
+    où tout le reste du site écrit « Jean-Baptiste FORT ».
+
+    C'est exactement ce que le module `noms` décrit : trente et une écritures
+    « chacune correcte, et toutes ensemble la seule chose qu'on ne peut pas
+    corriger — une règle d'affichage qui n'existe nulle part ».
+
+    ⚠️ Rend UN dictionnaire par personne, et non quatre dictionnaires
+    parallèles : les quatre se remplissaient de la même boucle et se lisaient au
+    même endroit, si bien qu'en oublier un se voyait à l'écran et nulle part
+    ailleurs.
+    """
+    ids = [ligne[0] for ligne in lignes if ligne[0]]
+    if not ids:
+        return {}
+    rangs = session.exec(
         select(
-            func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
-            func.count().label("total"),
-        )
-        .where(TelemetryEvent.cree_le >= depuis)
-        .group_by("heure")
-        .order_by("heure")
+            Utilisateur.id,
+            Utilisateur.prenom,
+            Utilisateur.nom,
+            Utilisateur.derniere_connexion,
+            Utilisateur.statut,
+            Utilisateur.batiment_id,
+        ).where(Utilisateur.id.in_(ids))
     ).all()
-
-
-def _heure_de_pointe(heures, decalage: int) -> str | None:
-    """L'heure (Paris) qui a compté le plus de vues, ou `None` s'il n'y en a aucune."""
-    if not heures:
-        return None
-    meilleure = max(heures, key=lambda x: x[1])
-    return f"{(meilleure[0] + decalage) % 24}h"
+    return {
+        u[0]: {
+            "nom": nom_affiche(u[1], u[2]),
+            "derniere_connexion": u[3].isoformat() if u[3] else None,
+            "statut": u[4],
+            "batiment_id": u[5],
+        }
+        for u in rangs
+    }
 
 
 @router.get("/dashboard")
 def dashboard(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
-    scope: str = Query("jour", pattern="^(jour|mois|annee)$"),
+    scope: str = Query("jour", regex="^(jour|mois|annee)$"),
 ):
     """Retourne les stats agrégées pour le dashboard admin.
     scope=jour  → stats du jour (temps réel events)
@@ -81,34 +105,97 @@ def dashboard(
 
     # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
     paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)
+    paris_offset_str = f"+{paris_offset} hours"
 
     if scope == "jour":
         # ── SCOPE JOUR ────────────────────────────────────────────────────
         today_stats = session.exec(
-            select(TelemetryEvent.page, func.count().label("total"))
+            select(
+                TelemetryEvent.page,
+                func.count().label("total"),
+                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+            )
             .where(TelemetryEvent.cree_le >= today_start_utc)
             .group_by(TelemetryEvent.page)
             .order_by(func.count().desc())
         ).all()
 
-        hour_stats = _vues_par_heure(session, today_start_utc)
+        active_today = session.exec(
+            select(func.count(func.distinct(TelemetryEvent.user_id))).where(
+                TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None)
+            )
+        ).one()
+
+        total_today = session.exec(
+            select(func.count())
+            .select_from(TelemetryEvent)
+            .where(TelemetryEvent.cree_le >= today_start_utc)
+        ).one()
+
+        # Répartition par heure (aujourd'hui)
+        hour_stats = session.exec(
+            select(
+                func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+                func.count().label("total"),
+                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+            )
+            .where(TelemetryEvent.cree_le >= today_start_utc)
+            .group_by("heure")
+            .order_by("heure")
+        ).all()
 
         # Convertir en heure Paris et trier correctement
-        chart = sorted(
-            ({"paris_h": (h[0] + paris_offset) % 24, "total": h[1]} for h in hour_stats),
-            key=lambda x: x["paris_h"],
-        )
+        chart_raw = [
+            {
+                "paris_h": (h[0] + paris_offset) % 24,
+                "label": f"{(h[0] + paris_offset) % 24}h",
+                "total": h[1],
+                "uniques": h[2],
+            }
+            for h in hour_stats
+        ]
+        chart_raw.sort(key=lambda x: x["paris_h"])
+        chart = [
+            {"label": c["label"], "total": c["total"], "uniques": c["uniques"]} for c in chart_raw
+        ]
+
+        # Heure de pointe aujourd'hui
+        hour_peak = None
+        if hour_stats:
+            best = max(hour_stats, key=lambda x: x[1])
+            hour_peak = f"{(best[0] + paris_offset) % 24}h"
+
+        # Moyenne vues/utilisateur
+        moy_vues = round(total_today / active_today, 1) if active_today else None
+
+        # Top users today
+        user_rows = session.exec(
+            select(
+                TelemetryEvent.user_id,
+                func.count().label("total"),
+                func.count(func.distinct(TelemetryEvent.page)).label("pages"),
+            )
+            .where(TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None))
+            .group_by(TelemetryEvent.user_id)
+            .order_by(func.count().desc())
+            .limit(30)
+        ).all()
+
+        fiches = _fiches_utilisateurs(session, user_rows)
 
         return {
             "scope": "jour",
             "kpi": {
-                "vues": sum(r[1] for r in today_stats),
+                "utilisateurs": active_today or 0,
+                "vues": total_today or 0,
                 "pages": len(today_stats),
-                "heure_pointe": _heure_de_pointe(hour_stats, paris_offset),
+                "heure_pointe": hour_peak,
+                "moy_vues_utilisateur": moy_vues,
             },
-            "chart": [{"label": f"{c['paris_h']}h", "total": c["total"]} for c in chart],
+            "chart": chart,
             "chart_label": "Vues par heure",
-            "top_pages": [{"page": r[0], "total": r[1]} for r in today_stats],
+            "top_pages": [{"page": r[0], "total": r[1], "uniques": r[2]} for r in today_stats],
+            "top_users": _palmares(user_rows, fiches),
         }
 
     elif scope == "mois":
@@ -121,31 +208,126 @@ def dashboard(
             .order_by(TelemetryDaily.jour)
         ).all()
 
-        vues_par_jour: dict[str, int] = {}
-        for r in daily_rows:
-            vues_par_jour[r.jour] = vues_par_jour.get(r.jour, 0) + r.total
+        # Vrais uniques par jour
+        daily_uniques_raw = session.exec(
+            select(
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
+                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+            )
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
+        ).all()
+        daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
 
-        top_pages = _cumul_par_page(daily_rows)
-        total_vues = sum(vues_par_jour.values())
-        nb_jours = len(vues_par_jour) or 1
+        total_rows = session.exec(
+            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
+                TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page == "__total__"
+            )
+        ).all()
+        for r in total_rows:
+            if r[0] not in daily_uniques_map:
+                daily_uniques_map[r[0]] = r[1]
+
+        # Chart par jour
+        daily_chart: dict[str, dict] = {}
+        for r in daily_rows:
+            if r.jour not in daily_chart:
+                daily_chart[r.jour] = {
+                    "label": r.jour[5:],
+                    "total": 0,
+                    "uniques": daily_uniques_map.get(r.jour, 0),
+                }
+            daily_chart[r.jour]["total"] += r.total
+
+        # Top pages
+        #  `uniques` ne s'ADDITIONNE pas : les agrégats journaliers portent des
+        #  cardinalités de distincts, et leur somme n'est pas la cardinalité de
+        #  l'union — la même personne revenue trois jours comptait pour trois
+        #  (#354). Les couples (page, utilisateur) distincts sont donc relus sur
+        #  la période, et `uniques_par_page()` les compte. `.distinct()` borne le
+        #  volume au nombre de couples, pas au nombre d'événements.
+        paires_page_user = session.exec(
+            select(TelemetryEvent.page, TelemetryEvent.user_id)
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+            .distinct()
+        ).all()
+        uniques_map = uniques_par_page(paires_page_user)
+
+        #  Vues rattachées à un utilisateur, sur la même fenêtre que le tableau
+        #  des utilisateurs. La différence avec le total est le nombre de vues
+        #  qu'aucune session ne permet d'attribuer — enregistrées avant que la
+        #  session soit établie, ou après son expiration. C'est l'écart « 78 vs
+        #  74 » signalé par l'utilisateur (#354), rendu explicite ici.
+        vues_attribuees = session.exec(
+            select(func.count())
+            .select_from(TelemetryEvent)
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+        ).one()
+
+        top_pages = _cumul_par_page(daily_rows, uniques=uniques_map)
+
+        # KPI agrégés
+        total_vues = sum(d["total"] for d in daily_chart.values())
+        total_uniques = max(daily_uniques_map.values()) if daily_uniques_map else 0
+        nb_jours = len(daily_chart) or 1
+        moy_vues_jour = round(total_vues / nb_jours, 1)
+        moy_utilisateurs_jour = (
+            round(sum(daily_uniques_map.values()) / nb_jours, 1) if daily_uniques_map else 0
+        )
+
+        # Jour le plus actif (par utilisateurs uniques)
+        jour_pointe = None
+        if daily_uniques_map:
+            best_j = max(daily_uniques_map, key=daily_uniques_map.get)  # type: ignore[arg-type]
+            jour_pointe = {"jour": best_j, "uniques": daily_uniques_map[best_j]}
+
+        # Heure de pointe (30j)
+        hour_stats = session.exec(
+            select(
+                func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+                func.count().label("total"),
+            )
+            .where(TelemetryEvent.cree_le >= thirty_days_ago)
+            .group_by("heure")
+            .order_by("heure")
+        ).all()
+
+        peak_hour = None
+        if hour_stats:
+            best = max(hour_stats, key=lambda x: x[1])
+            peak_hour = f"{(best[0] + paris_offset) % 24}h"
+
+        # Top users 30j
+        user_rows = session.exec(
+            select(
+                TelemetryEvent.user_id,
+                func.count().label("total"),
+                func.count(func.distinct(TelemetryEvent.page)).label("pages"),
+            )
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+            .group_by(TelemetryEvent.user_id)
+            .order_by(func.count().desc())
+            .limit(30)
+        ).all()
+
+        fiches = _fiches_utilisateurs(session, user_rows)
 
         return {
             "scope": "mois",
             "kpi": {
                 "vues": total_vues,
+                "utilisateurs": total_uniques,
                 "pages": len(top_pages),
-                "heure_pointe": _heure_de_pointe(
-                    _vues_par_heure(session, now_paris.replace(tzinfo=None) - timedelta(days=30)),
-                    paris_offset,
-                ),
-                "moy_vues_jour": round(total_vues / nb_jours, 1),
-                "jour_pointe": record(vues_par_jour, "jour"),
+                "heure_pointe": peak_hour,
+                "moy_vues_jour": moy_vues_jour,
+                "moy_utilisateurs_jour": moy_utilisateurs_jour,
+                "jour_pointe": jour_pointe,
+                "vues_non_attribuees": vues_non_attribuees(total_vues, vues_attribuees),
             },
-            "chart": [
-                {"label": jour[5:], "total": vues} for jour, vues in sorted(vues_par_jour.items())
-            ],
+            "chart": sorted(daily_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par jour (30j)",
             "top_pages": sorted(top_pages.values(), key=lambda x: -x["total"]),
+            "top_users": _palmares(user_rows, fiches),
         }
 
     else:
@@ -158,37 +340,121 @@ def dashboard(
             .order_by(TelemetryMonthly.mois)
         ).all()
 
-        vues_par_mois: dict[str, int] = {}
+        # Uniques par mois (events bruts récents + fallback __total__)
+        thirty_days_ago = (now_paris - timedelta(days=30)).strftime("%Y-%m-%d")
+        monthly_uniques_raw = session.exec(
+            select(
+                func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str).label("mois"),
+                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+            )
+            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
+            .group_by(func.strftime("%Y-%m", TelemetryEvent.cree_le, paris_offset_str))
+        ).all()
+        monthly_uniques_map = {r[0]: r[1] for r in monthly_uniques_raw}
+
+        total_monthly_rows = session.exec(
+            select(TelemetryMonthly.mois, TelemetryMonthly.utilisateurs_uniques).where(
+                TelemetryMonthly.mois >= ten_years_ago, TelemetryMonthly.page == "__total__"
+            )
+        ).all()
+        for r in total_monthly_rows:
+            if r[0] not in monthly_uniques_map:
+                monthly_uniques_map[r[0]] = r[1]
+
+        # Chart par mois
+        monthly_chart: dict[str, dict] = {}
         for r in monthly_rows:
-            vues_par_mois[r.mois] = vues_par_mois.get(r.mois, 0) + r.total
+            if r.mois not in monthly_chart:
+                monthly_chart[r.mois] = {
+                    "label": r.mois,
+                    "total": 0,
+                    "uniques": monthly_uniques_map.get(r.mois, 0),
+                }
+            monthly_chart[r.mois]["total"] += r.total
 
-        #  Le record du jour se lit dans les agrégats journaliers, gardés 12 mois :
-        #  la ligne `__total__` porte toutes les vues du jour.
-        vues_par_jour = dict(
-            session.exec(
-                select(TelemetryDaily.jour, TelemetryDaily.total).where(
-                    TelemetryDaily.page == "__total__"
-                )
-            ).all()
-        )
-
+        #  Sans `uniques` : le cumul mois par mois — voir `_cumul_par_page`,
+        #  qui nomme la divergence au lieu de la laisser se reproduire.
         top_pages_all = _cumul_par_page(monthly_rows)
-        total_vues = sum(vues_par_mois.values())
-        nb_mois_actifs = len(vues_par_mois) or 1
+
+        total_vues = sum(d["total"] for d in monthly_chart.values())
+        nb_mois_actifs = len(monthly_chart) or 1
+        moy_vues_mois = round(total_vues / nb_mois_actifs, 1)
+
+        # Records
+        best_day = None
+        daily_uniques_raw = session.exec(
+            select(
+                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
+                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+            )
+            .where(TelemetryEvent.user_id.isnot(None))
+            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
+        ).all()
+        daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
+        # Add fallback from daily totals
+        total_daily_all = session.exec(
+            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
+                TelemetryDaily.page == "__total__"
+            )
+        ).all()
+        for r in total_daily_all:
+            if r[0] not in daily_uniques_map:
+                daily_uniques_map[r[0]] = r[1]
+
+        if daily_uniques_map:
+            best_jour = max(daily_uniques_map, key=daily_uniques_map.get)  # type: ignore[arg-type]
+            best_day = {"jour": best_jour, "uniques": daily_uniques_map[best_jour]}
+
+        best_month = None
+        if monthly_uniques_map:
+            best_mois = max(monthly_uniques_map, key=monthly_uniques_map.get)  # type: ignore[arg-type]
+            best_month = {"mois": best_mois, "uniques": monthly_uniques_map[best_mois]}
 
         return {
             "scope": "annee",
             "kpi": {
                 "vues": total_vues,
-                "mois_actifs": len(vues_par_mois),
+                "mois_actifs": len(monthly_chart),
                 "pages": len(top_pages_all),
-                "record_jour": record(vues_par_jour, "jour"),
-                "record_mois": record(vues_par_mois, "mois"),
-                "moy_vues_mois": round(total_vues / nb_mois_actifs, 1),
+                "record_jour": best_day,
+                "record_mois": best_month,
+                "moy_vues_mois": moy_vues_mois,
             },
-            "chart": [
-                {"label": mois, "total": vues} for mois, vues in sorted(vues_par_mois.items())
-            ],
+            "chart": sorted(monthly_chart.values(), key=lambda x: x["label"]),
             "chart_label": "Vues par mois (10 ans)",
             "top_pages": sorted(top_pages_all.values(), key=lambda x: -x["total"]),
+            "top_users": [],
         }
+
+
+@router.get("/users-active")
+def users_active(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """Top utilisateurs actifs sur les 30 derniers jours."""
+    from zoneinfo import ZoneInfo
+
+    thirty_days_ago = (datetime.now(ZoneInfo("Europe/Paris")) - timedelta(days=30)).strftime(
+        "%Y-%m-%d"
+    )
+    rows = session.exec(
+        select(
+            TelemetryEvent.user_id,
+            func.count().label("total"),
+            func.count(func.distinct(TelemetryEvent.page)).label("pages"),
+        )
+        .where(
+            TelemetryEvent.cree_le >= thirty_days_ago,
+            TelemetryEvent.user_id.isnot(None),
+        )
+        .group_by(TelemetryEvent.user_id)
+        .order_by(func.count().desc())
+        .limit(30)
+    ).all()
+
+    #  Le même relevé que les deux autres, en abrégé : il ne lisait que le nom.
+    #  Prendre la version complète coûte quatre colonnes de plus sur trente
+    #  lignes au maximum, et supprime la troisième écriture de la règle de nom.
+    fiches = _fiches_utilisateurs(session, rows)
+    return [{"user_id": r[0], **ligne} for r, ligne in zip(rows, _palmares(rows, fiches))]

@@ -108,10 +108,10 @@ _PUBLICS_ASSUMES = {
     # (cf. `_PUBLIC_KEYS` dans routers/config.py) — vérifié plus bas.
     ("config.py", "get_config"),
     ("config.py", "get_legal_config"),
-    # Télémétrie par `sendBeacon`, visiteurs anonymes inclus. Elle ne lit pas la
-    # session et n'enregistre aucun identifiant (#1545, #1595) ; plafonnée par
-    # minute ET par jour, lot et champs bornés (#1597) — tenu par
-    # `test_telemetrie_collecte_bornee.py`.
+    # Télémétrie par `sendBeacon`, visiteurs anonymes inclus. Elle rattache au
+    # compte par `utilisateur_ou_anonyme` (auth/deps.py, #1595) sans jamais
+    # refuser ; plafonnée par minute ET par jour, lot et champs bornés (#1597) —
+    # tenu par `test_telemetrie_collecte_bornee.py`.
     ("telemetry_collecte.py", "collect"),
     #  🔴 Les quatre routes de `rapports_scripts.py` ONT QUITTÉ CETTE LISTE le
     #  19/09/2026 (#1028). Elles n'étaient pas publiques : elles sont

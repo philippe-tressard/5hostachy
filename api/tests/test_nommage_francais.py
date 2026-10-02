@@ -101,6 +101,7 @@ ROUTES_FIGEES = {
     "/auth/me/demande-modification",
     "/auth/me/demandes-modification",
     "/auth/me/opt-out-telemetrie",
+    "/auth/me/telemetrie",
     "/auth/refresh",
     "/auth/register",
     "/bailleur/search-locataire",
@@ -118,6 +119,7 @@ ROUTES_FIGEES = {
     "/signalements/count",
     "/telemetry/collect",
     "/telemetry/dashboard",
+    "/telemetry/users-active",
 }
 
 TAG_CONFORME = re.compile(r"[a-zà-ÿ0-9]+(?:-[a-zà-ÿ0-9]+)*")

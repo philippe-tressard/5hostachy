@@ -21,6 +21,7 @@ from app.utils import horloge
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
+from app.utils.valeurs import valeur
 
 router = APIRouter()
 
@@ -48,7 +49,7 @@ def list_demandes_profil(
             nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
         )
         item["utilisateur_email"] = utilisateur.email if utilisateur else None
-        item["statut_actuel"] = utilisateur.statut.value if utilisateur else None
+        item["statut_actuel"] = valeur(utilisateur.statut) if utilisateur else None
         item["batiment_actuel"] = libelle_batiment_ou(
             session.get(Batiment, utilisateur.batiment_id)
             if utilisateur and utilisateur.batiment_id

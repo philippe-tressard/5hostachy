@@ -7,12 +7,15 @@
 	 * lignes — le contrôle de modularité refuse qu'il grossisse. L'étoffer sur
 	 * place aurait été refusé au pré-check ; le découper est ce que la règle
 	 * « au fil de l'eau » demande.
-	 *
-	 * 🔴 Plus de colonne « Utilisateurs » ni de note sur les vues « non
-	 * rattachées » depuis le 02/10/2026 (#1545) : la mesure d'audience ne porte
-	 * plus d'identifiant, il n'y a plus de personnes à compter par page.
 	 */
-	export let pages: { page: string; total: number }[] = [];
+	export let pages: { page: string; total: number; uniques: number }[] = [];
+
+	/** Vues comptées ici mais rattachées à aucun utilisateur (#354).
+	    Ce tableau compte TOUTES les vues ; celui des utilisateurs n'en retient que
+	    les attribuables. Deux nombres côte à côte sur un même écran engagent une
+	    promesse de cohérence : quand ils diffèrent, l'écran doit le dire — c'est
+	    plus important que la cause. */
+	export let vuesNonAttribuees = 0;
 
 	//  Calculé UNE fois. Il l'était à l'intérieur de la boucle, donc recalculé
 	//  pour chaque ligne : sans effet visible, mais quadratique.
@@ -31,6 +34,7 @@
 				<tr>
 					<th>Page</th>
 					<th style="text-align:right">Vues</th>
+					<th style="text-align:right">Utilisateurs</th>
 					<th style="text-align:right">%</th>
 				</tr>
 			</thead>
@@ -39,6 +43,7 @@
 					<tr>
 						<td><code style="font-size:var(--fs-md)">{p.page}</code></td>
 						<td style="text-align:right;font-weight:600">{p.total}</td>
+						<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
 						<td style="text-align:right;color:var(--color-text-muted)">
 							{((p.total / diviseur) * 100).toFixed(1)}%
 						</td>
@@ -50,11 +55,32 @@
 					<td>Total — {pages.length} page{pages.length > 1 ? 's' : ''}</td>
 					<td style="text-align:right">{totalVues}</td>
 					<td style="text-align:right;color:var(--color-text-muted)">
+						<!--  Additionner la colonne serait FAUX : un même utilisateur compte
+						      dans chaque page qu'il a vue, et la somme dirait « 17 personnes »
+						      là où il n'y en a qu'une. Le nombre réel d'utilisateurs distincts
+						      est celui de l'indicateur en tête d'écran. -->
+						<span
+							title="La somme des utilisateurs par page compterait plusieurs fois la même personne. Le nombre d'utilisateurs distincts est donné par l'indicateur « Utilisateurs » en haut de cette page."
+							>—</span
+						>
+					</td>
+					<td style="text-align:right;color:var(--color-text-muted)">
 						{totalVues > 0 ? '100.0%' : '—'}
 					</td>
 				</tr>
 			</tfoot>
 		</table>
+		{#if vuesNonAttribuees > 0}
+			<p class="tl-note">
+				Dont <strong>{vuesNonAttribuees}</strong> vue{vuesNonAttribuees > 1 ? 's' : ''}
+				non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees >
+				1
+					? 's'
+					: ''}
+				avant l'ouverture de la session ou après son expiration. C'est ce qui explique l'écart avec le
+				tableau « Utilisateurs les plus actifs ».
+			</p>
+		{/if}
 		<p class="muted" style="font-size:var(--fs-sm);margin:.5rem 0 0">
 			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au total du site.
 		</p>
@@ -62,6 +88,12 @@
 {/if}
 
 <style>
+	.tl-note {
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin: 0.6rem 0 0;
+	}
 	tfoot tr.total > td {
 		border-top: 2px solid var(--color-border);
 		font-weight: 700;

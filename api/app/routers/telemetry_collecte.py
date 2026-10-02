@@ -5,27 +5,25 @@ fichier faisait 511 lignes et portait deux notions — ÉCRIRE les événements
 (public, anonymes compris) et LIRE le tableau de bord (administrateur). Même
 préfixe `/telemetry` : l'URL publique ne bouge pas.
 
-## 🔴 Elle ne sait pas QUI (#1545, arbitrage du 02/10/2026)
+## Elle sait QUI — rétablie le 02/10/2026
 
-Chaque événement portait `user_id`, collecté par défaut, avec un refus a
-posteriori dans le profil. `standards/14` §4 : une mesure d'audience interne
-n'échappe au consentement que si ses données sont non réidentifiantes — « une
-télémétrie qui enregistre qui a vu quelle page ne remplit pas ces conditions ».
-L'arbitrage n'est pas l'opt-in : c'est de ne plus savoir qui.
+La v2.92.0 (#1545) avait retiré `user_id` : le tableau de bord avait perdu ses
+statistiques par utilisateur (actifs, palmarès…), sans l'accord de
+l'utilisateur du produit. Elles sont rétablies (migration 0247), la politique
+de confidentialité dit de nouveau « rattachées à votre compte », et le refus du
+profil est honoré ICI comme dans le navigateur.
 
-Cette route ne lit donc **plus le cookie de session** (#1595 : elle le décodait
-elle-même, sans `actif` ni l'empreinte du mot de passe). Le refus du profil
-s'applique dans le NAVIGATEUR (`front/src/lib/telemetry.ts`) : un résident qui
-refuse n'envoie plus rien, et le serveur n'a pas à savoir qui a refusé pour
-l'honorer.
+## La session se lit par `auth/deps.py`, jamais ici (#1595)
 
-L'heure seule est gardée, jamais la minute : un horodatage exact se recouperait
-avec la dernière connexion d'un compte et rendrait une identité à l'événement.
+Avant #1595, cette route décodait le cookie elle-même — sans `actif` ni
+l'empreinte du mot de passe : une session invalidée restait reconnue. Elle
+prend `utilisateur_ou_anonyme`, la même chaîne que toute route authentifiée,
+qui rend `None` au lieu d'un 401 pour un visiteur.
 
 ## Le volume est borné (#1597)
 
 Route PUBLIQUE, déclarée comme telle dans `test_autorisation.py`. Elle écrit en
-base : plafond par minute ET par jour (`LIMITE_COLLECTE_ANONYME`), lot borné en
+base : plafond par minute ET par jour (`LIMITE_COLLECTE_AUDIENCE`), lot borné en
 nombre, champs bornés en taille — refusés en bloc (422), pas tronqués : le
 client du site n'envoie rien de tel, une charge hors norme vient d'ailleurs.
 """
@@ -34,10 +32,11 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from app.auth.deps import utilisateur_ou_anonyme
 from app.database import get_session
-from app.models.core import TelemetryEvent
+from app.models.core import TelemetryEvent, Utilisateur
 from app.utils import horloge
-from app.utils.limiter import LIMITE_COLLECTE_ANONYME, limiter
+from app.utils.limiter import LIMITE_COLLECTE_AUDIENCE, limiter
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -59,14 +58,22 @@ class LotAudience(BaseModel):
 
 
 @router.post("/collect", status_code=204)
-@limiter.limit(LIMITE_COLLECTE_ANONYME)
+@limiter.limit(LIMITE_COLLECTE_AUDIENCE)
 def collect(
     body: LotAudience,
     request: Request,
     session: Session = Depends(get_session),
+    user: Utilisateur | None = Depends(utilisateur_ou_anonyme),
 ):
-    """Endpoint de collecte appelé par `sendBeacon` — anonyme, toujours."""
-    heure = horloge.maintenant().replace(minute=0, second=0, microsecond=0)
+    """Endpoint de collecte appelé par `sendBeacon` — rattaché au compte s'il y en a un."""
+    if user and user.opt_out_telemetrie:
+        return  # RGPD art. 21 : le refus du profil vaut aussi côté serveur
+    user_id = user.id if user else None
+    now = horloge.maintenant()
     for ev in body.events:
-        session.add(TelemetryEvent(page=ev.page, action=ev.action, detail=ev.detail, cree_le=heure))
+        session.add(
+            TelemetryEvent(
+                user_id=user_id, page=ev.page, action=ev.action, detail=ev.detail, cree_le=now
+            )
+        )
     session.commit()

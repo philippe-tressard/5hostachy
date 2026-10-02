@@ -57,11 +57,8 @@ _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 #: disparaît, son entrée peut partir — et le dernier test le signale.
 EXIGENCES = [
     (
-        #  #1545 (02/10/2026) : elle n'est plus nominative — l'événement ne porte
-        #  aucun identifiant de personne (test plus bas). Elle reste une collecte,
-        #  donc elle reste nommée.
-        "la mesure d'audience interne (télémétrie, sans identifiant)",
-        ("models/telemetrie.py", "class TelemetryEvent"),
+        "la télémétrie d'usage, nominative",
+        ("models/telemetrie.py", "user_id"),
         ("télémétrie", "telemetrie", "mesure d'audience", "audience"),
     ),
     (
@@ -265,65 +262,3 @@ def test_la_duree_annoncee_des_courriels_est_celle_que_le_code_applique():
     )
     assert CONSERVATION_COURRIELS in politique
     assert "Aucune purge automatique" not in politique
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  #1545 — LA MESURE D'AUDIENCE NE SAIT PAS QUI (arbitrage du 02/10/2026)
-# ══════════════════════════════════════════════════════════════════════════════
-#
-#  `standards/14` §4 : une mesure d'audience interne échappe au consentement
-#  seulement si ses données sont NON RÉIDENTIFIANTES — « une télémétrie qui
-#  enregistre qui a vu quelle page ne remplit pas ces conditions ». Elle portait
-#  `user_id`, collectée par défaut, et la politique disait « rattachées à votre
-#  compte ». L'arbitrage retenu n'est pas l'opt-in : c'est de ne plus savoir qui.
-#
-#  Ces deux contrôles tiennent le choix dans les deux sens où il peut se défaire
-#  en silence : une colonne d'identité qui revient dans le modèle, ou un texte
-#  qui recommence à promettre — ou à avouer — un rattachement au compte.
-
-#: Ce qui, dans un nom de colonne, désigne une personne ou de quoi la retrouver.
-_MOTS_D_IDENTITE = ("user", "utilisateur", "compte", "session", "ip", "adresse", "email", "nom")
-
-
-def test_l_evenement_d_audience_ne_porte_aucun_identifiant_de_personne():
-    """Ni `user_id`, ni pseudonyme, ni clé étrangère vers qui que ce soit."""
-    from app.models.telemetrie import TelemetryEvent
-
-    table = TelemetryEvent.__table__
-    colonnes = [c.name for c in table.columns]
-    assert "page" in colonnes, "le contrôle ne lit pas la table des événements"
-    suspectes = [
-        nom for nom in colonnes if any(mot in nom.lower().split("_") for mot in _MOTS_D_IDENTITE)
-    ]
-    assert not suspectes and not table.foreign_keys, (
-        f"`telemetry_event` porte de quoi retrouver une personne : colonnes {suspectes}, "
-        f"clés étrangères {sorted(str(fk.target_fullname) for fk in table.foreign_keys)}. "
-        "La mesure d'audience est collectée sans consentement parce qu'elle ne sait "
-        "pas QUI (`standards/14` §4, #1545) : la rattacher à un compte exige d'abord "
-        "un consentement préalable, et une politique qui le dit."
-    )
-
-
-def _section(texte: str, debut: str, fin: str) -> str:
-    """Le passage du texte entre deux titres de section, ou lève."""
-    i, j = texte.find(debut), texte.find(fin)
-    assert 0 <= i < j, f"sections « {debut} » / « {fin} » introuvables dans la politique"
-    return texte[i:j]
-
-
-def test_la_politique_dit_que_la_mesure_n_est_pas_rattachee_au_compte():
-    """Le texte dit ce que fait le code — et la base légale de ce qu'il fait."""
-    texte = _texte_du_gabarit()
-    assert "rattachées à votre compte" not in texte, (
-        "La politique dit encore la mesure d'audience « rattachées à votre compte » : "
-        "c'est faux depuis #1545 — l'événement ne porte plus aucun identifiant."
-    )
-    assert "sans identifiant" in texte, (
-        "La politique doit DIRE que la mesure d'audience est enregistrée sans identifiant : "
-        "se taire laisserait croire l'inverse."
-    )
-    bases = _section(texte, "3. finalités et bases légales", "4. destinataires")
-    assert "mesure d'audience" in bases, (
-        "La section « Finalités et bases légales » ne cite pas la mesure d'audience : "
-        "toute collecte a sa base légale, et le lecteur la cherche là."
-    )

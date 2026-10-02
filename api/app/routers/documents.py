@@ -30,6 +30,7 @@ from app.utils.liens import nom_site
 from app.utils.recuperer import ou_404
 from app.config import get_settings
 from app.utils.cloche import sonner
+from app.utils.valeurs import valeur
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def list_categories(
     if est_moderateur(user):
         return [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in cats]
     # Pour les autres : ne retourner que les catégories dont le profil d'accès autorise le rôle
-    user_idents = set(user.roles) | {user.statut.value}
+    user_idents = set(user.roles) | {valeur(user.statut)}
     result = []
     for c in cats:
         profil = session.get(ProfilAccesDocument, c.profil_acces_id)

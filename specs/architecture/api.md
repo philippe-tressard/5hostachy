@@ -430,7 +430,7 @@ Liste exhaustive et volontaire, verrouillée par `_PUBLICS_ASSUMES` dans
 | `/auth/batiments` | Alimente le formulaire d'inscription |
 | `GET /config` | Coquille d'interface — filtrée par **liste blanche** (voir ci-dessous) |
 | `GET /config/legal` | Mentions légales et politique de confidentialité |
-| `POST /telemetry/collect` | `sendBeacon`, visiteurs anonymes ; ne lit pas la session et n'enregistre aucun identifiant, horodatage à l'heure près (#1545, #1595) ; `LIMITE_COLLECTE_ANONYME` par minute et par jour, 20 événements et champs bornés, refus en bloc (#1597) ; le refus du profil s'applique dans le navigateur |
+| `POST /telemetry/collect` | `sendBeacon`, visiteurs anonymes compris ; rattache l'événement au compte s'il y en a un, par `utilisateur_ou_anonyme` (`auth/deps.py`, jamais un décodage local — #1595) ; refus du profil honoré côté serveur et navigateur ; `LIMITE_COLLECTE_AUDIENCE` par minute et par jour, 20 événements et champs bornés, refus en bloc (#1597) |
 | `POST /admin/maintenance/rapport` | Cron machine-à-machine ; secret partagé, refuse tout si la clé n'est pas configurée |
 
 `GET /config` filtre par **liste blanche** (`_PUBLIC_KEYS`), jamais par liste noire :

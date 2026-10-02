@@ -14,6 +14,7 @@ from app.database import get_session
 from app.models.core import Delegation, StatutDelegation, Utilisateur
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
+from app.utils.valeurs import valeur
 from app.auth.appartenance import exiger_aidant_de_la_delegation
 
 router = APIRouter(prefix="/delegations", tags=["délégations-aidant"])
@@ -59,7 +60,7 @@ def _to_read(d: Delegation, session: Session) -> dict:
         "mandant_nom": _user_display(mandant) if mandant else "?",
         "aidant_id": d.aidant_id,
         "aidant_nom": _user_display(aidant) if aidant else "?",
-        "statut": d.statut.value if isinstance(d.statut, StatutDelegation) else d.statut,
+        "statut": valeur(d.statut),
         "motif": d.motif,
         "date_debut": d.date_debut.isoformat() if d.date_debut else None,
         "date_fin": d.date_fin.isoformat() if d.date_fin else None,

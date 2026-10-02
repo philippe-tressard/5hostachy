@@ -69,16 +69,18 @@ LIMITE_CONTROLE_FICHIER = "300/minute"
 #: demandes. Appelée à chaque chargement d'écran, parfois plusieurs fois.
 LIMITE_LECTURE_AUTHENTIFIEE = "60/minute"
 
-#  `LIMITE_DONNEES_PERSONNELLES` (5/minute) est RETIRÉE le 02/10/2026 : ses
-#  deux seules routes, l'export et l'effacement de « sa » télémétrie, sont
-#  parties avec l'identifiant qu'elles lisaient (#1545). Une constante sans
-#  route laisserait croire qu'une intention est encore servie.
+#: L'**export** ou l'**effacement** des données personnelles d'un compte — sa
+#: télémétrie (`routers/auth_telemetrie.py`). Une intention de conformité, pas de
+#: sécurité : ces routes rendent ou détruisent des données au porteur de la
+#: session, et une rafale coûte cher au serveur. Retirée le 02/10/2026 avec
+#: l'identifiant de la télémétrie (#1545), rétablie le même jour avec lui.
+LIMITE_DONNEES_PERSONNELLES = "5/minute"
 
 #: Le basculement d'une **préférence** du compte.
 LIMITE_PREFERENCE = "10/minute"
 
-#: Une **collecte anonyme** que le navigateur émet tout seul et qui ÉCRIT en
-#: base : la mesure d'audience (`POST /telemetry/collect`), publique.
+#: Une **collecte** que le navigateur émet tout seul et qui ÉCRIT en base : la
+#: mesure d'audience (`POST /telemetry/collect`), publique.
 #:
 #: 🔴 Elle s'appelait `LIMITE_JOURNAL` et valait `60/minute`, sans plafond
 #: journalier : avec 50 événements par appel, 3 000 lignes par minute et par
@@ -87,7 +89,7 @@ LIMITE_PREFERENCE = "10/minute"
 #: d'onglet : 10 par minute reste hors d'atteinte d'une visite, et 500 par jour
 #: couvre plus de quatre heures d'usage continu. Au-delà, ce n'est pas le site
 #: qui envoie.
-LIMITE_COLLECTE_ANONYME = "10/minute;500/day"
+LIMITE_COLLECTE_AUDIENCE = "10/minute;500/day"
 
 #: Une **lecture publique**, sans secret ni écriture : la liste des bâtiments que
 #: le formulaire d'inscription affiche. La limite n'y protège rien d'autre que le

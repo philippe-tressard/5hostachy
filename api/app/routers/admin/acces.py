@@ -102,7 +102,7 @@ def traiter_commande(
         "sa_demande",
         destinataire_id=cmd.user_id,
         type="vigik",
-        titre=f"Commande {cmd.type} : {cmd.statut.value}",
+        titre=f"Commande {cmd.type} : {valeur(cmd.statut)}",
         corps=body.motif_refus or "Votre demande a été traitée.",
         lien="/mon-lot",
     )
@@ -160,22 +160,12 @@ def audit_user_lots(
                 "user_lot_id": ul.id,
                 "user_id": ul.user_id,
                 "user_nom": nom_affiche(user.prenom, user.nom) if user else "?",
-                "user_statut": user.statut.value
-                if user and hasattr(user.statut, "value")
-                else str(user.statut)
-                if user
-                else "?",
+                "user_statut": valeur(user.statut) if user else "?",
                 "lot_id": ul.lot_id,
                 "lot_numero": lot.numero if lot else "?",
-                "lot_type": lot.type.value
-                if lot and hasattr(lot.type, "value")
-                else str(lot.type)
-                if lot
-                else "?",
+                "lot_type": valeur(lot.type) if lot else "?",
                 "batiment": libelle_batiment_ou(bat, "—"),
-                "type_lien": ul.type_lien.value
-                if hasattr(ul.type_lien, "value")
-                else str(ul.type_lien),
+                "type_lien": valeur(ul.type_lien),
             }
         )
     return result
