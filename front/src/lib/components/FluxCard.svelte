@@ -73,7 +73,7 @@
 	 *  d'actualité, `detail` EST l'extrait, et l'afficher deux fois serait pire
 	 *  que de ne rien ajouter. C'est la donnée qui tranche, pas le type de carte
 	 *  — énumérer les types est exactement ce qui a coûté l'affichage du
-	 *  commentaire d'un événement (cf. `flux/evenements.py`).
+	 *  commentaire d'un événement (cf. `flux/evenements.py`,(supprimé avec #1092)).
 	 */
 	$: extraitReplie = (() => {
 		const brut = (item.meta?.evol_contenu ?? item.meta?.description) as string | undefined;

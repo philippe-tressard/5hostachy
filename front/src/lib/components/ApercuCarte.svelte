@@ -34,7 +34,7 @@
 	 *
 	 *   ⚠️ NE PAS les verser dans `photos` : la vignette prend `photos[0]` et le
 	 *   pose dans un `<img>`. Un événement dont la seule pièce est un devis PDF
-	 *   sortait donc en image cassée — c'est ce que faisait `CarteEvenement`.
+	 *   sortait donc en image cassée — c'est ce que faisait `CarteEvenement` (supprimé avec #1092).
 	 *
 	 *   Les ACTUALITÉS n'en passent pas : leurs documents sont des entités
 	 *   `Document` chargées au dépliage, et les compter ici coûterait une requête
