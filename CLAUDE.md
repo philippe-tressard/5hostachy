@@ -120,6 +120,16 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    chaque vrai lieu 📍 se **déclarent** dans le contrôle, avec leur nombre
    d'occurrences. Il a trouvé « 📍 Concerne votre bâtiment » et « 📍 Dépannage ».
 
+   **Côté API, la même règle** vit dans `app/utils/perimetres/arbre.py` :
+   `est_perimetre_par_defaut(codes)` pose la question, `perimetre_cible_json(codes)`
+   écrit une sélection (vide → le défaut ; sans argument, c'est le
+   `default_factory` des colonnes `perimetre_cible`), `perimetre_defaut_liste()`
+   la donne en liste — toutes lisent la racine dans l'arbre (`code_par_defaut`).
+   Le code « résidence » n'est écrit que par le **seed** qui pose le nœud ; il
+   l'était 23 fois avant #1567. 🔒 `test_perimetre_racine_source_unique.py`
+   (exceptions déclarées : la granularité documentaire `Document.perimetre`,
+   autre axe — *qui lit* un fichier, pas *où* se passe un contenu).
+
 ---
 
 ## Conventions Backend (Python / FastAPI)
