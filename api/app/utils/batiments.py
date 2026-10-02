@@ -95,6 +95,12 @@ def libelle_lot(lot) -> Optional[str]:
     la forme la plus discrète de la duplication : trois copies justes rendent la
     quatrième invisible, puisque *« ça marche ailleurs »*.
 
+    ⚠️ Ce tableau dit où la notion « libellé du lot » était écrite, pas que la
+    garde `hasattr(…)` avait disparu : elle a survécu trois fois dans
+    `admin/acces.py` (l'audit des rattachements) jusqu'au 02/10/2026, coupée
+    sur deux lignes par `ruff format` et donc invisible au relevé ligne à
+    ligne de `test_valeur_source_unique` (#1536). C'est `valeur()` désormais.
+
     ⚠️ La majuscule initiale est posée ICI : l'enum stocke `appartement` en
     minuscules, et trois écrans l'affichaient tel quel.
     """
