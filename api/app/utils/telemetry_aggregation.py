@@ -7,11 +7,7 @@ Trois niveaux de rétention :
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
 
-NOTE : Les événements (cree_le) sont stockés en UTC, à l'heure près.
-
-⚠️ Plus aucun décompte de personnes distinctes depuis le 02/10/2026 (#1545) :
-l'événement ne porte plus d'identifiant, donc `utilisateurs_uniques` n'est plus
-calculé — la colonne garde l'historique et vaut 0 sur les nouvelles lignes.
+NOTE : Les événements (cree_le) sont stockés en UTC.
 Les bornes jour/mois utilisent le fuseau Europe/Paris pour que le
 découpage corresponde aux journées réelles des utilisateurs.
 """
@@ -110,6 +106,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         TelemetryEvent.page,
                         TelemetryEvent.action,
                         func.count().label("total"),
+                        func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
                     )
                     .where(
                         TelemetryEvent.cree_le >= current_utc,
@@ -127,17 +124,29 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                             page=r[0],
                             action=r[1],
                             total=r[2],
+                            utilisateurs_uniques=r[3],
                         )
                     )
 
-                # Ligne __total__ : toutes les vues du jour
+                # Ligne __total__ : vrais uniques site-wide (COUNT DISTINCT user_id)
                 if rows:
+                    total_uniques = (
+                        session.exec(
+                            select(func.count(func.distinct(TelemetryEvent.user_id))).where(
+                                TelemetryEvent.cree_le >= current_utc,
+                                TelemetryEvent.cree_le < jour_fin_utc,
+                                TelemetryEvent.user_id.isnot(None),
+                            )
+                        ).one()
+                        or 0
+                    )
                     session.add(
                         TelemetryDaily(
                             jour=jour_str,
                             page="__total__",
                             action="view",
                             total=sum(r[2] for r in rows),
+                            utilisateurs_uniques=total_uniques,
                         )
                     )
 
@@ -181,6 +190,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                         TelemetryDaily.page,
                         TelemetryDaily.action,
                         func.sum(TelemetryDaily.total).label("total"),
+                        func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
                     )
                     .where(
                         TelemetryDaily.jour.startswith(mois_str),
@@ -197,6 +207,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                                 page=r[0],
                                 action=r[1],
                                 total=r[2],
+                                utilisateurs_uniques=r[3],
                             )
                         )
 
@@ -204,6 +215,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                 total_row = session.exec(
                     select(
                         func.sum(TelemetryDaily.total).label("total"),
+                        func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
                     ).where(
                         TelemetryDaily.jour.startswith(mois_str),
                         TelemetryDaily.page == "__total__",
@@ -216,6 +228,9 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                             page="__total__",
                             action="view",
                             total=total_row[0],
+                            # Approximation : somme des uniques quotidiens (même user sur 2 jours = compté 2×)
+                            # Acceptable pour les tendances mensuelles longue durée.
+                            utilisateurs_uniques=total_row[1] or 0,
                         )
                     )
 

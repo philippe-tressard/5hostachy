@@ -80,38 +80,38 @@ COURRIELS_TRANSFERES = (
     "dans une affaire réservée au conseil syndical."
 )
 
-#: La mesure d'audience, telle que le code la collecte depuis le 02/10/2026
-#: (#1545) : SANS IDENTIFIANT — ni compte, ni adresse IP, l'heure seule. Écrites
-#: une fois : le gabarit, les ajouts de #1034 et la migration 0246, qui corrige
-#: le texte servi, les lisent ici. Les phrases d'AVANT vivent dans la 0246 :
-#: c'est un fait passé, elles ne changeront plus.
+#: La mesure d'audience, telle que le code la collecte : RATTACHÉE AU COMPTE
+#: (`telemetry_event.user_id`). Écrites une fois : le gabarit, les ajouts de
+#: #1034 et les migrations 0246 et 0247, qui corrigent le texte servi, les lisent
+#: ici.
 #:
-#: ⚠️ Le refus reste, et le texte le dit : une collecte anonyme peut garder un
-#: refus volontaire. L'export et l'effacement, eux, sont partis — il n'y a plus
-#: de télémétrie « à soi » à rendre ou à effacer.
+#: ⚠️ La 0246 (#1545) les avait passées « sans identifiant » en retirant la
+#: colonne ; la 0247 les rétablit le même jour avec elle — le retrait supprimait
+#: les statistiques par utilisateur sans l'accord de l'utilisateur du produit.
+#: Le texte doit dire ce que fait le code : rattachée au compte, refusable,
+#: exportable et effaçable depuis le profil.
 TELEMETRIE_COLLECTE = (
-    "<li><strong>Mesure d'audience interne (télémétrie)\xa0:</strong> pages consultées et "
-    "actions effectuées, enregistrées <strong>sans identifiant</strong>\xa0: elles ne sont "
-    "rattachées ni à votre compte ni à votre adresse IP, et ne sont horodatées qu'à l'heure "
-    "près. Elle sert à savoir quels écrans servent, et à rien d'autre\xa0: elle n'alimente "
-    "aucune publicité et ne quitte pas l'application. Vous pouvez la <strong>refuser</strong> "
-    "depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>\xa0: votre navigateur "
-    "n'envoie alors plus rien.</li>"
+    "<li><strong>Mesure d'audience interne (télémétrie) :</strong> pages consultées et "
+    "actions effectuées, rattachées à votre compte. Elle sert à savoir quels écrans servent, "
+    "et à rien d'autre : elle n'alimente aucune publicité et ne quitte pas l'application. "
+    "Vous pouvez la <strong>refuser</strong> et <strong>effacer</strong> votre historique "
+    "depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>.</li>"
 )
 TELEMETRIE_BASE_LEGALE = (
-    "<li><strong>Mesure d'audience interne</strong> — base\xa0: intérêt légitime "
-    "(art.\xa06-1-f) à savoir quels écrans servent. Elle ne porte aucun identifiant\xa0; "
-    "vous pouvez vous y opposer depuis votre profil (art.\xa021).</li>"
+    "<li><strong>Mesure d'audience interne</strong> — base : intérêt légitime "
+    "(art. 6-1-f) à savoir quels écrans servent et à qui ; vous pouvez vous y "
+    "opposer et effacer votre historique depuis votre profil (art. 17 et 21).</li>"
 )
 TELEMETRIE_CONSERVATION = (
-    "<li>Mesure d'audience\xa0: événements sans identifiant <strong>30\xa0jours</strong>, puis "
-    "agrégats — par jour pendant 12\xa0mois, par mois pendant 10\xa0ans.</li>"
+    "<li>Mesure d'audience : événements détaillés <strong>30 jours</strong>, puis "
+    "agrégats sans détail — par jour pendant 12 mois, par mois pendant 10 ans. "
+    "L'effacement demandé depuis votre profil est immédiat.</li>"
 )
 #: La phrase du point 6 sur ce qu'un compte fait depuis son profil : il y
-#: exportait et effaçait sa télémétrie, seule donnée concernée — partie avec
-#: l'identifiant (#1545).
+#: exporte et efface sa télémétrie.
 DROITS_DEPUIS_LE_PROFIL = (
-    "Les titulaires d'un compte peuvent aussi passer par la messagerie de l'application."
+    "Les titulaires d'un compte peuvent aussi passer par la messagerie de "
+    "l'application, ou exporter et effacer leurs données depuis leur profil."
 )
 
 DEFAULT_LEGAL = {

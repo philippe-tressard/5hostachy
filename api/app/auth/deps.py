@@ -53,6 +53,25 @@ def get_current_user(user: Utilisateur = Depends(_get_current_user)) -> Utilisat
     return user
 
 
+def utilisateur_ou_anonyme(
+    access_token: str | None = Cookie(default=None),
+    session: Session = Depends(get_session),
+) -> Utilisateur | None:
+    """Le compte de la session, ou `None` pour un visiteur — sans jamais refuser.
+
+    Pour une route publique qui RATTACHE ce qu'elle reçoit au compte s'il y en a
+    un (la mesure d'audience). Même chaîne que `get_current_user` — `actif`,
+    empreinte du mot de passe — : un second lecteur du cookie ne suivrait pas
+    ses durcissements (#1595).
+    """
+    if not access_token:
+        return None
+    try:
+        return _get_current_user(access_token, session)
+    except HTTPException:
+        return None
+
+
 #  🔴 `get_acting_user` A ÉTÉ RETIRÉE le 02/10/2026 (#1534). Elle lisait
 #  l'en-tête `X-Acting-As` que le front posait pour « Agir pour… », et AUCUNE
 #  route ne l'a jamais prise : l'aidant écrivait sous sa propre identité

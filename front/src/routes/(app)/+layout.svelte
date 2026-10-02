@@ -38,10 +38,9 @@
 		//  manquant retombe sur son rendu calculé plutôt que de retarder la page.
 		if ($currentUser) chargerPerimetres();
 
-		//  Le refus de la mesure d'audience, AVANT le premier envoi. C'est ICI qu'il
-		//  s'applique, et nulle part ailleurs : le serveur ne sait pas qui envoie
-		//  (#1545). Dans les deux sens — sinon le refus d'un compte survivrait à sa
-		//  déconnexion, sur le même onglet, pour le compte suivant.
+		//  Le refus de la mesure d'audience, AVANT le premier envoi (le serveur
+		//  l'honore aussi). Dans les deux sens — sinon le refus d'un compte
+		//  survivrait à sa déconnexion, sur le même onglet, pour le compte suivant.
 		setTelemetryOptOut($currentUser?.opt_out_telemetrie ?? false);
 		trackPageView(window.location.pathname);
 	});

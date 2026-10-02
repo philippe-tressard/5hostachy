@@ -156,9 +156,11 @@ export const admin = {
 	//  elle fait recopier la route en entier — et la route recopiée ne suit plus.
 	telemetryDashboard: (scope?: 'jour' | 'mois' | 'annee') =>
 		api.get<any>(`/telemetry/dashboard${buildQuery({ scope })}`),
-	//  🔴 `telemetryUsersActive` A ÉTÉ RETIRÉE (#801), et l'endpoint
-	//  `GET /telemetry/users-active` avec elle le 02/10/2026 : la télémétrie ne
-	//  porte plus d'identifiant (#1545), il n'y a plus d'utilisateurs à compter.
+	//  🔴 `telemetryUsersActive` A ÉTÉ RETIRÉE (#801) : le tableau de bord de
+	//  télémétrie porte déjà `kpi.utilisateurs` et `kpi.moy_utilisateurs_jour`,
+	//  servis par `telemetryDashboard()` en une requête. L'endpoint
+	//  `GET /telemetry/users-active` reste — il rend la LISTE, pas le compte, et
+	//  c'est un écran qui n'existe pas encore.
 	//  @sans-appelant-direct Appelées depuis CE module par `lancerTache()` et
 	//  `historiqueTache()`, jamais depuis un écran. Le relevé les compte comme
 	//  orphelines parce qu'il ne regarde que les appels HORS de `lib/api/` — et

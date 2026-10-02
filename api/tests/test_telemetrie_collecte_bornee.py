@@ -1,4 +1,4 @@
-"""`POST /telemetry/collect` est public : son volume est BORNÉ (#1597), et il ne sait pas qui (#1545).
+"""`POST /telemetry/collect` est public : son volume est BORNÉ (#1597).
 
 ## Le défaut (audit du 02/10/2026)
 
@@ -15,9 +15,9 @@ La route est publique — `sendBeacon`, visiteurs anonymes compris — et elle
 - un lot borné en NOMBRE et des champs bornés en TAILLE — refusés en bloc
   (422) et non plus tronqués en silence : une charge hors norme ne vient pas
   du client du site ;
-- l'heure seule, jamais la minute : des horodatages exacts se recouperaient
-  avec la dernière connexion d'un compte, et rendraient une identité à des
-  événements qui n'en portent plus (#1545).
+- un visiteur est enregistré sans compte, et la route ne refuse jamais faute
+  de session — elle rattache au compte quand il y en a un (rétabli le
+  02/10/2026, après le retrait de #1545).
 """
 
 from __future__ import annotations
@@ -102,17 +102,21 @@ def test_un_champ_hors_borne_fait_refuser_le_lot(moteur, evenement):
     assert _evenements(moteur) == []
 
 
-def test_un_lot_normal_est_enregistre_a_l_heure_pres(moteur):
+def test_un_lot_normal_d_un_visiteur_est_enregistre_sans_compte(moteur):
     corps = {"events": [{"page": "/actualites"}, {"page": "/tickets", "action": "view"}]}
     reponse = TestClient(app).post(ROUTE, json=corps)
     assert reponse.status_code == 204, reponse.text
     lignes = _evenements(moteur)
     assert sorted(e.page for e in lignes) == ["/actualites", "/tickets"]
-    for e in lignes:
-        assert (e.cree_le.minute, e.cree_le.second, e.cree_le.microsecond) == (0, 0, 0), (
-            f"horodatage {e.cree_le} : l'heure suffit au tableau de bord, et la minute "
-            "permettrait de recouper un événement avec une connexion (#1545)."
-        )
+    assert all(e.user_id is None for e in lignes)
+
+
+def test_un_cookie_invalide_ne_fait_pas_refuser_la_collecte(moteur):
+    """`utilisateur_ou_anonyme` rend `None`, jamais un 401 : `sendBeacon` ne lit pas la réponse."""
+    http = TestClient(app, cookies={"access_token": "pas-un-jeton"})
+    reponse = http.post(ROUTE, json={"events": [{"page": "/actualites"}]})
+    assert reponse.status_code == 204, reponse.text
+    assert [e.user_id for e in _evenements(moteur)] == [None]
 
 
 def test_une_rafale_est_coupee_par_la_limite(moteur):

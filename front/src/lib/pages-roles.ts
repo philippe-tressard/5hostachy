@@ -105,7 +105,7 @@ export const PAGES_ROLES: PageDef[] = [
 				label: 'Télémétrie',
 				groupe: '👥 Gestion utilisateurs',
 				descriptif:
-					"Statistiques d'utilisation : quelles pages servent, et quand — par jour, mois ou année, sans savoir qui.",
+					"Statistiques d'utilisation : qui utilise quoi, et quand — par jour, mois ou année.",
 			},
 			{
 				id: 'emails',

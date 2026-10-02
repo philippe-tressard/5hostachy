@@ -1,50 +1,67 @@
-"""Garde-fous des calculs de télémétrie (#354, puis #1545).
+"""Garde-fous des calculs de télémétrie (#354).
 
-Les tests de #354 tenaient le décompte des visiteurs DISTINCTS — trois jours du
-même visiteur ne font pas trois visiteurs. Ce décompte n'existe plus depuis le
-02/10/2026 : l'événement de télémétrie ne porte plus d'identifiant (#1545), et
-le tableau de bord ne compte que des vues. Ce qui reste à tenir est là.
+Ces tests existent parce que le défaut qu'ils décrivent était **invisible** :
+la colonne « UTILISATEURS » de Top pages additionnait des cardinalités de
+distincts, et la capture qui a servi à le signaler montrait 1 partout — un seul
+jour était agrégé. Le calcul faux et le calcul juste donnaient donc le même
+résultat ce jour-là. Il fallait plusieurs jours pour que l'erreur se voie, et
+personne ne regardait.
+
+Le premier test est le **cas zéro** (`standards/04` §2) : il échoue sur l'ancien
+calcul et passe sur le nouveau. Sans lui, ces tests ne prouveraient pas qu'ils
+savent détecter quoi que ce soit.
 """
 
-from types import SimpleNamespace
-
-from app.utils.telemetrie_calculs import _cumul_par_page, record
+from app.utils.telemetrie_calculs import uniques_par_page, vues_non_attribuees
 
 
-def _ligne(page: str, total: int):
-    return SimpleNamespace(page=page, total=total)
+def test_meme_visiteur_plusieurs_jours_compte_pour_un():
+    """LE défaut de #354 : trois jours du même visiteur ne font pas trois visiteurs.
+
+    L'ancien code sommait les agrégats journaliers — 1 + 1 + 1 = 3. La vérité est
+    1, et c'est ce que compte une union d'ensembles.
+    """
+    trois_jours_du_meme = [("/actualites", 7), ("/actualites", 7), ("/actualites", 7)]
+    assert uniques_par_page(trois_jours_du_meme) == {"/actualites": 1}
 
 
-def test_les_vues_d_une_page_s_additionnent_d_un_jour_a_l_autre():
-    """Des vues, contrairement à des personnes distinctes, s'additionnent."""
-    lignes = [_ligne("/actualites", 3), _ligne("/tickets", 1), _ligne("/actualites", 2)]
-    assert _cumul_par_page(lignes) == {
-        "/actualites": {"page": "/actualites", "total": 5},
-        "/tickets": {"page": "/tickets", "total": 1},
-    }
+def test_visiteurs_differents_s_additionnent_bien():
+    """Le pendant du précédent : le nouveau calcul ne sous-compte pas non plus."""
+    paires = [("/actualites", 7), ("/actualites", 8), ("/actualites", 9)]
+    assert uniques_par_page(paires) == {"/actualites": 3}
 
 
-def test_aucune_colonne_de_personnes_ne_revient():
-    """Le cumul ne rend plus de clé `uniques` : l'écran n'a plus rien à y lire."""
-    assert set(_cumul_par_page([_ligne("/faq", 1)])["/faq"]) == {"page", "total"}
+def test_pages_distinctes_sont_comptees_separement():
+    paires = [("/actualites", 7), ("/tickets", 7), ("/tickets", 8)]
+    assert uniques_par_page(paires) == {"/actualites": 1, "/tickets": 2}
 
 
-def test_cumul_vide():
-    assert _cumul_par_page([]) == {}
+def test_vues_anonymes_ignorees_et_ne_creent_pas_de_page():
+    """Une page vue UNIQUEMENT par des anonymes n'a aucun utilisateur à montrer.
+
+    Elle ne doit pas apparaître avec « 0 utilisateur » comme s'il s'agissait d'une
+    mesure : elle n'est simplement pas attribuable. Le total de ces vues est rendu
+    par `vues_non_attribuees()`, qui est là pour ça.
+    """
+    assert uniques_par_page([("/faq", None), ("/faq", None)]) == {}
 
 
-def test_le_record_est_la_periode_la_plus_vue():
-    assert record({"2026-09-01": 4, "2026-09-02": 9, "2026-09-03": 7}, "jour") == {
-        "jour": "2026-09-02",
-        "vues": 9,
-    }
+def test_liste_vide():
+    assert uniques_par_page([]) == {}
 
 
-def test_a_egalite_le_record_revient_a_la_premiere_periode():
-    """Celle qui l'a établi — et un choix stable d'un affichage à l'autre."""
-    assert record({"2026-09": 5, "2026-08": 5}, "mois") == {"mois": "2026-08", "vues": 5}
+def test_ecart_explique_le_cas_signale():
+    """Les nombres exacts de la capture du 15/08/2026 : 78 vues, 74 attribuées."""
+    assert vues_non_attribuees(78, 74) == 4
 
 
-def test_pas_de_record_sans_donnees():
-    """Le cas zéro : rien à afficher, et surtout pas « 0 vue » comme une mesure."""
-    assert record({}, "jour") is None
+def test_ecart_nul_quand_tout_est_attribue():
+    assert vues_non_attribuees(74, 74) == 0
+
+
+def test_ecart_negatif_borne_a_zero():
+    """Les deux totaux ne viennent pas de la même source ni de la même fraîcheur :
+    les agrégats de 02:00 d'un côté, les événements bruts de l'autre. Selon
+    l'heure, l'écart peut s'inverser — mieux vaut n'afficher aucun écart qu'un
+    nombre absurde."""
+    assert vues_non_attribuees(70, 74) == 0
