@@ -87,3 +87,57 @@ def module_app(rel: str) -> Module:
         if m.rel == rel:
             return m
     raise AssertionError(f"`app/{rel}` est introuvable : le contrôle vise un module disparu.")
+
+
+def routeurs_declares() -> dict:
+    """Chaque `APIRouter` DÉFINI au niveau d'un module de `app/routers/`, par nom.
+
+    Un routeur importé d'ailleurs (`from .parc import router as …`) ou un paquet
+    agrégateur qui inclut ses sous-routeurs n'est compté qu'une fois : là où ses
+    routes sont déclarées. Écrite dans `test_routeurs_montes.py` jusqu'au
+    02/10/2026, remontée ici quand un second contrôle a dû parcourir les mêmes
+    routeurs (#1535).
+    """
+    import importlib
+    import pkgutil
+
+    from fastapi import APIRouter
+
+    import app.routers as paquet
+
+    trouves: dict = {}
+    for info in pkgutil.walk_packages(paquet.__path__, paquet.__name__ + "."):
+        module = importlib.import_module(info.name)
+        for nom, valeur in vars(module).items():
+            if isinstance(valeur, APIRouter) and _defini_dans(valeur, module):
+                trouves[f"{info.name}.{nom}"] = valeur
+    return trouves
+
+
+def _defini_dans(routeur, module) -> bool:
+    """Un routeur « appartient » au module où ses routes sont déclarées.
+
+    Un routeur vide (paquet agrégateur) appartient au module qui l'expose sous
+    le nom `router` — c'est la convention de tous les `__init__.py` du dépôt.
+    """
+    for route in routeur.routes:
+        point = getattr(route, "endpoint", None)
+        if point is not None:
+            return getattr(point, "__module__", None) == module.__name__
+    return True
+
+
+def routes_declarees() -> list:
+    """Chaque route d'API (`APIRoute`) déclarée dans `app/routers/`, une fois.
+
+    Lit les routeurs, pas l'application montée : importée seule, celle-ci n'en
+    expose presque aucune (le montage dépend du démarrage).
+    """
+    from fastapi.routing import APIRoute
+
+    return [
+        route
+        for routeur in routeurs_declares().values()
+        for route in routeur.routes
+        if isinstance(route, APIRoute)
+    ]
