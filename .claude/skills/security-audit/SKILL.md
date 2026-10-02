@@ -248,6 +248,14 @@ Get-Content .gitignore | Select-String -Pattern "\.env"
 if (Test-Path .env.example) { Get-Content .env.example }
 ```
 
+#### Un secret s'écrit une fois, et jamais dans une URL (#1596)
+
+- **La clé du bridge WhatsApp** : `.env` seulement (`WHATSAPP_API_KEY`), lue par
+  le bridge et par `utils/whatsapp.entetes_bridge` — `ConfigSite` la refuse
+  (`_CLES_HORS_BASE`). Le bridge refuse au démarrage une clé vide, d'exemple ou
+  trop courte, et ignore `?apikey=`. 🔒 `api/tests/test_cle_bridge_whatsapp.py`,
+  `whatsapp-bridge/tests/contrat-http.test.js`.
+
 #### Aucune personne réelle dans le dépôt — il est PUBLIC (#1493)
 
 Un test, un e2e, un commentaire qui cite le cas signalé : le nom vient de l'écran,

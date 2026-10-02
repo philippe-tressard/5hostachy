@@ -153,7 +153,7 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 | `ORIGIN` | URL complète du site | `https://example.com` |
 | `COOKIE_SECURE` | `true` en prod HTTPS, `false` en dev HTTP | `true` |
 | `MAIL_ENABLED` | Activer les notifications email | `false` |
-| `WHATSAPP_API_KEY` | Clé d'authentification du bridge WhatsApp | *(optionnel)* |
+| `WHATSAPP_API_KEY` | Clé du bridge WhatsApp — **obligatoire**, min 16 caractères ; lue par l'API et par le bridge, seule source | *(refusée si absente, d'exemple ou trop courte)* |
 | `ENABLE_API_DOCS` | Exposer `/docs` et `/redoc` | `false` |
 
 ## Documentation

@@ -674,6 +674,14 @@ alerte quand sa fenêtre de rattrapage s'épuise sans envoi réussi.
   cd /opt/5hostachy && docker compose up -d whatsapp-bridge
   ```
 - `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
+- **La clé du bridge** (#1596, 02/10/2026) : une seule source, `WHATSAPP_API_KEY`
+  dans `.env`, lue par le bridge (`WA_API_KEY`) **et** par l'API
+  (`utils/whatsapp.entetes_bridge`) — plus rien ne se saisit à l'écran. Le bridge
+  **refuse de démarrer** si elle est vide, vaut la valeur d'exemple ou fait moins de
+  16 caractères (`docker logs hostachy_whatsapp` le dit, sans la valeur), et ne la
+  lit qu'en en-tête `x-api-key`. Après toute modification de `.env` :
+  `docker compose up -d api whatsapp-bridge` — sinon l'API garde l'ancienne, et
+  Admin › WhatsApp › Statut répond « le bridge refuse la clé de l'API »
 
 #### 🔴 Blocage du compte WhatsApp — la panne qui ne se répare pas (#1061, 26/09/2026)
 

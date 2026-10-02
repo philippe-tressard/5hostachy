@@ -109,7 +109,7 @@ nano /opt/5hostachy/.env
 | Variable | Description |
 |---|---|
 | `SECRET_KEY` | Clé JWT — **min 32 caractères aléatoires** (`openssl rand -hex 32`) |
-| `WHATSAPP_API_KEY` | 🔴 **Obligatoire** — `docker-compose.yml` la déclare `:?`, donc `docker compose up` **refuse de démarrer** sans elle (min 16 caractères) |
+| `WHATSAPP_API_KEY` | 🔴 **Obligatoire** — `docker-compose.yml` la déclare `:?`, donc `docker compose up` **refuse de démarrer** sans elle ; le bridge refuse en plus la valeur d'exemple et toute clé de moins de 16 caractères (`openssl rand -hex 24`). Seule source de la clé : l'API la lit aussi, rien ne se saisit à l'écran (#1596) |
 | `INSTANCE_ID` | `rpi1` ou `rpi2` — identifie le nœud au pied de page et dans la colonne « Nœud » des tâches planifiées |
 | `ORIGIN` | URL complète (`https://5hostachy.fr`) — ou IP LAN si standby |
 | `COOKIE_SECURE` | `true` (prod HTTPS) |
