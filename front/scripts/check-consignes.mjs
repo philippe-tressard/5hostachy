@@ -290,7 +290,7 @@ for (const notion of NOTIONS) {
 // ── 4. Les NOMBRES recopiés (#1541) ──────────────────────────────────────────
 //
 //  🔴 Une liste qu'on ne recopie plus se recopie encore par son COMPTE. CLAUDE.md
-//  disait « treize » sections, `ux-patterns` « Les TREIZE sections » et « les 10
+//  disait « treize » sections, `ux-patterns` « les treize sections » et « les 10
 //  sections » : le code en comptait quatorze depuis six jours (#1342), et les
 //  deux consignes renvoyaient pourtant à `SECTIONS_ORDRE`. Le renvoi était juste,
 //  le nombre posé à côté de lui ne l'était plus.
@@ -314,7 +314,7 @@ const NOMBRES = [
 			};
 			return extraire(readFileSync(chemin, 'utf8'), 'SECTIONS_ORDRE', chemin, { echec }).length;
 		},
-		//  « les 10 sections », « Les TREIZE sections », et un nombre en lettres
+		//  « les 10 sections », « les treize sections », et un nombre en lettres
 		//  sur la ligne même du renvoi — « **treize**, dans l'ordre de
 		//  `SECTIONS_ORDRE` » (CLAUDE.md), où le mot « sections » n'est pas écrit.
 		motifs: [

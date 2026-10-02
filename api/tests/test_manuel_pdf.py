@@ -340,7 +340,18 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
         ),
         "FAQ": (front / "routes" / "(app)" / "faq" / "+page.svelte").read_text(encoding="utf-8"),
     }
-    manquants = [ou for ou, texte in endroits.items() if "/api/manuel/pdf" not in texte]
+    #  Les écrans le lisent du client d'API depuis #1578 (`manuel.pdfUrl()`) ; le
+    #  manuel, page statique, l'écrit en clair. Le client doit alors bien rendre
+    #  `/api/manuel/pdf` — sinon les deux écrans pointeraient ailleurs, ensemble.
+    client = (front / "lib" / "api" / "index.ts").read_text(encoding="utf-8")
+    base = (front / "lib" / "api" / "client.ts").read_text(encoding="utf-8")
+    assert "pdfUrl: (): string => `${BASE}/manuel/pdf`" in client
+    assert "export const BASE = '/api';" in base
+    manquants = [
+        ou
+        for ou, texte in endroits.items()
+        if "/api/manuel/pdf" not in texte and "manuel.pdfUrl()" not in texte
+    ]
     assert not manquants, "le lien vers le PDF a disparu de : " + ", ".join(manquants)
 
 
