@@ -302,7 +302,10 @@ def mon_bail(
         lot_type_appartement=bail_lot.type_appartement if bail_lot else None,
         lot_etage=bail_lot.etage if bail_lot else None,
         lot_superficie=bail_lot.superficie if bail_lot else None,
-        lot_batiment_nom=bail_bat.nom if bail_bat else None,
+        #  🔴 `bail_bat.nom` jusqu'au 02/10/2026 (#1563) : `Batiment` n'a pas de
+        #  `nom`, et la route levait dès que le lot du bail avait un bâtiment —
+        #  le locataire lisait « Impossible de charger votre bail ».
+        lot_batiment_nom=libelle_batiment_ou(bail_bat, None),
         bailleur_nom=bailleur.nom if bailleur else "",
         bailleur_prenom=bailleur.prenom if bailleur else "",
         bailleur_email=bailleur.email if bailleur else None,
