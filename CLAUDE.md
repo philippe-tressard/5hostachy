@@ -359,9 +359,24 @@ importe les gestes du transport.
   dans le cookie ou le lien. Une copie de la base donnait des jetons
   utilisables (#1389). Changer `SECRET_KEY` ferme donc toutes les sessions et
   invalide les liens en attente — voulu. 🔒 `test_jetons_empreinte.py`.
+- **« Le compte de cette adresse » : une seule porte.** `auth/adresse_compte` —
+  `compte_par_adresse` (insensible à la casse et aux espaces, des deux côtés) et
+  `normaliser_adresse`, la forme sous laquelle une adresse s'écrit ET se cherche.
+  Deux écritures divergeaient sur la casse : un compte à majuscule se connectait
+  mais ne recevait ni lien de vérification ni mot de passe oublié (#1550).
+  🔒 `test_adresse_compte_source_unique.py` refuse une comparaison sur
+  `Utilisateur.email` ou une normalisation d'adresse recopiée.
+- **Changer l'adresse d'un compte est une DEMANDE, jamais une écriture** —
+  `utils/verification_adresse.demander_changement_adresse`, pour le profil comme
+  pour l'administrateur : mot de passe de **qui agit**, lien à la nouvelle
+  adresse (le jeton de l'inscription, qui porte alors `nouvelle_adresse`), avis
+  à l'ancienne, qui reste celle du compte jusqu'au clic, journal. Une session
+  volée suffisait à détourner un compte (#1549). 🔒 `test_changement_adresse.py`
+  refuse aussi `x.email = …` hors de la confirmation du lien.
 - **Journal de sécurité : une seule porte.** Un geste sensible — connexion
   refusée, mot de passe changé ou réinitialisé, rôle ajouté ou retiré,
-  bannissement, jeton de rafraîchissement rejoué — appelle `utils/journal_securite.journaliser_securite`, et
+  bannissement, jeton de rafraîchissement rejoué, changement d'adresse demandé
+  ou confirmé ; la liste fait foi dans `GESTES_SENSIBLES` — appelle `utils/journal_securite.journaliser_securite`, et
   **aucun** n'écrit dans un `logger` local. Rien n'était journalisé avant le
   20/09/2026 : un compte compromis ou une élévation de rôle ne laissait aucune
   trace exploitable (#1040). Depuis #1548, le **cycle de vie d'un compte** aussi :
