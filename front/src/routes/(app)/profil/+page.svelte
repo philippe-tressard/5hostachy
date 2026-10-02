@@ -23,6 +23,8 @@
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import DemarcheArrivant from '$lib/components/DemarcheArrivant.svelte';
 	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
+	import ChampAdresseCompte from '$lib/components/ChampAdresseCompte.svelte';
+	import { adresseChangee, annonceLienEnvoye } from '$lib/comptes';
 
 	$: _pc = getPageConfig($configStore, 'profil', defautsDePage('profil'));
 	$: _siteNom = $siteNomStore;
@@ -40,6 +42,8 @@
 	let societe = '';
 	let fonction = '';
 	let email = '';
+	/** Exigé seulement si l'adresse change (#1549) — puis vidé, jamais gardé. */
+	let motDePasseAdresse = '';
 	let saving = false;
 	let uploadingAvatar = false;
 
@@ -140,15 +144,20 @@
 	// ── Actions ───────────────────────────────────────────────────────────────
 	async function saveProfile() {
 		saving = true;
+		//  🔴 Une autre adresse n'est qu'une DEMANDE (#1549) : le serveur éprouve le
+		//  mot de passe, envoie le lien à la nouvelle adresse et l'avis à l'actuelle,
+		//  qui reste celle du compte jusqu'au clic. L'écran le dit, au lieu
+		//  d'annoncer « mis à jour » une adresse qui ne l'est pas encore.
+		const emailChanged = adresseChangee(email, $currentUser?.email);
+		const annonce = emailChanged ? annonceLienEnvoye(email) : 'Profil mis à jour';
 		await tenter(async () => {
-			const emailChanged = email && email !== $currentUser?.email;
 			const updated = await authApi.updateMe({
 				prenom,
 				nom,
 				telephone: telephone || null,
 				societe: societe || null,
 				fonction: fonction || null,
-				...(emailChanged ? { email } : {}),
+				...(emailChanged ? { email, mot_de_passe_actuel: motDePasseAdresse } : {}),
 			});
 			//  Les DEUX étages s'écrivent dans le composant qui les saisit : `Lot.etage`
 			//  est une autre table avec une autre règle d'accès (#835), et l'étage
@@ -156,7 +165,11 @@
 			//  site quand la saisie contredit le lot.
 			mesLots = await champsEtage.enregistrerEtagesDeLots();
 			setUser((await champsEtage.enregistrerEtagePersonnel()) ?? updated);
-		}, 'Profil mis à jour');
+			//  Le champ revient à l'adresse du compte — toujours l'ancienne — et le
+			//  mot de passe ne reste pas dans la page.
+			email = updated.email ?? email;
+			motDePasseAdresse = '';
+		}, annonce);
 		saving = false;
 	}
 
@@ -255,10 +268,12 @@
 					<input id="p-nom" type="text" bind:value={nom} required />
 				</div>
 			</div>
-			<div class="field">
-				<label for="p-email">Adresse e-mail<EtoileRequis vide={!email} /></label>
-				<input id="p-email" type="email" bind:value={email} required />
-			</div>
+			<ChampAdresseCompte
+				id="p-email"
+				bind:adresse={email}
+				adresseActuelle={$currentUser?.email ?? ''}
+				bind:motDePasse={motDePasseAdresse}
+			/>
 			<div class="field">
 				<label for="p-tel">Téléphone</label>
 				<input id="p-tel" type="tel" bind:value={telephone} placeholder="+33 6 00 00 00 00" />

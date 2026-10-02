@@ -14,7 +14,12 @@
 -->
 <script lang="ts">
 	import { admin as adminApi } from '$lib/api';
-	import { ETIQUETTES_COMPTE, formulaireCompte } from '$lib/comptes';
+	import {
+		adresseChangee,
+		annonceLienEnvoye,
+		ETIQUETTES_COMPTE,
+		formulaireCompte,
+	} from '$lib/comptes';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import { badgeStatut, badgesDeRoles, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
@@ -43,6 +48,8 @@
 	let roleEnCours: { user: any; role: string; action: 'ajouter' | 'retirer' } | null = null;
 	let editUser: any | null = null;
 	let editForm = formulaireCompte();
+	/** Le mot de passe de l'administrateur, si l'adresse change (#1549) — jamais gardé. */
+	let motDePasseAdmin = '';
 
 	async function relancerAutoMatch(userId: number, userNom: string) {
 		try {
@@ -93,15 +100,29 @@
 	function openEdit(u: any) {
 		editForm = formulaireCompte(u);
 		editUser = u;
+		motDePasseAdmin = '';
 	}
 
 	async function saveEdit() {
 		if (!editUser) return;
+		//  Une autre adresse n'est qu'une DEMANDE (#1549) : le mot de passe de
+		//  l'administrateur, un lien à la nouvelle adresse, un avis à l'actuelle —
+		//  qui reste celle du compte jusqu'à ce que le titulaire clique.
+		const changee = adresseChangee(editForm.email, editUser.email);
 		try {
-			const updated = await adminApi.modifierUtilisateur(editUser.id, editForm);
+			const updated = await adminApi.modifierUtilisateur(editUser.id, {
+				...editForm,
+				...(changee ? { mot_de_passe_actuel: motDePasseAdmin } : {}),
+			});
 			utilisateurs = utilisateurs.map((u) => (u.id === editUser!.id ? { ...u, ...updated } : u));
-			toast('success', 'Utilisateur mis à jour.');
+			toast(
+				'success',
+				changee
+					? `Utilisateur mis à jour. ${annonceLienEnvoye(editForm.email, true)}`
+					: 'Utilisateur mis à jour.',
+			);
 			editUser = null;
+			motDePasseAdmin = '';
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
 		}
@@ -390,6 +411,8 @@
 	<FormulaireCreation titre="Modifier l'utilisateur" cle={editUser}>
 		<FormulaireUtilisateur
 			bind:editForm
+			adresseActuelle={editUser.email}
+			bind:motDePasse={motDePasseAdmin}
 			statutLabels={LIBELLES_STATUT_ABREGE}
 			{batimentsList}
 			onAnnuler={() => (editUser = null)}

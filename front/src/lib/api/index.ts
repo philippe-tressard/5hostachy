@@ -56,8 +56,13 @@ export const auth = {
 	requestPasswordReset: (data: unknown) => api.post('/auth/mot-de-passe-oublie', data),
 	resetPassword: (data: { token: string; nouveau_mot_de_passe: string }) =>
 		api.post('/auth/reinitialiser-mot-de-passe', data),
+	//  Le même lien vérifie l'adresse d'une inscription OU confirme une nouvelle
+	//  adresse (#1549) : `changement_adresse` dit lequel, et l'écran ne dit pas
+	//  « en attente de validation » à qui vient de changer d'adresse.
 	verifierEmail: (token: string) =>
-		api.get<{ message: string }>(`/auth/verifier-email?token=${encodeURIComponent(token)}`),
+		api.get<{ message: string; changement_adresse?: boolean }>(
+			`/auth/verifier-email?token=${encodeURIComponent(token)}`,
+		),
 	renvoyerVerification: (email: string) => api.post('/auth/renvoyer-verification', { email }),
 	batiments: () => api.get<{ id: number; numero: string }[]>('/auth/batiments'),
 	mesDemandes: () => api.get<any[]>('/auth/me/demandes-modification'),
