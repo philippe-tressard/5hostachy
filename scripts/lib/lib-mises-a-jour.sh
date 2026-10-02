@@ -190,7 +190,8 @@ verdict_etrangers_revenus() {
 }
 
 #  Émis par check-reliability quand le pair ne répond pas en SSH. Dépend de
-#  l'appelant : warn/fail, PEER, PEER_IP.
+#  l'appelant : warn/fail, PEER, PEER_IP. $1 (facultatif) : la cause dite par
+#  `ssh_noeud_diagnostic` — une clé d'hôte non épinglée n'est pas un nœud figé (#1598).
 pair_injoignable_emettre() {
     local m age='' cible=''
     m=$(cat "$MARQUE_REDEMARRAGE" 2>/dev/null)
@@ -198,7 +199,7 @@ pair_injoignable_emettre() {
     case "$(verdict_pair_injoignable "$age")" in
         REDEMARRAGE)   warn "Peer $PEER ($PEER_IP) en redémarrage prévu depuis ${age} s (noyau $cible, #1395) — revérifié au prochain passage" ;;
         NE_REPART_PAS) fail "Peer $PEER ($PEER_IP) injoignable $(( age / 60 )) min après avoir redémarré pour le noyau $cible — il ne repart pas (accès physique : le Pi n'a pas de menu de démarrage)" ;;
-        *)             fail "Peer $PEER ($PEER_IP) injoignable en SSH — impossible d'auditer les 2 nœuds." ;;
+        *)             fail "Peer $PEER ($PEER_IP) injoignable en SSH — impossible d'auditer les 2 nœuds.${1:+ $1}" ;;
     esac
 }
 
@@ -353,6 +354,10 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "marque de 20 min → FAIL" FAIL eval 'pair_injoignable_emettre | cut -d" " -f1'
     rm -f "$tmpm"
     t "sans marque → FAIL" FAIL eval 'pair_injoignable_emettre | cut -d" " -f1'
+    #  #1598 : la cause dite par lib-ssh-noeuds termine le message ; muette, rien.
+    t "la cause SSH termine le message" "nœuds. (clé non épinglée)" \
+      eval 'pair_injoignable_emettre "(clé non épinglée)" | grep -o "nœuds\..*"'
+    t "sans cause : le message s'arrête" "nœuds." eval 'pair_injoignable_emettre "" | grep -o "nœuds\..*"'
     t "commande manuelle : les paquets de la liste" \
       "ssh -t ptressard@192.168.1.223 'sudo apt-get update && sudo apt-get install --only-upgrade $NOYAU_PAQUETS && sudo reboot'" \
       commande_montee_noyau 192.168.1.223
