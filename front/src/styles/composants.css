@@ -1099,11 +1099,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	background: #fdf6e7;
 	border-color: #e8cf95;
 }
-/*  Le bouton « + Nouveau membre » sous une liste de fiches de l'annuaire —
-    conseil syndical et syndic (#779, 29/09/2026) : deux composants, un geste. */
-.ajout-membre {
-	margin-top: 0.5rem;
-}
 .header-summary {
 	display: flex;
 	align-items: center;
