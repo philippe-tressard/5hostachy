@@ -172,33 +172,16 @@ def test_une_autre_erreur_du_fournisseur_nomme_son_code_et_se_journalise(
     assert f"Liste des modèles openai → {code}" in caplog.text
 
 
-#  🔴 DÉFAUT RÉVÉLÉ (#1569, 02/10/2026) : `llm_modeles` rattrape `ValueError`, `KeyError` et
-#  `TypeError` autour de `lire_modeles`, mais pas `AttributeError`. Un service (ou un proxy
-#  « compatible OpenAI ») qui répond un JSON valide d'une AUTRE forme — un tableau, ou
-#  `{"data": "…"}` — fait lever `reponse.get(...)` / `m.get(...)` : l'exception sort, l'écran
-#  d'administration reçoit un 500 au lieu du motif « Liste illisible — format inattendu. »
-#  que la fonction promet (« rend toujours une réponse LISIBLE, jamais une exception »).
-#  Non corrigé ici (lot de tests seuls) : les deux cas restent en xfail strict, et passeront
-#  au vert — donc feront échouer le xfail — le jour où le défaut sera corrigé.
-_FORME_INATTENDUE = pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="AttributeError non rattrapée par llm_modeles.modeles_disponibles (#1569)",
-)
+#  Un JSON VALIDE d'une AUTRE forme (un tableau, `{"data": "texte"}`) fait lever `.get` :
+#  `AttributeError` doit être rattrapée comme les autres (#1569 l'avait révélé, #1624 l'a corrigé).
 
 
 @pytest.mark.parametrize(
     "reponse",
     [
         pytest.param(_Reponse(200, illisible=True), id="json-invalide"),
-        pytest.param(
-            _Reponse(200, charge=["pas", "un", "objet"]), id="tableau", marks=_FORME_INATTENDUE
-        ),
-        pytest.param(
-            _Reponse(200, charge={"data": "pas une liste"}),
-            id="data-chaine",
-            marks=_FORME_INATTENDUE,
-        ),
+        pytest.param(_Reponse(200, charge=["pas", "un", "objet"]), id="tableau"),
+        pytest.param(_Reponse(200, charge={"data": "pas une liste"}), id="data-chaine"),
         pytest.param(_Reponse(200, charge={"data": [{"sans_id": 1}]}), id="sans-id"),
     ],
 )

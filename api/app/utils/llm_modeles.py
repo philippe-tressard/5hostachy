@@ -75,7 +75,9 @@ async def modeles_disponibles(session: Session) -> dict[str, Any]:
         }
     try:
         modeles = cfg.fournisseur.lire_modeles(reponse.json())
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError, AttributeError):
+        #  `AttributeError` : un JSON VALIDE d'une autre forme (un tableau, ou
+        #  `{"data": "texte"}`) fait lever `.get` — c'est « illisible », pas un 500 (#1624).
         return {"listable": False, "motif": "Liste illisible — format inattendu.", "modeles": []}
     #  Une liste VIDE n'est pas une liste : la rendre ferait choisir dans un
     #  menu sans entrée (`standards/04` §2 — le cas zéro).
