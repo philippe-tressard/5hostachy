@@ -135,7 +135,7 @@
 		      le formulaire remonterait à la ligne de titre et replierait ce qu'on est
 		      en train de corriger (`ux-patterns` §3). -->
 		<div
-			class="carte-modifiable-corps"
+			class="carte-corps carte-modifiable-corps"
 			class:teinte
 			role="presentation"
 			on:click|stopPropagation
@@ -149,7 +149,7 @@
 			</FormulaireCreation>
 		</div>
 	{:else if expanded}
-		<div class="carte-modifiable-corps" class:teinte>
+		<div class="carte-corps carte-modifiable-corps" class:teinte>
 			<slot name="detail" />
 		</div>
 	{/if}

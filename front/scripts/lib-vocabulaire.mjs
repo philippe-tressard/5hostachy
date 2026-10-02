@@ -192,10 +192,15 @@ export function texteVisible(source) {
 	return sortie;
 }
 
-/** Les textes de balisage d'un fichier qui portent l'un des mots de code. */
-export function texteVisibleFautif(source, motsDeCode, exceptions = []) {
+/**
+ *  Les textes de balisage d'un fichier qui portent l'un des mots de code.
+ *
+ *  `motifPropre` : une autre façon de reconnaître le mot (`lib-mots-anglais`,
+ *  #1579) — la frontière `\b` par défaut ne voit pas un accent comme une lettre.
+ */
+export function texteVisibleFautif(source, motsDeCode, exceptions = [], motifPropre = null) {
 	if (!motsDeCode.length) return [];
-	const motif = new RegExp(`\\b(${motsDeCode.join('|')})s?\\b`, 'i');
+	const motif = motifPropre ?? new RegExp(`\\b(${motsDeCode.join('|')})s?\\b`, 'i');
 	const fautes = [];
 	texteVisible(source)
 		.split('\n')
@@ -208,11 +213,11 @@ export function texteVisibleFautif(source, motsDeCode, exceptions = []) {
 	return fautes;
 }
 
-/** Les libellés visibles d'un fichier qui portent l'un des mots de code. */
-export function libellesFautifs(source, motsDeCode, exceptions = []) {
+/** Les libellés visibles d'un fichier qui portent l'un des mots de code (`motifPropre` : cf. ci-dessus). */
+export function libellesFautifs(source, motsDeCode, exceptions = [], motifPropre = null) {
 	if (!motsDeCode.length) return [];
 	const propre = sansCommentaires(source);
-	const motif = new RegExp(`\\b(${motsDeCode.join('|')})s?\\b`, 'i');
+	const motif = motifPropre ?? new RegExp(`\\b(${motsDeCode.join('|')})s?\\b`, 'i');
 	const fautes = [];
 	propre.split('\n').forEach((ligne, i) => {
 		for (const { nom, re } of PORTES) {

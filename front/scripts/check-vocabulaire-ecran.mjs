@@ -57,6 +57,13 @@ import {
 	texteVisibleFautif,
 	vocabulaireDeclare,
 } from './lib-vocabulaire.mjs';
+import {
+	bilanAnglais,
+	casAnglais,
+	EXCEPTIONS_ANGLAIS,
+	MOTS_ANGLAIS,
+	motsAnglaisFautifs,
+} from './lib-mots-anglais.mjs';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(RACINE, 'src');
@@ -327,6 +334,9 @@ function selftest() {
 		[],
 	);
 
+	//  Les mots anglais d'interface (#1579) : `lib-mots-anglais.mjs` porte ses cas.
+	casAnglais(verifier);
+
 	const echecs = cas.filter((c) => !c.ok);
 	if (echecs.length) {
 		for (const c of echecs) {
@@ -399,6 +409,9 @@ const motsDeCode = [
 const fautifs = [];
 const exceptionsVues = new Set();
 let libellesVus = 0;
+const anglais = [];
+const exceptionsAnglaisVues = new Set();
+let fichiersLus = 0;
 
 for (const chemin of fichiers(SOURCE)) {
 	const rel = relative(SOURCE, chemin).split(sep).join('/');
@@ -416,9 +429,18 @@ for (const chemin of fichiers(SOURCE)) {
 	];
 	libellesVus += fautes.length;
 	if (fautes.length) fautifs.push({ rel, fautes });
+
+	//  🔴 Le français exclusif (#1579) : mêmes portes, autre liste — des mots
+	//  d'interface anglais, déclarés dans `lib-mots-anglais.mjs`.
+	fichiersLus += 1;
+	for (const e of EXCEPTIONS_ANGLAIS)
+		if (source.includes(e.texte)) exceptionsAnglaisVues.add(e.texte);
+	const fautesAnglais = motsAnglaisFautifs(source, chemin.endsWith('.svelte'));
+	if (fautesAnglais.length) anglais.push({ rel, fautes: fautesAnglais });
 }
 
 const exceptionsMortes = EXCEPTIONS.filter((e) => !exceptionsVues.has(e.texte));
+if (bilanAnglais(anglais, exceptionsAnglaisVues, fichiersLus)) process.exit(1);
 
 if (fautifs.length) {
 	console.error(`\n✗ Le mot du MODÈLE sort dans ${libellesVus} libellé(s) que l’on lit :\n`);
@@ -449,5 +471,6 @@ if (exceptionsMortes.length) {
 console.log(
 	`✓ Vocabulaire d’écran : ${entites.length} entité(s) déclarée(s), ` +
 		`${motsDeCode.length} mot(s) de modèle surveillé(s) (${motsDeCode.join(', ')}), ` +
-		`aucun dans un libellé — ${EXCEPTIONS.length} exception(s), toutes encore utiles.`,
+		`aucun dans un libellé — ${EXCEPTIONS.length} exception(s), toutes encore utiles ; ` +
+		`${MOTS_ANGLAIS.length} mot(s) anglais refusé(s), aucun relevé.`,
 );
