@@ -229,7 +229,7 @@ qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
 | Prédicat | La question |
 |---|---|
 | `est_moderateur(user)` | conseil syndical **ou** admin — « qui modère » |
-| `est_rattache_au_lot(session, user, lot_id)` | « ce lot est le mien » (lien **actif** exigé) |
+| `est_rattache_au_lot(user, lot_id, comme=…)` | « ce lot est le mien » (lien **actif** exigé) ; `comme` en restreint la nature — donner à bail exige un lien copropriétaire (#1535) |
 | `peut_commenter` / `peut_editer` | l'auteur, le « saisi pour », l'admin (+ le CS pour commenter) ; une **actualité** : le CS et son auteur — l'arrivant corrige son annonce, sans décider qui la lit (#1091) |
 
 Et les règles d'**appartenance** — « cet objet est-il le mien ? » — vivent dans
@@ -242,6 +242,13 @@ et ne l'admet pas ; l'aidant d'une délégation refuse en 403 sans l'admettre no
 plus. Trois combinaisons pour trois règles — les réunir demanderait quatre
 paramètres de variation. Ce qu'elles gagnent est un **lieu** : côte à côte, on
 voit ce qui diverge et pourquoi. 🔒 `test_appartenance_source_unique.py`.
+
+🔴 **Une route qui reçoit un `lot_id` (chemin, requête, formulaire ou corps) pose
+la question** — `est_rattache_au_lot` ou `exiger_lot_du_bailleur` —, ou se réserve
+au CS/admin, ou se déclare dans `ROUTES_SANS_QUESTION` avec sa raison. Un écran
+qui ne propose que « mes lots » n'est pas un refus : `creer-multi` laissait tout
+propriétaire poser un bail sur le lot d'un voisin, et en porter les badges
+(#1535). 🔒 `test_appartenance_lot_source_unique.py`.
 
 🔒 Écrire `has_role(conseil_syndical, admin)` en ligne est refusé par
 `api/tests/test_moderateur_source_unique.py`. Il l'était **vingt-six fois** avant le
