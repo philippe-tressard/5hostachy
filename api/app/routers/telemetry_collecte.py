@@ -26,6 +26,11 @@ Route PUBLIQUE, déclarée comme telle dans `test_autorisation.py`. Elle écrit 
 base : plafond par minute ET par jour (`LIMITE_COLLECTE_AUDIENCE`), lot borné en
 nombre, champs bornés en taille — refusés en bloc (422), pas tronqués : le
 client du site n'envoie rien de tel, une charge hors norme vient d'ailleurs.
+
+## Les erreurs vues dans le navigateur passent par ici (#1631)
+
+Même route, même plafond, même refus du profil — mais un compteur à part
+(`utils/erreurs_navigateur`), sans identifiant de compte.
 """
 
 from fastapi import APIRouter, Depends, Request
@@ -36,6 +41,7 @@ from app.auth.deps import utilisateur_ou_anonyme
 from app.database import get_session
 from app.models.core import TelemetryEvent, Utilisateur
 from app.utils import horloge
+from app.utils.erreurs_navigateur import ACTION_ERREUR, enregistrer_erreur
 from app.utils.limiter import LIMITE_COLLECTE_AUDIENCE, limiter
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
@@ -71,6 +77,11 @@ def collect(
     user_id = user.id if user else None
     now = horloge.maintenant()
     for ev in body.events:
+        #  Un signalement d'erreur est COMPTÉ à part, sans compte (#1631) :
+        #  dans `telemetry_event`, il passerait pour une page vue.
+        if ev.action == ACTION_ERREUR:
+            enregistrer_erreur(session, ev.page, ev.detail, now)
+            continue
         session.add(
             TelemetryEvent(
                 user_id=user_id, page=ev.page, action=ev.action, detail=ev.detail, cree_le=now

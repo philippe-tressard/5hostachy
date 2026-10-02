@@ -192,6 +192,41 @@
 			</div>
 		{/if}
 
+		<!--  Erreurs vues par les résidents (#1631) — avant le graphe : un écran qui
+		      casse compte plus qu'une courbe de fréquentation. La clé (page, code) est
+		      unique : le serveur les regroupe par ce couple. -->
+		<div class="card tl-panneau">
+			<h3 class="tl-section-title">
+				⚠️ Erreurs vues par les résidents
+				<span class="tl-periode">{tlScope === 'jour' ? 'aujourd’hui' : '30 derniers jours'}</span>
+			</h3>
+			{#if telemetryData.erreurs?.length}
+				<table class="table">
+					<thead>
+						<tr><th>Page et erreur</th><th class="tl-nombre">Onglets</th><th>Dernière</th></tr>
+					</thead>
+					<tbody>
+						{#each telemetryData.erreurs as e (`${e.page}|${e.code}`)}
+							<tr>
+								<td>
+									<code>{e.page}</code>
+									<span class="tl-code">{e.code}</span>
+								</td>
+								<td class="tl-nombre">{e.total}</td>
+								<td class="tl-discret">{fmt(e.derniere_le)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{:else}
+				<p class="tl-note">✅ Aucune erreur signalée sur la période.</p>
+			{/if}
+			<p class="tl-note">
+				Chaque onglet ouvert signale une même erreur une seule fois. Les comptes qui ont refusé la
+				mesure d’audience n’envoient rien. Conservation : 30 jours.
+			</p>
+		</div>
+
 		<!-- Graphe (barres CSS) — adaptatif au scope -->
 		{#if telemetryData.chart.length > 0}
 			{@const maxVal = Math.max(...telemetryData.chart.map((x: { total: number }) => x.total), 1)}
@@ -339,6 +374,37 @@
 		font-weight: 600;
 		margin: 0 0 0.75rem;
 		padding: 0.75rem 1rem 0;
+	}
+	/*  Le panneau des erreurs (#1631). Au téléphone, un code long fait défiler
+	    la CARTE, pas la page : c'est la règle des tableaux (`normes.css`,
+	    cellules sans retour à la ligne, carte en `overflow-x: auto`). */
+	.tl-panneau {
+		margin-top: 1.25rem;
+	}
+	.tl-periode {
+		font-size: var(--fs-sm);
+		font-weight: 400;
+		color: var(--color-text-muted);
+		margin-left: 0.4rem;
+	}
+	.tl-code {
+		display: block;
+		margin-top: 0.2rem;
+		font-size: var(--fs-sm);
+		color: var(--color-danger);
+	}
+	.tl-nombre {
+		text-align: right;
+		font-weight: 600;
+	}
+	.tl-discret {
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+	}
+	.tl-note {
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+		margin: 0.5rem 1rem 0.75rem;
 	}
 	.tl-chart-wrap {
 		display: flex;

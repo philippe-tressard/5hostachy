@@ -70,6 +70,24 @@ class TelemetryMonthly(SQLModel, table=True):
     total: int = 0
 
 
+class ErreurNavigateur(SQLModel, table=True):
+    """Une erreur vue par les résidents, COMPTÉE par jour, page et code (#1631).
+
+    Pas un événement : un compteur, et SANS `user_id` — savoir qu'un écran casse
+    ne demande pas de savoir chez qui. Écrit et lu par `utils/erreurs_navigateur`,
+    purgé après `CONSERVATION_JOURS` par l'agrégation quotidienne.
+    """
+
+    __tablename__ = "erreur_navigateur"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+    page: str
+    code: str  # produit par `codeErreur` (front/src/lib/telemetry.ts)
+    total: int = 0
+    premiere_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+    derniere_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
+
+
 class HistoriqueTelemetrie(SQLModel, table=True):
     """Historique des exécutions d'agrégation de la télémétrie."""
 

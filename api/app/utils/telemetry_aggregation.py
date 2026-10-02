@@ -4,6 +4,7 @@ Trois niveaux de rétention :
   - Événements bruts (telemetry_event) : 30 jours
   - Agrégation journalière (telemetry_daily) : 12 mois
   - Agrégation mensuelle (telemetry_monthly) : 10 ans
+  - Erreurs vues dans le navigateur (erreur_navigateur) : 30 jours (#1631)
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
 
@@ -29,6 +30,7 @@ from app.models.core import (
     TelemetryMonthly,
     HistoriqueTelemetrie,
 )
+from app.utils.erreurs_navigateur import purger_erreurs
 from app.utils.noeud import noeud_courant
 
 logger = logging.getLogger(__name__)
@@ -56,6 +58,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         "events_purges": 0,
         "daily_purges": 0,
         "monthly_purges": 0,
+        "erreurs_navigateur_purgees": 0,
         "erreurs": [],
     }
 
@@ -280,6 +283,15 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
                 rapport["monthly_purges"] = result.rowcount
         except Exception as exc:
             rapport["erreurs"].append(f"purge monthly: {exc}")
+
+        # ─── 6. Purge : erreurs vues dans le navigateur (#1631) ─────────
+        try:
+            rapport["erreurs_navigateur_purgees"] = purger_erreurs(
+                session, horloge.jour_civil(now_utc)
+            )
+        except Exception as exc:
+            rapport["erreurs"].append(f"purge erreurs navigateur: {exc}")
+            session.rollback()
 
     # ─── Mise à jour de l'historique ──────────────────────────────────
     duree = round(time.monotonic() - t0, 2)

@@ -119,6 +119,12 @@ EXIGENCES = [
         ("utils/courriel_transfert.py", "def verser"),
         ("courriels transférés",),
     ),
+    (
+        #  #1631 : comptées sans compte, mais collectées dans le navigateur.
+        "les erreurs vues dans le navigateur",
+        ("utils/erreurs_navigateur.py", "def enregistrer_erreur"),
+        ("erreurs techniques",),
+    ),
 ]
 
 

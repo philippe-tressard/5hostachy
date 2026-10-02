@@ -1,5 +1,5 @@
 /**
- * Télémétrie — collecte transparente des pages visitées.
+ * Télémétrie — collecte des pages visitées et des erreurs vues à l'écran.
  *
  * Utilise `navigator.sendBeacon` pour un envoi non-bloquant (fire-and-forget).
  * Les événements sont accumulés en mémoire et envoyés en batch toutes les 30 s
@@ -22,10 +22,21 @@ const ENDPOINT = '/api/telemetry/collect';
  *  deux valeurs se tiennent à la main — le front et l'API ne partagent aucun
  *  fichier. */
 const EVENEMENTS_PAR_LOT = 20;
+/** L'action d'un signalement d'erreur (#1631). ⚠️ Tenue à la main avec
+ *  `ACTION_ERREUR` de `api/app/utils/erreurs_navigateur.py`. */
+const ACTION_ERREUR = 'erreur';
+/** Au plus tant de signalements par onglet ouvert : une boucle d'erreurs ne doit
+ *  ni épuiser la limite de collecte du serveur ni noyer les vues du même lot. */
+const SIGNALEMENTS_PAR_ONGLET = 10;
+/** Le `max_length` du `detail` côté serveur (`EvenementAudience`) : au-delà, le
+ *  lot entier serait refusé, vues comprises. */
+const LONGUEUR_DETAIL = 100;
 
 const buffer: { page: string; action: string; detail?: string }[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 let disabled = false;
+/** Les couples (page, code) déjà signalés par cet onglet. */
+const signales = new Set<string>();
 
 /** Refus de la mesure d'audience — appliqué ici, seul endroit qui le peut. */
 export function setTelemetryOptOut(optOut: boolean) {
@@ -49,6 +60,51 @@ export function trackPageView(path: string) {
 export function trackTabView(tab: string) {
 	if (typeof window === 'undefined') return;
 	trackEvent(`${window.location.pathname}#${tab}`, 'view');
+}
+
+/**
+ * **Le CODE d'une erreur — ce qu'on en garde, jamais son message brut** (#1631).
+ *
+ * Un message peut porter une saisie de l'utilisateur ; une pile d'appels, des
+ * chemins de fichiers. On garde donc, dans cet ordre :
+ * - le code d'une erreur Svelte (`svelte:each_key_duplicate`), lu dans le lien
+ *   que Svelte 5 met dans chaque message ;
+ * - le statut et le chemin d'une réponse en échec (`ApiError`, reconnue à ses
+ *   champs : l'importer ferait boucler ce module et le client d'API) ;
+ * - sinon le nom de l'erreur et la PREMIÈRE ligne du message, sans ce qui est
+ *   entre guillemets ou chevrons et sans les nombres.
+ */
+export function codeErreur(e: unknown): string {
+	const brut = e instanceof Error ? e.message : String(e ?? '');
+	const svelte = /svelte\.dev\/e\/(\w+)/.exec(brut);
+	if (svelte) return `svelte:${svelte[1]}`;
+	const reponse = e as { status?: unknown; chemin?: unknown } | null;
+	if (typeof reponse?.status === 'number') {
+		return codeHttp(reponse.status, typeof reponse.chemin === 'string' ? reponse.chemin : '?');
+	}
+	const nom = e instanceof Error ? e.name : typeof e;
+	const signature = (brut.split('\n')[0] ?? '')
+		.replace(/(["'`])[^"'`]*\1|«[^»]*»/g, '…')
+		.replace(/\d+/g, '#')
+		.replace(/\s+/g, ' ')
+		.trim();
+	return (signature ? `${nom}: ${signature}` : nom).slice(0, LONGUEUR_DETAIL);
+}
+
+/** Le code d'une réponse en échec : statut et chemin, identifiants masqués
+ *  (`HTTP 502 /tickets/#`) — mille affaires ne font pas mille lignes. */
+export function codeHttp(status: number, chemin: string): string {
+	return `HTTP ${status} ${chemin.split('?')[0].replace(/\d+/g, '#')}`.slice(0, LONGUEUR_DETAIL);
+}
+
+/** Signale une erreur vue à l'écran — une fois par page et par code, pour cet onglet. */
+export function signalerErreur(code: string) {
+	if (typeof window === 'undefined') return;
+	const page = window.location.pathname;
+	const cle = `${page}|${code}`;
+	if (signales.has(cle) || signales.size >= SIGNALEMENTS_PAR_ONGLET) return;
+	signales.add(cle);
+	trackEvent(page, ACTION_ERREUR, code);
 }
 
 function flush() {
@@ -85,4 +141,9 @@ export function initTelemetry() {
 		if (document.visibilityState === 'hidden') flush();
 	});
 	window.addEventListener('beforeunload', flush);
+
+	//  Ce que rien n'a rattrapé (#1631). Les erreurs d'un chargement ou d'une
+	//  navigation n'arrivent pas jusqu'ici : `hooks.client.ts` les prend.
+	window.addEventListener('error', (ev) => signalerErreur(codeErreur(ev.error ?? ev.message)));
+	window.addEventListener('unhandledrejection', (ev) => signalerErreur(codeErreur(ev.reason)));
 }
