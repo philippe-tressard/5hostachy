@@ -1811,8 +1811,9 @@ application à ce cas qui était fausse.
 ### L'aperçu replié se REPLIE sur l'Historique (18/08/2026)
 
 Quand l'objet ne porte aucune pièce mais que son Historique en porte, la carte
-repliée montre celles de l'entrée **la plus récente** — `apercuAvecRepli()`
-(`$lib/fichiers.ts`).
+repliée montre celles de l'entrée **la plus récente** — repli calculé côté
+serveur par `pieces_ticket_ou_repli` (`routers/tickets/commun.py`), jamais par
+le front.
 
 **Why** : un événement de calendrier n'a le plus souvent aucune photo propre, c'est
 le suivi qui en apporte. Sa carte restait donc nue là où un ticket illustré montre
