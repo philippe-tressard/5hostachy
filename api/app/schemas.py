@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator
 
 from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
 from app.models.tickets import CategorieTicket
+from app.utils.perimetres import perimetre_defaut_liste
 
 
 #  `liste_depuis_json` et `ListeJson` vivent dans `schemas_communs.py` depuis le
@@ -300,7 +301,7 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
             try:
                 return json.loads(v)
             except Exception:
-                return ["résidence"]
+                return perimetre_defaut_liste()
         return v
 
     class Config:

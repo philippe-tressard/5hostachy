@@ -45,6 +45,7 @@ from enum import Enum
 from typing import Optional
 
 from sqlmodel import Field
+from app.utils.perimetres import perimetre_defaut_texte
 from app.utils.assiste_ia import AssisteIAMixin
 from app.utils.saisi_pour import SaisiPourMixin
 from app.models.evolution import EvolutionMixin
@@ -78,7 +79,9 @@ class Evenement(SaisiPourMixin, AssisteIAMixin, table=True):
     lieu: Optional[str] = None
     debut: NaiveDatetime
     fin: Optional[NaiveDatetime] = None
-    perimetre: str = "résidence"  # résidence | bâtiment
+    #  Codes de l'arbre séparés par des virgules (`parse_perimetres`) ; le
+    #  défaut se lit dans les données (#1567).
+    perimetre: str = Field(default_factory=perimetre_defaut_texte)
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
     auteur_id: int = Field(foreign_key="utilisateur.id")
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

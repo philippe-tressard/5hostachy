@@ -48,6 +48,7 @@ from app.utils.apercu_diffusion import (
     apercu_whatsapp,
 )
 from app.utils.copie_auteur import adresse_copie
+from app.utils.perimetres import perimetre_cible_json
 from app.utils.photos import photos_internes
 
 from .annonces_hall_courriels import (
@@ -100,7 +101,7 @@ def _annonce_previsionnelle(b: BrouillonAnnonceHall, auteur: Utilisateur) -> Ann
     return AnnonceHall(
         titre=b.titre,
         message=b.message,
-        perimetre_cible=json.dumps(b.perimetre_cible or ["résidence"], ensure_ascii=False),
+        perimetre_cible=perimetre_cible_json(b.perimetre_cible),
         format_effectif=fmt,
         pdf_nom=nom_fichier(b.titre, cree_le),
         #  Le PDF n'existe pas : l'e-mail réel le joindra, l'aperçu ne peut pas le

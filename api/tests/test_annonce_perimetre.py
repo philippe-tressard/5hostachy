@@ -143,10 +143,15 @@ def test_correction_sans_perimetre_ne_l_efface_pas(resident):
             session.commit()
 
 
-def test_annonce_anterieure_a_la_migration_se_lit_comme_residence(resident):
+def test_annonce_anterieure_a_la_migration_se_lit_comme_residence(resident, batiments):
     """Une annonce déposée AVANT 0151 porte `NULL` : elle valait « résidence » de
     fait, elle doit le valoir explicitement — sinon `perimetreLabel` reçoit `null`
-    et la carte affiche un badge vide au lieu de n'en afficher aucun."""
+    et la carte affiche un badge vide au lieu de n'en afficher aucun.
+
+    ⚠️ Mesuré le 02/10/2026 (#1567) : l'ORM remplace le `None` passé ci-dessous
+    par le défaut de la colonne à l'insertion — la ligne n'est donc pas NULL.
+    Ce défaut était le code de la racine écrit en dur ; il est maintenant lu dans
+    l'arbre (`perimetre_cible_json`), d'où `batiments`, qui le sème."""
     with Session(engine) as session:
         ancienne = PetiteAnnonce(
             titre="Ancienne annonce",

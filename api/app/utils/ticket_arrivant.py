@@ -55,6 +55,7 @@ from sqlmodel import Session, select
 
 from app.models.core import Ticket, Utilisateur
 from app.routers.tickets.commun import generer_numero
+from app.utils.perimetres import perimetre_cible_json
 
 #: Le titre est stable et reconnaissable : c'est lui qui sert de garde contre le
 #: doublon, et c'est lui que le conseil cherche dans sa liste.
@@ -131,7 +132,7 @@ def creer_ticket_arrivant(
         saisi_pour_nom=nom_complet,
         saisi_pour_email=user.email,
         batiment_id=user.batiment_id,
-        perimetre_cible='["résidence"]',
+        perimetre_cible=perimetre_cible_json(),
         #  Les deux démarches ont deux destinataires : le syndic pose l'étiquette
         #  de boîte aux lettres, le conseil ajoute le nom sur l'interphone. Le
         #  ticket les vise tous les deux — c'est la raison d'en faire UN seul.

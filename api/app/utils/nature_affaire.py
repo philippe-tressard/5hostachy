@@ -30,6 +30,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from app.models.tickets import CATEGORIES_RESERVEES_AU_CS, CategorieTicket, StatutTicket
+from app.utils.perimetres import perimetre_cible_json
 from app.utils.valeurs import valeur
 
 ACTUALITE = CategorieTicket.actualite.value
@@ -60,8 +61,14 @@ def change_de_nature(ticket: Any, nouvelle_categorie: Any) -> bool:
     return (valeur(nouvelle_categorie) == ACTUALITE) != est_actualite(ticket)
 
 
-#: Le périmètre d'un BOGUE : il n'en a pas — il concerne le site, pas un lieu.
-PERIMETRE_BUG = '["résidence"]'
+def perimetre_bug() -> str:
+    """Le périmètre d'un BOGUE : il n'en a pas — il concerne le site, pas un lieu.
+
+    Le défaut de l'arbre, lu à l'écriture : c'était la constante `PERIMETRE_BUG`,
+    qui recopiait le code de la racine (#1567). La règle garde son nom — deux
+    gestes l'appliquent (création, correction), et c'est elle qu'ils citent.
+    """
+    return perimetre_cible_json()
 
 
 def est_bug(categorie: Any) -> bool:

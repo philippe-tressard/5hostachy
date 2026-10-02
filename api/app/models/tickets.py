@@ -34,6 +34,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.models.evolution import EvolutionMixin
 from app.utils import horloge
 from app.utils.assiste_ia import AssisteIAMixin
+from app.utils.perimetres import perimetre_cible_json
 from app.utils.saisi_pour import SaisiPourMixin
 
 #  Références différées vers `core.py` et `copropriete.py` : `core` importe CE
@@ -287,9 +288,8 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     auteur_id: int = Field(foreign_key="utilisateur.id")
     lot_id: Optional[int] = Field(default=None, foreign_key="lot.id")
     batiment_id: Optional[int] = Field(default=None, foreign_key="batiment.id")
-    perimetre_cible: Optional[str] = Field(
-        default='["résidence"]'
-    )  # JSON: résidence|bat:{id}|parking|cave
+    #  JSON de codes de l'arbre ; le défaut se lit dans les données (#1567).
+    perimetre_cible: Optional[str] = Field(default_factory=perimetre_cible_json)
     photos_urls: Optional[str] = None  # JSON array of photo URLs
     # Pièces jointes non-images (PDF, bureautique). Même convention que
     # TicketEvolution.fichiers_urls : un seul nom pour la notion « fichier joint ».

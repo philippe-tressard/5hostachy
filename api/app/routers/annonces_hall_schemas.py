@@ -11,15 +11,16 @@ part, ce qui DÉCIDE reste.
 déclarer ici en ferait une seconde description de la même sortie.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.utils.assiste_ia import AssisteIAEntree
+from app.utils.perimetres import perimetre_defaut_liste
 
 
 class AnnonceHallBase(BaseModel):
     titre: str
     message: str
-    perimetre_cible: list[str] = ["résidence"]
+    perimetre_cible: list[str] = Field(default_factory=perimetre_defaut_liste)
     format_demande: str = "auto"
     images: list[str] = []
 

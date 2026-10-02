@@ -22,7 +22,6 @@ prestataire », suivies au kanban.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from app.utils import horloge
 from html import escape
@@ -39,6 +38,7 @@ from app.models.prestataires import Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.intervenant import FREQUENCES, contrat_valide
+from app.utils.perimetres import perimetre_cible_json
 
 from .commun import generer_numero
 
@@ -109,7 +109,7 @@ def creer_visites_en_lot(
                 priorite="normale",
                 suivi_kanban=True,
                 auteur_id=user.id,
-                perimetre_cible=json.dumps(v.perimetre_cible or ["résidence"], ensure_ascii=False),
+                perimetre_cible=perimetre_cible_json(v.perimetre_cible),
                 debut=v.debut,
                 prestataire_id=v.prestataire_id,
                 contrat_id=v.contrat_id,

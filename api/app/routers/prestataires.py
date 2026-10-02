@@ -25,7 +25,11 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
-from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
+from app.utils.perimetres.arbre import (
+    batiments_cibles,
+    parse_json_perimetres,
+    perimetre_cible_json,
+)
 from app.models.core import (
     ContratEntretien,
     NotationPrestataire,
@@ -132,7 +136,7 @@ def archive_prestataire(
 
 class ContratCreate(BaseModel):
     copropriete_id: int
-    #: Le PÉRIMÈTRE couvert — `["résidence"]`, `["bat:3"]`, `["parking"]`…
+    #: Le PÉRIMÈTRE couvert — des codes de l'arbre, `["bat:3"]`, `["parking"]`…
     #: C'est la seule chose que l'écran saisit depuis le 10/09/2026 ;
     #: `batiment_id` en est déduit par `_deriver_batiment` et n'est plus reçu.
     perimetre_cible: Optional[list[str]] = None
@@ -282,7 +286,7 @@ def _appliquer_perimetre(contrat: ContratEntretien, codes: Optional[list[str]]) 
     """
     if codes is None:
         return
-    contrat.perimetre_cible = json.dumps(codes or ["résidence"], ensure_ascii=False)
+    contrat.perimetre_cible = perimetre_cible_json(codes)
     vises = batiments_cibles(codes or [])
     contrat.batiment_id = next(iter(vises)) if len(vises) == 1 else None
 
@@ -296,7 +300,7 @@ def create_contrat(
     donnees = body.model_dump()
     codes = donnees.pop("perimetre_cible", None)
     c = ContratEntretien(**donnees)
-    _appliquer_perimetre(c, codes if codes is not None else ["résidence"])
+    _appliquer_perimetre(c, codes or [])
     session.add(c)
     session.commit()
     session.refresh(c)
