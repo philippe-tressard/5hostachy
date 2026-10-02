@@ -350,8 +350,10 @@ importe les gestes du transport.
   du volume n'est ni répliqué par `bascule.sh`, ni sauvegardé par `backup.py`.
 - **Le dépôt est PUBLIC : aucun nom de personne réelle** — ni dans un test, un
   commentaire, un message de commit, ni dans un ticket. Un nom inventé de même
-  forme (#1493). 🔒 `test_identites_fictives.py` (liste blanche) ; ce qu'il ne
-  voit pas : `.claude/skills/security-audit` §8.
+  forme (#1493). 🔒 `test_identites_fictives.py` (liste blanche) lit le code,
+  les tests, les **migrations** et les **documents** — ces deux-là depuis
+  #1544, une docstring de migration nommait deux employées du syndic ; ce qu'il
+  ne voit pas : `.claude/skills/security-audit` §8.
 
 ---
 
