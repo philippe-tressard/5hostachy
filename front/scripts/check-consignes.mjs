@@ -50,6 +50,8 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { extraire } from './lib-lecture-source.mjs';
+import { motifNombre, valeurNombre } from './lib-nombres-fr.mjs';
 
 const RACINE_FRONT = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const RACINE_DEPOT = new URL('../..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -285,6 +287,79 @@ for (const notion of NOTIONS) {
 	}
 }
 
+// ── 4. Les NOMBRES recopiés (#1541) ──────────────────────────────────────────
+//
+//  🔴 Une liste qu'on ne recopie plus se recopie encore par son COMPTE. CLAUDE.md
+//  disait « treize » sections, `ux-patterns` « Les TREIZE sections » et « les 10
+//  sections » : le code en comptait quatorze depuis six jours (#1342), et les
+//  deux consignes renvoyaient pourtant à `SECTIONS_ORDRE`. Le renvoi était juste,
+//  le nombre posé à côté de lui ne l'était plus.
+//
+//  Ce contrôle refuse donc le nombre lui-même, JUSTE OU FAUX : un compte exact
+//  aujourd'hui diverge à la prochaine section, et rien ne le relit alors. Une
+//  consigne dit où se lit la liste (`standards/13` §1), pas combien elle porte.
+//
+//  ⚠️ Seuil : la moitié du compte réel. « Trois sections entrent », « deux
+//  sections fusionnées » racontent un CHANGEMENT et restent permis ; un nombre
+//  qui prétend couvrir le cadre entier est une copie de son compte. Un seuil
+//  plus bas rougirait sur l'histoire ; aucun seuil n'attraperait plus rien.
+const NOMBRES = [
+	{
+		nom: 'sections de formulaire',
+		ou: 'front/src/lib/entites/types.ts (SECTIONS_ORDRE)',
+		compte: () => {
+			const chemin = join(RACINE_FRONT, 'lib', 'entites', 'types.ts');
+			const echec = (m) => {
+				throw new Error(m);
+			};
+			return extraire(readFileSync(chemin, 'utf8'), 'SECTIONS_ORDRE', chemin, { echec }).length;
+		},
+		//  « les 10 sections », « Les TREIZE sections », et un nombre en lettres
+		//  sur la ligne même du renvoi — « **treize**, dans l'ordre de
+		//  `SECTIONS_ORDRE` » (CLAUDE.md), où le mot « sections » n'est pas écrit.
+		motifs: [
+			new RegExp(`${motifNombre()}[*_]*\\s+sections?\\b`, 'giu'),
+			new RegExp(`^.*SECTIONS_ORDRE.*$`, 'gmu'),
+		],
+		dansLaLigne: new RegExp(motifNombre({ chiffres: false }), 'giu'),
+	},
+];
+
+for (const notion of NOMBRES) {
+	let compte;
+	try {
+		compte = notion.compte();
+	} catch (e) {
+		console.error(
+			`✗ INCONNU : ${notion.ou} est illisible (${e.message}) — ce contrôle ne conclut pas.`,
+		);
+		process.exit(1);
+	}
+	if (!compte) {
+		console.error(
+			`✗ Cas zéro : ${notion.ou} ne porte aucun élément — le motif de lecture a dérivé.`,
+		);
+		process.exit(1);
+	}
+	const seuil = Math.ceil(compte / 2);
+	for (const { relatif, texte } of textes) {
+		const lus = [];
+		const [adjacent, ligneDuRenvoi] = notion.motifs;
+		for (const m of texte.matchAll(adjacent)) lus.push([m[1], m[0]]);
+		for (const ligne of texte.matchAll(ligneDuRenvoi)) {
+			for (const m of ligne[0].matchAll(notion.dansLaLigne)) lus.push([m[1], ligne[0].trim()]);
+		}
+		for (const [nombre, contexte] of lus) {
+			if ((valeurNombre(nombre) ?? 0) < seuil) continue;
+			erreurs.push(
+				`${relatif} — recopie le nombre de « ${notion.nom} » : « ${contexte.slice(0, 90)} »\n` +
+					`      le code en compte ${compte} (${notion.ou}) — juste ou faux, ce nombre se périme\n` +
+					`      → dire où se lit la liste, sans son compte (\`standards/13\` §1, #1541)`,
+			);
+		}
+	}
+}
+
 if (erreurs.length) {
 	console.error('✗ Consigne incomplète — elle décrit un dépôt qui n’existe pas :\n');
 	for (const e of erreurs) console.error(`  • ${e}`);
@@ -299,5 +374,6 @@ if (erreurs.length) {
 
 console.log(
 	`✓ Consignes : ${NOTIONS.length} notion(s) confrontée(s) à leur source sur ` +
-		`${candidats.length} fichier(s) de consigne — aucune liste recopiée n'a dérivé.`,
+		`${candidats.length} fichier(s) de consigne — aucune liste recopiée n'a dérivé, ` +
+		`aucun compte de ${NOMBRES.map((n) => n.nom).join(', ')} recopié.`,
 );

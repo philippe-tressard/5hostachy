@@ -12,16 +12,18 @@
  *    porte `data-onglet="<id>" data-reserve="<valeur>"`. Une réserve que le
  *    manuel annonce sans que `pages.ts` la porte doit être DÉCLARÉE ci-dessous,
  *    avec la ligne du code qui l'applique — et échoue si cette ligne disparaît.
- * 2. **Les treize sections d'une affaire, vues du résident** : la table du
- *    chapitre « Ouvrir une affaire » suit `SECTIONS_ORDRE`, dit « conseil » là
- *    où la déclaration `TICKET` éteint la section pour un résident, et ne dit
- *    « obligatoire » que d'une section `requis`.
+ * 2. **Les sections d'une affaire, vues du résident** : la table du chapitre
+ *    « Ouvrir une affaire » suit `SECTIONS_ORDRE`, dit « conseil » là où la
+ *    déclaration `TICKET` éteint la section pour un résident, ne dit
+ *    « obligatoire » que d'une section `requis` — et son titre, s'il compte les
+ *    sections, dit le compte de `SECTIONS_ORDRE` (#1541).
  * 3. **Les catégories qu'un résident choisit** : celles de `CATEGORIES_TICKET`
  *    sans `reserveCS`, ni plus ni moins.
  *
  * Il lit des ATTRIBUTS, jamais la prose (même raison que `check-manuel-menus`).
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { motifNombre, valeurNombre } from './lib-nombres-fr.mjs';
 
 const RACINE = new URL('../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const lire = (chemin) => readFileSync(`${RACINE}${chemin}`, 'utf8');
@@ -101,7 +103,7 @@ for (const [href, carte] of cartes) {
 	}
 }
 
-// ── 2. Les treize sections, vues du résident ────────────────────────────────
+// ── 2. Les sections, vues du résident ───────────────────────────────────────
 const ordre = [
 	...types.match(/SECTIONS_ORDRE[^=]*=\s*\[([\s\S]*?)\];/)[1].matchAll(/'(\w+)'/g),
 ].map((m) => m[1]);
@@ -125,6 +127,27 @@ if (ordre.length < 10 || declarations.size < 10) {
 }
 if (lignes.map(([id]) => id).join(',') !== ordre.join(',')) {
 	erreurs.push(`la table des sections du manuel ne suit pas SECTIONS_ORDRE (${ordre.join(', ')})`);
+}
+//  Le TITRE de la table compte les sections (« Les quatorze sections du
+//  formulaire ») : le manuel s'adresse au résident et ne peut pas renvoyer à
+//  `SECTIONS_ORDRE`, son nombre est donc légitime — mais rien ne le relisait.
+//  La table, elle, était tenue : une quinzième section l'aurait fait rougir ici,
+//  et le titre serait resté à « quatorze » sans un mot (#1541). Il est lu au
+//  `<h3>` qui précède la première ligne marquée, jamais dans la prose.
+const debutTable = manuel.indexOf('data-section-affaire=');
+const titreTable = [...manuel.slice(0, debutTable).matchAll(/<h3>([^<]*)<\/h3>/g)].at(-1)?.[1];
+if (!titreTable) {
+	console.error(
+		'✗ Cas zéro : aucun <h3> avant la table des sections du manuel — le motif a dérivé.',
+	);
+	process.exit(1);
+}
+for (const m of titreTable.matchAll(new RegExp(motifNombre(), 'giu'))) {
+	if (valeurNombre(m[1]) !== ordre.length) {
+		erreurs.push(
+			`le titre de la table des sections, « ${titreTable} », annonce ${m[1]} : SECTIONS_ORDRE en compte ${ordre.length}`,
+		);
+	}
 }
 for (const [id, pourLeResident] of lignes) {
 	const d = declarations.get(id);

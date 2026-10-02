@@ -1293,7 +1293,11 @@ jobs:
       # produit était CORRECT — c'est sa raison d'être qui était périmée. La CI ne
       # lisait ni CLAUDE.md ni .claude/skills/. Celui-ci les lit, et compare à ce
       # que `sanitize.ts` exporte réellement.
-      - name: Consignes complètes (assainisseurs réellement exportés)
+      #
+      # Il refuse aussi un COMPTE recopié (#1541) : CLAUDE.md et `ux-patterns`
+      # disaient « treize » sections six jours après l'entrée de la quatorzième,
+      # tout en renvoyant à `SECTIONS_ORDRE`. Juste ou faux, un nombre se périme.
+      - name: Consignes complètes (listes et comptes lus à leur source)
         working-directory: front
         run: npm run lint:consignes
 
@@ -1506,7 +1510,7 @@ jobs:
         # `lint:manuel-menus` vérifie qui voit une ENTRÉE ; il laissait passer
         # « Tout le monde » sur Résidence, dont le carnet est fermé aux
         # locataires (signalé à l'écran le 24/09/2026). Celui-ci confronte au
-        # code les onglets réservés, la table des treize sections vue du
+        # code les onglets réservés, la table des sections vue du
         # résident et les catégories qu'il peut choisir.
         working-directory: front
         run: npm run lint:manuel-profils
