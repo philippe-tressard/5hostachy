@@ -102,7 +102,7 @@ def traiter_commande(
         "sa_demande",
         destinataire_id=cmd.user_id,
         type="vigik",
-        titre=f"Commande {cmd.type} : {cmd.statut.value}",
+        titre=f"Commande {cmd.type} : {valeur(cmd.statut)}",
         corps=body.motif_refus or "Votre demande a été traitée.",
         lien="/mon-lot",
     )

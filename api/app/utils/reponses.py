@@ -29,6 +29,7 @@ from app.utils.roles_libelles import libelle_role, libelle_statut_court
 from app.utils.liens import base_site
 from app.auth.deps import est_moderateur
 from app.utils.cloche import sonner
+from app.utils.valeurs import valeur
 
 # Code du template email (voir seed.EMAIL_TEMPLATES + _EMAIL_PREF_MAP).
 REPONSE_EMAIL_CODE = "reponse_communaute"
@@ -63,7 +64,7 @@ def auteur_meta(auteur: Optional[Utilisateur], session: Session) -> dict:
         #  toutes lettres. Divergence assumée, écrite ici plutôt que subie.
         role = "Administrateur"
     else:
-        statut = auteur.statut.value if auteur.statut is not None else ""
+        statut = valeur(auteur.statut) or ""
         role = libelle_statut_court(statut) if statut else None
     batiment = None
     if auteur.batiment_id is not None:
