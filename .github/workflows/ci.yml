@@ -549,6 +549,10 @@ jobs:
           # docker / containerd / cloudflared — la collecte exécutée sur apt et
           # dpkg simulés, et le cas zéro de chaque mesure.
           bash scripts/lib/lib-paquets.sh           --selftest
+          # C32 (#1593) : les ports à l'écoute sur toutes les interfaces — la collecte
+          # exécutée sur un `ss` simulé (IPv4, IPv6, formes anciennes), la liste
+          # blanche confrontée à `docker-compose.yml`, et le cas zéro.
+          bash scripts/lib/lib-ports-ecoute.sh      --selftest
           bash scripts/lib/lib-mises-a-jour.sh      --selftest
           bash scripts/lib/lib-notification.sh      --selftest
           bash scripts/poste/precheck-mep.sh      --selftest

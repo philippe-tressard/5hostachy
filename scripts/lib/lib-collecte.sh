@@ -240,3 +240,9 @@ COLLECT="$COLLECT$(fragment_bits_exec "$(scripts_a_mesurer "$(dirname "${BASH_SO
 # `lib-health-watch.sh` ; `healthwatch_verdicts` y est donc defini aussi.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-health-watch.sh"
 COLLECT="$COLLECT$COLLECT_HW"
+
+# C32 (#1593) : les ports TCP a l ecoute sur toutes les interfaces. La mesure,
+# la liste blanche declaree et la decision vivent ensemble, dans
+# `lib-ports-ecoute.sh` ; `ports_ecoute_verdicts` y est donc defini aussi.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-ports-ecoute.sh"
+COLLECT="$COLLECT$COLLECT_PORTS"
