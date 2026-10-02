@@ -175,7 +175,6 @@
 		//  la reçoit dans `valeurs` : la page n'a plus à connaître sa forme.
 		// WhatsApp : la configuration part telle quelle vers l'onglet dédié.
 		waCfgPublique = cfg;
-		waApiKeySet = !!adminCfg['whatsapp_api_key'];
 		smtpValeurs = adminCfg;
 		loadBatiments();
 		loadComptes();
@@ -211,7 +210,6 @@
 	//  état, ses appels et son rendu. Ne restent ici que les deux valeurs que la
 	//  page a déjà chargées et lui transmet.
 	let waCfgPublique: Record<string, string> = {};
-	let waApiKeySet = false;
 
 	// ── SMTP ────────────────────────────────────────────────────
 	// L'onglet vit dans `OngletSmtp.svelte` ; la page ne garde que les valeurs
@@ -309,7 +307,6 @@
 {:else if onglet === 'whatsapp'}
 	<OngletWhatsApp
 		cfgPublique={waCfgPublique}
-		apiKeySet={waApiKeySet}
 		bind:footer={siteConfig.whatsapp_footer}
 		footerSaving={siteSaving}
 		onSaveFooter={saveSiteConfig}

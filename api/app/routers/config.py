@@ -73,7 +73,7 @@ def _est_public(cle: str) -> bool:
 #:
 #: ⚠️ Le marqueur conserve ce dont l'écran a besoin — savoir si la valeur EXISTE —
 #: sans transmettre laquelle. C'est pourquoi il n'est pas une chaîne vide.
-_SECRETS = {"smtp_password", "imap_password", "whatsapp_api_key", "llm_api_key"}
+_SECRETS = {"smtp_password", "imap_password", "llm_api_key"}
 
 #: Ce que l'API renvoie à la place. L'écran teste sa présence, jamais sa valeur.
 MARQUEUR_SECRET = "••••••••"
@@ -98,6 +98,12 @@ def _valeur_pour_admin(cle: str, valeur: str) -> str:
 #: normalise aux DEUX bouts — ici pour que la donnée soit propre, là-bas pour que
 #: le lien le soit même quand elle ne l'est pas.
 _NORMALISEURS = {"site_url": lambda v: base_site(str(v))}
+
+#: 🔴 Refusées en base (#1596) : la clé du bridge n'a qu'une source, `.env` — se
+#: saisir ici en recréerait une seconde, qu'aucun contrôle ne confrontait.
+_CLES_HORS_BASE = {
+    "whatsapp_api_key": "La clé du bridge WhatsApp se définit dans .env (WHATSAPP_API_KEY).",
+}
 
 
 @router.get("", response_model=Dict[str, str])
@@ -145,6 +151,8 @@ def save_config(
         gestionnaire.isdigit() and peut_gerer_le_site(session.get(Utilisateur, int(gestionnaire)))
     ):
         raise HTTPException(422, "Le gestionnaire du site doit être un administrateur.")
+    for cle in data.keys() & _CLES_HORS_BASE.keys():
+        raise HTTPException(422, _CLES_HORS_BASE[cle])
     for cle, valeur in data.items():
         if cle in _NORMALISEURS:
             valeur = _NORMALISEURS[cle](valeur)
@@ -317,17 +325,15 @@ def whatsapp_qr(
     rows = session.exec(select(ConfigSite)).all()
     config = {r.cle: r.valeur for r in rows}
 
+    from app.utils.whatsapp import entetes_bridge
+
     api_url = config.get("whatsapp_api_url", "").strip()
-    api_key = config.get("whatsapp_api_key", "").strip()
     if not api_url:
         raise HTTPException(400, "whatsapp_api_url non configuré.")
 
     try:
         with httpx.Client(timeout=5) as client:
-            resp = client.get(
-                f"{api_url.rstrip('/')}/qr",
-                headers={"x-api-key": api_key},
-            )
+            resp = client.get(f"{api_url.rstrip('/')}/qr", headers=entetes_bridge())
             resp.raise_for_status()
             return Response(content=resp.content, media_type="image/png")
     except Exception as e:
