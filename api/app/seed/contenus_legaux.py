@@ -80,6 +80,40 @@ COURRIELS_TRANSFERES = (
     "dans une affaire réservée au conseil syndical."
 )
 
+#: La mesure d'audience, telle que le code la collecte depuis le 02/10/2026
+#: (#1545) : SANS IDENTIFIANT — ni compte, ni adresse IP, l'heure seule. Écrites
+#: une fois : le gabarit, les ajouts de #1034 et la migration 0246, qui corrige
+#: le texte servi, les lisent ici. Les phrases d'AVANT vivent dans la 0246 :
+#: c'est un fait passé, elles ne changeront plus.
+#:
+#: ⚠️ Le refus reste, et le texte le dit : une collecte anonyme peut garder un
+#: refus volontaire. L'export et l'effacement, eux, sont partis — il n'y a plus
+#: de télémétrie « à soi » à rendre ou à effacer.
+TELEMETRIE_COLLECTE = (
+    "<li><strong>Mesure d'audience interne (télémétrie)\xa0:</strong> pages consultées et "
+    "actions effectuées, enregistrées <strong>sans identifiant</strong>\xa0: elles ne sont "
+    "rattachées ni à votre compte ni à votre adresse IP, et ne sont horodatées qu'à l'heure "
+    "près. Elle sert à savoir quels écrans servent, et à rien d'autre\xa0: elle n'alimente "
+    "aucune publicité et ne quitte pas l'application. Vous pouvez la <strong>refuser</strong> "
+    "depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>\xa0: votre navigateur "
+    "n'envoie alors plus rien.</li>"
+)
+TELEMETRIE_BASE_LEGALE = (
+    "<li><strong>Mesure d'audience interne</strong> — base\xa0: intérêt légitime "
+    "(art.\xa06-1-f) à savoir quels écrans servent. Elle ne porte aucun identifiant\xa0; "
+    "vous pouvez vous y opposer depuis votre profil (art.\xa021).</li>"
+)
+TELEMETRIE_CONSERVATION = (
+    "<li>Mesure d'audience\xa0: événements sans identifiant <strong>30\xa0jours</strong>, puis "
+    "agrégats — par jour pendant 12\xa0mois, par mois pendant 10\xa0ans.</li>"
+)
+#: La phrase du point 6 sur ce qu'un compte fait depuis son profil : il y
+#: exportait et effaçait sa télémétrie, seule donnée concernée — partie avec
+#: l'identifiant (#1545).
+DROITS_DEPUIS_LE_PROFIL = (
+    "Les titulaires d'un compte peuvent aussi passer par la messagerie de l'application."
+)
+
 DEFAULT_LEGAL = {
     "mentions_legales": (
         "<h2>Éditeur du service</h2>"
@@ -122,16 +156,15 @@ DEFAULT_LEGAL = {
         " une annonce ou un contrat. Les métadonnées de prise de vue (EXIF, dont la géolocalisation) "
         "sont <strong>retirées</strong> au téléversement.</li><li><strong>Objets d'accès\xa0:</strong> "
         "badges Vigik et télécommandes de parking, avec leur porteur et le lot auquel ils sont "
-        "rattachés.</li><li><strong>Mesure d'audience interne (télémétrie)\xa0:</strong> pages "
-        "consultées et actions effectuées, rattachées à votre compte. Elle sert à savoir quels écrans"
-        " servent, et à rien d'autre\xa0: elle n'alimente aucune publicité et ne quitte pas "
-        "l'application. Vous pouvez la <strong>refuser</strong> et <strong>effacer</strong> votre "
-        "historique depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>.</li><h2>3. "
-        "Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
+        "rattachés.</li>"
+        + TELEMETRIE_COLLECTE
+        + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "
         "base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Communication résidents/CS</strong> — "
         "base\xa0: exécution du contrat (art.\xa06-1-b).</li><li><strong>E-mails transactionnels</strong> —"
-        " base\xa0: intérêt légitime / consentement.</li></ul><h2>4. Destinataires</h2><p>Les données "
+        " base\xa0: intérêt légitime / consentement.</li>"
+        + TELEMETRIE_BASE_LEGALE
+        + "</ul><h2>4. Destinataires</h2><p>Les données "
         "sont accessibles uniquement aux membres du conseil syndical et à l'administrateur. Elles ne "
         "sont ni cédées à des tiers, ni commercialisées, ni utilisées à des fins "
         "publicitaires.</p><p>Cette phrase vise la <strong>cession</strong> et la "
@@ -161,9 +194,8 @@ DEFAULT_LEGAL = {
         " contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul><h2>5. Durée de "
         "conservation</h2><ul><li>Données de compte actif\xa0: durée de la relation + 2 "
         "ans.</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
-        "configuration.</li></ul><ul><li>Mesure d'audience\xa0: événements détaillés "
-        "<strong>30\xa0jours</strong>, puis agrégats sans détail — par jour pendant 12\xa0mois, par mois "
-        "pendant 10\xa0ans. L'effacement demandé depuis votre profil est immédiat.</li>"
+        "configuration.</li></ul><ul>"
+        + TELEMETRIE_CONSERVATION
         + CONSERVATION_COURRIELS
         + "</li>"
         + CONSERVATION_RELEVES
@@ -171,9 +203,9 @@ DEFAULT_LEGAL = {
         "des droits d'accès (art.\xa015), rectification (art.\xa016), effacement (art.\xa017), portabilité "
         "(art.\xa020), opposition (art.\xa021) et retrait du consentement (art.\xa07-3). Pour les exercer, "
         "écrivez à l'adresse indiquée au point 1 — cette voie doit rester ouverte même sans compte, y"
-        " compris après sa suppression. Les titulaires d'un compte peuvent aussi passer par la "
-        "messagerie de l'application, ou exporter et effacer leurs données depuis leur profil. En cas"
-        " de litige\xa0: <strong>CNIL</strong> — www.cnil.fr.</p><h2>7. Cookies</h2><p>L'application "
+        " compris après sa suppression. "
+        + DROITS_DEPUIS_LE_PROFIL
+        + " En cas de litige\xa0: <strong>CNIL</strong> — www.cnil.fr.</p><h2>7. Cookies</h2><p>L'application "
         "utilise exclusivement des cookies techniques d'authentification (<code>access_token</code>, "
         "<code>refresh_token</code>) définis en <code>HttpOnly; Secure; SameSite=Strict</code>. Aucun"
         " cookie publicitaire ou de traçage.</p>"
@@ -210,11 +242,7 @@ AJOUTS_1034 = [
         "(EXIF, dont la géolocalisation) sont <strong>retirées</strong> au "
         "téléversement.</li><li><strong>Objets d'accès\xa0:</strong> badges Vigik et télécommandes "
         "de parking, avec leur porteur et le lot auquel ils sont "
-        "rattachés.</li><li><strong>Mesure d'audience interne (télémétrie)\xa0:</strong> pages "
-        "consultées et actions effectuées, rattachées à votre compte. Elle sert à savoir quels "
-        "écrans servent, et à rien d'autre\xa0: elle n'alimente aucune publicité et ne quitte pas "
-        "l'application. Vous pouvez la <strong>refuser</strong> et <strong>effacer</strong> votre"
-        " historique depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>.</li>",
+        "rattachés.</li>" + TELEMETRIE_COLLECTE,
     ),
     (
         "<h2>5. Durée de conservation</h2>",
@@ -239,9 +267,8 @@ AJOUTS_1034 = [
     ),
     (
         "<h2>6. Vos droits</h2>",
-        "<ul><li>Mesure d'audience\xa0: événements détaillés <strong>30\xa0jours</strong>, puis "
-        "agrégats sans détail — par jour pendant 12\xa0mois, par mois pendant 10\xa0ans. L'effacement "
-        "demandé depuis votre profil est immédiat.</li>"
+        "<ul>"
+        + TELEMETRIE_CONSERVATION
         + CONSERVATION_COURRIELS
         + "</li>"
         + CONSERVATION_RELEVES
