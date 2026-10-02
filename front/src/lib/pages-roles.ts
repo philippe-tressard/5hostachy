@@ -220,6 +220,6 @@ export const PAGES_ROLES: PageDef[] = [
 		navLabel: 'Délégations',
 		icone: 'heart-handshake',
 		descriptif:
-			"Gestion des accès délégués pour les proches aidants : un proche peut consulter et agir à votre place, sans que cela constitue une procuration d'assemblée générale.",
+			"Gestion des accès délégués pour les proches aidants : un proche peut consulter à votre place ce qui vous est adressé, sans pouvoir agir en votre nom ni que cela constitue une procuration d'assemblée générale.",
 	},
 ];

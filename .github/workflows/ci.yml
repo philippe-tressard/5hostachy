@@ -1342,6 +1342,14 @@ jobs:
         working-directory: front
         run: npm run lint:onglets-reserves
 
+      # « Agir pour… » posait `X-Acting-As` sur chaque requête, et seule une
+      # dépendance qu'AUCUNE route ne prenait le lisait : l'aidant écrivait sous
+      # sa propre identité pendant que l'écran disait le contraire (#1534).
+      # Un en-tête posé par le front doit être lu par une route.
+      - name: En-tête posé par le front lu par une route de l'API
+        working-directory: front
+        run: npm run lint:en-tetes-lus
+
       # Un garde refuse sur un « non » avéré, jamais sur un « pas encore » : les
       # stores de rôle valent faux tant que `authApi.me()` n'a pas répondu (#1083).
       - name: Aucune garde ne décide avant que l'authentification soit résolue

@@ -60,10 +60,11 @@ def _fichiers_routers() -> list[pathlib.Path]:
 # `deps.py` plutôt que dans son routeur : il ne reconnaît une autorisation qu'au
 # module où elle est écrite, et c'est précisément le point (audit du 26/07/2026,
 # `_require_bailleur` posé hors du module central avec 17 endpoints dessus).
+#
+# `get_acting_user` et `require_role` en sont sortis le 02/10/2026 (#1534) :
+# aucune route ne les prenait, et le cas zéro plus bas le refuse désormais.
 _DEPS_AUTORISATION = {
     "get_current_user",
-    "get_acting_user",
-    "require_role",
     "require_proprietaire",
     "require_cs_or_admin",
     "require_admin",
@@ -205,7 +206,10 @@ def _noms(node) -> set[str]:
 
 
 def _endpoints():
-    """Itère sur (fichier, ligne, verbe, chemin, nom_fonction, a_autorisation)."""
+    """Itère sur (fichier, ligne, verbe, chemin, nom_fonction, dependances_prises).
+
+    `dependances_prises` est l'ensemble des dépendances d'autorisation que
+    l'endpoint prend — vide (donc faux) s'il n'en prend aucune."""
     for f in _fichiers_routers():
         if f.name == "__init__.py":
             continue
@@ -225,19 +229,24 @@ def _endpoints():
             )
             if deco is None:
                 continue
-            trouve = any(
-                kw.arg == "dependencies" and _noms(kw.value) & _DEPS_AUTORISATION
-                for kw in deco.keywords
-            )
-            if not trouve:
-                defauts = list(node.args.defaults) + [
-                    d for d in node.args.kw_defaults if d is not None
-                ]
-                trouve = any(_noms(d) & _DEPS_AUTORISATION for d in defauts)
             chemin = (
                 deco.args[0].value if deco.args and isinstance(deco.args[0], ast.Constant) else ""
             )
-            yield f.name, node.lineno, deco.func.attr.upper(), chemin, node.name, trouve
+            prises = _deps_prises(deco, node)
+            yield f.name, node.lineno, deco.func.attr.upper(), chemin, node.name, prises
+
+
+def _deps_prises(deco, node) -> set[str]:
+    """Les dépendances d'autorisation que prend un endpoint — par `dependencies=`
+    du décorateur ou par les valeurs par défaut de ses paramètres."""
+    defauts = list(node.args.defaults) + [d for d in node.args.kw_defaults if d is not None]
+    noms = set()
+    for kw in deco.keywords:
+        if kw.arg == "dependencies":
+            noms |= _noms(kw.value)
+    for d in defauts:
+        noms |= _noms(d)
+    return noms & _DEPS_AUTORISATION
 
 
 def test_tout_endpoint_porte_une_autorisation():
@@ -258,6 +267,31 @@ def test_tout_endpoint_porte_une_autorisation():
         "(get_current_user, require_cs_or_admin, require_admin…). Si l'endpoint doit "
         "vraiment être public, l'inscrire dans `_PUBLICS_ASSUMES` AVEC sa "
         "justification — c'est une décision de sécurité :\n" + "\n".join(manquants)
+    )
+
+
+def test_chaque_dependance_d_autorisation_est_prise_par_une_route():
+    """Cas zéro de la liste ci-dessus (`standards/04` §2) : une dépendance
+    reconnue qu'AUCUNE route ne prend est une promesse sans effet.
+
+    🔴 Le défaut qu'il attrape (#1534, audit du 02/10/2026). `get_acting_user`
+    figurait dans `_DEPS_AUTORISATION` et dans la table des dépendances de
+    `CLAUDE.md` — « délégation, en-tête `X-Acting-As` ». Le front posait bien
+    l'en-tête, l'écran affichait « Vous agissez pour… », et aucune route n'a
+    jamais pris la dépendance : l'aidant écrivait sous sa propre identité. Ce
+    fichier vérifiait qu'une route prenait une dépendance de la liste, jamais
+    que chaque dépendance de la liste servait — il aurait accepté la route qui
+    la prenait, et n'a rien dit de son absence.
+
+    Une dépendance qu'on retire de toutes les routes se retire donc aussi d'ici
+    et de `deps.py`, et la documentation qui la promet avec elle.
+    """
+    prises = set().union(*(p for *_, p in _endpoints()))
+    orphelines = sorted(_DEPS_AUTORISATION - prises)
+    assert not orphelines, (
+        "Dépendance(s) d'autorisation qu'aucune route ne prend — la règle qu'elles "
+        "portent ne s'applique nulle part, et ce qui la promet (écran, manuel, "
+        "`CLAUDE.md`) ment :\n" + "\n".join(f"  {d}" for d in orphelines)
     )
 
 

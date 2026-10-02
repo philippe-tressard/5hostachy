@@ -232,8 +232,9 @@
 				<span class="aide">Sans date, la délégation reste valable sans limite.</span>
 			</div>
 			<p class="avertissement">
-				&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. L'accès aidant ne constitue pas une
-				procuration d'AG.
+				&#x26A0;&#xFE0F; L'aidant devra accepter la délégation. Il pourra consulter à la place de la
+				personne aidée ce qui lui est adressé, sans agir en son nom. L'accès aidant ne constitue pas
+				une procuration d'AG.
 			</p>
 
 			<PiedFormulaire

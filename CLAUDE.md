@@ -221,9 +221,15 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 | `require_cs_or_admin` | Création/modification de contenu |
 | `require_admin` | Suppression définitive, config système |
 | `require_proprietaire` | Fonctions propriétaires |
-| `get_acting_user` | Délégation (header `X-Acting-As`) |
 
-Ces cinq-là **refusent** (elles lèvent un 403). À côté vivent les **prédicats**,
+Ces quatre-là **refusent** (elles lèvent un 401 ou un 403). La délégation n'en
+a pas : elle est en **lecture seule** depuis le 02/10/2026 (#1534) — l'aidant
+lit ce que lit la personne aidée, par `utils/delegations_actives`.
+`get_acting_user`, qui figurait ici (« Délégation, header `X-Acting-As` »),
+n'avait **jamais** été prise par une route : l'aidant écrivait sous sa propre
+identité pendant que l'écran disait « Vous agissez pour ».
+🔒 `test_autorisation.py` refuse une dépendance qu'aucune route ne prend ;
+`npm run lint:en-tetes-lus`, un en-tête posé par le front qu'aucune route ne lit. À côté vivent les **prédicats**,
 qui *disent* sans refuser — et qui s'appellent, jamais ne se redérivent :
 
 | Prédicat | La question |
