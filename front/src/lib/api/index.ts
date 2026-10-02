@@ -67,8 +67,8 @@ export const auth = {
 		ancien_resident?: string | null;
 		ancien_resident_inconnu?: boolean;
 	}) => api.post<any>('/admin/me/accueil-arrivant', data),
-	exportTelemetrie: () => api.get<any[]>('/auth/me/telemetrie'),
-	effacerTelemetrie: () => api.delete('/auth/me/telemetrie'),
+	//  L'export et l'effacement de « sa » télémétrie sont retirés (#1545) : elle
+	//  ne porte plus d'identifiant, il n'y a plus rien à soi à rendre ni à effacer.
 	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) =>
 		api.patch('/auth/me/opt-out-telemetrie', data),
 };

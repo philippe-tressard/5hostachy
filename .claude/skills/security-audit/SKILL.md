@@ -161,7 +161,7 @@ Get-ChildItem -Recurse -Filter "*.py" | Select-String -Pattern "slowapi|RateLimi
 
 **Les limites vivent dans `api/app/utils/limiter.py`**, une constante par
 **intention** (secret éprouvé, courriel déclenché, session, contrôle de fichier,
-lecture authentifiée, journal, lecture publique). Chaque constante dit pourquoi
+lecture authentifiée, collecte anonyme, lecture publique). Chaque constante dit pourquoi
 elle vaut ce qu'elle vaut — et c'est là qu'on lit la valeur, pas ici.
 
 🔴 Ce tableau les recopiait, et il a été **faux** : `/auth/change-password` et

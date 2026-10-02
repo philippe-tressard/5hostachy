@@ -14,8 +14,8 @@ désormais ici.
 
 ## Deux constantes peuvent partager une valeur — c'est le but
 
-`LIMITE_SECRET_EPROUVE` et `LIMITE_DONNEES_PERSONNELLES` valent toutes deux
-`5/minute` aujourd'hui. Ce n'est pas une duplication à fusionner : ce sont deux
+`LIMITE_SESSION` et `LIMITE_PREFERENCE` valent toutes deux `10/minute`
+aujourd'hui. Ce n'est pas une duplication à fusionner : ce sont deux
 intentions distinctes, qui doivent pouvoir **divergrer** le jour où l'une des
 deux se révèle mal réglée. Les fusionner reviendrait à décider d'avance qu'elles
 bougeront ensemble.
@@ -69,19 +69,25 @@ LIMITE_CONTROLE_FICHIER = "300/minute"
 #: demandes. Appelée à chaque chargement d'écran, parfois plusieurs fois.
 LIMITE_LECTURE_AUTHENTIFIEE = "60/minute"
 
-#: L'**export** ou l'**effacement** des données personnelles d'un compte. Une
-#: intention de conformité, pas de sécurité : ces routes rendent ou détruisent
-#: des données au porteur de la session, et une rafale coûte cher au serveur.
-LIMITE_DONNEES_PERSONNELLES = "5/minute"
+#  `LIMITE_DONNEES_PERSONNELLES` (5/minute) est RETIRÉE le 02/10/2026 : ses
+#  deux seules routes, l'export et l'effacement de « sa » télémétrie, sont
+#  parties avec l'identifiant qu'elles lisaient (#1545). Une constante sans
+#  route laisserait croire qu'une intention est encore servie.
 
 #: Le basculement d'une **préférence** du compte.
 LIMITE_PREFERENCE = "10/minute"
 
-#: Une **collecte passive** que le navigateur émet tout seul — rapport de
-#: politique de sécurité du contenu, télémétrie d'usage. Haute par nécessité :
-#: une page peut en produire plusieurs par visite, et les perdre rendrait le
-#: journal muet sans que rien ne le signale.
-LIMITE_JOURNAL = "60/minute"
+#: Une **collecte anonyme** que le navigateur émet tout seul et qui ÉCRIT en
+#: base : la mesure d'audience (`POST /telemetry/collect`), publique.
+#:
+#: 🔴 Elle s'appelait `LIMITE_JOURNAL` et valait `60/minute`, sans plafond
+#: journalier : avec 50 événements par appel, 3 000 lignes par minute et par
+#: adresse, en SQLite sur un Raspberry Pi (#1597, 02/10/2026). Le client du
+#: site envoie un lot toutes les 30 secondes au plus, plus un au changement
+#: d'onglet : 10 par minute reste hors d'atteinte d'une visite, et 500 par jour
+#: couvre plus de quatre heures d'usage continu. Au-delà, ce n'est pas le site
+#: qui envoie.
+LIMITE_COLLECTE_ANONYME = "10/minute;500/day"
 
 #: Une **lecture publique**, sans secret ni écriture : la liste des bâtiments que
 #: le formulaire d'inscription affiche. La limite n'y protège rien d'autre que le

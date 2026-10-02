@@ -6,16 +6,25 @@
  * ou au moment du déchargement de la page (beforeunload / visibilitychange).
  *
  * Aucun impact sur la latence utilisateur.
+ *
+ * 🔴 ANONYME (#1545, 02/10/2026) : le serveur n'enregistre aucun identifiant et
+ * ne lit pas la session (`routers/telemetry_collecte.py`). Le refus du profil
+ * s'applique donc ICI — qui refuse n'envoie plus rien.
  */
 
 const FLUSH_INTERVAL = 30_000; // 30 secondes
 const ENDPOINT = '/api/telemetry/collect';
+/** Au-delà, le serveur refuse le lot (`EVENEMENTS_PAR_LOT` de
+ *  `telemetry_collecte.py`, #1597) : la file part dès qu'elle l'atteint. ⚠️ Les
+ *  deux valeurs se tiennent à la main — le front et l'API ne partagent aucun
+ *  fichier. */
+const EVENEMENTS_PAR_LOT = 20;
 
 const buffer: { page: string; action: string; detail?: string }[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 let disabled = false;
 
-/** Désactive la collecte côté client (opt-out RGPD). */
+/** Refus de la mesure d'audience — appliqué ici, seul endroit qui le peut. */
 export function setTelemetryOptOut(optOut: boolean) {
 	disabled = optOut;
 	if (optOut) buffer.length = 0;
@@ -25,6 +34,7 @@ export function setTelemetryOptOut(optOut: boolean) {
 export function trackEvent(page: string, action = 'view', detail?: string) {
 	if (disabled) return;
 	buffer.push({ page, action, ...(detail ? { detail } : {}) });
+	if (buffer.length >= EVENEMENTS_PAR_LOT) flush();
 }
 
 /** Enregistre une vue de page. */
