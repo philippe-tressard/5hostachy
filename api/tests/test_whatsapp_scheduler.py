@@ -28,6 +28,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
 from app.models.core import ConfigSite, WhatsAppLog, WhatsAppScheduled
+from app.utils import horloge
 from app.utils import whatsapp as W
 from app.utils import whatsapp_scheduler as S
 
@@ -148,7 +149,13 @@ def planifie(monkeypatch):
     monkeypatch.setattr(S, "datetime", _HorlogeFigee)
     #  L'heure UTC du module passe par `horloge` depuis #1047 : c'est elle qu'on
     #  fige, et dans CE module seulement — comme `datetime` juste au-dessus.
-    monkeypatch.setattr(S, "horloge", SimpleNamespace(maintenant=_HorlogeFigee.maintenant))
+    monkeypatch.setattr(
+        S,
+        "horloge",
+        SimpleNamespace(
+            maintenant=_HorlogeFigee.maintenant, debut_du_jour_utc=horloge.debut_du_jour_utc
+        ),
+    )
 
     alertes: list[list[str]] = []
     import app.utils.health_monitor as HM
@@ -371,4 +378,4 @@ def test_la_borne_du_jour_est_en_utc():
     jour précédent.
     """
     minuit_paris = datetime(2026, 8, 14, 1, 30, tzinfo=PARIS)
-    assert S._debut_du_jour_utc(minuit_paris) == datetime(2026, 8, 13, 22, 0)
+    assert horloge.debut_du_jour_utc(minuit_paris) == datetime(2026, 8, 13, 22, 0)

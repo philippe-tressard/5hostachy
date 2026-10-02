@@ -242,3 +242,190 @@ def test_le_fuseau_de_paris_s_ecrit_une_fois():
         f"  {f}" for f in fautes
     )
     assert '"Europe/Paris"' in module_app(_HORLOGE).source, "le témoin a disparu : contrôle vide"
+
+
+# ── Le garde-fou : le début du jour de Paris, en UTC, s'écrit une fois (#1617) ─
+#
+#  « Minuit de Paris exprimé en UTC naïf » — la borne d'une requête sur une
+#  colonne `_le` — se calculait en trois copies (`routers/telemetry`,
+#  `telemetry_aggregation`, `whatsapp_scheduler`). Une conversion de fuseau
+#  recopiée diverge au premier changement d'heure mal traité. `horloge.
+#  debut_du_jour_utc` est la seule.
+
+
+def _minuit_local(noeud: ast.AST) -> bool:
+    """`x.replace(hour=0, …)` ou `datetime.combine(…, time.min)` : un minuit recomposé."""
+    if not (isinstance(noeud, ast.Call) and isinstance(noeud.func, ast.Attribute)):
+        return False
+    if noeud.func.attr == "replace":
+        return any(
+            k.arg == "hour" and isinstance(k.value, ast.Constant) and k.value.value == 0
+            for k in noeud.keywords
+        )
+    if noeud.func.attr == "combine":
+        return any(
+            isinstance(a, ast.Attribute) and a.attr == "min" and _receveur(a.value).endswith("time")
+            for a in noeud.args
+        )
+    return False
+
+
+def _noeuds_du_scope(scope: ast.AST):
+    """Les nœuds d'une fonction (ou du module), sans entrer dans les fonctions imbriquées."""
+    pile = list(ast.iter_child_nodes(scope))
+    while pile:
+        n = pile.pop()
+        yield n
+        if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            pile.extend(ast.iter_child_nodes(n))
+
+
+def _fautes_de_minuit_converti(arbre: ast.AST) -> list[int]:
+    """Les lignes où un minuit recomposé est converti de fuseau dans la MÊME fonction.
+
+    `replace(hour=0)` seul est banal (début de mois, planificateur) ; `.astimezone`
+    seul aussi (un en-tête de courriel). C'est leur **conjonction** qui est la
+    borne « début du jour de Paris en UTC », et qui appartient à `horloge`.
+    """
+    fautes = set()
+    scopes = [arbre] + [
+        n for n in ast.walk(arbre) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    for scope in scopes:
+        noeuds = list(_noeuds_du_scope(scope))
+        if any(isinstance(n, ast.Attribute) and n.attr == "astimezone" for n in noeuds):
+            fautes.update(n.lineno for n in noeuds if _minuit_local(n))
+    return sorted(fautes)
+
+
+def test_le_debut_du_jour_utc_s_ecrit_une_fois():
+    """Hors `horloge`, aucun minuit recomposé n'est converti de fuseau."""
+    fautes = [
+        f"app/{m.rel}:{ligne}"
+        for m in modules_app()
+        if m.rel != _HORLOGE
+        for ligne in _fautes_de_minuit_converti(m.arbre)
+    ]
+    assert not fautes, (
+        "Le début du jour de Paris en UTC naïf se demande à `horloge.debut_du_jour_utc`,\n"
+        "  il ne se recompose pas (`replace(hour=0…)` + `astimezone`) :\n"
+        + "\n".join(f"  {f}" for f in fautes)
+    )
+    assert "astimezone" in module_app(_HORLOGE).source, "le témoin a disparu : contrôle vide"
+
+
+def test_le_controle_du_minuit_converti_sait_REFUSER():
+    """Chaque recomposition est reconnue ; ce qui reste permis ne l'est pas."""
+    forges = {
+        "def f(d):\n  m = d.replace(hour=0, minute=0)\n  return m.astimezone(utc)": 1,
+        "def f(d):\n  return d.replace(hour=0).astimezone(ZoneInfo('UTC'))": 1,
+        "def f(d):\n  m = datetime.combine(d, time.min)\n  return m.astimezone(utc)": 1,
+        "m = d.replace(hour=0)\nn = m.astimezone(utc)": 1,
+        #  Permis : un minuit sans conversion, une conversion sans minuit,
+        #  et les deux dans des fonctions DISTINCTES (aucun lien entre eux).
+        "def f(d):\n  return d.replace(day=1, hour=0, minute=0)": 0,
+        "def f(d):\n  return d.astimezone(utc)": 0,
+        "def f(d):\n  return d.replace(hour=12).astimezone(utc)": 0,
+        "def f(d):\n  return d.replace(hour=0)\ndef g(d):\n  return d.astimezone(utc)": 0,
+        "x = horloge.debut_du_jour_utc()": 0,
+    }
+    ecarts = {
+        source: (trouvees, attendu)
+        for source, attendu in forges.items()
+        if (trouvees := len(_fautes_de_minuit_converti(ast.parse(source)))) != attendu
+    }
+    assert not ecarts, f"(trouvées, attendues) : {ecarts}"
+
+
+# ── Caractérisation : la fonction rend, octet pour octet, ce que rendaient les trois copies ──
+
+
+def _ancien_telemetry(maintenant_utc: datetime) -> datetime:
+    """Copie littérale de `routers/telemetry.dashboard` avant #1617."""
+    from zoneinfo import ZoneInfo
+
+    now_paris = horloge.a_paris(maintenant_utc)
+    return (
+        now_paris.replace(hour=0, minute=0, second=0, microsecond=0)
+        .astimezone(ZoneInfo("UTC"))
+        .replace(tzinfo=None)
+    )
+
+
+def _ancien_aggregation(dt_paris: datetime) -> datetime:
+    """Copie littérale de `telemetry_aggregation._paris_midnight` avant #1617."""
+    from zoneinfo import ZoneInfo
+
+    midnight = dt_paris.replace(hour=0, minute=0, second=0, microsecond=0)
+    return midnight.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+
+
+def _ancien_whatsapp(now: datetime) -> datetime:
+    """Copie littérale de `whatsapp_scheduler._debut_du_jour_utc` avant #1617."""
+    minuit_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return minuit_local.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _instants_a_risque() -> list[datetime]:
+    """Des instants UTC naïfs autour des deux changements d'heure de 2026 — et d'autres."""
+    bases = [
+        datetime(2026, 3, 28, 22, 59),  # veille de la bascule d'été, 23:59 à Paris
+        datetime(2026, 3, 28, 23, 0),  # 00:00 le 29 à Paris (encore UTC+1)
+        datetime(2026, 3, 29, 0, 30),  # 01:30 à Paris, avant la bascule
+        datetime(2026, 3, 29, 1, 0),  # 03:00 à Paris (UTC+2) — l'heure 02:xx n'existe pas
+        datetime(2026, 3, 29, 21, 59),  # 23:59 le 29 (UTC+2)
+        datetime(2026, 3, 29, 22, 0),  # 00:00 le 30
+        datetime(2026, 10, 24, 21, 59),  # 23:59 le 24 (UTC+2)
+        datetime(2026, 10, 24, 22, 0),  # 00:00 le 25 (UTC+2)
+        datetime(2026, 10, 25, 0, 30),  # 02:30 CEST, première occurrence
+        datetime(2026, 10, 25, 1, 30),  # 02:30 CET, seconde occurrence (fold=1)
+        datetime(2026, 10, 25, 22, 59),  # 23:59 le 25 (UTC+1)
+        datetime(2026, 10, 25, 23, 0),  # 00:00 le 26 (UTC+1)
+        datetime(2026, 1, 15, 23, 30),
+        datetime(2026, 7, 14, 21, 59),
+        datetime(2026, 7, 14, 22, 0),
+        datetime(2025, 12, 31, 23, 0),
+        datetime(2028, 2, 29, 12, 0),
+    ]
+    return bases + [b + timedelta(hours=h) for b in bases for h in (1, 13)]
+
+
+def test_debut_du_jour_utc_vaut_l_ancien_calcul_des_trois_copies():
+    """Même résultat que les trois anciennes copies, sur des instants autour des changements d'heure."""
+    instants = _instants_a_risque()
+    assert len(instants) > 40, "cas zéro : la grille d'instants est vide ou rabougrie"
+    verifies = set()
+    for u in instants:
+        paris = horloge.a_paris(u)
+        attendu = _ancien_telemetry(u)
+        assert _ancien_aggregation(paris) == attendu == _ancien_whatsapp(paris)
+        #  Les appelants passaient un datetime de Paris (conscient) : même réponse.
+        assert horloge.debut_du_jour_utc(paris) == attendu, u
+        #  Un instant de la base (UTC naïf), lu au jour de Paris : même réponse.
+        assert horloge.debut_du_jour_utc(u) == attendu, u
+        #  Un jour (date) : même réponse que l'instant qui le porte.
+        assert horloge.debut_du_jour_utc(paris.date()) == attendu, u
+        assert horloge.debut_du_jour_utc(u).tzinfo is None
+        verifies.add(attendu)
+    #  La grille doit réellement toucher les deux décalages (UTC+1 et UTC+2).
+    assert {d.hour for d in verifies} == {22, 23}
+
+
+def test_debut_du_jour_utc_au_fil_des_jours_comme_la_boucle_d_agregation():
+    """`telemetry_aggregation` avance de jour en jour (`+ timedelta(days=1)`) : même borne à chaque pas."""
+    courant = datetime(2026, 3, 25, tzinfo=horloge.TZ_PARIS)
+    for _ in range(10):  # franchit la bascule d'été du 29/03
+        assert horloge.debut_du_jour_utc(courant) == _ancien_aggregation(courant)
+        courant += timedelta(days=1)
+    courant = datetime(2026, 10, 21, tzinfo=horloge.TZ_PARIS)
+    for _ in range(10):  # franchit la bascule d'hiver du 25/10
+        assert horloge.debut_du_jour_utc(courant) == _ancien_aggregation(courant)
+        courant += timedelta(days=1)
+
+
+def test_debut_du_jour_utc_sans_argument_est_aujourd_hui(monkeypatch):
+    """22:30 UTC le 1er octobre = 00:30 le 2 à Paris : la borne est le 2 à 00:00 Paris = 22:00 UTC le 1er."""
+    _figer(monkeypatch, datetime(2026, 10, 1, 22, 30))
+    assert horloge.debut_du_jour_utc() == datetime(2026, 10, 1, 22, 0)
+    _figer(monkeypatch, datetime(2026, 1, 15, 22, 30))  # 23:30 à Paris le 15, UTC+1
+    assert horloge.debut_du_jour_utc() == datetime(2026, 1, 14, 23, 0)
