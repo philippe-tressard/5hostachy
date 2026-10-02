@@ -231,6 +231,22 @@ verdict_bits_exec() {  # $1 = relevé « ok:chemin:état,… »
   else echo "OK|$n"; fi
 }
 
+#  Les constats de C6, un par nœud — appelée par check-reliability, dont elle
+#  emploie `ok`/`warn`/`fail`, `$SELF`, `$PEER`, `$PEER_OK` et les champs
+#  `S_exec_bits`/`P_exec_bits` (comme `healthwatch_verdicts`, #1586).
+bits_exec_verdicts() {
+  local _n _v
+  for _n in "$SELF:${S_exec_bits:-}" "$PEER:${P_exec_bits:-}"; do
+    [ "${_n%%:*}" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+    _v=$(verdict_bits_exec "${_n#*:}")
+    case "${_v%%|*}" in
+      OK)   ok "Bits exec OK sur ${_n%%:*} (${_v#*|} scripts lancés par crons et unité)" ;;
+      FAIL) fail "Scripts lancés NON exécutables sur ${_n%%:*} — ${_v#*|}" ;;
+      *)    warn "Bits exec INCONNUS sur ${_n%%:*} — ${_v#*|} — ni vert ni rouge" ;;
+    esac
+  done
+}
+
 # ── Self-test — le contrat des trois fonctions ───────────────────────────────
 points_entree_selftest() {
   local echecs=0
