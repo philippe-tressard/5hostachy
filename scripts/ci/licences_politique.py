@@ -126,6 +126,31 @@ EXCEPTIONS = (
     },
 )
 
+# ── Licences déclarées pour ce que le poste ne peut pas installer ───────────
+#  Une dépendance de l'IMAGE (Linux) qu'aucune plateforme du poste (Windows)
+#  ne peut installer rend le jugement INCONNU au rejeu local — et le point 16
+#  du pré-check refuserait alors toute MEP depuis le poste. Sa licence se
+#  DÉCLARE ici, et la déclaration ne sert qu'à ce cas :
+#    - sur le poste, paquet absent et non installable : licence déclarée
+#      retenue, la sortie dit « vérifiée par la CI » ;
+#    - en CI (Linux), le paquet est installé : sa licence LUE doit être celle
+#      déclarée, sinon ÉCHEC ;
+#    - une entrée dont le paquet quitte l'image, ou devient installable sur le
+#      poste, fait ÉCHOUER : elle se retire.
+#  `licence` : l'expression telle que l'inventaire la LIT (même règle que
+#  `licences_spdx.licence_python`), pas une reformulation.
+LICENCES_HORS_POSTE = {
+    "uvloop": {
+        "licence": "MIT",
+        "raison": (
+            "Boucle d'événements d'uvicorn[standard], exclue de Windows par son marqueur "
+            "(sys_platform != 'win32'). PyPI, uvloop 0.23.0 : champ License « MIT "
+            "License » (lu « MIT »), classifieurs MIT et Apache — double licence."
+        ),
+        "date": "2026-10-02",
+    },
+}
+
 # ── Contenus tiers recopiés dans le dépôt (#1543) ───────────────────────────
 #  Ce que `reuse lint` ne peut pas voir : un fichier qui porte des tracés
 #  repris ailleurs reçoit la licence du motif `**` de REUSE.toml, et le

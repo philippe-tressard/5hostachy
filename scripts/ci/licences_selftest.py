@@ -11,7 +11,7 @@ import json
 import pathlib
 import tempfile
 
-from licences_inventaire import Inconnu, paquets_npm
+from licences_inventaire import Inconnu, decider_hors_poste, paquets_npm
 from licences_spdx import admise, identifiants, licence_python
 
 ADMISES = frozenset({"MIT", "Apache-2.0", "BSD-3-Clause"})
@@ -19,6 +19,33 @@ EXC = (
     {"source": "bridge", "paquets": ("libsignal",), "licences": ("GPL-3.0",)},
     {"source": "bridge", "paquets": ("@img/sharp-*",), "licences": ("LGPL-3.0-or-later",)},
 )
+
+
+def _hors_poste(t) -> None:
+    """`LICENCES_HORS_POSTE` : servir sur le poste, être vérifiée sur Linux, se retirer."""
+    table = {"uvloop": {"licence": "MIT", "date": "2026-10-02", "raison": "-"}}
+    image, poste = {"uvicorn", "uvloop"}, {"uvicorn"}
+    r, n, e, reste = decider_hors_poste(table, image, poste, {"uvicorn": "BSD"}, {"uvloop"})
+    t(
+        "hors poste — Windows : licence déclarée retenue",
+        (r, len(e), reste),
+        ({"uvloop": "MIT"}, 0, set()),
+    )
+    t("hors poste — Windows : la sortie le dit", "vérifiée par la CI" in n[0], True)
+    r, n, e, reste = decider_hors_poste({}, image, poste, {}, {"uvloop"})
+    t("hors poste — sans entrée : reste absente (INCONNU)", reste, {"uvloop"})
+    r, n, e, reste = decider_hors_poste(table, image, poste, {"uvloop": "MIT"}, set())
+    t("hors poste — Linux : licence lue conforme", (r, e), ({}, []))
+    _, _, e, _ = decider_hors_poste(table, image, poste, {"uvloop": "GPL-3.0"}, set())
+    t("hors poste — Linux : déclaration fausse ÉCHOUE", len(e), 1)
+    _, _, e, _ = decider_hors_poste(table, {"uvicorn"}, poste, {}, set())
+    t("hors poste — paquet sorti de l'image : entrée inutile", len(e), 1)
+    _, _, e, reste = decider_hors_poste(table, image, image, {}, {"uvloop"})
+    t(
+        "hors poste — installable sur le poste : entrée inutile, absence réelle",
+        (len(e), reste),
+        (1, {"uvloop"}),
+    )
 
 
 def lancer(confronter, exceptions_inutiles) -> int:
@@ -117,6 +144,7 @@ def lancer(confronter, exceptions_inutiles) -> int:
             "NON DÉCLARÉE",
         )
 
+    _hors_poste(t)
     ko = [(n, o, a) for n, o, a in cas if o != a]
     for n, o, a in ko:
         print(f"✗ {n} : obtenu {o!r}, attendu {a!r}")

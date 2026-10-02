@@ -18,7 +18,10 @@ ne l'avait vu entrer.
   - `api/` : les métadonnées des distributions INSTALLÉES, en suivant le graphe
     depuis `api/requirements.txt` (production seule, extras compris), marqueurs
     évalués pour l'image (Linux, Python 3.12). Le job `test-backend` les a
-    installées ; ailleurs, une distribution absente rend INCONNU.
+    installées ; ailleurs, une distribution absente rend INCONNU — sauf si elle
+    ne peut PAS s'installer sur le poste (`uvloop` sous Windows) et que sa
+    licence est déclarée dans `LICENCES_HORS_POSTE` : retenue alors, et
+    confrontée en CI à la licence lue du paquet installé.
 
 Chaque licence est confrontée à `licences_politique.ADMISES`, puis aux
 EXCEPTIONS. L'inventaire est rendu dans `docs/licences-tierces.md`, GÉNÉRÉ par
@@ -107,8 +110,9 @@ def exceptions_inutiles(exceptions, servies: set, sources_mesurees: set) -> list
     return inutiles
 
 
-def mesurer() -> tuple[dict, dict, list[str], list[str]]:
-    """(à juger, à figer, réserves sur le jugement, réserves sur le document)."""
+def mesurer() -> tuple[dict, dict, list[str], list[str], list[str], list[str]]:
+    """(à juger, à figer, réserves sur le jugement, réserves sur le document,
+    échecs de mesure, notes)."""
     juger: dict[str, list[dict]] = {}
     figer: dict[str, list[dict]] = {}
     reserves_jugement: list[str] = []
@@ -126,9 +130,10 @@ def mesurer() -> tuple[dict, dict, list[str], list[str]]:
             continue
         juger[source] = figer[source] = paquets
     try:
-        paquets, rj, rd = paquets_python(EXIGENCES_API)
+        api = paquets_python(EXIGENCES_API, politique.LICENCES_HORS_POSTE)
     except Inconnu as e:
-        paquets, rj, rd = [], [str(e)], [str(e)]
+        api = {"paquets": [], "jugement": [str(e)], "document": [str(e)]}
+    paquets, rj, rd = api["paquets"], api["jugement"], api["document"]
     directes = [p for p in paquets if "directe" in p["portee"]]
     if not paquets:
         rj = rj or ["aucun paquet lu"]
@@ -139,7 +144,14 @@ def mesurer() -> tuple[dict, dict, list[str], list[str]]:
     if paquets:
         juger["api"] = paquets
     figer["api"] = directes
-    return juger, figer, reserves_jugement, reserves_document
+    return (
+        juger,
+        figer,
+        reserves_jugement,
+        reserves_document,
+        api.get("echecs", []),
+        api.get("notes", []),
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -148,9 +160,9 @@ def main(argv: list[str]) -> int:
 
         return lancer(confronter, exceptions_inutiles)
 
-    juger, figer, reserves_jugement, reserves_document = mesurer()
+    juger, figer, reserves_jugement, reserves_document, echecs, notes = mesurer()
     exceptions, admises = politique.EXCEPTIONS, politique.ADMISES
-    echecs, tolerees, servies = [], [], set()
+    tolerees, servies = [], set()
     for source, paquets in juger.items():
         e, t, s = confronter(source, paquets, exceptions, admises)
         echecs += e
@@ -164,6 +176,8 @@ def main(argv: list[str]) -> int:
     print(f"Licences tierces — {total} paquets jugés ({detail}).")
     for t in tolerees:
         print(f"  ~ exception déclarée : {t}")
+    for n in notes:
+        print(f"  ~ {n}")
 
     for r in reserves_jugement:
         print(f"\n⚠️  INCONNU — jugement partiel, {r}", file=sys.stderr)
