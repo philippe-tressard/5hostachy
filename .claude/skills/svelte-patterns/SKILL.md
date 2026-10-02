@@ -222,13 +222,13 @@ elle ne se redécide pas ici.
 avec `showModal` et `.modal-actions`. **`npm run lint:modales` le refuse**, et
 `.modal-actions` n'existe pas.
 
-Le **cadre du geste** est tranché (`ux-patterns` §14, validé à l'écran après
-quatre positions essayées) :
+Le **cadre du geste** est tranché (`ux-patterns` §14 à §14 ter, validé à l'écran
+après quatre positions essayées) :
 
 | Geste | Où |
 |---|---|
-| **créer** | en place, dans la page — **jamais** une modale |
-| **modifier** | dans une fenêtre `Modale` |
+| **créer** | en place, dans la page (`FormulaireCreation`, via `CadreFormulaire`) — **jamais** une modale |
+| **modifier** | **dans la carte**, à la place de son corps (`ux-patterns` §14 ter) — `<Modale edition>` est **refusée** par `lint:geste-edition`, ses écarts sont déclarés ; `Modale` reste pour les confirmations, aperçus et gestes courts |
 | **faire évoluer** | `EvolForm`, qui reçoit son `entite: EntiteDeclaree` |
 
 🔒 `npm run lint:cadre-geste` et `npm run lint:geste-edition` tiennent cette

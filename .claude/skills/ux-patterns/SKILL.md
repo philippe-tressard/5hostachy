@@ -524,7 +524,7 @@ l'écran, jamais en relecture, puisque l'écart n'existe que le formulaire ouver
 | Icône | Signification | Usage |
 |-------|--------------|-------|
 | 📍 | Lieu physique (adresse, salle) | Texte inline, pas de badge |
-| 🔹 | Périmètre logique (Parking, Bât.) | Badge `.badge-gray` ou `.badge-blue` |
+| 🔹 | Périmètre logique (Parking, Bât.) | Badge — rendu par `BadgePerimetre` **seul** (§2) |
 
 **Ne JAMAIS utiliser** 📍 pour un périmètre logique.
 
@@ -592,10 +592,15 @@ forme front, puis vérifie que le test Python attend la même chaîne.
 pastilles, second niveau facultatif quand un bâtiment est choisi, et la
 **description** du nœud affichée sous la sélection.
 
-Rendus par page — l'icône du périmètre est **🔹**, jamais 📍 (cf. §1) :
-- Actualités : `<span class="badge badge-gray">&#x1F539; {label}</span>`
-- Calendrier : `<span class="badge badge-blue">&#x1F539; {label}</span>`
-- Tickets : `<p style="font-size:.8rem;color:var(--color-text-muted)">🔹 {label}</p>`
+Rendu — l'icône du périmètre est **🔹**, jamais 📍 (cf. §1), et il s'écrit **une
+seule fois** : `<BadgePerimetre perimetre={…} />` (prop `perimetre`, un code ou
+une liste de codes ; `ton` en choisit la teinte). Le composant lit le libellé,
+tait le périmètre par défaut et porte l'icône — aucune page ne compose son propre
+`<span class="badge">` ni son `<p style="…">`. 🔒 `npm run lint:pictogrammes`
+refuse le badge 🔹 écrit ailleurs, `lint:styles-en-ligne` l'attribut `style`.
+Les trois rendus par page que cette section listait (actualités, calendrier,
+tickets) sont tous passés par ce composant ; la page Calendrier n'existe plus
+(#1092).
 
 Le label vient de `perimetreLabel()` (`$lib/utils`) — ne pas réimplémenter la table
 de correspondance dans une page.
@@ -877,7 +882,7 @@ déborde » : la mesure se fait après rendu (`scrollHeight > clientHeight`).
 - **Une seule** carte ouverte à la fois — et un seul bloc déplié, quel qu'il soit
   (règle 17 du tableau de tête, `$lib/accordeon`)
 - Chargement lazy des détails au premier clic
-- Prévisualisation `.clamp-5` (5 lignes max)
+- Prévisualisation `.clamp-3` (3 lignes max dans une carte, §7)
 - Border-left, urgence, espacement et ombre : **portés par `.carte-liste`** (voir
   ci-dessus). Ne pas les redéfinir dans une page.
 - Urgence : bord gauche rouge, et **un seul glyphe, ⚡** (27/09/2026, arbitré à l'écran) —
@@ -1122,11 +1127,16 @@ https://claude.ai/artifact/BRYAWNn4EZAx1EBTHHNMQu
 
 ## 6. Ligne de publication
 
-**Ordre** : `[📌 coin absolu] [Brouillon?] Titre [Statut] [🔹 Périmètre]`
+🔴 **Cette section décrivait la ligne antérieure à `PastillesAffaire`** — « urgence :
+bord gauche rouge uniquement (pas de badge texte) » — et contredisait le §3, qui
+fait foi depuis le 27/09/2026 : le bord rouge **et** un seul glyphe, ⚡
+(`GLYPHE_URGENCE`), « ⚡ Urgente » dans la dernière ligne de la carte, rendue par
+`PastillesAffaire` (#1556).
 
-- Badges : toujours **après** le titre
-- Urgence : bord gauche rouge uniquement (pas de badge texte)
-- Épingle : badge absolu coin haut-gauche (`.pin-badge`)
+- **L'ordre** des pastilles, la ligne d'auteur et l'urgence : §3 — une seule
+  écriture, ne pas la recomposer ici.
+- Badges : toujours **après** le titre.
+- Épingle : badge absolu coin haut-gauche (`.pin-badge`).
 
 ## 7. Prévisualisation — 3 lignes dans une CARTE, 5 ailleurs
 
@@ -2184,11 +2194,13 @@ recouvre donc les deux cas sans en contredire aucun.
 
 ⚠️ **Ce qu'il en coûte de choisir l'autre.** Poser le cadre dans la page oblige à
 deux branches `{#if}` montant le **même** formulaire avec les mêmes propriétés —
-seize pour l'événement, dont quatre liaisons bidirectionnelles que Svelte 4 ne
-sait pas répandre. Deux copies qui divergent au premier champ ajouté, c'est-à-dire
+seize pour l'événement, dont quatre liaisons bidirectionnelles que `{...props}`
+ne répand pas dans le mode legacy de Svelte 5 (`export let`, `$:`). Deux copies qui divergent au premier champ ajouté, c'est-à-dire
 la duplication que l'extraction du composant avait supprimée.
 
-**En syntaxe Svelte 4, la forme qui n'écrit le corps qu'une fois est :**
+**Dans le mode legacy de Svelte 5** — celui du projet (`svelte ^5`, `export let`,
+`$:`) ; ce n'est pas du Svelte 4 —, **la forme d'origine, qui n'écrit le corps
+qu'une fois, était :**
 
 ```svelte
 <svelte:component
@@ -2198,6 +2210,12 @@ la duplication que l'extraction du composant avait supprimée.
 	on:fermer={() => dispatch('annule')}
 >
 ```
+
+⚠️ `<svelte:component>` n'est déprécié qu'en **mode runes**. Si le projet y passe,
+la forme recommandée est un composant dynamique — `{@const Cadre = modeEdition ?
+Modale : FormulaireCreation}` puis `<Cadre … />`. Depuis §14 bis, aucun écran
+n'écrit plus ce choix : il vit dans `CadreFormulaire`, seul endroit où il se
+tranche.
 
 🔒 **Nommer `Modale` DANS le `this={…}` fait partie du geste** : c'est ce que
 `lint:formulaires` lit. Un cadre choisi dans une variable (`const cadre = …`)
