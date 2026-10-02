@@ -48,7 +48,7 @@ from app.routers.idees import list_idees
 from app.routers.sondages.crud import list_sondages
 from app.utils.horloge import maintenant
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 #: Bien au-delà du délai du site (30 jours), pour que le test ne dépende pas du
 #: réglage courant : s'il passait à 60, ce cas resterait juste.

@@ -52,7 +52,7 @@ from app.models.core import RoleUtilisateur, Ticket, Utilisateur
 from app.routers.tickets.commun import OPTIONS_RESERVEES_AU_CS, OPTIONS_TICKET, appliquer_options
 from app.utils.categories_ticket import ticket_urgent
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 class _Corps:

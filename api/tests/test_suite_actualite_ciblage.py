@@ -43,7 +43,7 @@ from app.routers.tickets.evolutions import add_evolution
 from app.schemas import TicketEvolutionCreate
 from tests.aides_base import compte
 from tests.aides_fil import cs, nettoyer_affaires  # noqa: F401
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 BAT_2 = ["bat:2"]
 

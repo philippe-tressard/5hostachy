@@ -31,7 +31,7 @@ from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, RELANCE
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
 from tests.aides_base import moteur_memoire
 from tests.aides_courriel import _AUTH_OK, _entetes_reponse, scene  # noqa: F401 — fixture
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 _RECU = datetime(2026, 9, 3)
 

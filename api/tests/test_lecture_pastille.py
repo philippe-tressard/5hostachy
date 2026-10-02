@@ -43,7 +43,7 @@ from app.utils import perimetres as P
 from app.utils.visibility import ticket_visible
 from app.utils.visibility.objets import annonce_visible, idee_visible, sondage_accessible
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 CAS = json.loads(
     (pathlib.Path(__file__).parent / "donnees" / "lecture_pastille.json").read_text(

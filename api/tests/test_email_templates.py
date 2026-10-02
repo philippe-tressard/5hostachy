@@ -27,7 +27,7 @@ from jinja2 import BaseLoader
 from jinja2.sandbox import SandboxedEnvironment
 
 from app.seed import EMAIL_TEMPLATES
-from tests.contrats_email import EXPECTED_VARS, SUJETS_QUI_NOMMENT_L_OBJET
+from tests.aides_contrats_email import EXPECTED_VARS, SUJETS_QUI_NOMMENT_L_OBJET
 from app.utils.email.variables import variables_de
 from tests.aides_migrations import VERSIONS, charger_migration
 

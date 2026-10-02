@@ -90,7 +90,7 @@ class ReponseRelance(SQLModel, table=True):
 
 
 class CourrielReleve(SQLModel, table=True):
-    """Un message relevé dans la boîte des réponses, et ce qu'on en a fait (#1447).
+    r"""Un message relevé dans la boîte des réponses, et ce qu'on en a fait (#1447).
 
     🔴 Le 28/09/2026, un message a été IGNORÉ sans qu'on puisse dire pourquoi :
     la relève ne gardait que des totaux, dans un journal de conteneur que deux

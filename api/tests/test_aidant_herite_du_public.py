@@ -18,7 +18,7 @@ from app.models.core import Delegation, StatutDelegation, StatutUtilisateur, Uti
 from app.utils import statuts_lus
 from app.utils.visibility.socle import public_cible_visible
 from tests import aides_base
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 OCCUPANTS = json.dumps(["copropriétaires_occupants"], ensure_ascii=False)
 BAILLEURS = json.dumps(["bailleurs"], ensure_ascii=False)

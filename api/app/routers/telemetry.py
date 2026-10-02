@@ -85,7 +85,7 @@ def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
 def dashboard(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
-    scope: str = Query("jour", regex="^(jour|mois|annee)$"),
+    scope: str = Query("jour", pattern="^(jour|mois|annee)$"),
 ):
     """Retourne les stats agrégées pour le dashboard admin.
     scope=jour  → stats du jour (temps réel events)

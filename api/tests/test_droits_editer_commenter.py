@@ -46,7 +46,7 @@ from tests.aides_base import compte
 
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _user(role: RoleUtilisateur) -> Utilisateur:

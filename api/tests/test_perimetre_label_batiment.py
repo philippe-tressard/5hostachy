@@ -61,7 +61,7 @@ from app.models.perimetre import Perimetre
 #  `perimetre.modifie_par_id` sans le modèle `Utilisateur` en mémoire.
 from app.models.core import Utilisateur  # noqa: F401
 from app.utils import perimetres as P
-from tests.purge_test import monter_batiments, vider_perimetres
+from tests.aides_purge import monter_batiments, vider_perimetres
 
 
 @pytest.fixture()

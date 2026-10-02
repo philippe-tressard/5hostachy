@@ -44,7 +44,7 @@ from app.utils import perimetres as P
 from app.utils.noms import nom_affiche
 from app.utils.visibility import ticket_visible
 from tests.aides_base import compte, moteur_memoire
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _mot() -> str:

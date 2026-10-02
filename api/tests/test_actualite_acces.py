@@ -35,7 +35,7 @@ from app.models.core import AnnonceHall, Ticket, Utilisateur
 from app.routers.tickets.actualite import appliquer_acces
 from app.utils.whatsapp import TITRE_CONFIDENTIEL, construire_message
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 VRAI_TITRE = "Dégât des eaux chez M. Durand"
 VRAI_CONTENU = "<p>Le sinistre concerne l'appartement du 3ᵉ étage.</p>"

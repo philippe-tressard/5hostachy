@@ -19,7 +19,7 @@ from app.routers.partage import PartageCourriel, partager_par_courriel
 from app.utils.limiter import LIMITE_PARTAGE_COURRIEL
 from tests.aides_base import compte
 from tests.conftest import requete_de_test
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()

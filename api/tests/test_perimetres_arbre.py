@@ -35,7 +35,7 @@ from app.utils import perimetres as P
 from tests.conftest import vider_patrimoine
 from app.utils.destinataires import batiments_du_perimetre
 from app.utils.visibility import actualite_visible, perimetre_visible
-from tests.purge_test import etat_invalide
+from tests.aides_purge import etat_invalide
 
 
 # ── L'ancienne implémentation, recopiée telle quelle ──────────────────────────

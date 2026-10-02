@@ -194,7 +194,7 @@ def test_toutes_les_variables_du_modele_sont_au_contrat():
     manquant enverrait à tout le monde la version du syndic, sans erreur.
     """
     from app.utils.email.variables import VARIABLES_DU_GABARIT
-    from tests.contrats_email import EXPECTED_VARS
+    from tests.aides_contrats_email import EXPECTED_VARS
 
     _, sujet, corps, _ = _modele()
     env = SandboxedEnvironment(loader=BaseLoader())

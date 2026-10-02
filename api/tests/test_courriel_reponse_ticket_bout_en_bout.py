@@ -33,7 +33,7 @@ from tests.aides_courriel import (  # noqa: F401 — `scene` est une fixture
     _notifs,
     scene,
 )
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 # ── Ce qui est écrit en base ──────────────────────────────────────────────────

@@ -4,7 +4,7 @@ Trois garde-fous de même forme, nés de trois incidents, et séparés de
 `test_roles_libelles.py` le 08/09/2026 quand le plafond de modularité a refusé
 de le laisser grossir. Le refus disait vrai : ce fichier-ci regarde le **front**,
 l'autre le **serveur**, et ils ne partagent que la mécanique de lecture — qui vit
-désormais dans `roles_libelles_lecture.py`.
+désormais dans `aides_roles_libelles_lecture.py`.
 
 Les trois questions, dans l'ordre où on a appris à les poser :
 
@@ -27,7 +27,7 @@ les deux auto-tests « refuse bien » restent à part, un par forme de valeur.
 
 from __future__ import annotations
 
-from tests.roles_libelles_lecture import (
+from tests.aides_roles_libelles_lecture import (
     ROLES_TS,
     VALEUR_CHAINE,
     VALEUR_TEINTE,

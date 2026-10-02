@@ -38,7 +38,7 @@ from app.utils import horloge
 from app.utils.maintenance import purger
 from tests import aides_base
 from tests.aides_sources import modules_app
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 _APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 

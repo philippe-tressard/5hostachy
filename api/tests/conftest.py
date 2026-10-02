@@ -45,10 +45,10 @@ import pytest  # noqa: E402  (après les variables d'environnement, par construc
 #  jamais la base, et importer l'application ici changerait leur ordre d'import.
 
 
-#  Les helpers de purge vivent dans `tests/purge_test.py` : un conftest n'est pas
+#  Les helpers de purge vivent dans `tests/aides_purge.py` : un conftest n'est pas
 #  importable par un test, et un fichier qui en avait besoin en gardait une COPIE
 #  divergente (#546, 28/08/2026). Réexportés ici pour les fixtures ci-dessous.
-from tests.purge_test import delier_references, vider_patrimoine  # noqa: E402,F401
+from tests.aides_purge import delier_references, vider_patrimoine  # noqa: E402,F401
 
 
 @pytest.fixture()
@@ -212,7 +212,7 @@ def utilisateur():
     from app.auth.jwt import hash_password
     from app.database import engine
     from app.models.core import PasswordResetToken, RefreshToken, RoleUtilisateur, Utilisateur
-    from tests.purge_test import purger_ligne
+    from tests.aides_purge import purger_ligne
 
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:

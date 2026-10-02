@@ -34,7 +34,7 @@ from app.utils import perimetres as P
 from app.utils.carnet_entretien import construire_carnet
 from app.utils.visibility import reservee_au_conseil, ticket_visible
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _compte(session, roles: str, statut=None, batiment_id=None) -> Utilisateur:

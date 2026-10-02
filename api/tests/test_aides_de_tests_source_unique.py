@@ -91,6 +91,10 @@ EXCEPTIONS: dict[tuple[str, str], str] = {
     ("balayage de app/", "test_echappements_source.py"): (
         "il lit `alembic/` pour prouver que l'exclusion des migrations sert encore"
     ),
+    ("balayage de app/", "test_python_sans_avertissement_de_syntaxe.py"): (
+        "il COMPILE chaque fichier de `app/`, `tests/`, `alembic/` et `scripts/` : "
+        "`aides_sources` ne lit que `app/`, et ne compile rien"
+    ),
 }
 
 

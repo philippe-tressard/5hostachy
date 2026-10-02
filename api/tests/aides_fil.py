@@ -17,7 +17,7 @@ from sqlmodel import Session, SQLModel, select
 from app.database import engine
 from app.models.core import RoleUtilisateur, Ticket, TicketEvolution, Utilisateur
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()
