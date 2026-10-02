@@ -9,7 +9,7 @@
  *   GET  /groups        → list groups the account is in
  *   POST /restart       → reconnect
  *
- * Auth: header `x-api-key` must match WA_API_KEY env var.
+ * Auth: header `x-api-key` must match WA_API_KEY env var — en-tête SEULEMENT.
  */
 
 const {
@@ -28,6 +28,37 @@ const fs = require("fs");
 
 const PORT = parseInt(process.env.WA_PORT || "8090", 10);
 const API_KEY = process.env.WA_API_KEY || "";
+
+// ── La clé : refusée au démarrage plutôt qu'acceptée faible (#1596) ─────
+// `docker-compose.yml` ne refusait que la clé VIDE (`:?`) : la valeur de
+// `.env.example` démarrait sans un mot — quand `SECRET_KEY`, côté API, refuse
+// la sienne depuis toujours (`config.py`). Le bridge tient le compte WhatsApp
+// de la résidence : une clé publiée dans un dépôt public n'en protège rien.
+// 🔴 Le message ne cite JAMAIS la valeur reçue — elle finirait dans
+// `docker logs`, puis dans une capture de diagnostic (`standards/03` §3).
+// Les valeurs d'exemple : celle de `.env.example` (le test du contrat
+// vérifie qu'elle est bien refusée) et l'ancien défaut de compose (#776).
+const CLES_EXEMPLE = new Set(["changez-cette-cle-whatsapp-min-16-chars", "changeme"]);
+const CLE_LONGUEUR_MIN = 16;
+
+function motifRefusCle(cle) {
+  if (!cle) return "WA_API_KEY est vide";
+  if (CLES_EXEMPLE.has(cle)) return "WA_API_KEY vaut la valeur d'exemple de .env.example";
+  if (cle.length < CLE_LONGUEUR_MIN) return `WA_API_KEY fait moins de ${CLE_LONGUEUR_MIN} caractères`;
+  return null;
+}
+
+const refusCle = motifRefusCle(API_KEY);
+if (refusCle) {
+  // `console.error` et non le logger : `WA_LOG_LEVEL` peut le rendre muet, et
+  // un refus de démarrer qui ne se lit nulle part ressemble à un plantage.
+  console.error(
+    `Bridge WhatsApp : démarrage refusé — ${refusCle}. Définir WHATSAPP_API_KEY ` +
+      `dans .env (au moins ${CLE_LONGUEUR_MIN} caractères aléatoires : openssl rand -hex 24), ` +
+      "puis : docker compose up -d whatsapp-bridge api"
+  );
+  process.exit(1);
+}
 const AUTH_DIR = process.env.WA_AUTH_DIR || path.join(__dirname, "auth_state");
 
 const logger = pino({ level: process.env.WA_LOG_LEVEL || "warn" });
@@ -130,10 +161,19 @@ function rejectAllPendingAcks(reason) {
 }
 
 // ── Auth middleware ──────────────────────────────────────────────────
+// La clé ne se lit que dans l'EN-TÊTE (#1596). `?apikey=` était accepté :
+// un secret en paramètre d'URL finit dans les journaux d'accès, l'historique
+// d'un navigateur et l'en-tête Referer (`standards/03` §4). L'API ne l'a
+// jamais employé (`utils/whatsapp.entetes_bridge`).
+// Comparaison des EMPREINTES : longueur fixe, donc `timingSafeEqual` ne lève
+// jamais — l'ancien `padEnd(64)` levait (500) sur une valeur de plus de 64
+// caractères — et rien ne fuit de la longueur de la clé.
+const empreinte = (v) => crypto.createHash("sha256").update(String(v)).digest();
+const EMPREINTE_CLE = empreinte(API_KEY);
+
 function authMiddleware(req, res, next) {
-  if (!API_KEY) return next(); // no key configured = open (dev only)
-  const provided = req.headers["x-api-key"] || req.query.apikey || "";
-  if (crypto.timingSafeEqual(Buffer.from(provided.padEnd(64)), Buffer.from(API_KEY.padEnd(64)))) {
+  const provided = req.headers["x-api-key"] || "";
+  if (crypto.timingSafeEqual(empreinte(provided), EMPREINTE_CLE)) {
     return next();
   }
   return res.status(401).json({ error: "Unauthorized" });
