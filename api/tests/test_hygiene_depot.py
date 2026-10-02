@@ -95,3 +95,32 @@ def test_tout_executable_porte_set_u_ou_se_declare():
     )
     perimees = SANS_SET_U.keys() - sans
     assert not perimees, f"Exception qui ne sert plus, à retirer de SANS_SET_U : {perimees}"
+
+
+def _ignore(chemin: str) -> bool:
+    """`.gitignore` écarte-t-il ce nom ? `--no-index` : la règle, pas l'état du suivi."""
+    r = subprocess.run(
+        ["git", "check-ignore", "--no-index", "-q", chemin],
+        cwd=RACINE,
+        capture_output=True,
+    )
+    assert r.returncode in (0, 1), f"git check-ignore a échoué : {r.stderr!r}"
+    return r.returncode == 0
+
+
+def test_une_copie_du_env_ne_se_versionne_pas_mais_le_gabarit_si():
+    """Les copies manuelles du `.env` (`.env.avant-1109`…) portent SECRET_KEY et SMTP.
+
+    Elles traînaient `??` dans `git status` (#1609) : un `git add -A` les publiait,
+    dans un dépôt PUBLIC. `.env.*` les écarte, `.env.example` — le gabarit
+    d'installation, lu par `test_env_exemple_coherent` — reste suivi.
+    """
+    #  Cas zéro : la vérification sait dire « ignoré » (règle ancienne) et « suivi ».
+    assert _ignore(".env"), "cas zéro : `.env` doit être ignoré — la sonde ne mesure rien"
+    assert not _ignore("README.md"), "cas zéro : un fichier ordinaire n'est pas ignoré"
+    for copie in (".env.avant-1109", ".env.avant-120min-20260918", ".env.prod", ".env.bak"):
+        assert _ignore(copie), f"{copie} n'est pas ignoré — une copie du .env se publierait"
+    assert not _ignore(".env.example"), (
+        "`.env.example` est ignoré : le gabarit d'installation ne serait plus versionné"
+    )
+    assert ".env.example" in _index(".env.example")[0][1], "`.env.example` n'est plus suivi"
