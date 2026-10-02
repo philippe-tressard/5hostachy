@@ -332,7 +332,11 @@ importe les gestes du transport.
   bannissement, jeton de rafraîchissement rejoué — appelle `utils/journal_securite.journaliser_securite`, et
   **aucun** n'écrit dans un `logger` local. Rien n'était journalisé avant le
   20/09/2026 : un compte compromis ou une élévation de rôle ne laissait aucune
-  trace exploitable (#1040).
+  trace exploitable (#1040). Depuis #1548, le **cycle de vie d'un compte** aussi :
+  validé ou refusé, désactivé ou réactivé, supprimé, et une délégation créée,
+  acceptée ou révoquée. Le geste suivant n'attend pas un audit : 🔒 `test_journal_securite.py`
+  confronte `GESTES_SENSIBLES` à ce que les routeurs **écrivent** (décision sur
+  un compte, rôles, effacement, délégation) et refuse un code absent de `_NIVEAUX`.
   🔴 **Jamais de donnée personnelle dans une ligne de journal** — un identifiant,
   jamais une adresse, un mot de passe ou un jeton, même tronqué. Le défaut
   inverse existe dans ce dépôt (#777, adresses journalisées en clair), et
