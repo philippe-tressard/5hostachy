@@ -246,3 +246,12 @@ COLLECT="$COLLECT$COLLECT_HW"
 # `lib-ports-ecoute.sh` ; `ports_ecoute_verdicts` y est donc defini aussi.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-ports-ecoute.sh"
 COLLECT="$COLLECT$COLLECT_PORTS"
+
+# C33 (#1609) et C34 (#1592) : des copies laissees a cote de l original — des
+# `.env*` a la racine du depot deploye, des bases autres que la base de l API
+# dans le volume de donnees (listage d un repertoire par un conteneur jetable en
+# lecture seule : la base n est jamais ouverte). Mesure, listes blanches et
+# decision vivent ensemble, dans `lib-fichiers-parasites.sh`. Dependance de
+# l APPELANT : $REPO.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-fichiers-parasites.sh"
+COLLECT="$COLLECT$(collecte_env_copies "$REPO")$(collecte_db_volume)"

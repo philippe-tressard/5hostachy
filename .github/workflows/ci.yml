@@ -553,6 +553,11 @@ jobs:
           # exécutée sur un `ss` simulé (IPv4, IPv6, formes anciennes), la liste
           # blanche confrontée à `docker-compose.yml`, et le cas zéro.
           bash scripts/lib/lib-ports-ecoute.sh      --selftest
+          # C33 (#1609) et C34 (#1592) : des copies de .env à côté de l'original, des
+          # bases autres que celle de l'API dans le volume — la collecte exécutée (un
+          # vrai répertoire, un docker simulé), et la règle d'or : un listage, jamais
+          # la base ouverte.
+          bash scripts/lib/lib-fichiers-parasites.sh --selftest
           bash scripts/lib/lib-mises-a-jour.sh      --selftest
           bash scripts/lib/lib-notification.sh      --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
