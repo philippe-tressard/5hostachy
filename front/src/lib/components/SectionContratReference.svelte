@@ -26,7 +26,11 @@
 	 * champs de saisie : la forme dit le régime sans qu'on ait à le lire.
 	 */
 	import { onMount } from 'svelte';
-	import { copropriete as coproprieteApi, type ContratCandidat } from '$lib/api';
+	import {
+		copropriete as coproprieteApi,
+		documents as documentsApi,
+		type ContratCandidat,
+	} from '$lib/api';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import { fmtDateShort } from '$lib/date';
 
@@ -107,7 +111,7 @@
 		</dl>
 		{#if documentId}
 			<p class="ref-renvoi">
-				<a href="/api/documents/{documentId}/télécharger">Télécharger le document du contrat</a>
+				<a href={documentsApi.downloadUrl(documentId)}>Télécharger le document du contrat</a>
 			</p>
 		{/if}
 	{:else}

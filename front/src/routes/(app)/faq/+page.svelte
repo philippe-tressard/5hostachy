@@ -9,7 +9,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
-	import { faq as faqApi } from '$lib/api';
+	import { faq as faqApi, manuel } from '$lib/api';
 	import { isCS, currentUser } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -343,7 +343,7 @@
 			><Icon name="book-open" size={15} /></span
 		>Le <a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur</a>
 		vous guide pas à pas, et existe
-		<a href="/api/manuel/pdf" target="_blank" rel="noopener">en PDF</a>.
+		<a href={manuel.pdfUrl()} target="_blank" rel="noopener">en PDF</a>.
 	</p>
 </div>
 

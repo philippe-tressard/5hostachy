@@ -238,7 +238,7 @@
 							WhatsApp → Appareils connectés → Connecter un appareil
 						</p>
 						<img
-							src="/api/config/whatsapp-qr?t={waQrTimestamp}"
+							src={configApi.whatsappQrUrl(waQrTimestamp)}
 							alt="QR code WhatsApp"
 							style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
 						/>

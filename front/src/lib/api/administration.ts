@@ -8,7 +8,7 @@
 //
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
-import { api, buildQuery } from './client';
+import { api, BASE, buildQuery } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
 
 export const annuaireAdmin = {
@@ -194,6 +194,9 @@ export const admin = {
 		id: number,
 		data: { batiment?: string | null; ancien_resident?: string | null },
 	) => api.post<any>(`/admin/utilisateurs/${id}/accueil-arrivant`, data),
+	/**  L'adresse de la fiche des consignes (PDF), pour un lien — seul
+	 *   `LienConsignes` la rend (#1578 ; `lint:lien-consignes`). */
+	ficheArrivantUrl: (): string => `${BASE}/admin/fiche-arrivant`,
 	banCommunaute: (id: number, data: unknown) =>
 		api.patch<any>(`/admin/utilisateurs/${id}/ban-communaute`, data),
 	//  ⚠️ Route DISTINCTE de `comptesEnAttente` : `/enrichis` rend les mêmes
@@ -394,6 +397,10 @@ export const config = {
 		}>('/config/llm-modeles'),
 
 	whatsappStatut: () => api.get<any>('/config/whatsapp-status'),
+	/**  L'image du QR code d'appairage, pour un `<img>`. `horodatage` change
+	 *   l'adresse à chaque rafraîchissement : sans lui, le navigateur
+	 *   resservirait le QR expiré de son cache (#1578). */
+	whatsappQrUrl: (horodatage: number): string => `${BASE}/config/whatsapp-qr?t=${horodatage}`,
 	whatsappJournaux: () => api.get<JournalEnvoiWhatsApp[]>('/config/whatsapp-logs'),
 	whatsappPlanifies: () => api.get<MessagePlanifieWhatsApp[]>('/config/whatsapp-scheduled'),
 	modifierWhatsappPlanifie: (id: number, data: unknown) =>

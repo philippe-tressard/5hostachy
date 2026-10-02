@@ -256,6 +256,12 @@ export const faq = {
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
+//  Le manuel utilisateur en PDF, rendu par l'API (`routers/manuel.py`). Son
+//  adresse était écrite deux fois — le menu (`LiensGuide`) et la FAQ (#1578).
+export const manuel = {
+	pdfUrl: (): string => `${BASE}/manuel/pdf`,
+};
+
 export const annuaire = {
 	get: () =>
 		api.get<{

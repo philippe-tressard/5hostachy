@@ -24,12 +24,14 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import { admin as adminApi } from '$lib/api';
 
 	export let forme: 'carte' | 'bouton' = 'bouton';
 	/** Carte seulement : habillée en avertissement. */
 	export let misEnAvant = false;
 
-	const ADRESSE = '/api/admin/fiche-arrivant';
+	//  L'adresse vient du client d'API : elle s'écrivait ici en dur (#1578).
+	const ADRESSE = adminApi.ficheArrivantUrl();
 	const LIBELLE = 'Consignes de la copropriété';
 </script>
 
