@@ -562,6 +562,20 @@ jobs:
           # self-test, un script qui confondrait « aucun » et « je n'ai pas pu
           # demander » rendrait le même message dans les deux cas (#546).
           bash scripts/poste/diagnostic-cles-etrangeres.sh --selftest
+          # 🔒 La décision qui ÉCRIT dans /etc/sudoers.d (#1574) : son self-test
+          # passait et n'était appelé par aucun job.
+          bash scripts/installation/durcir-sudoers.sh --selftest
+          # Le garde-fou de cette étape elle-même : tout script versionné qui
+          # expose --selftest doit être listé ci-dessus (étape suivante).
+          bash scripts/poste/verifier-selftests-branches.sh --selftest
+
+      - name: Tout --selftest exposé est lancé par ce job
+        # `check-ci-complete.mjs` transposé aux scripts d'infra (#1574, famille
+        # #409/#410/#411/#561) : un self-test écrit, juste, vert quand on le
+        # tape, et qu'aucune ligne de l'étape précédente n'exécute. Les
+        # exposeurs sont lus à la forme du geste (`= "--selftest"` non commenté),
+        # et une exception se déclare avec sa raison dans le script.
+        run: bash scripts/poste/verifier-selftests-branches.sh
 
       - name: Variables non assignées sous `set -u`
         # 🔴 DEUX fois un script d'infra est mort à l'exécution sur une variable
