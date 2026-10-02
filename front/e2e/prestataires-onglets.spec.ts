@@ -12,6 +12,11 @@
  *     boîte de création que possède l'ONGLET ;
  *  3. le lien profond `#presta-<id>` venu d'un autre onglet conduit à la fiche,
  *     dépliée.
+ *
+ *  Et, depuis le 02/10/2026 (#1539), la correction EN PLACE que les deux cartes
+ *  tiennent de `CarteModifiable` : la boîte s'ouvre dans la carte, le crayon
+ *  dit le mode, et le titre ne replie pas une carte en correction — la règle
+ *  du contrat, que le prestataire n'avait pas.
  */
 import type { Page } from '@playwright/test';
 import { expect, simulerApi, test } from './aides';
@@ -92,3 +97,33 @@ test('un lien #presta venu des contrats conduit à la fiche, dépliée', async (
 	await expect(deplie(page, 'presta-2')).toBeVisible();
 	await expect(deplie(page, 'presta-1')).toHaveCount(0);
 });
+
+for (const [chemin, carte, modifier] of [
+	['/prestataires', 'presta-1', 'Modifier le prestataire'],
+	['/prestataires/contrats', 'contrat-11', 'Modifier le contrat'],
+] as const) {
+	test(`la correction s’ouvre dans la carte, le titre ne la replie pas (${carte})`, async ({
+		page,
+		baseURL,
+	}) => {
+		await ouvrir(page, baseURL, chemin);
+		const fiche = page.locator(`#${carte}`);
+		await fiche.getByRole('button', { name: modifier }).click();
+		const boite = fiche.getByRole('group', { name: modifier });
+		await expect(boite).toBeVisible();
+		const crayon = fiche.getByRole('button', { name: 'Annuler la correction' });
+		await expect(crayon).toHaveAttribute('aria-pressed', 'true');
+
+		await fiche.locator('.ec-titre-btn').click();
+		await expect(boite).toBeVisible();
+
+		await crayon.click();
+		await expect(boite).toHaveCount(0);
+		//  Le clic sur le titre n'a rien basculé en silence : la carte se replie.
+		await expect(page.locator(`#${carte}.expanded`)).toHaveCount(0);
+		await expect(fiche.getByRole('button', { name: modifier })).toHaveAttribute(
+			'aria-pressed',
+			'false',
+		);
+	});
+}
