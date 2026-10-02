@@ -136,6 +136,13 @@ toucher à celui qui sert), puis le secours (tunnel laissé arrêté). Jamais
   ses fichiers locaux → 7 versions ≈ 14 jours **à trous**, aucun nœud n'ayant celle de
   la veille. Copie hors site : `scripts/poste/export-hors-site.cmd` (voir ci-dessous)
 - **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
+- **Clé d'hôte du pair non épinglée** (#1598, 02/10/2026) : le SSH inter-nœuds
+  (`scripts/lib/lib-ssh-noeuds.sh`, seule source) exige `StrictHostKeyChecking=yes`
+  contre `/root/.ssh/known_hosts_bascule`. Fichier absent, vide, ou nœud réinstallé
+  (nouvelle clé d'hôte) → bascule arrêtée en phase 0, `check-reliability` en FAIL
+  « Peer injoignable », et le message porte la commande d'épinglage. Ce n'est **pas**
+  un nœud figé : épingler (procédure `docs/restauration-complete.md`, étape 12),
+  jamais repasser à `no` — `scripts-ci-ssh-noeuds.sh` le refuse en CI
 
 ## Copie hors site des sauvegardes (v2.37.0 — 04/08/2026)
 

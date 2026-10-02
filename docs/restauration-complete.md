@@ -81,8 +81,10 @@ cat ~/.ssh/hostachy_deploy.pub
 cat >> ~/.ssh/config << 'EOF'
 Host github.com
     IdentityFile ~/.ssh/hostachy_deploy
-    StrictHostKeyChecking no
 EOF
+# Au premier clonage, ssh affiche l'empreinte de github.com : la comparer à
+# celle que GitHub publie (docs.github.com, « GitHub's SSH key fingerprints »)
+# AVANT de répondre yes. Jamais de confiance d'office (#1598).
 
 # Cloner
 sudo mkdir -p /opt/5hostachy
@@ -285,9 +287,30 @@ sudo ssh-keygen -t ed25519 -C "hostachy-bascule" -f /root/.ssh/id_ed25519_bascul
 sudo ssh-copy-id -i /root/.ssh/id_ed25519_bascule.pub ptressard@192.168.1.223  # depuis rpi1
 sudo ssh-copy-id -i /root/.ssh/id_ed25519_bascule.pub ptressard@192.168.1.222  # depuis rpi2
 
-# Tester
-sudo ssh -i /root/.ssh/id_ed25519_bascule ptressard@192.168.1.223 "echo ok"
+# Épingler la clé d'HÔTE du pair — sur rpi1 (sur rpi2 : 192.168.1.222)
+sudo sh -c 'ssh-keyscan -t ed25519 192.168.1.223 2>/dev/null > /root/.ssh/known_hosts_bascule'
+sudo ssh-keygen -lf /root/.ssh/known_hosts_bascule
+# …et comparer cette empreinte à celle que le pair donne de lui-même, lue SUR lui :
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub        # sur 192.168.1.223
+
+# Tester — exactement les options des scripts (`scripts/lib/lib-ssh-noeuds.sh`)
+sudo ssh -i /root/.ssh/id_ed25519_bascule -o BatchMode=yes -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile=/root/.ssh/known_hosts_bascule -o GlobalKnownHostsFile=/dev/null \
+  ptressard@192.168.1.223 "echo ok"
 ```
+
+> 🔒 **Pourquoi épingler (#1598).** La clé `id_ed25519_bascule` authentifie le
+> nœud qui se connecte, jamais celui qui répond. Les scripts d'exploitation
+> (`bascule.sh`, `health-watch.sh`, `boot-role-guard.sh`, `check-reliability.sh`,
+> `noyau-standby.sh`) n'acceptent que la clé d'hôte écrite dans
+> `/root/.ssh/known_hosts_bascule` : sans elle, ils **échouent** au lieu de
+> parler à quiconque a pris l'IP du pair — et leur journal donne la commande
+> ci-dessus. Le fichier vit chez root, hors du dépôt que le compte de
+> déploiement réécrit.
+>
+> ⚠️ **Un nœud réinstallé change de clé d'hôte** : la bascule s'arrête alors en
+> phase 0 (« Peer injoignable … clé d'hôte non épinglée »), et `check-reliability`
+> le signale. Refaire l'épinglage **sur l'autre nœud**, empreinte comparée.
 
 ---
 
