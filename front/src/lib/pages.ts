@@ -51,8 +51,19 @@ export interface OngletDef {
 	 * ⚠️ La route de l'onglet par défaut est celle de la page (`href`) : sans quoi
 	 * l'entrée de menu et le premier onglet seraient deux adresses pour le même
 	 * écran, et `test_liens_front.py` refuse.
+	 *
+	 * ⚠️ Une seule page garde la forme `?onglet=` : l'administration (« sauf
+	 * admin », demandé le 05/09/2026). Sa route est donc `/admin?onglet=<id>`,
+	 * et `/admin` pour l'onglet par défaut — l'adresse réelle, que la page lit.
 	 */
 	route: string;
+	/**
+	 * Le GROUPE de l'onglet, quand la rangée se partage en groupes nommés —
+	 * l'administration seule : « 👥 Gestion utilisateurs », « ⚙️ Configuration ».
+	 * `BarreOnglets` rend une rangée par groupe, dans l'ordre de la table ; les
+	 * onglets d'un même groupe se suivent.
+	 */
+	groupe?: string;
 	/** Les sous-onglets, quand l'onglet en porte une rangée (un seul cas : les
 	    baux de la gestion locative). Ils ont une URL, pas d'entrée dans la
 	    configuration éditable — l'administration n'ordonne et ne renomme que les

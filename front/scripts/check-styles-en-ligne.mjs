@@ -51,7 +51,7 @@ import { fileURLToPath } from 'node:url';
  *  caractéristiques d'un lot (`CaracteristiquesLot`), deux modales de
  *  suppression remplacées par `SUPPRESSION` (#779).
  */
-const PLAFOND = 419;
+const PLAFOND = 417;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
