@@ -21,6 +21,10 @@ env/
 .env
 .env.local
 .env.*.local
+# Copies manuelles du .env (`.env.avant-1109`, `.env.sauvegarde`...) : elles portent
+# SECRET_KEY et SMTP, et git status les listait `??` (#1609). Seul le gabarit se versionne.
+.env.*
+!.env.example
 secrets/
 .active
 # Marque posée sur l'actif par le standby qui redémarre pour son noyau (#1395)

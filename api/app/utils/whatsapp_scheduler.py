@@ -30,7 +30,7 @@ Si la fenêtre se ferme sans envoi réussi, une alerte e-mail est déclenchée.
 
 import calendar
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from app.utils import horloge
 from app.utils.horloge import TZ_PARIS
 
@@ -75,18 +75,6 @@ def _is_friday_before_nth_saturday(dt: datetime, n: int) -> bool:
     return day is not None and saturday.day == day
 
 
-def _debut_du_jour_utc(now: datetime) -> datetime:
-    """Minuit du jour local `now`, exprimé en UTC naïf comme `WhatsAppLog.envoye_le`.
-
-    Les horodatages sont écrits en UTC (`datetime.utcnow`) et la borne était
-    calculée en heure de Paris : comparer les deux ne « marchait » que parce que
-    la fenêtre d'envoi est en soirée, où les deux dates coïncident. Décaler la
-    fenêtre d'une heure après minuit aurait suffi à casser la déduplication.
-    """
-    minuit_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return minuit_local.astimezone(timezone.utc).replace(tzinfo=None)
-
-
 def check_and_send():
     """Vérifie les messages planifiés et envoie ceux qui correspondent à aujourd'hui."""
     from app.utils.whatsapp import envoyer_whatsapp_raw
@@ -122,7 +110,7 @@ def check_and_send():
                 continue
 
             # Tentatives déjà faites aujourd'hui pour ce message (tout statut)
-            today_start = _debut_du_jour_utc(now)
+            today_start = horloge.debut_du_jour_utc(now)
             today_logs = session.exec(
                 select(WhatsAppLog)
                 .where(

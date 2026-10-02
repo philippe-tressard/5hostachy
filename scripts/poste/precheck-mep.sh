@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  Pré-check MEP 15 points — exécutable, et non plus une liste à dérouler à la main.
+#  Pré-check MEP — exécutable, et non plus une liste à dérouler à la main.
 #
-#  POURQUOI ce script existe. La grille des 15 points vit dans
+#  POURQUOI ce script existe. La grille des points vit dans
 #  `.claude/skills/mep-precheck` depuis le 02/08/2026, et l'ordre des opérations
 #  (pré-check AVANT le push sur dev) dans la banque de mémoire du projet. Les deux
 #  étaient justes. Ils ont quand même été enfreints TROIS lots d'affilée les 07 et
@@ -21,7 +21,7 @@
 #     `||` ajoute une seconde valeur et le test devient inexploitable ;
 #   - jamais `docker exec` ni `sqlite3` sur app.db pendant que l'API tourne.
 #
-#  Usage : bash scripts/poste/precheck-mep.sh   # déroule les 15 points
+#  Usage : bash scripts/poste/precheck-mep.sh   # déroule tous les points
 #          bash scripts/poste/precheck-mep.sh --post-mep # APRÈS la fusion : la production seule (#1282)
 #          bash scripts/poste/precheck-mep.sh --selftest # éprouve les fonctions de décision
 # =============================================================================

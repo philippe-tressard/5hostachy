@@ -53,10 +53,9 @@
       avec ses photos dès l'ouverture en affichait une. Deux tickets, même contenu
       visible, deux apparences dans la liste.
 
-      ⚠️ Le repli se calcule côté SERVEUR et non ici, contrairement au calendrier
-      (`apercuAvecRepli`) : la page des tickets charge ses évolutions à la demande,
-      et les réclamer en liste coûterait une requête par carte. Le serveur, lui,
-      ne transporte que les URLs affichées.
+      ⚠️ Le repli se calcule côté SERVEUR et non ici : la page des tickets charge ses évolutions
+      à la demande, et les réclamer en liste coûterait une requête par carte.
+      Le serveur, lui, ne transporte que les URLs affichées.
 
       ⚠️ Le tri photos / documents se fait dans le `<script>` : `{@const}` n'est
       permis qu'à l'intérieur d'un bloc, jamais à la racine d'un composant. -->

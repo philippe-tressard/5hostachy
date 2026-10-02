@@ -187,8 +187,6 @@ export const SECTIONS_LIBELLE_ABANDONNE: Readonly<Record<string, IdSection>> = {
 /** Les quatre rendus d'une même entité. */
 export type Etat = 'affichage' | 'creation' | 'edition' | 'evolution';
 
-export const ETATS: readonly Etat[] = ['affichage', 'creation', 'edition', 'evolution'];
-
 /**
  * Les QUATRE motifs de divergence, et il n'y en a pas d'autre (R4).
  *

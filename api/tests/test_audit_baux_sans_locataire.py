@@ -113,7 +113,7 @@ def test_un_bail_dont_le_locataire_A_un_compte_est_signale_comme_RATTRAPABLE(
     #  C'est exactement ce qui fait échouer l'appariement automatique.
     session.add(
         Utilisateur(
-            email="jean.perso@gmail.com",
+            email="jean.perso@exemple.test",
             hashed_password="x",
             nom="Durand",
             prenom="Jean",
@@ -143,7 +143,7 @@ def test_un_bail_dont_le_locataire_A_un_compte_est_signale_comme_RATTRAPABLE(
     assert len(lignes) == 1
     assert lignes[0]["categorie"] == "compte_probable"
     assert lignes[0]["candidats"], "le compte trouvé doit être proposé, sinon le relevé n'aide pas"
-    assert lignes[0]["candidats"][0]["email"] == "jean.perso@gmail.com"
+    assert lignes[0]["candidats"][0]["email"] == "jean.perso@exemple.test"
 
 
 def test_un_bail_dont_personne_ne_s_est_inscrit_est_NORMAL_et_le_dit(

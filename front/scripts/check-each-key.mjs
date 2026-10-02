@@ -28,8 +28,9 @@
  * ⚠️ Depuis le 01/09/2026 cette compensation ne s'écrit plus dans l'écran mais
  * dans `$lib/listeDepliable`, éprouvée par `npm run lint:liste-depliable` : elle y
  * existait en DEUX exemplaires identiques, et c'est exactement le genre de code
- * qu'on recopie sans le relire. Les deux `{#each membres… as m, i}` de
- * `espace-cs` restent donc SANS clé, et c'est justifié : ces lignes de formulaire
+ * qu'on recopie sans le relire. Les lignes de
+ * formulaire de l'annuaire du syndic (`AnnuaireSyndic.svelte`, jadis dans
+ * `espace-cs`) peuvent donc rester SANS clé, et c'est justifié : elles
  * n'ont aucun identifiant stable (`user_id` est nullable, un membre ajouté n'a
  * rien), et l'état y est indexé par position. Poser une clé devinée y serait le
  * remède pire que le mal que ce fichier décrit plus bas.
@@ -97,9 +98,12 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
  * temps que le rendu se corrige, au lieu de choisir entre les deux. Elle
  * remplace au passage `splitTels()` et une recopie littérale dans l'annuaire.
  *
- * ⚠️ LA DERNIÈRE RESTE, ET C'EST DÉFINITIF : `espace-cs` ligne ~1248 édite les
- * numéros d'un membre du syndic par `bind:value={…telephones[ti]}`. La boucle a
- * BESOIN de l'index pour écrire dans le tableau, et une clé portée par la valeur
+ * ⚠️ LA DERNIÈRE RESTE, ET C'EST DÉFINITIF : l'unique `{#each}` sans clé que
+ * couvre `PLAFOND` est dans `AnnuaireSyndic.svelte` (l'édition du syndic, jadis
+ * dans `espace-cs`), qui édite les numéros d'un membre par
+ * `bind:value={…telephones[ti]}` — la ligne se retrouve par ce `bind`, elle
+ * n'est pas recopiée ici : le numéro écrit jadis (« ligne ~1248 ») avait dérivé.
+ * La boucle a BESOIN de l'index pour écrire dans le tableau, et une clé portée par la valeur
  * changerait à chaque caractère tapé — Svelte recréerait le nœud, et le champ
  * perdrait le focus en cours de frappe. Le remède serait ici plus grave que le
  * mal, et aucune clé n'est meilleure que l'index.

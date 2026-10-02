@@ -238,7 +238,7 @@ def test_un_courriel_en_HTML_SEUL_se_lit_et_sa_citation_reste_dehors():
     html = (
         "<html><head><style>p{color:red}</style></head><body>"
         "<div>Bonsoir&nbsp;<br></div><div>D&eacute;sol&eacute;e, je suis absente.</div>"
-        "<div>----------------</div><div><b>De :</b> Philippe &lt;p@icloud.com&gt;</div>"
+        "<div>----------------</div><div><b>De :</b> Philippe &lt;p@exemple.test&gt;</div>"
         "<blockquote type='cite'><div>Texte cité</div></blockquote></body></html>"
     )
     texte = _corps_lisible(_html_seul(html))

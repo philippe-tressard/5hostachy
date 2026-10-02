@@ -228,7 +228,7 @@
 			      pour TOUT le fichier, et `lint:css-orphelin` devient aveugle sur ce
 			      composant — qui porte une centaine de lignes de style.
 
-			      Les trois valeurs sont celles de `TypeEvolution` ($lib/evolutions) :
+			      Les trois valeurs sont les clés de `EVOLUTION_ICONE` ($lib/evolutions) :
 			      un quatrième type ajouté là-bas ne recevrait pas son fond ici, et
 			      c'est le seul risque que la conversion introduit. Il est moindre que
 			      l'aveuglement qu'elle supprime, et `svelte-check` signalera alors le

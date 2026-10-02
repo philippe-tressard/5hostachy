@@ -551,6 +551,9 @@ jobs:
           bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest
           python scripts/poste/verifier-fins-de-ligne.py --selftest
+          # 🔒 Le hook pre-commit refuse un index à marqueurs de conflit (#1616) :
+          # LF et CRLF, la dérogation, et le VRAI hook joué dans un dépôt jetable.
+          bash scripts/poste/verifier-marqueurs-conflit.sh --selftest
           python scripts/poste/verifier-variables-shell.py --selftest
           # Le poste a-t-il ce que le lot épingle ? Sinon le rejeu rend INCONNU (#1417).
           python scripts/poste/verifier-dependances-poste.py --selftest
@@ -559,6 +562,23 @@ jobs:
           # self-test, un script qui confondrait « aucun » et « je n'ai pas pu
           # demander » rendrait le même message dans les deux cas (#546).
           bash scripts/poste/diagnostic-cles-etrangeres.sh --selftest
+          # 🔒 La décision qui ÉCRIT dans /etc/sudoers.d (#1574) : son self-test
+          # passait et n'était appelé par aucun job.
+          bash scripts/installation/durcir-sudoers.sh --selftest
+          # La garde d'options du banc de volumes (#1605) : une option inconnue
+          # lançait le banc, qui crée et détruit des volumes. `docker` y est factice.
+          bash scripts/exploitation/banc-volumes.sh --selftest
+          # Le garde-fou de cette étape elle-même : tout script versionné qui
+          # expose --selftest doit être listé ci-dessus (étape suivante).
+          bash scripts/poste/verifier-selftests-branches.sh --selftest
+
+      - name: Tout --selftest exposé est lancé par ce job
+        # `check-ci-complete.mjs` transposé aux scripts d'infra (#1574, famille
+        # #409/#410/#411/#561) : un self-test écrit, juste, vert quand on le
+        # tape, et qu'aucune ligne de l'étape précédente n'exécute. Les
+        # exposeurs sont lus à la forme du geste (`= "--selftest"` non commenté),
+        # et une exception se déclare avec sa raison dans le script.
+        run: bash scripts/poste/verifier-selftests-branches.sh
 
       - name: Variables non assignées sous `set -u`
         # 🔴 DEUX fois un script d'infra est mort à l'exécution sur une variable
@@ -625,6 +645,23 @@ jobs:
           # moteur qu'il centralise (cas zéro, `standards/04` §2).
           grep -qE '^[^#]*smtplib' scripts/lib/lib-alert.sh \
             || { echo "::error file=scripts/lib/lib-alert.sh::le moteur SMTP a disparu du module qui doit le porter — le contrôle ci-dessus ne mesure plus rien"; st=1; }
+          # 🔴 L'adresse d'alerte ne s'écrit QU'UNE fois : le défaut de lib-alert.sh
+          # (#1581). Elle l'était trois fois — `bascule.sh`, `health-watch.sh` et le
+          # module qu'ils sourcent tous les deux —, et la triple écriture était
+          # consciente, jamais déclarée : changer d'adresse en oubliait deux. Cas
+          # zéro : 0 écriture veut dire que le défaut a disparu, ou que le motif ne
+          # lit plus rien.
+          n=0
+          for f in $(git ls-files -- '*.sh'); do
+            c=$(grep -cE '^[^#]*\bALERT_EMAIL=' "$f" || true)
+            [ "$c" -gt 0 ] || continue
+            n=$((n + c))
+            case "$f" in
+              scripts/lib/lib-alert.sh) ;;
+              *) echo "::error file=$f::ALERT_EMAIL assigné hors de lib-alert.sh — l'adresse d'alerte n'a qu'un défaut, celui du module"; st=1 ;;
+            esac
+          done
+          [ "$n" -eq 1 ] || { echo "::error::$n écriture(s) de ALERT_EMAIL= dans les scripts, exactement 1 attendue (lib-alert.sh)"; st=1; }
           exit $st
 
       - name: SSH entre les nœuds — clé d'hôte épinglée, commande écrite une fois
@@ -1629,7 +1666,7 @@ jobs:
         # MIXTE CRLF/LF, et un `lf` forcé aurait converti 200 fichiers en un
         # commit illisible, exactement ce que `.githooks/pre-commit` refuse.
         working-directory: front
-        run: npx prettier --check .
+        run: npm run lint:format
 
       - name: Vérification des types (svelte-check)
         working-directory: front

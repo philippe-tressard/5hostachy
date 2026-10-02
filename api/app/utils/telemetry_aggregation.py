@@ -16,7 +16,6 @@ from datetime import datetime, timedelta
 from app.utils import horloge
 import logging
 from typing import Optional
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, text
 from sqlmodel import Session, select
@@ -40,13 +39,6 @@ _PARIS = horloge.TZ_PARIS
 def _paris_now() -> datetime:
     """Heure actuelle à Paris (consciente)."""
     return horloge.a_paris(horloge.maintenant())
-
-
-def _paris_midnight(dt_paris: datetime) -> datetime:
-    """Retourne minuit Paris du jour donné, converti en UTC naïf
-    (pour comparaison avec les cree_le stockés en UTC naïf)."""
-    midnight = dt_paris.replace(hour=0, minute=0, second=0, microsecond=0)
-    return midnight.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
 
 def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
@@ -90,16 +82,16 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
             # Ne pas agréger le jour en cours (données incomplètes)
             # end = minuit Paris aujourd'hui (= début du jour courant)
-            end_utc = _paris_midnight(now_paris)
+            end_utc = horloge.debut_du_jour_utc(now_paris)
             current_paris = start_paris.replace(hour=0, minute=0, second=0, microsecond=0)
 
             while True:
-                current_utc = _paris_midnight(current_paris)
+                current_utc = horloge.debut_du_jour_utc(current_paris)
                 if current_utc >= end_utc:
                     break
                 jour_str = current_paris.strftime("%Y-%m-%d")
                 next_paris = current_paris + timedelta(days=1)
-                jour_fin_utc = _paris_midnight(next_paris)
+                jour_fin_utc = horloge.debut_du_jour_utc(next_paris)
 
                 rows = session.exec(
                     select(

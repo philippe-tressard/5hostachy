@@ -92,15 +92,9 @@ def dashboard(
     scope=mois  → stats 30 jours (daily)
     scope=annee → stats 10 ans (monthly)
     """
-    from zoneinfo import ZoneInfo
-
     now_paris = horloge.a_paris(horloge.maintenant())
     # Minuit Paris aujourd'hui → converti en UTC naïf pour requête sur cree_le
-    today_start_utc = (
-        now_paris.replace(hour=0, minute=0, second=0, microsecond=0)
-        .astimezone(ZoneInfo("UTC"))
-        .replace(tzinfo=None)
-    )
+    today_start_utc = horloge.debut_du_jour_utc(now_paris)
 
     # Offset horaire Paris (pour convertir les heures UTC → Paris dans les labels)
     paris_offset = int(now_paris.utcoffset().total_seconds() // 3600)

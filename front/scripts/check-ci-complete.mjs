@@ -41,9 +41,10 @@ const WORKFLOW = new URL('../../.github/workflows/ci.yml', import.meta.url);
  * contrôle redevenu câblé, et masquerait le prochain qui ne l'est pas.
  */
 const EXCEPTIONS = {
-	'lint:format':
-		'prettier — le reformatage n’a pas eu lieu (#419, points 3 et 4). Le câbler ' +
-		'aujourd’hui rendrait le job rouge sur 51 fichiers, donc désarmé dans la semaine.',
+	//  Vide depuis le 02/10/2026 (#1573). `lint:format` y a figuré sur une raison
+	//  périmée (« #419, 51 fichiers à reformater ») alors que le job lançait déjà
+	//  `npx prettier --check .` : la même commande, mais sous un nom que ce contrôle
+	//  ne reconnaît pas. L'étape appelle désormais `npm run lint:format`.
 };
 
 function abandonner(message) {

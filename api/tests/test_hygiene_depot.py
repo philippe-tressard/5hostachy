@@ -95,3 +95,86 @@ def test_tout_executable_porte_set_u_ou_se_declare():
     )
     perimees = SANS_SET_U.keys() - sans
     assert not perimees, f"Exception qui ne sert plus, à retirer de SANS_SET_U : {perimees}"
+
+
+def _ignore(chemin: str) -> bool:
+    """`.gitignore` écarte-t-il ce nom ? `--no-index` : la règle, pas l'état du suivi."""
+    r = subprocess.run(
+        ["git", "check-ignore", "--no-index", "-q", chemin],
+        cwd=RACINE,
+        capture_output=True,
+    )
+    assert r.returncode in (0, 1), f"git check-ignore a échoué : {r.stderr!r}"
+    return r.returncode == 0
+
+
+def test_une_copie_du_env_ne_se_versionne_pas_mais_le_gabarit_si():
+    """Les copies manuelles du `.env` (`.env.avant-1109`…) portent SECRET_KEY et SMTP.
+
+    Elles traînaient `??` dans `git status` (#1609) : un `git add -A` les publiait,
+    dans un dépôt PUBLIC. `.env.*` les écarte, `.env.example` — le gabarit
+    d'installation, lu par `test_env_exemple_coherent` — reste suivi.
+    """
+    #  Cas zéro : la vérification sait dire « ignoré » (règle ancienne) et « suivi ».
+    assert _ignore(".env"), "cas zéro : `.env` doit être ignoré — la sonde ne mesure rien"
+    assert not _ignore("README.md"), "cas zéro : un fichier ordinaire n'est pas ignoré"
+    for copie in (".env.avant-1109", ".env.avant-120min-20260918", ".env.prod", ".env.bak"):
+        assert _ignore(copie), f"{copie} n'est pas ignoré — une copie du .env se publierait"
+    assert not _ignore(".env.example"), (
+        "`.env.example` est ignoré : le gabarit d'installation ne serait plus versionné"
+    )
+    assert ".env.example" in _index(".env.example")[0][1], "`.env.example` n'est plus suivi"
+
+
+#: Fournisseurs de messagerie publics : une adresse de test sur l'un d'eux peut
+#: désigner une boîte réelle (#1581). `exemple.test` / `example.org` existent pour ça.
+FOURNISSEURS_REELS = (
+    "gmail",
+    "icloud",
+    "yahoo",
+    "hotmail",
+    "outlook",
+    "live",
+    "orange",
+    "wanadoo",
+    "free",
+    "sfr",
+    "laposte",
+    "protonmail",
+    "aol",
+    "msn",
+)
+_BOITE_REELLE = re.compile(
+    r"@(?:" + "|".join(FOURNISSEURS_REELS) + r")\.(?:com|fr|net|org)\b", re.I
+)
+CE_FICHIER = "api/tests/test_hygiene_depot.py"
+
+
+def _boites_reelles(texte: str) -> list[str]:
+    return [m.group(0) for m in _BOITE_REELLE.finditer(texte)]
+
+
+def test_la_sonde_de_boites_reelles_distingue_le_reel_du_fictif():
+    assert _boites_reelles("jean@gmail.com et p@iCloud.com") == ["@gmail.com", "@iCloud.com"]
+    assert _boites_reelles("jean@exemple.test, a@example.org, b@copro-orange.fr") == []
+    assert _boites_reelles("") == []  # cas zéro
+
+
+def test_aucune_adresse_de_test_sur_un_fournisseur_reel():
+    fichiers = [
+        chemin
+        for _, chemin in _index("api/tests", "front/e2e")
+        if chemin.endswith((".py", ".ts", ".mjs", ".json", ".html", ".txt", ".eml"))
+        and chemin != CE_FICHIER
+    ]
+    #  Cas zéro : un balayage qui ne lit aucun fichier ne prouve rien.
+    assert len(fichiers) > 100, f"{len(fichiers)} fichier(s) lu(s) — la liste ne correspond plus"
+    trouvees = {}
+    for chemin in fichiers:
+        contenu = (RACINE / chemin).read_text(encoding="utf-8", errors="replace")
+        if hits := _boites_reelles(contenu):
+            trouvees[chemin] = sorted(set(hits))
+    assert not trouvees, (
+        f"adresse(s) sur un fournisseur réel dans les tests : {trouvees}. "
+        "Une boîte peut exister derrière : écrire `…@exemple.test`."
+    )

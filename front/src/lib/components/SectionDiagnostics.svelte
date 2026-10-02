@@ -279,6 +279,7 @@
 											<a
 												href={diagnosticsApi.downloadUrl(rapport.id)}
 												target="_blank"
+												rel="noopener"
 												class="btn btn-sm"
 												download
 											>

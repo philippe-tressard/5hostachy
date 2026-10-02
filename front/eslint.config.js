@@ -18,9 +18,9 @@
 // est un contrôle qui ment (`standards/04`). Chaque règle coupée l'est NOMMÉMENT,
 // avec son compte et son motif, et la dette est suivie en #549 et #550.
 //
-// ⚠️ `npm run lint` — qui enchaîne prettier — reste hors CI : sans `.prettierrc`,
-// prettier ne charge pas `prettier-plugin-svelte` et IGNORE EN SILENCE tous les
-// `.svelte`, donc l'essentiel du front. C'est le point 3 de #419, encore ouvert.
+// ✅ Prettier est lui aussi en CI : l'étape « Formatage » lance `npm run lint:format`
+// (#419 est fermé, `.prettierrc` charge `prettier-plugin-svelte`). `npm run lint`,
+// qui enchaîne les deux, n'est qu'un agrégat de poste : la CI nomme chaque étape.
 
 import js from '@eslint/js';
 import ts from 'typescript-eslint';
@@ -230,8 +230,8 @@ export default defineConfig(
 
 			// ⚠️ DÉSACTIVATION ASSUMÉE, ET ELLE LAISSE UN TROU — à lire avant d'y toucher.
 			//
-			// `svelte/no-at-html-tags` interdit tout `{@html …}`. Ce projet en compte 61
-			// dans 25 fichiers, et ils sont voulus : les contenus riches (descriptions de
+			// `svelte/no-at-html-tags` interdit tout `{@html …}`. Ce projet en emploie
+			// dans de nombreux fichiers (`npm run lint:html` les compte), et ils sont voulus : les contenus riches (descriptions de
 			// tickets, corps de notifications) sont assainis par DOMPurify dans
 			// `src/lib/sanitize.ts` avant d'être rendus. La règle ne sait pas distinguer
 			// `{@html safeHtml(x)}` de `{@html x}` : elle les condamne les deux, donc elle
@@ -393,9 +393,10 @@ export default defineConfig(
 		files: ['**/*.{js,mjs,ts,svelte}'],
 		plugins: { '@typescript-eslint': ts.plugin },
 		rules: {
-			// 553 — `any` dans les enveloppes d'appel API et les charges utiles
-			// hétérogènes. Le supprimer est un travail de TYPAGE, pas un réglage de
-			// linter, et il mérite son propre ticket.
+			// `any` dans les enveloppes d'appel API et les charges utiles
+			// hétérogènes (le compte se mesure par `grep`, il ne s'écrit pas ici : il
+			// avait déjà dérivé). Le supprimer est un travail de TYPAGE, pas un
+			// réglage de linter — il a son ticket, #1572.
 			'@typescript-eslint/no-explicit-any': 'off',
 
 			// Même raison que dans le bloc Svelte : `a ? f() : g()` employé comme

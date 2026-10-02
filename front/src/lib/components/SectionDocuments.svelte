@@ -117,7 +117,13 @@
 					</div>
 					<div class="doc-actions">
 						<BoutonLien ancre="doc-{doc.id}" quoi="le document" />
-						<a href={urlTelechargement(doc)} target="_blank" class="btn btn-sm" download>
+						<a
+							href={urlTelechargement(doc)}
+							target="_blank"
+							rel="noopener"
+							class="btn btn-sm"
+							download
+						>
 							⬇ Télécharger
 						</a>
 						{#if peutModifier}

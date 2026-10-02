@@ -35,8 +35,11 @@ Toute modification UX ou fonctionnalité visible **doit** être documentée dans
 **même commit** que la fonctionnalité. Après modification du manuel :
 
 ```powershell
-Copy-Item 5hostachy/docs/manuel-utilisateur.html 5hostachy/front/static/manuel-utilisateur.html
+Copy-Item docs/manuel-utilisateur.html front/static/manuel-utilisateur.html
 ```
+
+(depuis la racine du dépôt — **un seul chemin**, le même que dans la checklist
+ci-dessous ; `api/tests/test_documentation.py` échoue si les deux copies diffèrent)
 
 ⚠️ **Ne jamais éditer le manuel avec `sed -i`** : il est versionné en **CRLF**, et
 `sed` le réécrit en LF — le diff passe alors de 3 lignes à 5 700, et la
@@ -70,28 +73,25 @@ docs/manuel-utilisateur.html
 
 ### 2. Ajouter le lien dans la sidebar
 
+Le point de couleur est un `<span class="dot">` dont la couleur se pose **en ligne**
+— il n'existe aucune classe `nav-dot-*` :
+
 ```html
 <div class="nav-section">
   <a class="nav-item" href="#nouveau">
-    <span class="dot nav-dot-nouveau"></span>
+    <span class="dot" style="background:var(--c-nouveau)"></span>
     Nouveau Chapitre
   </a>
 </div>
 ```
 
-### 3. Ajouter le style du dot de navigation
-
-```css
-.nav-dot-nouveau { background: var(--c-nouveau); }
-```
-
-### 4. Ajouter le style de la card (border-top)
+### 3. Ajouter le style de la card (border-top)
 
 ```css
 .chapter[data-section="nouveau"] .card { border-top: 3px solid var(--c-nouveau); }
 ```
 
-### 5. Créer la section dans `<main>`
+### 4. Créer la section dans `<main>`
 
 ```html
 <section class="chapter" id="nouveau" data-section="nouveau">
@@ -143,7 +143,7 @@ docs/manuel-utilisateur.html
 ```html
 <ul class="steps">
   <li class="step">
-    <span class="step-num" style="background:var(--c-section)">1</span>
+    <span class="step-num" style="background:var(--c-nouveau)">1</span>
     <div class="step-content">
       <strong>Action à effectuer</strong>
       <p>Explication détaillée.</p>
@@ -152,18 +152,12 @@ docs/manuel-utilisateur.html
 </ul>
 ```
 
-### Captures d'écran
+### Captures d'écran — il n'y en a plus
 
-```html
-<div class="capture-grid">
-  <div class="capture-card">
-    <img src="img/capture.png" alt="Description de la capture" />
-    <h3>Légende</h3>
-    <p>Description de ce que montre la capture.</p>
-    <span class="capture-tag">Catégorie</span>
-  </div>
-</div>
-```
+Elles ont été **retirées le 02/09/2026** (#1038) : `docs/img/` n'existe plus, et une
+capture périme au premier changement d'écran sans que personne s'en aperçoive. Le
+manuel **décrit** les écrans ; il ne les montre pas. Aucun gabarit `capture-*` n'est
+à écrire — ces classes n'existent pas dans le manuel.
 
 ### Callouts (info, tip, warning, danger)
 
@@ -189,13 +183,16 @@ docs/manuel-utilisateur.html
 </div>
 ```
 
-### Badges de statut
+### Étiquettes — « pour vous » et accès
+
+Il n'y a pas de composant « badge de statut » : le manuel emploie deux étiquettes,
+dans la table des sections d'une affaire et dans la fiche d'un écran.
 
 ```html
-<div class="status-chip">
-  <span class="dot" style="background:#22c55e"></span>
-  Actif
-</div>
+<span class="pour-vous pour-vous-obligatoire">Obligatoire</span>   <!-- ou -facultatif, -conseil -->
+<ul class="ecran-profils">
+  <li><span class="profil">Chacun</span> n’y voit que ce que son profil lui ouvre…</li>
+</ul>
 ```
 
 ### Montrer une pastille du site — la VRAIE, jamais un mot (27/09/2026)
@@ -211,16 +208,22 @@ et refuse tout écart. Un nouveau cas s'ajoute dans `CAS` du contrôle.
 il réécrit le CRLF en LF (vécu le 27/09/2026, 3 432 lignes de diff). Muter en
 octets, ou sur une copie.
 
-### FAQ / Accordéon
+### Accordéon
+
+Le détail qui ne sert qu'à qui le cherche se range dans un `<details>` — la forme
+employée par les fiches d'écran du manuel :
 
 ```html
-<details class="faq-item">
-  <summary>Question fréquente ?</summary>
-  <div class="faq-body">
-    <p>Réponse détaillée.</p>
+<details class="ecran-detail">
+  <summary>En savoir plus</summary>
+  <div class="ecran-detail-corps">
+    <ul><li>Détail…</li></ul>
   </div>
 </details>
 ```
+
+(`details.faq-item` est défini dans la feuille de style, mais aucun chapitre ne
+l'emploie aujourd'hui : préférer `ecran-detail`, déjà éprouvé.)
 
 ## Couleurs des sections existantes
 
@@ -240,8 +243,8 @@ octets, ou sur une copie.
 | ~~Délégation~~ | `--c-delegation` | `#d97706` | 🤝 |
 
 ⚠️ **La ligne « Délégation » est barrée** : la variable de couleur existe, mais
-aucune `data-section="delegation"` n'est rendue — le manuel en compte **onze**,
-pas douze. Une table de sections qui annonce une section absente fait chercher un
+aucune `data-section="delegation"` n'est rendue — le manuel n'a pas de chapitre de
+délégation. Une table de sections qui annonce une section absente fait chercher un
 écran qui n'existe pas (#1051).
 
 ## Checklist

@@ -39,6 +39,7 @@ treize fichiers ont déjà une variable ou un paramètre nommé `maintenant`
 | quel **jour** est-on pour le résident ? (calendrier, échéance, date affichée) | `aujourd_hui()` — le jour de Paris |
 | quel jour était-ce, à Paris, à cet instant de la base ? | `jour_civil(instant)` |
 | quelle heure est-il / était-il à Paris ? (fenêtre d'envoi, minuit, libellé) | `a_paris(instant)` — conscient |
+| quelle borne UTC pour « depuis le début du jour » à Paris ? (requête sur `_le`) | `debut_du_jour_utc(jour=None)` — UTC naïf (#1617) |
 
 Deux « aujourd'hui » coexistaient : `date.today()` (dix fois — le jour du
 **conteneur**, parisien en production par `TZ=Europe/Paris` et UTC sur un poste
@@ -54,7 +55,8 @@ planificateur (`backup.setup_scheduler`) compris.
 🔒 `test_horloge.py` refuse, hors de ce module, `date.today`, `datetime.today`,
 `datetime.now` sans fuseau — appelés **ou** référencés, la forme
 `default_factory` qu'aucune règle Ruff ne voit — et `maintenant.date()` ; et
-« Europe/Paris » écrit ailleurs qu'ici.
+« Europe/Paris » écrit ailleurs qu'ici — et, depuis #1617, un minuit recomposé
+(`replace(hour=0…)`) puis converti de fuseau dans une même fonction.
 """
 
 from __future__ import annotations
@@ -104,3 +106,20 @@ def aujourd_hui() -> date:
     Tiré de `maintenant()` (cherché à l'appel) : figer l'un fige l'autre.
     """
     return jour_civil(maintenant())
+
+
+def debut_du_jour_utc(jour: date | datetime | None = None) -> datetime:
+    """Minuit **de Paris** du jour demandé, en **UTC naïf** — la borne d'une requête sur `_le`.
+
+    Les colonnes de date sont en UTC naïf ; « depuis le début du jour » pour le
+    résident est minuit à Paris, soit 22 h ou 23 h UTC la veille selon la saison.
+    Comparer à `maintenant().replace(hour=0…)` serait la borne du jour UTC (#1617).
+
+    `jour` : un `datetime` — UTC naïf comme en base, ou conscient — se lit au jour
+    qu'il était à Paris (`jour_civil`) ; une `date` est ce jour-là ; rien, c'est
+    aujourd'hui (`aujourd_hui`). Un jour de changement d'heure est traité par le
+    fuseau : minuit n'y est jamais ambigu, la bascule a lieu la nuit, à 2 h ou 3 h.
+    """
+    jour = aujourd_hui() if jour is None else jour_civil(jour)
+    minuit = datetime(jour.year, jour.month, jour.day, tzinfo=TZ_PARIS)
+    return minuit.astimezone(timezone.utc).replace(tzinfo=None)

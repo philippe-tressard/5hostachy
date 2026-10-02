@@ -16,45 +16,68 @@ npx playwright test --project=bureau e2e/squelette.spec.ts
 Le serveur de développement démarre tout seul (`webServer` dans
 `playwright.config.ts`) et est réutilisé s'il tourne déjà.
 
-## 🔴 Ce que ces tests ne couvrent PAS, et pourquoi
+## Ce que ces tests couvrent — et ce que l'API simulée ne prouve pas
 
-**Tout le site applicatif est derrière une connexion.** Sans session, seuls
-`/auth/*`, les mentions légales et la politique de confidentialité sont
-atteignables — c'est le périmètre actuel.
+**Deux familles, et la différence compte.**
 
-⚠️ **Le lien d'évitement « Aller au contenu » n'en fait donc pas partie** : il
-vit dans le squelette `(app)` et son ancre `#contenu` n'existe pas sur les écrans
-publics (voir `routes/+layout.svelte`). Ce qui est couvert ici est la moitié qui
+1. **Les écrans publics, pour de vrai** — `/auth/*`, les mentions légales, la
+   politique de confidentialité : le serveur de développement les rend sans
+   session, et le test lit ce qu'un visiteur lit (`squelette.spec.ts`).
+2. **Les écrans authentifiés, sur une API simulée.** Tout le site applicatif est
+   derrière une connexion, et un test qui chercherait l'écran sans compte serait
+   _sauté_ — un faux vert. On rend donc le VRAI écran, avec le VRAI navigateur et
+   le VRAI CSS, en interceptant `/api/*` : `simulerApi` (`e2e/aides.ts`) répond
+   `MEMBRE_CS` à `/api/auth/me`, la forme déclarée dans `REPONSES_PAR_DEFAUT` pour
+   les chemins dont la forme ne se devine pas, un objet vide pour une
+   configuration et une liste vide pour le reste ; un test qui veut autre chose
+   le déclare à l'appel. La plupart des specs de ce dossier sont de cette
+   famille — leur nombre se lit par `ls`, il ne s'écrit pas ici.
+
+⚠️ **Ce que l'API simulée ne prouve PAS** — et c'est ce qui borne ces tests :
+
+- **le serveur** : un droit, un filtre de lecture, une règle d'accès. Le compte
+  simulé est un membre du conseil syndical (`MEMBRE_CS`), qui voit tout : un
+  test qui le prend ne dit rien de ce qu'un résident ne doit PAS voir — c'est
+  l'affaire de `api/tests/` ;
+- **la forme réelle des réponses** : le simulateur rend celle qu'on lui a
+  déclarée. Si le serveur la change, le test reste vert. C'est pourquoi chaque
+  entrée de `REPONSES_PAR_DEFAUT` nomme le type du client qu'elle imite, et
+  pourquoi une réponse mal formée fait désormais échouer le test (exception de
+  page, voir `e2e/aides.ts`) au lieu de passer en silence (#1475) ;
+- **la connexion elle-même** : cookies de session, renouvellement, expiration
+  (`api/tests/` pour le serveur ; ici, seul le comportement de l'écran à la
+  réponse 401 est éprouvé) ;
+- **les données réelles** : listes longues, contenus riches, caractères
+  inattendus.
+
+Ce qui est couvert est donc **le comportement de l'interface**, pas celui de
+l'application de bout en bout. Un test de bout en bout — avec un compte de test
+dans une base de développement, ses identifiants **hors du dépôt** (`standards/03`
+§2 : un historique git conserve ce qu'on y a mis) et l'API lancée sur
+`localhost:8000` — reste une décision non prise, et rien dans ce dossier ne la
+suppose.
+
+⚠️ **Le lien d'évitement « Aller au contenu »** vit dans le squelette `(app)` :
+son ancre `#contenu` n'existe pas sur les écrans publics (voir
+`routes/+layout.svelte`). Ce que les écrans publics couvrent est la moitié qui
 avait réellement cassé — les bandeaux flottants qui volaient le premier Tab
-(#802), défaut visible sur n'importe quelle page.
+(#802).
 
-Couvrir les écrans applicatifs demande trois décisions, aucune prise :
-
-1. un **compte de test** dédié dans la base de développement — jamais un compte
-   réel, jamais un compte de production ;
-2. un endroit pour ses identifiants qui ne soit **pas le dépôt** (`standards/03`
-   §2 — un historique git conserve ce qu'on y a mis) : des variables
-   d'environnement, et un test qui se **saute explicitement** quand elles
-   manquent, plutôt qu'un échec laissant croire que l'écran est cassé ;
-3. l'**API lancée** sur `localhost:8000` — `vite dev` ne fait qu'y proxifier les
-   appels, il ne la démarre pas.
-
-### Un exemple concret de ce que ça coûte (07/09/2026)
+### Un exemple de ce que ça coûte (07/09/2026) — et de ce que l'API simulée change
 
 L'infobulle des boutons icône a été signalée à l'écran : elle s'affichait **sous**
 l'icône, là où le pointeur la masquait. Le correctif l'a ancrée au-dessus — puis
 l'arbitrage suivant, **de nouveau à l'écran**, l'a supprimée au profit de la bulle
 native du navigateur. Un test avait été écrit pour vérifier la position rendue,
-puis **retiré** : les 86 boutons `btn-icon` sont tous derrière la connexion. Le
-seul bouton icône d'un écran public (`ChampMotDePasse`, l'œil du champ) porte une
-autre classe.
+puis **retiré** : les boutons `btn-icon` étaient tous derrière la connexion, et
+il n'existait alors aucun moyen de rendre un écran authentifié. Depuis
+l'introduction de `simulerApi`, ce moyen existe.
 
 🔴 Ce qu'un test sans navigateur atteint : `npm run lint:infobulles` tient le nom
 accessible et l'absence de résidu `data-info`. **Ce qu'il n'atteint pas** : à quoi
 la bulle ressemble, et si elle se lit. Cette question-là a été tranchée deux fois
 en une journée par un coup d'œil humain, et c'est exactement le genre de
-vérification que ces tests existent pour automatiser — sans pouvoir encore
-l'atteindre.
+vérification que ces tests existent pour automatiser.
 
 ## En CI : le job `e2e-frontend` (depuis le 08/09/2026, #839)
 

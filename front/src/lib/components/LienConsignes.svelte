@@ -36,7 +36,13 @@
 </script>
 
 {#if forme === 'carte'}
-	<a href={ADRESSE} target="_blank" class="consignes-carte" class:mis-en-avant={misEnAvant}>
+	<a
+		href={ADRESSE}
+		target="_blank"
+		rel="noopener"
+		class="consignes-carte"
+		class:mis-en-avant={misEnAvant}
+	>
 		<span class="consignes-icone" aria-hidden="true">📄</span>
 		<span class="consignes-texte">
 			<strong class="consignes-titre">{LIBELLE}</strong>
@@ -48,7 +54,7 @@
 	</a>
 {:else}
 	<div class="form-actions">
-		<a href={ADRESSE} target="_blank" class="btn btn-outline consignes-bouton">
+		<a href={ADRESSE} target="_blank" rel="noopener" class="btn btn-outline consignes-bouton">
 			<span aria-hidden="true">📄</span>
 			{LIBELLE}
 		</a>

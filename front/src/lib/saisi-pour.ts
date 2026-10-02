@@ -106,40 +106,12 @@ export function champsSaisiPour(
 	};
 }
 
-import { comparerParNom } from '$lib/noms';
-
 /** Une personne proposable dans le sélecteur « pour un résident inscrit ». */
 export interface ResidentProposable {
 	id: number;
 	prenom: string;
 	nom: string;
 	email: string;
-}
-
-/**
- * Les résidents proposables — actifs, classés par nom de famille.
- *
- * ⚠️ **Ne lève jamais.** La section reste utilisable en « En mon nom » et pour
- * une personne extérieure : bloquer la saisie entière pour un défaut qui ne
- * concerne qu'un des trois modes coûterait plus qu'il ne protège.
- *
- * 🔴 Écrite ici parce que les trois formulaires en avaient besoin le même jour.
- * Recopiée, elle aurait divergé sur le tri — c'est précisément ce qui venait
- * d'arriver au classement des porteurs de badges.
- */
-export async function chargerResidents(
-	lister: () => Promise<unknown[]>,
-): Promise<ResidentProposable[]> {
-	try {
-		const tous = (await lister()) as (ResidentProposable & { actif?: boolean })[];
-		//  ⚠️ `comparerParNom` n'est PAS un paramètre : classer des personnes par
-		//  nom de famille est la règle du site (`$lib/noms`), pas une option de
-		//  l'appelant. La laisser choisir rouvrirait les cinq tris divergents que
-		//  la centralisation vient de fermer.
-		return tous.filter((u) => u.actif).sort(comparerParNom);
-	} catch {
-		return [];
-	}
 }
 
 /** Ce qu'un objet déjà enregistré sait de son propriétaire. */

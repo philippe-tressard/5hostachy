@@ -175,8 +175,10 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   test de concordance. La plupart des tables n'ont ni `actif` ni `archivee`, et
   c'est voulu : un booléen ajouté à côté ferait une seconde façon de disparaître.
 - Lire un objet ou rendre 404 : `utils/recuperer.ou_404(session, Modele, id,
-  "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`, que
-  #1047 résorbe.
+  "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`. Les
+  404 bruts qui restent sont un **plafond décroissant**, `PLAFOND_404_BRUTS` dans
+  `api/tests/test_recuperer_source_unique.py` — la valeur se lit là, et la carte
+  des plafonds est #1571 (#1047, qui le citait, est fermé).
 - La valeur d'une énumération (`categorie`, `statut`…) : `utils/valeurs.valeur(x)`,
   jamais `str(x)` — qui rend « CategorieTicket.etude_travaux » — ni un
   `getattr(x, "value", x)` recopié (il l'était neuf fois ; 🔒 `test_valeur_source_unique`).
@@ -194,8 +196,8 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 > relu à chaque session (#1046).
 
 - **Nommage : français, tables, routes et tags compris.** Les noms anglais
-  existants (9 tables, 46 routes) sont **figés** dans `api/tests/test_nommage_francais.py`,
-  qui refuse le suivant : ils se renomment **au fil de l'eau**, quand un lot touche
+  existants — tables et routes — sont **figés** dans `api/tests/test_nommage_francais.py`
+  (`TABLES_FIGEES`, `ROUTES_FIGEES` : le compte se lit là, pas ici), qui refuse le suivant : ils se renomment **au fil de l'eau**, quand un lot touche
   déjà la table ou la route — jamais en bloc (migration + client front) —, et on retire
   alors l'entrée, la liste ne fait que décroître. Un **tag** OpenAPI s'écrit en
   minuscules à tirets (`carnet-entretien`), un **préfixe** de routeur au pluriel (#1056).
@@ -421,12 +423,14 @@ importe les gestes du transport.
 ## Checklist avant commit
 
 ### Frontend
-- [ ] Pattern existant réutilisé (pas de variante ad hoc)
+- [ ] Pattern existant réutilisé (pas de variante ad hoc) — *non mesurable : aucun
+      garde-fou ne le tient, c'est la relecture qui le porte*
 - [ ] Méta toujours visible en mode collapsé — tenue par `EnteteCarte`, qui porte
       les tags sur la carte repliée (`npm run lint:entete-carte` exige qu'une
       carte passe par lui)
 - [ ] Corps déplié d'une carte : `class="carte-corps …"` — c'est ce qui le fait
-      entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. Un survol
+      entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. *Non mesurable
+      pour l'instant : aucun linter n'exige cette classe (#1579).* Un survol
       qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
       fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
 - [ ] Dernière ligne d'une carte d'affaire, d'actualité ou du fil : `PastillesAffaire`,
@@ -479,7 +483,8 @@ importe les gestes du transport.
       jamais `titre="… *"` (#1329, 27/09/2026). Les
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
-- [ ] Libellés et nommage en français
+- [ ] Libellés et nommage en français — *non mesurable : `lint:texte` (normalisation
+      Unicode) et le contrôle de casse de `lint:champs` ne jugent pas la langue (#1579)*
 - [ ] Couleur et taille de texte : `var(--color-…)`, `var(--fs-…)` (`socle.css`),
       jamais une valeur en dur — `npm run lint:charte-valeurs`, plafond qui ne
       fait que baisser (#1055). Arbitré sur maquette le 27/09/2026 : une taille
@@ -529,7 +534,10 @@ importe les gestes du transport.
 - [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
       24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
       exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur
-      une autre ligne : relancer `ruff check` après. Une comparaison SQLAlchemy
+      une autre ligne : rejouer le contrôle **tel que la CI le passe** —
+      `bash scripts/poste/rejouer-ci.sh lint-backend` —, jamais un `ruff check`
+      nu, qui juge autre chose que la CI (fixtures pytest et ré-exports de `core.py`
+      écartés exprès par `ci.yml`, #1603). Une comparaison SQLAlchemy
       (`Model.actif == True`) garde `# noqa: E712` — jamais `is True`, qui vide
       le filtre sans un mot
 
@@ -678,12 +686,17 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 > **point 17** du pré-check compare l'installé au dépôt. C18 ne compare que les
 > nœuds entre eux, donc pas la dérive commune.
 
+**Quand** chacun tourne — jour, heure, minutes — se lit dans
+`infra/points-entree/cron-root.crontab` (et `cron-ptressard.crontab`), jamais ici :
+les minutes y sont **décalées** exprès, et une cadence recopiée dans cette table
+écrivait `*/5` là où le dépôt écrit autre chose (#1562).
+
 | Cron root (identique sur les 2 nœuds) | Rôle |
 |---|---|
-| `0 2 * * *` `bascule.sh` | bascule active/standby, puis le nouveau standby pose sa **révision** de noyau et redémarre (`noyau-standby.sh`, #1395) — une nouvelle **série** reste manuelle, C30 la signale avec la commande |
-| `0 3 * * 0` `maintenance.sh` | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée ; sur les **deux** nœuds, images de base re-tirées (#1379) et rotation des logs |
-| `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS — et une ligne datée à **chaque** sonde, site OK compris : son battement, que **C31** mesure sur les deux nœuds (#1586). Il se taisait quand tout allait bien, donc rien ne distinguait ce calme d'un failover mort |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C31** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
+| `bascule.sh` (quotidien, de nuit) | bascule active/standby, puis le nouveau standby pose sa **révision** de noyau et redémarre (`noyau-standby.sh`, #1395) — une nouvelle **série** reste manuelle, C30 la signale avec la commande |
+| `maintenance.sh` (hebdomadaire) | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée ; sur les **deux** nœuds, images de base re-tirées (#1379) et rotation des logs |
+| `health-watch.sh` (toutes les quelques minutes) | failover automatique si le site est HS — et une ligne datée à **chaque** sonde, site OK compris : son battement, que **C31** mesure sur les deux nœuds (#1586). Il se taisait quand tout allait bien, donc rien ne distinguait ce calme d'un failover mort |
+| `check-reliability.sh` (quart d'heure) | contrôles de fiabilité **C1 à C31** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
 
 **Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
 `app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si
@@ -694,7 +707,7 @@ lit le code, le contrôle au démarrage lit le scheduler (#1047).
 
 ⚠️ « Identique sur les 2 nœuds » **est un invariant, pas un constat** : il était faux
 jusqu'au 06/08/2026, rpi2 portant en plus un `check-stack.sh` en échec permanent (récit et
-chiffres : `mep-precheck/HISTORIQUE.md`, à « check-stack »). Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` (`*/5`) est
+chiffres : `mep-precheck/HISTORIQUE.md`, à « check-stack »). Le vérifier fait partie du point 8 du pré-check. `auto-deploy.sh` est
 à part : c'est le seul cron **utilisateur** (`ptressard`), et c'est ce qui fait
 l'objet du point 11.
 
@@ -761,7 +774,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   ⚠️ `gh pr merge --delete-branch` supprime aussi la branche **locale** et bascule
   sur `main` : committer sans regarder `git branch --show-current` met le lot suivant
   sur `main`, où le push est refusé.
-- MEP : elle n'est **pas** la fusion. `auto-deploy.sh` (cron `*/5`) fait le `git pull`
+- MEP : elle n'est **pas** la fusion. `auto-deploy.sh` (cron utilisateur, toutes les quelques minutes) fait le `git pull`
   **puis** le build : entre les deux, les points 12 et 18 du pré-check échouent
   légitimement — le code est à jour, l'image ne l'est pas. Attendre la ligne
   `Déployé: <sha>` dans `/var/log/hostachy-deploy.log` **sur l'actif**, puis

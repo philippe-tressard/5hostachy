@@ -46,8 +46,6 @@
  * `./front` : rien de la racine n'entre dans les images, le partage d'un fichier
  * est impossible, seule la copie l'est.
  */
-import type { Readable } from 'svelte/store';
-
 /** Le défaut du site, en jours. Copie assumée de la valeur serveur. */
 export const DELAI_ARCHIVAGE_JOURS = 30;
 
@@ -71,7 +69,3 @@ export function delaiArchivageJours(config: Record<string, string> | null | unde
 export function delaiArchivageMs(config: Record<string, string> | null | undefined): number {
 	return delaiArchivageJours(config) * 86_400_000;
 }
-
-//  Réexport de commodité pour les écrans qui n'ont pas besoin du store : évite
-//  qu'ils réécrivent `30` en dur, ce qui est exactement le point de départ.
-export type ConfigLisible = Readable<Record<string, string>>;
