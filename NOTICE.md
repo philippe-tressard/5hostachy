@@ -77,3 +77,45 @@ conditions.
 Le logiciel est fourni **« tel quel »**, sans garantie explicite ou implicite.
 L'auteur ne peut être tenu responsable des dommages directs ou indirects liés à
 son utilisation.
+
+## 9. Composants tiers
+
+5Hostachy s'appuie sur des bibliothèques et des contenus tiers. **Ils restent
+sous leur propre licence** : la licence 5Hostachy ne s'applique pas à eux, et
+leurs mentions se conservent avec eux.
+
+L'inventaire complet — chaque dépendance de `front/`, `whatsapp-bridge/` et
+`api/` avec sa licence — est [`docs/licences-tierces.md`](docs/licences-tierces.md).
+Il est **généré** et vérifié par l'intégration continue, qui échoue sur toute
+licence ni admise ni déclarée ; la politique et les motifs des exceptions vivent
+dans `scripts/ci/licences_politique.py`.
+
+### Contenus repris dans le dépôt
+
+- **Icônes Lucide** (<https://lucide.dev>) — tracés recopiés dans
+  `front/src/lib/icones-svg.json`, sa copie `api/app/utils/icones-svg.json`, les
+  deux exemplaires du manuel utilisateur et `infra/cloudflare-worker.js`.
+  Licence ISC, `Copyright (c) 2026 Lucide Icons and Contributors` ; pour les
+  icônes dérivées de Feather, licence MIT, `Copyright (c) 2013-present Cole Bemis`.
+  Textes et mentions :
+  [`LICENSES/ISC.txt`](LICENSES/ISC.txt) et [`LICENSES/MIT.txt`](LICENSES/MIT.txt).
+- **Logo WhatsApp** (tracé de Simple Icons, <https://simpleicons.org>) — versé
+  au domaine public sous CC0-1.0 ([`LICENSES/CC0-1.0.txt`](LICENSES/CC0-1.0.txt)).
+  CC0 ne cède aucun droit de marque : le logo reste une marque de son titulaire.
+
+L'attribution de ces fichiers est déclarée dans `REUSE.toml`, et contrôlée par
+`scripts/ci/contenus_tiers.py`.
+
+### Composants sous licence non permissive
+
+- **`libsignal` (GPL-3.0)**, tiré par `baileys`, est utilisé dans le **service
+  de messagerie `whatsapp-bridge/`**. Ce service s'exécute dans un **conteneur
+  distinct** de l'API et de l'interface, avec lesquels il communique
+  **uniquement par HTTP**. Les binaires de `libvips` (LGPL-3.0-or-later),
+  embarqués par `sharp`, vivent dans le même conteneur.
+- Côté API : `certifi` (MPL-2.0) et `pyphen` (GPL 2.0+ / LGPL 2.1+ / MPL 1.1,
+  selon son propre fichier de licence), tous deux utilisés sans modification.
+
+> ⚠️ **La compatibilité de ces usages avec la licence du projet reste à valider
+> par l'auteur.** Ce fichier constate où ces composants sont employés et
+> comment ; il n'affirme rien de juridique.

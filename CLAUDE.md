@@ -558,6 +558,16 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   variables — sinon échec silencieux à l'envoi (cf. bug `'destinataire' is undefined`).
 - **`test_migrations.py`** — chaîne Alembic : head unique, base unique, révisions uniques
   (attrape un `down_revision` erroné qui bloquerait `alembic upgrade head` au démarrage).
+- **Licences tierces** (#1542, #1543) — `scripts/ci/licences_tierces.py` (job
+  `test-backend`) juge chaque dépendance de `front/`, `whatsapp-bridge/` et `api/`
+  contre une liste blanche. Une licence hors liste s'ajoute en **exception nommée**
+  avec son motif dans `scripts/ci/licences_politique.py` — jamais en élargissant la
+  liste ; une exception qui ne sert plus fait échouer. Un paquet qui entre ou
+  change de licence : relire, puis `--ecrire` régénère `docs/licences-tierces.md`,
+  jamais tenu à la main. Un fichier ou un tracé **repris** d'un projet tiers se
+  déclare dans `CONTENUS_TIERS` et dans `REUSE.toml` — `contenus_tiers.py` (job
+  `lint-backend`) le vérifie : `reuse lint` dit qu'une licence est déclarée, pas
+  qu'elle est vraie.
 - **Le code de test ne se recopie pas non plus** (#1495) : la liste des aides et
   de ce qu'elles remplacent se lit dans `MOTIFS` de
   🔒 `test_aides_de_tests_source_unique.py` — balayage de `app/`, base en mémoire

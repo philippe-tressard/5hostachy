@@ -167,6 +167,7 @@ Toute la configuration se fait via le fichier `.env` (voir [.env.example](.env.e
 | [docs/cloudflare-worker-maintenance.md](docs/cloudflare-worker-maintenance.md) | Page de maintenance Cloudflare |
 | [docs/icones-menu.md](docs/icones-menu.md) | Renvois : où se lisent les icônes du menu (`pages.ts`, `pages-roles.ts`) — plus un inventaire |
 | [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html) | **Manuel utilisateur** — ce que chaque écran contient et qui peut le voir |
+| [docs/licences-tierces.md](docs/licences-tierces.md) | Inventaire **généré** des licences tierces — dépendances, exceptions déclarées, fichiers repris (vérifié en CI) |
 
 ## Sécurité
 
@@ -200,3 +201,7 @@ requiert un accord préalable de l'auteur.
 ⚠️ Ce n'est **pas** une licence libre au sens de l'OSI, et elle n'est **pas**
 compatible AGPLv3 : la clause commerciale ajoute une restriction que l'AGPLv3 §7
 n'admet pas. Voir aussi [`NOTICE.md`](NOTICE.md).
+
+Les composants tiers gardent leur propre licence : [`NOTICE.md`](NOTICE.md) §9
+les nomme, dont `libsignal` (GPL-3.0) dans le service de messagerie — sa
+compatibilité avec la licence du projet reste à valider par l'auteur.
