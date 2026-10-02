@@ -1446,6 +1446,14 @@ jobs:
         working-directory: front
         run: npm run lint:editeur
 
+      - name: Un seul éditeur riche
+        # 🔴 `LegalEditor` recopiait l'amorçage de `RichEditor` (#1539) : 53
+        # lignes sur 104, et `lint:editeur` les COMPTAIT sans refuser le second.
+        # Un `new Editor(` ou un import `@tiptap/…` hors de `RichEditor` est
+        # refusé ; ce qui manque à un écran s'y ajoute en prop.
+        working-directory: front
+        run: npm run lint:editeur-unique
+
       - name: Classe relayée à un composant, stylée en :global() borné
         #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
         #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.

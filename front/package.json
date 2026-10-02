@@ -84,6 +84,7 @@
 		"lint:accordeon": "node --experimental-strip-types scripts/check-accordeon.mjs --selftest",
 		"lint:annuaire-rapprochement": "node scripts/check-annuaire-rapprochement.mjs --selftest",
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
+		"lint:editeur-unique": "node scripts/check-editeur-unique.mjs --selftest && node scripts/check-editeur-unique.mjs",
 		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
 		"lint:csp": "node scripts/check-csp-servie.mjs",
 		"lint:evitement": "node scripts/check-lien-evitement.mjs",
