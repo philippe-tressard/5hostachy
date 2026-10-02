@@ -228,6 +228,15 @@ jobs:
         # On garde un garde-fou « erreurs réelles » (syntaxe, noms invalides, runtime)
         # sans bloquer le CI sur des règles de style legacy.
 
+      - name: Clones Python (plafond décroissant)
+        # #1564 (02/10/2026) : aucune mesure de duplication Python n'existait —
+        # 29 clones, dont sept vraies duplications, comptés à la main par l'audit.
+        # `jscpd` est épinglé (le compte change d'une version à l'autre) ; le
+        # plafond échoue dans les DEUX sens, pour que la marge libérée par une
+        # factorisation ne serve pas à en écrire une autre. Ce qui reste est
+        # déclaré dans l'en-tête de `scripts/ci/clones_python.py`.
+        run: python scripts/ci/clones_python.py
+
   # ── Backend: tests préventifs (templates email + migrations) ─
   test-backend:
     name: Tests Python (pytest)
