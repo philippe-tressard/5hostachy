@@ -16,7 +16,8 @@
 #  ici, une fois, avec leur self-test — qui est leur contrat.
 #
 #  Ces fonctions sont PURES : aucun SSH, aucun sudo, aucune écriture — sauf
-#  `points_entree_verdicts_locaux`, isolée plus bas et signalée comme telle.
+#  `points_entree_verdicts_locaux`, isolée plus bas et signalée comme telle, et
+#  `scripts_a_mesurer` (C6), qui lit les fichiers du DÉPÔT et rien d'autre.
 #
 #  ── POURQUOI C22 EXISTE, ET POURQUOI IL EST EN WARN ─────────────────────────
 #
@@ -145,6 +146,89 @@ agreger_points_entree() {
   if   [ -n "$ecart" ];   then echo "ECART|${ecart%, }"
   elif [ -n "$inconnu" ]; then echo "INCONNU|${inconnu%, }"
   else echo "OK|"; fi
+}
+
+# ── C6 (#1546) — les scripts que lancent les points d'entrée sont exécutables ─
+#
+#  🔴 POURQUOI ICI. C6 mesurait une liste RECOPIÉE de sept relais à la racine du
+#  dépôt ; six ont été retirés le 16/08/2026, la liste n'a pas suivi, et
+#  `[ -f ] && [ ! -x ]` faux sur six noms rendait « ok » : faux vert sur les deux
+#  nœuds jusqu'à l'audit du 02/10/2026. La liste se DÉRIVE donc désormais des
+#  fichiers de ce répertoire-ci (`infra/points-entree/`), qui disent ce que les
+#  nœuds lancent — et un chemin attendu qui manque se dit, il ne se tait plus.
+
+#  Les chemins de scripts 5Hostachy cités par un texte (crontab, unité systemd),
+#  un par ligne. Lignes commentées et vides écartées. PURE (stdin → stdout).
+#  C'est la SEULE écriture pure du motif : `crontab_scripts` (C18) s'en sert, et
+#  `verdicts_selftest` la compare au jumeau inline de `lib-collecte.sh`.
+scripts_cites() {
+  grep -vE '^\s*(#|$)' | grep -oE '/opt/5hostachy/[A-Za-z0-9_./-]+\.sh'
+}
+
+#  Un relais (`boot-role-guard.sh` à la racine, que vise l'unité systemd) exécute
+#  sa cible par `exec` : la cible doit donc AUSSI porter son bit x, sinon le
+#  garde-fou anti-split-brain échoue au démarrage — le seul moment où il sert.
+#  Rend le chemin de la cible relatif au relais, ou rien. PURE (stdin → stdout).
+cible_relais() {
+  grep -oE '^exec "\$\(dirname "\$0"\)/[A-Za-z0-9_./-]+\.sh"' | head -1 \
+    | sed -E 's#^.*\)/##; s#"$##'
+}
+
+#  La liste à mesurer, dérivée du dépôt : chemins absolus séparés par des espaces.
+#  ⚠️ LIT des fichiers du dépôt (jamais le système) : ni SSH, ni sudo, ni écriture.
+#  Un répertoire introuvable rend une liste VIDE — jamais une liste par défaut —,
+#  que `verdict_bits_exec` traduit en INCONNU. Les chemins ne contiennent que
+#  `[A-Za-z0-9_./-]` (les deux motifs ci-dessus) : c'est ce qui permet de les
+#  injecter tels quels dans le code exécuté sur les nœuds.
+scripts_a_mesurer() {  # $1 = racine du dépôt
+  local racine="$1" base="$1/infra/points-entree" p cible
+  for p in $(cat "$base"/*.crontab "$base"/*.service 2>/dev/null | scripts_cites | sort -u); do
+    echo "$p"
+    cible=$(cible_relais < "$racine/${p#/opt/5hostachy/}" 2>/dev/null)
+    [ -n "$cible" ] && echo "$(dirname "$p")/$cible"
+  done | sort -u | tr '\n' ' ' | sed 's/ $//'
+}
+
+#  Le code de mesure exécuté sur CHAQUE nœud (local et pair), sous forme de
+#  chaîne : `lib-collecte.sh` l'ajoute à COLLECT. Il rapporte des FAITS BRUTS,
+#  `chemin:x|nx|absent`, derrière un marqueur `ok:` qui distingue « mesuré » de
+#  « pas pu mesurer » ; c'est `verdict_bits_exec` qui conclut. PURE (rend du texte).
+fragment_bits_exec() {  # $1 = chemins séparés par des espaces
+  printf '\n%s\n%s\n' \
+    "BITS=ok:; for _bx in $1; do if [ ! -e \"\$_bx\" ]; then _be=absent; elif [ -x \"\$_bx\" ]; then _be=x; else _be=nx; fi; BITS=\"\$BITS\$_bx:\$_be,\"; done" \
+    'echo "exec_bits=$BITS"'
+}
+
+#  La décision de C6. PURE. Rend `OK|n`, `FAIL|détail` ou `INCONNU|raison`.
+#  Un défaut AVÉRÉ (bit perdu) prime sur tout le reste, comme dans
+#  `agreger_points_entree`. Trois façons de ne RIEN savoir, toutes INCONNU :
+#  relevé absent (collecte muette, pair injoignable), liste vide (zéro fichier
+#  mesuré n'est pas zéro fichier fautif), et aucun chemin attendu présent — la
+#  racine elle-même manque, c'est le cas exact où l'ancienne boucle disait « ok ».
+verdict_bits_exec() {  # $1 = relevé « ok:chemin:état,… »
+  local releve="$1" e chemin n=0 presents=0 nx="" absent="" illisible=""
+  local -a entrees=()
+  case "$releve" in
+    ok:*) releve=${releve#ok:} ;;
+    *)    echo "INCONNU|relevé absent"; return ;;
+  esac
+  IFS=, read -r -a entrees <<< "$releve"
+  for e in ${entrees[@]+"${entrees[@]}"}; do
+    [ -n "$e" ] || continue
+    n=$((n+1)); chemin=${e%:*}; chemin=${chemin#/opt/5hostachy/}
+    case "${e##*:}" in
+      x)      presents=$((presents+1)) ;;
+      nx)     presents=$((presents+1)); nx+=" $chemin" ;;
+      absent) absent+=" $chemin" ;;
+      *)      illisible+=" $chemin" ;;
+    esac
+  done
+  if   [ "$n" -eq 0 ]; then echo "INCONNU|aucun script mesuré"
+  elif [ -n "$nx" ];   then echo "FAIL|sans bit x :${nx}${absent:+ ; absent :$absent}"
+  elif [ "$presents" -eq 0 ] && [ -z "$illisible" ]; then echo "INCONNU|aucun script attendu présent"
+  elif [ -n "$absent" ];    then echo "FAIL|absent :$absent"
+  elif [ -n "$illisible" ]; then echo "INCONNU|état illisible :$illisible"
+  else echo "OK|$n"; fi
 }
 
 # ── Self-test — le contrat des trois fonctions ───────────────────────────────
