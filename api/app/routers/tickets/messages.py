@@ -8,6 +8,7 @@ from app.utils import horloge
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import est_moderateur, get_current_user, lit_les_notes_internes
 from app.database import get_session
 from app.models.core import (
@@ -25,7 +26,6 @@ from .commun import config_site, contexte_site
 from .courriels import envoyer_email_externe
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.noms import contexte_personne
-from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner
 
 router = APIRouter()
@@ -37,9 +37,7 @@ def get_messages(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
-    if not ticket_visible(ticket, user):
-        raise HTTPException(403, "Accès refusé")
+    exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     stmt = select(MessageTicket).where(MessageTicket.ticket_id == ticket_id)
     # Messages internes réservés CS/admin
     if not lit_les_notes_internes(user):
@@ -104,12 +102,10 @@ def add_message(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
     #  🔴 La même garde que le `GET` ci-dessus : sans elle, n'importe quel compte
     #  écrivait sur une affaire qu'il ne peut pas lire — une affaire réservée au
     #  conseil comprise — et alertait le CS en son nom (#1164, 23/09/2026).
-    if not ticket_visible(ticket, user):
-        raise HTTPException(403, "Accès refusé")
+    ticket = exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     est_cs = est_moderateur(user)
     if body.interne and not est_cs:
         raise HTTPException(403, "Messages internes réservés au CS")

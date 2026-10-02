@@ -1,5 +1,12 @@
 """Le vocabulaire visuel des courriels — chaque notion écrite UNE fois (#959).
 
+## Le cadre commun à tous les fichiers du paquet
+
+Le gabarit commun (`email._wrap_email`) enveloppe chaque contenu : pas de `<html>`
+ni de `<body>` dans un modèle, seulement le corps riche. La mise en forme — encarts,
+cadre de commentaire, boutons, titres — vient d'ici, jamais d'un `<table>` réécrit
+dans `tickets.py` ou `vie_collective.py` : ajouter un paramètre ici.
+
 ## Ce que ce module remplace
 
 Un relevé mécanique du 15/09/2026 a trouvé **17 lignes de gabarit écrites à

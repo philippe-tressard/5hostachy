@@ -47,7 +47,7 @@ from app.utils.import_xlsx import etage_de_lot, type_de_lot
 from app.utils.resolution_lots import rapprocher_imports, resoudre_imports
 from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
-from app.utils.fichiers import verifier_fichier_recu
+from app.utils.fichiers import lire_tableur_recu
 
 router = APIRouter()
 
@@ -73,6 +73,25 @@ def _type_lien_from_str(s: str) -> TypeLien:
         return TypeLien.propriétaire
 
 
+def _lier_utilisateurs(session: Session, entrees: list[dict], lot_id: int) -> None:
+    """Crée le `UserLot` de chaque utilisateur lié qui n'en a pas encore sur ce lot.
+
+    Écrit deux fois (résolution d'une ligne, puis resynchronisation d'une ligne
+    déjà résolue) jusqu'au 02/10/2026 (#1564). Une entrée sans `user_id` est
+    ignorée, un lien déjà présent n'est jamais dupliqué ni modifié.
+    """
+    for entree in entrees:
+        uid = entree.get("user_id")
+        type_lien = _type_lien_from_str(entree.get("type_lien", "propriétaire"))
+        if not uid:
+            continue
+        existant = session.exec(
+            select(UserLot).where(UserLot.user_id == uid, UserLot.lot_id == lot_id)
+        ).first()
+        if not existant:
+            session.add(UserLot(user_id=uid, lot_id=lot_id, type_lien=type_lien, actif=True))
+
+
 #  Import staging  endpoints
 
 
@@ -86,19 +105,7 @@ async def upload_import_lots(
     """Upload un Excel, auto-matche et résout automatiquement les copropriétaires."""
     from app.utils.import_lots import importer_depuis_bytes
 
-    contenu = await file.read()
-    #  🔴 Les trois règles AVANT de lire le classeur (#1026). Cet import
-    #  n'avait AUCUN contrôle : ni type, ni taille — `await file.read()` lisait
-    #  le corps entier en mémoire, puis le passait à l'analyseur.
-    #
-    #  Le plafond de la famille « tableur » protège donc la mémoire du Raspberry
-    #  Pi autant qu'il contrôle l'entrée : un fichier d'import est une LISTE, pas
-    #  un scan, et rien ne borne le corps d'une requête en amont.
-    #
-    #  ⚠️ Rien n'est écrit sur disque ici, et c'est voulu : le classeur est
-    #  analysé puis jeté. On appelle donc `verifier_fichier_recu`, pas
-    #  `enregistrer_fichier_recu`.
-    verifier_fichier_recu(contenu, file.filename, file.content_type, "tableur")
+    contenu = await lire_tableur_recu(file)
     stats_import = importer_depuis_bytes(contenu, session=session, remplacer=remplacer)
     #  Rapprocher PUIS résoudre — deux étapes, une écriture chacune (#829).
     #  Ce bloc était recopié dans `auto_match_imports` juste en dessous, et les
@@ -250,17 +257,7 @@ def patch_import(
             ).first()
             if ul:
                 session.delete(ul)
-        # Créer les nouveaux UserLot
-        for entry in new_entries:
-            uid = entry.get("user_id")
-            tl = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
-            if not uid:
-                continue
-            existing_ul = session.exec(
-                select(UserLot).where(UserLot.user_id == uid, UserLot.lot_id == imp.lot_id)
-            ).first()
-            if not existing_ul:
-                session.add(UserLot(user_id=uid, lot_id=imp.lot_id, type_lien=tl, actif=True))
+        _lier_utilisateurs(session, new_entries, imp.lot_id)
     session.add(imp)
     session.commit()
     session.refresh(imp)
@@ -305,26 +302,7 @@ def resoudre_import(
     imp.lot_id = lot.id
 
     # 2. Créer les UserLot pour chaque utilisateur lié
-    for entry in _parse_users(imp.utilisateurs_json):
-        uid = entry.get("user_id")
-        tl = _type_lien_from_str(entry.get("type_lien", "propriétaire"))
-        if not uid:
-            continue
-        existing_ul = session.exec(
-            select(UserLot).where(
-                UserLot.user_id == uid,
-                UserLot.lot_id == lot.id,
-            )
-        ).first()
-        if not existing_ul:
-            session.add(
-                UserLot(
-                    user_id=uid,
-                    lot_id=lot.id,
-                    type_lien=tl,
-                    actif=True,
-                )
-            )
+    _lier_utilisateurs(session, _parse_users(imp.utilisateurs_json), lot.id)
     session.flush()
 
     imp.statut = StatutLotImport.resolu

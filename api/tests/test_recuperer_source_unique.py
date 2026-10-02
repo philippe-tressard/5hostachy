@@ -56,7 +56,7 @@ SOURCE = "utils/recuperer.py"
 #:
 #: 🔴 Ce nombre ne monte JAMAIS. Il descend quand une de ces écritures devient
 #: convertible ; l'augmenter, c'est rouvrir la duplication que `ou_404` a fermée.
-PLAFOND_404_BRUTS = 30
+PLAFOND_404_BRUTS = 27
 
 
 def _404_bruts() -> list[str]:

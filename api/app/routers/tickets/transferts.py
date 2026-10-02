@@ -18,7 +18,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.auth.appartenance import exiger_auteur_du_versement, peut_defaire_le_versement
+from app.auth.appartenance import (
+    exiger_auteur_du_versement,
+    exiger_objet_autorise,
+    peut_defaire_le_versement,
+)
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import Ticket, Utilisateur
@@ -67,8 +71,7 @@ def lister_transferts(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    if not ticket_visible(ou_404(session, Ticket, ticket_id, "Ticket"), user):
-        raise HTTPException(403, "Accès refusé")
+    exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     rendus = []
     for v in versements.versements_de(session, ticket_id):
         #  La liste et le geste posent la même question (#1551).
@@ -96,8 +99,7 @@ def annuler_transfert(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    if not ticket_visible(ou_404(session, Ticket, ticket_id, "Ticket"), user):
-        raise HTTPException(403, "Accès refusé")
+    exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     v = exiger_auteur_du_versement(session, ticket_id, transfert_id, user, deplacer=False)
     ticket = versements.annuler(session, v)
     session.commit()
@@ -112,8 +114,7 @@ def deplacer_transfert(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    if not ticket_visible(ou_404(session, Ticket, ticket_id, "Ticket"), user):
-        raise HTTPException(403, "Accès refusé")
+    exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     v = exiger_auteur_du_versement(session, ticket_id, transfert_id, user, deplacer=True)
     if body.ticket_id is None:
         ticket = versements.detacher(session, v, user)

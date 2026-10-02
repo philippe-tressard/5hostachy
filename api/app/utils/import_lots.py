@@ -39,8 +39,7 @@ from sqlmodel import Session, select
 #  colonnes. `normaliser` est ré-exporté : `acces.py` et `auto_match_service.py`
 #  l'importent depuis ce module.
 from app.utils.import_xlsx import (  # noqa: F401  (ré-export de `normaliser`)
-    importer_bytes,
-    importer_fichier,
+    importeurs,
     normaliser,
     purger_staging,
 )
@@ -102,23 +101,6 @@ _PURGES_PAR_REMPLACER = (
     StatutLotImport.utilisateur_lie,
     StatutLotImport.lot_lie,
 )
-
-
-def importer_depuis_bytes(
-    contenu: bytes,
-    session: Session,
-    remplacer: bool = False,
-) -> dict:
-    """Import depuis des octets en mémoire (téléversement HTTP)."""
-    return importer_bytes(contenu, session, remplacer, _traiter_rows)
-
-
-def importer_depuis_fichier(chemin: str, remplacer: bool = False) -> dict:
-    """Importe les lots depuis un xlsx (script en ligne de commande).
-
-    Rend un dict aux clés ``importes``, ``ignores``, ``doublons``, ``erreurs``.
-    """
-    return importer_fichier(chemin, remplacer, _traiter_rows)
 
 
 def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
@@ -212,3 +194,7 @@ def _traiter_rows(rows: list, session: Session, remplacer: bool) -> dict:
         stats["importes"] += 1
 
     return stats
+
+
+#  Les deux points d'entrée d'un import — le mécanisme est dans `import_xlsx`.
+importer_depuis_bytes, importer_depuis_fichier = importeurs(_traiter_rows)

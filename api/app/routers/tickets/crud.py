@@ -20,6 +20,7 @@ from app.utils.perimetres import perimetre_cible_json
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
 
+from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import (
     exiger_non_externe,
     get_current_user,
@@ -299,9 +300,7 @@ def get_ticket(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    ticket = ou_404(session, Ticket, ticket_id, "Ticket")
-    if not ticket_visible(ticket, user):
-        raise HTTPException(403, "Accès refusé")
+    ticket = exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     return ticket_read(ticket, session, user)
 
 
