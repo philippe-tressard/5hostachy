@@ -240,7 +240,7 @@ contrôles rendent WARN par choix assumé — C16 (cache de build), C17 (mainten
 retard), C19 (journal ⇆ base), C20 (sudo), C22 (points d’entrée), et depuis le
 01/09/2026 **C1** dans ses deux cas non concluants et **C24** (surface sudo ⇆ dépôt)
 — au motif qu’un FAIL
-à `*/15` enverrait un mail par heure. Le raisonnement était juste sur la **fréquence**
+à un passage par quart d'heure enverrait un mail par heure. Le raisonnement était juste sur la **fréquence**
 et faux sur la **conclusion** : on en a déduit « pas de mail » là où il fallait « pas
 ce mail-là ». Ces cinq contrôles n’avaient donc **aucun destinataire**.
 
@@ -441,7 +441,7 @@ quatrième copie.
 
 `health-watch.sh` ne disait **rien** quand le site répondait : le 02/10/2026, la
 dernière ligne de son journal datait de 34 h sur les deux nœuds, pour un cron
-`*/5`. Rien ne distinguait ce calme d'un script mort — cron perdu, bit x, module
+qui tourne toutes les quelques minutes (horaire : `infra/points-entree/`). Rien ne distinguait ce calme d'un script mort — cron perdu, bit x, module
 absent avant la sonde, verrou bloqué —, donc d'un failover automatique
 inexistant, et aucun contrôle ne mesurait son passage.
 
@@ -560,8 +560,9 @@ fois.
 
 🔴 **Ne pas les recopier ici.** La table qui vivait à cet endroit citait **trois
 scripts sur quatre** — `check-reliability.sh`, celui qui décide d'alerter, n'y
-figurait pas — et donnait `*/5` là où l'installé écrit `2,7,12,…` (minutes décalées
-pour ne pas empiler les deux sondes). Une table recopiée se périme, et celle-ci
+figurait pas — et donnait une cadence « toutes les 5 minutes » là où l'installé écrit des minutes
+décalées (pour ne pas empiler les deux sondes) — l'horaire ne s'écrit donc plus
+que dans le fichier versionné (#1562). Une table recopiée se périme, et celle-ci
 décrivait un parc qui n'existait plus (#1051).
 
 **La source est versionnée** : `infra/points-entree/cron-root.crontab` (root) et
@@ -572,7 +573,7 @@ pré-check compare l'installé au dépôt avant chaque livraison.
 
 ## Le standby s'aligne tout seul (#448 — 19/08/2026)
 
-`auto-deploy.sh` (cron **utilisateur** `ptressard`, `*/5`) tourne sur les **deux**
+`auto-deploy.sh` (cron **utilisateur** `ptressard`, horaire dans `infra/points-entree/cron-ptressard.crontab`) tourne sur les **deux**
 nœuds. Il sortait jusqu'ici avant le `git fetch` sur le standby : son code et ses
 images restaient figés au jour où il a cessé d'être actif.
 
