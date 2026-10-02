@@ -22,6 +22,7 @@ from typing import Any
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
+from app.utils.journal_securite import journaliser_securite
 
 router = APIRouter()
 
@@ -132,6 +133,7 @@ def traiter_compte(
 
     # Auto-match sur les 3 systèmes d'import dès qu'un compte est validé
     auto_match_result: dict[str, Any] = {}
+    mandant_auto_id: int | None = None  # délégation posée d'office (aidant)
     if body.action == "valider":
         from app.utils.auto_match_service import (
             auto_match_pour_utilisateur,
@@ -219,9 +221,25 @@ def traiter_compte(
                         )
                     )
                     aide_result["delegation"] = True
+                    mandant_auto_id = aide.id
             auto_match_result["aide_match"] = aide_result
 
     session.commit()
+    #  Le geste qui OUVRE l'accès, et le conseil syndical le fait (#1548). Le
+    #  motif d'un refus reste dehors : c'est un texte libre.
+    journaliser_securite(
+        "compte_valide" if body.action == "valider" else "compte_refuse",
+        acteur_id=admin.id,
+        cible_id=user.id,
+    )
+    if mandant_auto_id is not None:
+        #  Posée d'office ET active : l'aidant lit dès maintenant au nom de l'aidé.
+        journaliser_securite(
+            "delegation_creee",
+            acteur_id=admin.id,
+            cible_id=mandant_auto_id,
+            detail=f"aidant={user.id} automatique",
+        )
     session.refresh(user)
     return CompteTraiteResult(user=UserRead.model_validate(user), auto_match=auto_match_result)
 

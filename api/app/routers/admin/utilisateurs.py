@@ -230,6 +230,7 @@ def modifier_utilisateur(
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     if body.etage is not None and etage_hors_bornes(body.etage):
         raise HTTPException(400, ETAGE_HORS_BORNES)
+    bascule_actif = body.actif is not None and body.actif != user.actif
     for field, val in body.model_dump(exclude_unset=True).items():
         setattr(user, field, val)
     #  Basculer `actif` — dans un sens comme dans l'autre — EST une décision de
@@ -240,6 +241,14 @@ def modifier_utilisateur(
         marquer_decide(user)
     session.add(user)
     session.commit()
+    #  Seulement si l'état CHANGE (#1548) : renvoyer le même état n'ouvre ni ne
+    #  ferme rien. Le changement d'adresse est journalisé par son propre lot.
+    if bascule_actif:
+        journaliser_securite(
+            "compte_reactive" if body.actif else "compte_desactive",
+            acteur_id=admin.id,
+            cible_id=user.id,
+        )
     session.refresh(user)
     return UserRead.from_orm_with_roles(user)
 
@@ -378,6 +387,9 @@ def supprimer_utilisateur(
     session.flush()
     purger(session, "utilisateur", user_id)
     session.commit()
+    #  Après l'effacement, plus rien en base ne dit qui l'a fait : cette ligne
+    #  est la seule trace qui reste (#1548).
+    journaliser_securite("compte_supprime", acteur_id=admin.id, cible_id=user_id)
 
 
 #  🔴 `POST /utilisateurs/{user_id}/changer-role` A ÉTÉ SUPPRIMÉ le 06/09/2026
