@@ -102,3 +102,82 @@ def test_le_module_central_porte_bien_des_regles():
         f"COMPARE des règles d'appartenance ; avec une seule, il n'y a rien à comparer "
         f"et le lieu a perdu sa raison d'être."
     )
+
+
+#  ── Une appartenance qui FILTRE au lieu de lever (#1551) ──────────────────────
+#
+#  Le test du haut ne voit qu'une comparaison qui gouverne une LEVÉE. La liste des
+#  transferts d'une affaire filtrait par `continue` sur la règle même de
+#  `exiger_auteur_du_versement` (`v.transfere_par_id != user.id`) : invisible, et
+#  libre de diverger le jour où la règle apprend quelque chose — la liste
+#  proposerait alors un geste refusé, ou tairait un geste permis.
+#
+#  On ne cherche pas « toute comparaison à user.id » : la plupart excluent
+#  l'auteur d'une notification (« ne pas se prévenir soi-même »), ce qui n'est
+#  pas une appartenance. On cherche les champs que le module central compare
+#  LUI-MÊME à un utilisateur — lus dans `auth/appartenance.py`, jamais recopiés
+#  ici : une règle neuve y étend aussitôt ce contrôle.
+#
+#  ⚠️ Hors portée, délibérément : la colonne d'une CLASSE dans un `select()`
+#  (`LocationBail.bailleur_id == user.id`). C'est la liste « des miens », une
+#  autre question que « puis-je agir dessus » — le bail admet le conseil
+#  syndical, « mes baux » non. Même arbitrage que `test_regle_acces_source_unique`.
+
+
+def _comparaisons_a_un_utilisateur(arbre: ast.AST):
+    """(champ, ligne) pour chaque `objet.champ ==/!= x.id`, `objet` une instance."""
+    for n in ast.walk(arbre):
+        if not isinstance(n, ast.Compare) or len(n.ops) != 1:
+            continue
+        if not isinstance(n.ops[0], (ast.Eq, ast.NotEq)):
+            continue
+        for a, b in ((n.left, n.comparators[0]), (n.comparators[0], n.left)):
+            if not (isinstance(b, ast.Attribute) and b.attr == "id"):
+                continue
+            if (
+                isinstance(a, ast.Attribute)
+                and isinstance(a.value, ast.Name)
+                and not a.value.id[:1].isupper()  # une instance, pas une colonne de classe
+                and a.attr != "id"
+            ):
+                yield a.attr, n.lineno
+
+
+def _champs_d_appartenance() -> set[str]:
+    """Les champs que le module central compare à un utilisateur."""
+    arbre = ast.parse((RACINE / SOURCE).read_text(encoding="utf-8"))
+    return {champ for champ, _ in _comparaisons_a_un_utilisateur(arbre)}
+
+
+def test_les_champs_d_appartenance_se_lisent_dans_le_module_central():
+    """Cas zéro : un relevé vide rendrait le test suivant vert sur rien."""
+    champs = _champs_d_appartenance()
+    assert {"transfere_par_id", "bailleur_id"} <= champs, (
+        f"le module central ne compare plus que {sorted(champs)} à un utilisateur : "
+        "le relevé a perdu sa portée, ou les règles ont changé de forme"
+    )
+    copie = "for v in vs:\n    if v.transfere_par_id != user.id:\n        continue\n"
+    assert list(_comparaisons_a_un_utilisateur(ast.parse(copie))), (
+        "la forme « filtre » n'est plus reconnue"
+    )
+
+
+def test_aucune_appartenance_ne_se_recompare_hors_du_module_central():
+    """🔴 Le défaut de #1551 : le filtre des transferts recopiait la règle du geste."""
+    champs = _champs_d_appartenance()
+    fautes = []
+    for module in modules_app():
+        if module.rel.startswith("auth/"):
+            continue
+        if not any(c in module.source for c in champs):
+            continue
+        for champ, ligne in _comparaisons_a_un_utilisateur(module.arbre):
+            if champ in champs:
+                fautes.append(f"  app/{module.rel}:{ligne} — `{champ}`")
+    assert not fautes, (
+        "Une règle d'appartenance du module central est recomparée ailleurs :\n"
+        + "\n".join(fautes)
+        + f"\n\nAppeler le prédicat de `app/{SOURCE}` — celui que le geste appelle "
+        "pour refuser. Une liste qui filtre sur sa propre copie propose ce que le "
+        "geste refusera, ou tait ce qu'il permet."
+    )

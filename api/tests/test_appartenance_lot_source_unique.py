@@ -34,6 +34,11 @@ quelqu'un s'en sert. C'est le même raisonnement que
    garantirait seulement que tout le monde se trompe au même endroit.
 2. Aucune fonction qui **décide** — qui lève une `HTTPException` — ne lit
    `UserLot` pour son propre compte, hors des exceptions ci-dessous.
+   **Et** aucune fonction, où qu'elle vive, ne juge un élément de
+   `….user_lots` sur `actif` hors de la source (#1551) : la lecture d'un
+   document ciblé sur un lot ou un bâtiment le réécrivait dans
+   `utils/visibility/documents.py`, où rien ne lève — une visibilité rend
+   `False` —, et la conjonction « lit `UserLot` ET lève » ne la voyait pas.
 
 ⚠️ Le contrôle ne cherche **pas** tous les `select(UserLot)` du projet : il y en
 a dix-sept, et la plupart listent ou réparent des liens sans rien autoriser
@@ -170,6 +175,98 @@ def test_aucune_decision_d_acces_ne_relit_UserLot_elle_meme():
         f"La question s'écrit dans `{fichier_source}::{nom_source}`, qui exige le "
         "lien ACTIF. Une seconde écriture ne diverge pas le premier jour — elle "
         "diverge le jour où l'une des deux apprend quelque chose."
+    )
+
+
+#  ── Le lien actif relu sur la relation `user_lots` (#1551) ───────────────────
+#
+#  Les tests ci-dessus reconnaissent une décision à ce qu'elle LÈVE. Une règle de
+#  visibilité ne lève pas : elle rend `False`. `document_visible` relisait donc
+#  `ul.actif` deux fois, à côté de la source, sans que rien ne le voie.
+#
+#  Le motif est lu sur l'AST — un motif ligne à ligne se fait couper par
+#  `ruff format` (#1536) — et vaut pour les deux formes d'un parcours : la
+#  compréhension (`{… for ul in user.user_lots if ul.actif}`, `any(… ul.actif …)`)
+#  et la boucle (`for ul in user.user_lots: if ul.actif:`). Ce qu'il ne voit pas :
+#  la relation parcourue sous un autre nom (`liens = user.user_lots`, puis
+#  `liens`), ou `filter(lambda …)` ; aucune n'existe dans le dépôt.
+
+
+def _juge_sur_actif(noeud: ast.AST, variable: str) -> bool:
+    return any(
+        isinstance(n, ast.Attribute)
+        and n.attr == "actif"
+        and isinstance(n.value, ast.Name)
+        and n.value.id == variable
+        for n in ast.walk(noeud)
+    )
+
+
+def _parcourt_user_lots(iterable: ast.AST, cible: ast.AST) -> str | None:
+    if isinstance(iterable, ast.Attribute) and iterable.attr == "user_lots":
+        if isinstance(cible, ast.Name):
+            return cible.id
+    return None
+
+
+def _relectures_du_lien_actif(arbre: ast.AST) -> list[int]:
+    """Les lignes où un élément de `….user_lots` est jugé sur `actif`."""
+    lignes = []
+    for noeud in ast.walk(arbre):
+        if isinstance(noeud, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
+            for gen in noeud.generators:
+                variable = _parcourt_user_lots(gen.iter, gen.target)
+                if variable and _juge_sur_actif(noeud, variable):
+                    lignes.append(noeud.lineno)
+        elif isinstance(noeud, (ast.For, ast.AsyncFor)):
+            variable = _parcourt_user_lots(noeud.iter, noeud.target)
+            if variable and any(_juge_sur_actif(b, variable) for b in noeud.body):
+                lignes.append(noeud.lineno)
+    return lignes
+
+
+def _relectures_hors_de_la_source():
+    """(fichier, fonction englobante, ligne) — la source elle-même comprise."""
+    for module in modules_app():
+        if "user_lots" not in module.source:
+            continue
+        for fonction in ast.walk(module.arbre):
+            if not isinstance(fonction, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for ligne in _relectures_du_lien_actif(fonction):
+                yield module.rel, fonction.name, ligne
+
+
+def test_le_detecteur_du_lien_actif_voit_sa_source_et_les_deux_formes():
+    """Cas zéro : un détecteur qui ne reconnaît plus rien serait vert sur tout."""
+    fichier, fonction = SOURCE
+    vues = {(f, n) for f, n, _ in _relectures_hors_de_la_source()}
+    assert (fichier, fonction) in vues, (
+        f"le détecteur ne reconnaît plus la lecture de `actif` dans `{fichier}::"
+        f"{fonction}` : soit la source a changé de forme, soit le détecteur est "
+        "devenu aveugle — et le test suivant ne prouverait plus rien"
+    )
+    boucle = "for ul in user.user_lots:\n    if ul.actif:\n        pass\n"
+    assert _relectures_du_lien_actif(ast.parse(boucle)), "la forme « boucle » n'est plus vue"
+    sans_actif = "{ul.lot_id for ul in user.user_lots}"
+    assert not _relectures_du_lien_actif(ast.parse(sans_actif)), (
+        "un parcours qui ne juge pas `actif` n'est pas une copie de la règle"
+    )
+
+
+def test_le_lien_actif_ne_se_relit_que_dans_sa_source():
+    """🔴 Le défaut de #1551 : `document_visible` jugeait `ul.actif` lui-même."""
+    fautes = [
+        f"  app/{f}:{ligne} ({n})"
+        for f, n, ligne in _relectures_hors_de_la_source()
+        if (f, n) != SOURCE
+    ]
+    assert not fautes, (
+        "Ces fonctions jugent un rattachement sur `actif` pour leur propre "
+        "compte :\n" + "\n".join(sorted(set(fautes))) + "\n\n"
+        f"Appeler `{SOURCE[0]}::{SOURCE[1]}` : le jour où « rattaché » apprend "
+        "quelque chose (la nature du lien, une date de fin), une copie ne "
+        "l'apprendra pas — et une visibilité trop large ne fait aucun bruit."
     )
 
 
