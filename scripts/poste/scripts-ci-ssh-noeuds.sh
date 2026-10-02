@@ -29,6 +29,9 @@
 # =============================================================================
 set -uo pipefail
 MODULE=scripts/lib/lib-ssh-noeuds.sh
+#  Ce fichier-ci porte, dans son auto-test, les lignes qu'il refuse : seule
+#  exception, et elle est déclarée.
+CE_FICHIER=scripts/poste/scripts-ci-ssh-noeuds.sh
 
 #  Lit des lignes « chemin:numéro:contenu » (la sortie de `git grep -n`) et rend
 #  celles qui enfreignent les règles 1 et 2. Fonction PURE : l'auto-test
@@ -37,6 +40,7 @@ ecarts_ssh() {
   local chemin num contenu
   while IFS=: read -r chemin num contenu; do
     case "$chemin" in
+      "$CE_FICHIER") continue ;;
       *.md) ;;
       *) [[ "$contenu" =~ ^[[:space:]]*# ]] && continue ;;
     esac
@@ -72,6 +76,9 @@ if [ "${1:-}" = "--selftest" ]; then
   t "une procédure nomme la clé"       'docs/r.md:9:sudo ssh-keygen -f /root/.ssh/id_ed25519_bascule' ""
   t "une sixième copie de la commande" 'scripts/x.sh:3:ssh -i /root/.ssh/id_ed25519_bascule h' "  scripts/x.sh:3$E2"
   t "aucune ligne → aucun écart"       ''                                             ""
+  #  Vécu à la première exécution sur l'arbre committé : le contrôle se
+  #  refusait lui-même, sur les lignes de son propre auto-test.
+  t "le contrôle et son auto-test"     "$CE_FICHIER:9:ssh -i /root/.ssh/id_ed25519_bascule -o StrictHostKeyChecking=no" ""
   exit $st
 fi
 
