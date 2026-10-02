@@ -277,6 +277,21 @@ sous le nom `peut_commander` : un nom qui décrivait **un geste** (fixer les cha
 commandement d'un ticket) n'est appelé que par ce geste, et les vingt-cinq autres
 points d'usage n'ont jamais vu qu'ils posaient la même question (#1028).
 
+🔴 **Une liste qui FILTRE appelle le prédicat du geste qui REFUSE** — jamais sa
+copie. Une règle qui rend `False` (visibilité) ou fait `continue` (une liste) ne
+lève rien, et les contrôles qui reconnaissaient une règle à sa **levée** ou à son
+**nom** ne la voyaient pas : la liste des transferts recopiait
+`exiger_auteur_du_versement` (→ `peut_defaire_le_versement`), celle des
+catégories de documents le profil d'accès de `document_visible`
+(→ `visibility.profil_admet`), et `document_visible` jugeait `ul.actif` à côté
+d'`est_rattache_au_lot` (#1551). Les trois contrôles lisent désormais le
+**contenu** sur l'AST : `roles_autorises` lu hors de `profil_admet`
+(`test_autorisation.py`), un élément de `user_lots` jugé sur `actif` hors
+d'`est_rattache_au_lot` (`test_appartenance_lot_source_unique.py`), un champ que
+`auth/appartenance.py` compare à un utilisateur recomparé ailleurs
+(`test_appartenance_source_unique.py` — les champs sont **lus** dans le module,
+une règle neuve étend le contrôle d'elle-même).
+
 ### Documents imprimables (PDF)
 - Thème commun : `app/utils/pdf_theme.py` — logo, palette de la charte, data-URI (image/QR), `html_to_pdf()`.
   **Ne jamais** redéfinir une palette, un logo ou un moteur PDF ailleurs.
