@@ -527,6 +527,9 @@ jobs:
           bash scripts/lib/lib-volumes.sh           --selftest
           bash scripts/exploitation/boot-role-guard.sh   --selftest
           bash scripts/exploitation/health-watch.sh      --selftest
+          # La ligne datée À L'ÉCRITURE et le contrat de sortie d'auto-deploy
+          # (#1587) : chaque `exit` daté, aucun `git fetch` sans repli.
+          bash scripts/lib/lib-journal.sh           --selftest
           # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
           bash scripts/lib/lib-jeton-tunnel.sh      --selftest
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest
@@ -571,7 +574,10 @@ jobs:
         #     fin (hostachy-reliability.log : 1,7 Mo, jamais roté) ;
         #   • un chemin de sortie muet dans auto-deploy.sh fait croire au
         #     contrôle de battement que le script est mort.
-        # Ces deux contrats sont statiques : ils se vérifient ici, sans les RPi.
+        # Ces deux contrats sont statiques : ils se vérifient sans les RPi. Le
+        # second vit depuis #1587 dans `lib-journal.sh` (`contrat_journal`),
+        # lancé par l'étape des self-tests avec ses cas fautifs : il lisait ici
+        # `$LOG_DATE`, la variable figée au démarrage que #1587 a retirée.
         run: |
           st=0
           for f in $(git ls-files -- '*.sh'); do
@@ -594,13 +600,6 @@ jobs:
             grep -qE '^[^#]*docker system prune' "$f" \
               && { echo "::error file=$f::\`docker system prune\` est interdit — il détruirait volumes et réseaux de l'application co-hébergée"; st=1; }
           done
-          awk '
-            /\$LOG_DATE/                  { last = NR }
-            /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
-                printf "::error file=scripts/exploitation/auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
-                bad = 1 } }
-            END { exit bad }
-          ' scripts/exploitation/auto-deploy.sh || st=1
           # 🔴 Le moteur d'envoi d'e-mail vit dans lib-alert.sh, et NULLE PART
           # ailleurs. `bascule.sh` a gardé le sien jusqu'au 30/08/2026 — trente
           # lignes de smtplib recopiées, et pire : envoyées par `docker exec

@@ -18,7 +18,9 @@ import re
 AUTO_DEPLOY = pathlib.Path(__file__).resolve().parents[2] / "scripts/exploitation/auto-deploy.sh"
 
 MARQUEUR = re.compile(r"^\s*marquer_images_construites\b")
-CLOTURE = re.compile(r'echo "\[\$LOG_DATE\] (Déployé|Aligné|Images reconstruites):')
+#  La ligne datée s'écrit par `log` depuis #1587 (datée à l'écriture, et non
+#  plus par `$LOG_DATE`, figé au démarrage).
+CLOTURE = re.compile(r'\blog "(Déployé|Aligné|Images reconstruites):')
 MENAGE = re.compile(r"^\s*borner_cache_build\s*$")
 
 
@@ -59,6 +61,6 @@ def test_le_controle_voit_l_ordre_du_01_10():
         '    marquer_images_construites "$REPO" "$GIT_HASH"',
         "    borner_cache_build",
         "    docker compose up -d",
-        '    echo "[$LOG_DATE] Déployé: $GIT_HASH"',
+        '    log "Déployé: $GIT_HASH"',
     ]
     assert _ecarts(fautif) == ["l. 2, après le marqueur de la l. 1"]

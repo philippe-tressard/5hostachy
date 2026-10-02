@@ -45,12 +45,23 @@
 # ⚠️ Motif SANS accent : la ligne traverse SSH depuis le peer, et « ÉCHEC »
 # dépendrait de la locale des deux bouts. « CHEC du build » est distinctif —
 # même raison que le « Garde-fou » de `lib-collecte`.
+#
+# 🔴 Depuis #1587, CHAQUE sortie d'auto-deploy est datée — celle d'un fetch en
+# échec comme celle d'un `set -e` imprévu. C14 (le battement) les voit donc
+# vivantes, et c'est juste : le script tourne. Ce qu'elles disent de son
+# TRAVAIL se lit ici, sinon une clé révoquée ou un `up -d` en échec à chaque
+# passage serait vert partout, là où le silence d'avant faisait au moins
+# tomber C14.
+#   « fetch impossible »  GitHub injoignable : rien ne se déploie (REPORTE) ;
+#   « CHEC inattendu »    le filet de `lib-journal` : sortie non prévue.
 verdict_build_autodeploy() {  # $1 = dernière ligne horodatée du deploy.log
-                              # → OK | FAIL | INCONNU
+                              # → OK | FAIL | REPORTE | INTERROMPU | INCONNU
   local ligne="${1:-}"
   [ -z "$ligne" ] && { echo INCONNU; return; }
   case "$ligne" in
-    *"CHEC du build"*) echo FAIL ;;
+    *"CHEC du build"*)    echo FAIL ;;
+    *"CHEC inattendu"*)   echo INTERROMPU ;;
+    *"fetch impossible"*) echo REPORTE ;;
     *) echo OK ;;
   esac
 }
@@ -89,6 +100,8 @@ autodeploy_verdicts() {
     case "$(verdict_build_autodeploy "$d")" in
       OK)   ok "auto-deploy a construit sans echec sur $n" ;;
       FAIL) fail "auto-deploy a ECHOUE a construire sur $n : le code est a jour, PAS les images (cause connue : /opt/5hostachy/.env illisible par ptressard ; comparer le proprietaire sur les deux noeuds)" ;;
+      INTERROMPU) fail "auto-deploy s est INTERROMPU sur $n sans sortie prevue (${d#*] }) — lire /var/log/hostachy-deploy.log autour de cette ligne (#1587)" ;;
+      REPORTE) warn "auto-deploy sur $n n a pas pu joindre GitHub a son dernier passage (git fetch) : rien ne se deploie tant que ca dure — isole, c est transitoire ; durable, verifier la cle de deploiement de ptressard (#1587)" ;;
       *)    warn "auto-deploy sur $n : aucune ligne horodatee lisible, son silence ne prouve rien" ;;
     esac
   done
