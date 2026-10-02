@@ -18,7 +18,6 @@ from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
@@ -30,6 +29,7 @@ from app.auth.jwt import (
     hash_password,
     verify_and_rehash,
 )
+from app.auth.adresse_compte import compte_par_adresse
 from app.auth.deps import get_current_user
 from app.auth.empreinte_jeton import empreinte
 from app.auth.jetons_rafraichissement import est_rejoue, remplacer, revoquer_sessions
@@ -162,10 +162,7 @@ def register(
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
 
-    existing = session.exec(
-        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-    ).first()
-    if existing:
+    if compte_par_adresse(session, body.email):
         raise HTTPException(400, "Email déjà utilisé.")
 
     user = Utilisateur(
@@ -271,9 +268,7 @@ def login(
     response: Response,
     session: Session = Depends(get_session),
 ):
-    user = session.exec(
-        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-    ).first()
+    user = compte_par_adresse(session, body.email)
     if not user or not user.hashed_password:
         #  🔴 L'adresse essayée ne s'écrit PAS dans le journal (#777) : la ligne dit
         #  qu'une tentative a échoué sur un compte inconnu, et cela suffit.
@@ -466,9 +461,7 @@ def resend_verification(
     session: Session = Depends(get_session),
 ):
     """Renvoie un email de vérification (si le compte existe et n'est pas encore vérifié)."""
-    user = session.exec(
-        select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())
-    ).first()
+    user = compte_par_adresse(session, body.email)
 
     if user and not user.email_verifie:
         # Invalider les anciens tokens

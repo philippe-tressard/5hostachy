@@ -67,25 +67,17 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+#  La forme d'une adresse — minuscules, espaces retirés, rien de plus — vit dans
+#  `auth.adresse_compte` depuis #1550 : la même sert à retrouver un compte.
+from app.auth.adresse_compte import normaliser_adresse
+
 #: Un destinataire tel que le portent `send_email_group` et ses appelants.
 Destinataire = tuple[Optional[int], str]
 
 
-def normaliser(adresse: Optional[str]) -> str:
-    """La forme sur laquelle deux adresses se comparent.
-
-    ⚠️ Minuscules et espaces retirés, **et rien de plus**. Pas de retrait des
-    points ni de la partie après `+` : `jean.dupont@` et `jeandupont@` sont deux
-    adresses distinctes pour la plupart des serveurs, et les « normaliser »
-    ensemble supprimerait un destinataire légitime. Une déduplication trop zélée
-    fait disparaître du courrier — c'est le mauvais côté de l'erreur.
-    """
-    return (adresse or "").strip().lower()
-
-
 def adresses(destinataires: Iterable[Destinataire]) -> set[str]:
     """Les adresses normalisées d'une liste de destinataires."""
-    return {normaliser(email) for _, email in destinataires if normaliser(email)}
+    return {normaliser_adresse(e) for _, e in destinataires if normaliser_adresse(e)}
 
 
 def sans_les_deja_servies(
@@ -101,8 +93,8 @@ def sans_les_deja_servies(
     L'appelant doit alors ne rien envoyer — pas envoyer à personne, ce qui
     laisserait une trace d'envoi sans destinataire dans `historique_email`.
     """
-    servies = {normaliser(a) for a in deja_servies if normaliser(a)}
-    return [(uid, email) for uid, email in destinataires if normaliser(email) not in servies]
+    servies = {normaliser_adresse(a) for a in deja_servies if normaliser_adresse(a)}
+    return [(uid, e) for uid, e in destinataires if normaliser_adresse(e) not in servies]
 
 
-__all__ = ["Destinataire", "adresses", "normaliser", "sans_les_deja_servies"]
+__all__ = ["Destinataire", "adresses", "sans_les_deja_servies"]

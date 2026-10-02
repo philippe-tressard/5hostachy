@@ -3,6 +3,7 @@ from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
+from app.auth.adresse_compte import normaliser_adresse
 from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
 from app.models.tickets import CategorieTicket
 from app.utils.perimetres import perimetre_defaut_liste
@@ -47,7 +48,7 @@ class UserCreate(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def lowercase_email(cls, v: str | None) -> str | None:
-        return v.strip().lower() if v else v
+        return normaliser_adresse(v) if v else v
 
     @field_validator("nom", "nom_aide", "nom_proprietaire", mode="before")
     @classmethod
@@ -137,7 +138,7 @@ class LoginRequest(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def lowercase_email(cls, v: str) -> str:
-        return v.strip().lower()
+        return normaliser_adresse(v)
 
 
 class TokenResponse(BaseModel):

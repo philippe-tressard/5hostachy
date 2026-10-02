@@ -14,6 +14,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app.auth.adresse_compte import compte_par_adresse
 from app.auth.deps import require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import (
@@ -249,7 +250,8 @@ def search_locataire(
         return []
     if "@" in q:
         # Recherche exacte par email
-        results = session.exec(select(Utilisateur).where(Utilisateur.email == q.lower())).all()
+        trouve = compte_par_adresse(session, q)
+        results = [trouve] if trouve else []
     else:
         # Recherche partielle insensible à la casse par nom ou prénom
         pattern = f"%{q.lower()}%"

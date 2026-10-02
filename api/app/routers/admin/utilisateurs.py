@@ -9,7 +9,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 from sqlmodel import Session, select
-from sqlalchemy import func, or_
+from sqlalchemy import or_
+from app.auth.adresse_compte import compte_par_adresse, normaliser_adresse
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.utils.journal_securite import journaliser_securite
@@ -210,7 +211,7 @@ class AdminUserUpdate(BaseModel):
     @field_validator("email", mode="before")
     @classmethod
     def lowercase_email(cls, v: str | None) -> str | None:
-        return v.strip().lower() if v else v
+        return normaliser_adresse(v) if v else v
 
 
 @router.patch("/utilisateurs/{user_id}", response_model=UserRead)
@@ -222,11 +223,8 @@ def modifier_utilisateur(
 ):
     """Modifier les informations d'un utilisateur (admin)."""
     user = ou_404(session, Utilisateur, user_id, "Utilisateur")
-    if body.email and body.email != user.email.lower():
-        existing = session.exec(
-            select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-        ).first()
-        if existing:
+    if body.email and body.email != normaliser_adresse(user.email):
+        if compte_par_adresse(session, body.email):
             raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     if body.etage is not None and etage_hors_bornes(body.etage):
         raise HTTPException(400, ETAGE_HORS_BORNES)

@@ -24,9 +24,9 @@ from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
-from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.auth.adresse_compte import compte_par_adresse, normaliser_adresse
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import (
@@ -102,12 +102,9 @@ def update_me(
     if body.nom is not None:
         user.nom = body.nom
     if body.email is not None:
-        new_email = body.email.strip().lower()
-        if new_email != user.email.lower():
-            existing = session.exec(
-                select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)
-            ).first()
-            if existing:
+        new_email = normaliser_adresse(body.email)
+        if new_email != normaliser_adresse(user.email):
+            if compte_par_adresse(session, new_email):
                 raise HTTPException(400, "Cette adresse e-mail est déjà utilisée")
             user.email = new_email
     if body.telephone is not None:

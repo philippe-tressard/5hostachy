@@ -18,6 +18,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlmodel import Session, or_, select
 
+from app.auth.adresse_compte import normaliser_adresse
 from app.models.core import (
     ConfigSite,
     GenreCivilite,
@@ -205,7 +206,7 @@ def est_adresse_syndic(session: Session, adresse: str) -> bool:
     Le syndic se reconnaît à son ADRESSE dans la fiche du cabinet, pas à un rôle :
     `RoleUtilisateur` n'en a pas, et le gestionnaire n'a souvent pas de compte.
     """
-    adresse = (adresse or "").strip().lower()
+    adresse = normaliser_adresse(adresse)
     if not adresse:
         return False
     return bool(
