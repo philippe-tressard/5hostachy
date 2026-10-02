@@ -44,12 +44,26 @@
  * liste de directives tolérées ne pourrait vérifier que la présence du
  * commentaire — pas que le défaut qu'il tait existe toujours.
  *
+ * ## 🔒 `target="_blank"` sans `rel` (#1599, 02/10/2026)
+ *
+ * Même porte, même contrôle : un lien qui ouvre un nouvel onglet porte
+ * `rel="noopener"` — la convention majoritaire du dépôt (quinze occurrences,
+ * contre six `noopener noreferrer`, toutes vers un site extérieur). Cinq liens
+ * ne le portaient pas (`CarteActualite`, `LienConsignes` ×2, `SectionDiagnostics`,
+ * `SectionDocuments`) : tous vers l'origine, donc inoffensifs aujourd'hui, mais
+ * deux conventions pour un même geste, et le sixième lien aurait suivi le
+ * mauvais exemple. Le contrôle lit la BALISE entière (`lib-balises` : un `>`
+ * d'expression ne la ferme pas) — `rel` sur une autre ligne que `target` est
+ * l'usage de ce dépôt.
+ *
  * Usage : npm run lint:a11y            (auto-test : --selftest)
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { avertissements, lignesDuRapport } from './lib-svelte-check.mjs';
+import { balisesOuvrantes, ligneDe } from './lib-balises.mjs';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const FRONT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -106,6 +120,38 @@ export function exceptionsMalFormees(exceptions) {
 		.map(([cle]) => cle);
 }
 
+/** `target="_blank"`, quelle que soit la graphie : chaîne, apostrophes, ou expression. */
+const CIBLE_BLANK = /\btarget\s*=\s*(?:"_blank"|'_blank'|\{\s*["']_blank["']\s*\})/g;
+/** Un `rel` qui NOMME `noopener` (ni `rel` absent, ni `rel="nofollow"` seul). */
+const REL_NOOPENER = /\brel\s*=\s*(?:"[^"]*\bnoopener\b[^"]*"|'[^']*\bnoopener\b[^']*')/;
+
+/**
+ * Les liens d'un source qui ouvrent un nouvel onglet SANS `rel="noopener"`.
+ *
+ * Fonction PURE, éprouvée par `--selftest`. Rend `{ ligne, balise, inconnues }` :
+ * `fautes` les `<a>` fautifs ; `inconnues` les `target="_blank"` portés par autre
+ * chose qu'un `<a>` (un composant, `<form>`) — que ce contrôle ne sait pas juger
+ * et qu'il refuse de taire (cas zéro : voir moins que ce qui existe, c'est ✓ à tort).
+ */
+export function liensBlank(source) {
+	const nu = neutraliserCommentaires(source);
+	const fautes = [];
+	let juges = 0;
+	for (const b of balisesOuvrantes(nu, 'a')) {
+		const cibles = b.balise.match(CIBLE_BLANK)?.length ?? 0;
+		if (!cibles) continue;
+		juges += cibles;
+		if (!REL_NOOPENER.test(b.balise)) {
+			fautes.push({
+				ligne: ligneDe(nu, b.index),
+				balise: b.balise.replace(/\s+/g, ' ').slice(0, 110),
+			});
+		}
+	}
+	const total = nu.match(CIBLE_BLANK)?.length ?? 0;
+	return { fautes, inconnues: total - juges };
+}
+
 function fichiersSvelte(dossier) {
 	return readdirSync(dossier, { withFileTypes: true }).flatMap((d) => {
 		const chemin = join(dossier, d.name);
@@ -141,6 +187,46 @@ function selftest() {
 		['cas zéro : source vide', '', 0],
 	]) {
 		verifier(nom, directivesA11y(source).length, attendu);
+	}
+	//  #1599 — `target="_blank"` : la forme fautive d'abord, puis ce qui ne l'est pas.
+	for (const [nom, source, fautes, inconnues] of [
+		['_blank sans rel (le cas vécu)', '<a href={u} target="_blank" class="x">t</a>', 1, 0],
+		[
+			'_blank sans rel, balise sur plusieurs lignes',
+			'<a\n\thref={u}\n\ttarget="_blank"\n>t</a>',
+			1,
+			0,
+		],
+		[
+			'rel sur une autre ligne que target : conforme',
+			'<a\n\ttarget="_blank"\n\trel="noopener"\n>t</a>',
+			0,
+			0,
+		],
+		['noopener noreferrer : conforme', '<a target="_blank" rel="noopener noreferrer">t</a>', 0, 0],
+		['rel sans noopener : refusé', '<a target="_blank" rel="nofollow">t</a>', 1, 0],
+		['apostrophes', "<a target='_blank'>t</a>", 1, 0],
+		['expression', '<a target={"_blank"}>t</a>', 1, 0],
+		[
+			'un `>` dans une expression ne ferme pas la balise',
+			'<a href={n > 0 ? u : v} target="_blank">t</a>',
+			1,
+			0,
+		],
+		[
+			'… ni ne cache le rel qui le suit',
+			'<a href={n > 0 ? u : v} target="_blank" rel="noopener">t</a>',
+			0,
+			0,
+		],
+		['_self : hors sujet', '<a href={u} target="_self">t</a>', 0, 0],
+		['lien sans target', '<a href={u}>t</a>', 0, 0],
+		['commentaire qui cite la forme : ignoré', '<!-- avant : <a target="_blank"> -->', 0, 0],
+		['_blank porté par un composant : INCONNU, pas ✓', '<Lien target="_blank" />', 0, 1],
+		['cas zéro : source vide', '', 0, 0],
+	]) {
+		const r = liensBlank(source);
+		verifier(nom, `${r.fautes.length}/${r.inconnues}`, `${fautes}/${inconnues}`);
 	}
 	verifier(
 		'exception sans date refusée',
@@ -193,6 +279,43 @@ const directives = fichiers.flatMap((f) =>
 	),
 );
 
+//  #1599 — les liens `target="_blank"` : même relevé de fichiers, même rapport.
+const liensFautifs = [];
+let liensInconnus = 0;
+let liensVus = 0;
+for (const f of fichiers) {
+	const source = readFileSync(f, 'utf8');
+	liensVus += source.match(/target\s*=\s*(?:"_blank"|'_blank'|\{)/g)?.length ?? 0;
+	const { fautes, inconnues } = liensBlank(source);
+	liensInconnus += inconnues;
+	for (const x of fautes) {
+		liensFautifs.push(`${relative(FRONT, f).split('\\').join('/')}:${x.ligne} — ${x.balise}`);
+	}
+}
+//  🔴 CAS ZÉRO — le dépôt porte une vingtaine de ces liens : n'en avoir vu aucun
+//  voudrait dire que le relevé ne lit plus rien, et rendrait ✓.
+if (liensVus < 10) {
+	console.error(
+		`\n⚠️  INCONNU — ${liensVus} lien(s) target="_blank" relevé(s) : le relevé n'a rien lu.\n`,
+	);
+	process.exit(2);
+}
+if (liensFautifs.length) {
+	console.error(
+		`\n✗ lint:a11y — ${liensFautifs.length} lien(s) target="_blank" sans rel="noopener" (#1599) :\n\n  ` +
+			liensFautifs.join('\n  ') +
+			'\n\n  Ajouter `rel="noopener"` : la convention du dépôt (`noopener noreferrer`\n' +
+			'  seulement vers un site extérieur dont on ne veut pas dire d’où l’on vient).\n',
+	);
+}
+if (liensInconnus) {
+	console.error(
+		`\n✗ lint:a11y — ${liensInconnus} target="_blank" porté(s) par autre chose qu'un <a> :\n` +
+			'  ce contrôle ne sait pas juger un composant ou un <form>. Soit un <a>, soit\n' +
+			'  étendre `liensBlank` — pas un silence.\n',
+	);
+}
+
 if (directives.length) {
 	console.error(
 		`\n✗ lint:a11y — ${directives.length} directive(s) \`svelte-ignore\` qui taisent l’accessibilité :\n\n  ` +
@@ -239,7 +362,7 @@ if (perimees.length) {
 	process.exit(1);
 }
 
-if (fautes.length || directives.length) {
+if (fautes.length || directives.length || liensFautifs.length || liensInconnus) {
 	if (fautes.length)
 		console.error(
 			`\n✗ lint:a11y — ${fautes.length} avertissement(s) d’accessibilité non déclaré(s) :\n\n  ` +
