@@ -36,7 +36,7 @@ from app.seed.patrimoine import poser_arborescence
 from app.utils import perimetres as P
 from app.utils.destinataires import batiments_du_perimetre, membres_cs_notifiables
 from app.utils.purge_referentielle import purger
-from tests.purge_test import vider_patrimoine
+from tests.aides_purge import vider_patrimoine
 
 
 def _vider(session: Session) -> None:

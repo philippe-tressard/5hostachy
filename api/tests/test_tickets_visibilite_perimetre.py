@@ -56,7 +56,7 @@ from app.utils import mes_batiments
 from app.utils import perimetres as P
 from app.utils.visibility import ticket_visible
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _ticket(session, auteur_id, perimetre, *, confidentiel=False) -> Ticket:

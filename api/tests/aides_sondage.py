@@ -20,7 +20,7 @@ from app.models.communaute import OptionSondage, Sondage, VoteSondage
 from app.models.core import Batiment, Copropriete, Lot, Utilisateur
 from app.seed.patrimoine import poser_arborescence
 from app.utils import perimetres as P
-from tests.purge_test import vider_patrimoine
+from tests.aides_purge import vider_patrimoine
 
 #: Ce que les tests de sondage écrivent, et que la fixture purge avant et après.
 #: Votes et options d'abord : ils référencent le sondage.

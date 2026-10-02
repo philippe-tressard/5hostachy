@@ -1,7 +1,7 @@
 /*
  *  Aides partagées des tests de navigateur.
  */
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * **Le `test` de tous les specs — une exception de la page le fait échouer.**
@@ -139,4 +139,49 @@ export async function simulerApi(
 			});
 		},
 	);
+}
+
+/**
+ * **La boîte d'un élément, une fois qu'il a fini d'entrer** (#1625).
+ *
+ * 🔴 Une boîte de dialogue entre en 200 ms, de 96 % à 100 % (`modale-entree`,
+ * `composants.css`). `boundingBox()` lu dans ce laps la mesure RÉDUITE : la marge
+ * gauche des boutons de la confirmation, exactement 12 px à l'arrêt, en valait
+ * 11,5 — et `>= 12` échouait une fois sur trente, sur des machines au repos, sans
+ * jamais échouer deux rejeux de suite au même endroit. Le test mesurait
+ * l'animation, pas la règle qu'il annonce.
+ *
+ * On attend donc que les animations finies de l'élément, de ses ancêtres et de
+ * ses descendants se terminent (celles qui bouclent, un indicateur d'attente,
+ * ne finiront jamais : elles sont laissées), puis que deux lectures successives
+ * donnent la même boîte. La seconde lecture couvre ce que la première ne voit
+ * pas — une mise en page encore en mouvement sans animation CSS.
+ *
+ * L'assertion du test ne s'affaiblit pas : elle porte sur la boîte à l'arrêt.
+ */
+export async function boiteStable(cible: Locator) {
+	await cible.evaluate(async (el) => {
+		const finies = () =>
+			document.getAnimations().filter((a) => {
+				const t = a.effect?.target;
+				const fini = a.effect?.getComputedTiming().iterations !== Infinity;
+				return fini && t && (t.contains(el) || el.contains(t));
+			});
+		await Promise.all(finies().map((a) => a.finished.catch(() => undefined)));
+	});
+	let precedente: string | null = null;
+	let boite: Awaited<ReturnType<Locator['boundingBox']>> = null;
+	await expect
+		.poll(
+			async () => {
+				boite = await cible.boundingBox();
+				const lue = JSON.stringify(boite);
+				const stable = boite !== null && lue === precedente;
+				precedente = lue;
+				return stable;
+			},
+			{ message: 'la boîte ne se stabilise pas', intervals: [50], timeout: 5000 },
+		)
+		.toBe(true);
+	return boite!;
 }

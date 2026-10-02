@@ -16,7 +16,7 @@ from app.models.courriel import RelanceCourriel, ReponseRelance
 from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton as _jeton
 from app.utils.courriel_ingestion import RELANCE
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 #  La scène (ticket + comptes + fiche syndic) et les en-têtes d'une réponse
 #  vivent dans `aides_courriel` (#1495) : plus aucun fichier de tests ne sert

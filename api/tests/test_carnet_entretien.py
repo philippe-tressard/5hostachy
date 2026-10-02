@@ -96,7 +96,7 @@ def test_une_affaire_se_dit_par_sa_categorie_jamais_incident():
     from app.models.core import StatutTicket, Ticket, Utilisateur
     from app.utils.carnet_entretien import construire_carnet
     from tests.aides_base import compte
-    from tests.purge_test import purger_ligne
+    from tests.aides_purge import purger_ligne
 
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:

@@ -47,11 +47,11 @@ from app.utils.roles_libelles import (
 )
 
 #  🔴 La lecture du TypeScript vit dans le module PARTAGÉ, et n'est plus
-#  recopiée ici : elle l'était — `_table_ts` et `roles_libelles_lecture.table_ts`
+#  recopiée ici : elle l'était — `_table_ts` et `aides_roles_libelles_lecture.table_ts`
 #  étaient la même fonction —, dans le fichier même dont l'en-tête du module
 #  partagé dit qu'il est né parce que « la lecture était elle-même dupliquée ».
 from tests.aides_sources import modules_app
-from tests.roles_libelles_lecture import ROLES_TS, table_ts
+from tests.aides_roles_libelles_lecture import ROLES_TS, table_ts
 
 #  Les chaînes qui ne doivent apparaître QUE dans le module source. Écrites ici
 #  une fois, et employées par le garde-fou comme par son cas zéro.

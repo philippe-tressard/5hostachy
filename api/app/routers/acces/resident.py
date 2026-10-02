@@ -28,7 +28,7 @@ from app.models.core import (
     Utilisateur,
     Lot,
 )
-from app.schemas import CommandeAccesCreate, CommandeAccesRead
+from app.routers.acces.resident_schemas import CommandeAccesCreate, CommandeAccesRead
 from app.routers.acces.vues import AccesOut
 from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, TypeAcces, VIGIK
 from app.utils.destinataires import membres_cs_notifiables

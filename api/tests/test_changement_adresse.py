@@ -45,7 +45,7 @@ from app.auth.jwt import hash_password
 from app.models.core import EmailVerificationToken, RoleUtilisateur
 from app.routers import auth, auth_profil
 from app.routers.admin import utilisateurs as admin_utilisateurs
-from app.schemas import LoginRequest
+from app.routers.auth_schemas import LoginRequest
 from app.utils import horloge
 from tests.aides_base import compte
 from tests.aides_sources import modules_app

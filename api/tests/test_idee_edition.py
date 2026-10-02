@@ -55,7 +55,7 @@ from app.routers.annonces import AnnonceCreate, create_annonce
 from app.routers.idees import IdeeCreate, IdeeUpdate, create_idee, update_idee
 from app.utils.visibility import annonce_visible, idee_visible
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _utilisateur(role: RoleUtilisateur, statut: StatutUtilisateur, prenom: str) -> Utilisateur:

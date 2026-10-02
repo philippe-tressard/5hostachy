@@ -42,7 +42,7 @@ from app.models.core import (
 from app.routers.admin.arrivants import AccueilArrivantBody, _declencher_accueil_arrivant
 from app.utils.ticket_arrivant import TITRE, corps_demarches
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()

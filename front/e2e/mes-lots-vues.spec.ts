@@ -14,7 +14,7 @@
  *    qui dit « irréversible » — et n'envoie rien tant qu'on n'a pas confirmé.
  */
 import type { Page } from '@playwright/test';
-import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
+import { attendreHydratation, boiteStable, expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const LOTS = [
 	{
@@ -122,9 +122,11 @@ test('supprimer un bail : confirmation partagée, rien n’est envoyé sans elle
 	await expect(boite).toContainText('Paul');
 	//  Le message et les boutons ne touchent pas les bords de la boîte : la
 	//  confirmation partagée les posait à nu, sans `.modal-body`.
-	const cadre = await boite.boundingBox();
-	const message = await boite.locator('.confirmation-message').boundingBox();
-	const annuler = await boite.getByRole('button', { name: 'Annuler' }).boundingBox();
+	//  Mesuré À L'ARRÊT : la boîte entre en 200 ms à 96 %, et sa marge de 12 px en
+	//  valait 11,5 en cours de route (#1625, un rejeu sur trente).
+	const cadre = await boiteStable(boite);
+	const message = await boiteStable(boite.locator('.confirmation-message'));
+	const annuler = await boiteStable(boite.getByRole('button', { name: 'Annuler' }));
 	expect(message!.x - cadre!.x, 'marge gauche du message').toBeGreaterThanOrEqual(12);
 	expect(annuler!.x - cadre!.x, 'marge gauche des boutons').toBeGreaterThanOrEqual(12);
 	await boite.getByRole('button', { name: 'Annuler' }).click();

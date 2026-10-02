@@ -25,6 +25,7 @@ const pino = require("pino");
 const path = require("path");
 const crypto = require("crypto");
 const fs = require("fs");
+const { creerArret, creerSuiviEcritures } = require("./arret");
 
 const PORT = parseInt(process.env.WA_PORT || "8090", 10);
 const API_KEY = process.env.WA_API_KEY || "";
@@ -123,7 +124,18 @@ const RECONNECT_BASE_MS = 5_000;
 const RECONNECT_MAX_MS = 60_000;
 const WATCHDOG_INTERVAL_MS = 60_000;
 
+// ── Arrêt propre (#1590) ─────────────────────────────────────────────
+// `docker compose stop` envoie SIGTERM ; Node en PID 1 n'y réagit pas sans
+// écouteur, et SIGKILL tombait 10 s plus tard — possiblement au milieu d'une
+// écriture de `creds.json` ou d'un fichier de clé. La décision est dans
+// `arret.js` (pure, testée) ; ici, seulement ce qu'on lui branche.
+// Le minuteur de sécurité (8 s) est SOUS `stop_grace_period` (20 s,
+// docker-compose.yml) : c'est le bridge qui sort, jamais Docker qui tue.
+const ARRET_DELAI_MS = parseInt(process.env.WA_ARRET_DELAI_MS || "8000", 10);
+const suiviEcritures = creerSuiviEcritures();
+
 function scheduleReconnect() {
+  if (arret.enCours()) return; // arrêt demandé : plus aucune reconnexion
   if (reconnectTimer) return; // déjà programmé
   const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempt, RECONNECT_MAX_MS);
   reconnectAttempt += 1;
@@ -203,6 +215,10 @@ async function startBaileysInner() {
     sock = null;
   }
 
+  // Un arrêt demandé pendant que le démarrage attendait ne doit pas ouvrir de
+  // socket de plus.
+  if (arret.enCours()) return;
+
   connectionState = "connecting";
   if (horsLigneDepuis === null) horsLigneDepuis = new Date().toISOString();
   qrCode = null;
@@ -214,7 +230,15 @@ async function startBaileysInner() {
     version,
     auth: {
       creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
+      // Les écritures de clés sont suivies, pour que l'arrêt les attende
+      // (comportement inchangé : mêmes appels, mêmes valeurs).
+      keys: makeCacheableSignalKeyStore(
+        {
+          get: (...args) => state.keys.get(...args),
+          set: suiviEcritures.suivre((...args) => state.keys.set(...args)),
+        },
+        logger
+      ),
     },
     logger,
     printQRInTerminal: true,
@@ -223,7 +247,7 @@ async function startBaileysInner() {
     browser: ["5Hostachy", "Chrome", "1.0.0"],
   });
 
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", suiviEcritures.suivre(saveCreds));
 
   // Resolve pending ACKs when WhatsApp server acknowledges receipt
   sock.ev.on("messages.update", (updates) => {
@@ -261,7 +285,9 @@ async function startBaileysInner() {
       dernierCode = statusCode ?? null;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
       logger.warn({ statusCode, shouldReconnect }, "Connection closed");
-      if (shouldReconnect) {
+      if (arret.enCours()) {
+        logger.warn("Arrêt demandé — pas de reconnexion");
+      } else if (shouldReconnect) {
         scheduleReconnect();
       } else {
         logger.warn("Logged out — delete auth_state and restart to re-pair");
@@ -424,6 +450,27 @@ app.post("/restart", async (_req, res) => {
   scheduleReconnect();
   res.json({ ok: true, message: "Restarting..." });
 });
+
+// ── Arrêt : SIGTERM (docker stop) et SIGINT ───────────────────────────
+const arret = creerArret({
+  fermer: () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    marquerHorsLigne();
+    if (sock) sock.end(undefined);
+  },
+  attendreEcritures: () => suiviEcritures.attendre(),
+  quitter: (code) => process.exit(code),
+  delaiMs: ARRET_DELAI_MS,
+  journal: (message) => logger.warn(message),
+});
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.on(signal, () => {
+    arret.demander(signal);
+  });
+}
 
 // ── Start ───────────────────────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {

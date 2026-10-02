@@ -13,14 +13,54 @@
  */
 const Module = require("module");
 const { EventEmitter } = require("events");
+const fs = require("fs");
+
+// ── Scénario d'ARRÊT (#1590) — inerte tant que SIMULE_TRACE n'est pas posée ──
+// Rejoue ce que fait Baileys au moment où `docker compose stop` arrive : une
+// écriture d'état d'authentification EN COURS (creds + clé, lentes), puis le
+// signal. Le signal est émis par `process.emit` et non envoyé par l'OS : sous
+// Windows `kill("SIGTERM")` tue le processus sans passer par les écouteurs,
+// et le test ne dirait rien du câblage d'`index.js`.
+//   SIMULE_TRACE            fichier où chaque événement s'écrit, une ligne chacun
+//   SIMULE_ECRITURE_MS      durée d'une écriture d'état (défaut 300)
+//   SIMULE_SIGNAL           signal émis pendant l'écriture (ex. SIGTERM)
+//   SIMULE_SECOND_SIGNAL    second signal, 50 ms plus tard
+const TRACE = process.env.SIMULE_TRACE;
+const trace = (ligne) => { if (TRACE) fs.appendFileSync(TRACE, `${ligne}\n`); };
+const ECRITURE_MS = parseInt(process.env.SIMULE_ECRITURE_MS || "300", 10);
+const attendre = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 const simule = {
-  default: () => {
+  default: (config) => {
     const ev = new EventEmitter();
+    trace("socket-cree");
     setTimeout(() => ev.emit("connection.update", { connection: "open" }), 20);
+    if (TRACE && process.env.SIMULE_SIGNAL) {
+      setTimeout(() => {
+        // Les deux écritures démarrent avant le signal, comme en vrai.
+        ev.emit("creds.update", {});
+        config.auth.keys.set({ session: { x: { k: 1 } } });
+      }, 60);
+      setTimeout(() => {
+        trace("signal");
+        process.emit(process.env.SIMULE_SIGNAL);
+        if (process.env.SIMULE_SECOND_SIGNAL) {
+          setTimeout(() => { trace("second-signal"); process.emit(process.env.SIMULE_SECOND_SIGNAL); }, 50);
+        }
+      }, 150);
+    }
     return {
       ev,
-      end() {},
+      end() {
+        trace("socket-end");
+        // Baileys annonce la fermeture après `end()` : l'arrêt voulu ne doit
+        // pas être pris pour une coupure à rattraper. (Seulement dans ce
+        // scénario : les autres tests n'ont jamais vu `end()` fermer quoi que ce soit.)
+        if (TRACE) setTimeout(() => ev.emit("connection.update", {
+          connection: "close",
+          lastDisconnect: { error: { output: { statusCode: 428 } } },
+        }), 0);
+      },
       groupFetchAllParticipating: async () => ({
         g1: { id: "g1", subject: "Hall", participants: [{}, {}] },
       }),
@@ -32,7 +72,24 @@ const simule = {
       },
     };
   },
-  useMultiFileAuthState: async () => ({ state: { creds: {}, keys: {} }, saveCreds() {} }),
+  useMultiFileAuthState: async () => ({
+    state: {
+      creds: {},
+      keys: {
+        get: async () => ({}),
+        set: async () => {
+          trace("cle-debut");
+          await attendre(ECRITURE_MS);
+          trace("cle-fin");
+        },
+      },
+    },
+    saveCreds: async () => {
+      trace("creds-debut");
+      await attendre(ECRITURE_MS);
+      trace("creds-fin");
+    },
+  }),
   DisconnectReason: { loggedOut: 401 },
   fetchLatestBaileysVersion: async () => ({ version: [2, 3000, 0] }),
   makeCacheableSignalKeyStore: (cles) => cles,

@@ -35,7 +35,7 @@ from app.utils.affaires_liees import (
     supprimer_liens_de,
 )
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 def _affaire(session, auteur, titre, confidentiel=False) -> Ticket:

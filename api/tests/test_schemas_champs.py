@@ -29,7 +29,7 @@ Pour chaque appel `<Nom>Read(...)` dans `app/`, que **chaque mot-clé** est un
 champ déclaré du schéma correspondant.
 
 ⚠️ Il travaille sur l'AST, et ne suit que les appels dont le nom se résout dans
-`app.schemas` : un constructeur homonyme défini ailleurs n'est pas concerné.
+`app.schemas` ou dans un `*_schemas.py` voisin d'un routeur (#1566) : un constructeur homonyme défini ailleurs n'est pas concerné.
 
 ⚠️ Il ne vérifie PAS l'inverse — un champ déclaré et jamais rempli. Celui-là ne se
 perd pas en silence : il prend sa valeur par défaut, ce qui est souvent voulu
@@ -40,19 +40,33 @@ et un contrôle qui crie sur du légitime finit désarmé.
 from __future__ import annotations
 
 import ast
+import importlib
 
 import app.schemas as schemas
 from tests.aides_sources import modules_app
 
 
+def _modules_de_schemas() -> list:
+    """`app.schemas` et les modules de schémas VOISINS d'un routeur (`routers/**/*_schemas.py`).
+
+    Un schéma propre à un seul routeur vit à côté de lui, plus dans `app/schemas.py`
+    (#1566) : sans eux, `MessageRead(...)`, `DocumentRead(...)`… sortaient du contrôle.
+    """
+    modules = [schemas]
+    for m in modules_app("routers", minimum=50):
+        if m.rel.endswith("_schemas.py"):
+            modules.append(importlib.import_module("app." + m.rel[: -len(".py")].replace("/", ".")))
+    return modules
+
+
 def _schemas_connus() -> dict[str, set[str]]:
-    """Les modèles Pydantic de `app.schemas`, et leurs champs déclarés."""
-    connus = {}
-    for nom in dir(schemas):
-        objet = getattr(schemas, nom)
-        champs = getattr(objet, "model_fields", None)
-        if isinstance(champs, dict):
-            connus[nom] = set(champs)
+    """Les modèles Pydantic de ces modules, et leurs champs déclarés."""
+    connus: dict[str, set[str]] = {}
+    for module in _modules_de_schemas():
+        for nom in dir(module):
+            champs = getattr(getattr(module, nom), "model_fields", None)
+            if isinstance(champs, dict):
+                connus.setdefault(nom, set()).update(champs)
     return connus
 
 
@@ -82,9 +96,12 @@ def test_le_cas_zero_le_relevé_porte_sur_quelque_chose():
     """🔴 Sans schémas connus, tout le reste serait vert sans rien lire."""
     connus = _schemas_connus()
     assert len(connus) >= 20, (
-        f"{len(connus)} schéma(s) Pydantic trouvé(s) dans `app.schemas` — le module "
-        "a-t-il été découpé ? Ce contrôle ne mesure plus rien."
+        f"{len(connus)} schéma(s) Pydantic trouvé(s) dans `app.schemas` et les `*_schemas.py` "
+        "des routeurs — le module a-t-il été découpé ? Ce contrôle ne mesure plus rien."
     )
+    #  Un schéma déplacé à côté de son routeur (#1566) reste couvert.
+    voisins = {"MessageRead", "DocumentRead", "NotificationRead", "CommandeAccesRead"}
+    assert voisins <= set(connus), "un schéma voisin de son routeur n'est plus relevé."
     assert "TicketRead" in connus, "TicketRead introuvable : le contrôle a perdu sa cible."
     assert "archivee" in connus["TicketRead"], (
         "TicketRead ne déclare plus `archivee` — c'est le champ qui a motivé ce "

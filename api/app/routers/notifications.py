@@ -15,7 +15,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, ma_notification
 from app.database import get_session
 from app.models.core import Notification, Utilisateur
-from app.schemas import NotificationRead
+from app.routers.notifications_schemas import NotificationRead
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

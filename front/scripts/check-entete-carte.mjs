@@ -36,6 +36,17 @@
  *  dépôt est conforme aujourd'hui. Une exception ajoutée plus tard devra dire
  *  pourquoi, et une exception qui ne sert plus fait échouer ce contrôle.
  *
+ *  ## Et le corps déplié porte `carte-corps` (#1579, 02/10/2026)
+ *
+ *  `.carte-liste .carte-corps` (`composants.css`) est ce qui fait ENTRER le corps :
+ *  fondu de 200 ms au montage, désactivé sous `prefers-reduced-motion`. Sans la
+ *  classe, le corps « apparaît sec, sans un mot » — et rien ne le disait : la
+ *  checklist Frontend de `CLAUDE.md` l'écrivait, aucun contrôle ne la tenait, et
+ *  `CarteModifiable` (contrats, prestataires) portait `carte-modifiable-corps`
+ *  seul. Tout fichier qui rend `.carte-liste` doit donc écrire `carte-corps` dans
+ *  un `class="…"` — comme `EnteteCarte`, le contrôle est grossier : il ne juge pas
+ *  QUEL élément la porte, seulement qu'elle est posée.
+ *
  *  ## Et la ligne de méta a UNE taille (#1308, 25/09/2026)
  *
  *  Signalé à l'écran, capture à l'appui : « Ouvert » et le périmètre en petit,
@@ -60,6 +71,8 @@ const RACINE = 'src';
 const CARTE = /class="[^"]*\bcarte-liste\b|class:carte-liste/;
 /** L'emploi du composant — par l'IMPORT, qu'une portée locale ne peut pas feindre. */
 const EMPLOI = /import\s+EnteteCarte\s+from/;
+/** Le corps déplié : la classe qui le fait entrer, dans un `class="…"` (#1579). */
+const CORPS = /class="[^"]*(?<![\w-])carte-corps(?![\w-])/;
 
 /**
  *  Les fichiers qui rendent `.carte-liste` sans `EnteteCarte`, avec leur motif.
@@ -90,11 +103,12 @@ function fichiers(dir, acc = []) {
 const CHEVRON_RECOPIE = /slot=["']chevron["']|class=["']chevron["']/;
 
 /**  La décision, PURE — testable sans toucher au disque.
- *   @returns {'ok'|'sans-entete'|'chevron-recopie'|'hors-sujet'} */
+ *   @returns {'ok'|'sans-entete'|'chevron-recopie'|'sans-corps'|'hors-sujet'} */
 export function verdictCarte(source) {
 	if (!CARTE.test(source)) return 'hors-sujet';
 	if (!EMPLOI.test(source)) return 'sans-entete';
-	return CHEVRON_RECOPIE.test(source) ? 'chevron-recopie' : 'ok';
+	if (CHEVRON_RECOPIE.test(source)) return 'chevron-recopie';
+	return CORPS.test(source) ? 'ok' : 'sans-corps';
 }
 
 /**  Les classes de la ligne de méta qui gardent LEUR taille, avec la raison.
@@ -164,12 +178,25 @@ if (process.argv.includes('--selftest')) {
 	t(
 		'carte conforme',
 		'ok',
-		'import EnteteCarte from \'./EnteteCarte.svelte\';\n<div class="carte-liste">',
+		'import EnteteCarte from \'./EnteteCarte.svelte\';\n<div class="carte-liste"><div class="carte-corps">',
 	);
 	t(
 		'carte conforme (class:)',
 		'ok',
-		"import EnteteCarte from './x';\n<div class:carte-liste={!a}>",
+		'import EnteteCarte from \'./x\';\n<div class:carte-liste={!a}><div class="carte-corps tk-body">',
+	);
+	//  🔴 #1579 : l'état exact de `CarteModifiable` avant le 02/10/2026 — un corps
+	//  sous sa propre classe, qui n'entre pas en fondu.
+	t(
+		'corps sans carte-corps',
+		'sans-corps',
+		'import EnteteCarte from \'./x\';\n<div class="carte-liste"><div class="carte-modifiable-corps">',
+	);
+	//  Un voisin de nom ne vaut pas la classe : `carte-corps-x` n'est pas `carte-corps`.
+	t(
+		'classe voisine',
+		'sans-corps',
+		'import EnteteCarte from \'./x\';\n<div class="carte-liste"><div class="carte-corps-x">',
 	);
 	//  🔴 LE cas qui donne sa raison d'être au contrôle : c'est l'état exact dans
 	//  lequel `CarteContrat` et `CartePrestataire` sont restées un mois.
@@ -183,7 +210,7 @@ if (process.argv.includes('--selftest')) {
 	t(
 		'mention en commentaire, avec import',
 		'ok',
-		'import EnteteCarte from \'./x\';\n// class="carte-liste"',
+		'import EnteteCarte from \'./x\';\n// class="carte-liste"\n<div class="carte-corps">',
 	);
 	//  🔴 Le second cas que ce contrôle refuse depuis le 18/09/2026.
 	t(
@@ -234,6 +261,7 @@ if (process.argv.includes('--selftest')) {
 const tous = fichiers(RACINE);
 const fautifs = [];
 const chevrons = [];
+const sansCorps = [];
 const exceptionsVues = new Set();
 let cartes = 0;
 
@@ -250,7 +278,7 @@ for (const f of tous) {
 		exceptionsVues.add(rel);
 		continue;
 	}
-	(verdict === 'chevron-recopie' ? chevrons : fautifs).push(rel);
+	(({ 'chevron-recopie': chevrons, 'sans-corps': sansCorps })[verdict] ?? fautifs).push(rel);
 }
 
 //  La taille de référence se LIT dans `EnteteCarte` : une valeur recopiée ici
@@ -361,6 +389,19 @@ if (chevrons.length) {
 			'  quatre cartes en sont venues à dire `expanded` et deux\n' +
 			'  `expanded || enEdition`, pour la même classe.\n' +
 			'  → retirer le chevron de la carte.\n',
+	);
+}
+
+if (sansCorps.length) {
+	echec = true;
+	console.error(`\n✗ ${sansCorps.length} carte(s) de liste sans \`carte-corps\` :\n`);
+	for (const f of sansCorps) console.error(`  ${f}`);
+	console.error(
+		'\n  `.carte-liste .carte-corps` (composants.css) fait ENTRER le corps déplié :\n' +
+			'  fondu de 200 ms, coupé sous `prefers-reduced-motion`. Sans la classe il\n' +
+			'  apparaît sec, sans un mot (#1579).\n' +
+			'  → ajouter `carte-corps` à la classe du corps (`class="carte-corps …"`),\n' +
+			'    ou inscrire le fichier dans `EXCEPTIONS` avec son motif.\n',
 	);
 }
 

@@ -44,7 +44,7 @@ from app.utils import courriel_boite, courriel_transfert
 from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 # ── Répondre à un ticket ──────────────────────────────────────────────────────
 

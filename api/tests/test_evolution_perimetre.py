@@ -46,7 +46,7 @@ from app.schemas import TicketEvolutionCreate, TicketEvolutionUpdate
 #  🔴 La purge passe par le code de PRODUCTION : supprimer une ligne sans ce
 #  qui la référence est ce que les clés étrangères refusent (#546).
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 BAT_2 = ["bat:2"]
 PRECIS = ["bat:2", "cave"]

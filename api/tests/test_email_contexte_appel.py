@@ -27,7 +27,7 @@ from tests.aides_sources import modules_app
 
 #  L'analyse du GABARIT vit à part depuis le 31/08/2026 : ce fichier-ci n'analyse
 #  que le POINT D'APPEL. Deux analyses de natures différentes, deux modules.
-from tests.lib_variables_jinja import _variables_qui_font_echouer
+from tests.aides_variables_jinja import _variables_qui_font_echouer
 
 _FONCTIONS_ENVOI = {"send_email", "send_email_group"}
 

@@ -29,7 +29,7 @@ from app.models.perimetre import Perimetre
 from app.routers.patrimoine import _codes_cites, _en_lecture
 from app.seed.patrimoine import poser_arborescence
 from tests.conftest import vider_patrimoine
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 #  Le montage (quatre bâtiments + arbre semé) vit dans `conftest.py` depuis le

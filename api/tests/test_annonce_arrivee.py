@@ -43,7 +43,7 @@ from app.utils.annonce_arrivee import (
     libelle_etage,
     titre_annonce,
 )
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 #: Des valeurs qu'on reconnaît à l'œil dans une chaîne — c'est tout leur intérêt.
 SENSIBLES = {

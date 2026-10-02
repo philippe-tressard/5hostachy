@@ -22,7 +22,7 @@
  *  `cible-tactile.spec.ts` : 44 px au doigt, et rien de changé à la souris.
  */
 import type { Page } from '@playwright/test';
-import { expect, simulerApi, test } from './aides';
+import { boiteStable, expect, simulerApi, test } from './aides';
 
 /** Rend l'écran Résidence et ouvre « Ajouter un plan ». */
 async function ouvrirAjoutPlan(page: Page) {
@@ -57,7 +57,7 @@ test('un document se dépose par FichiersUpload, jamais par le sélecteur du nav
 test('au doigt, le bouton 📎 fait au moins 44 px de haut', async ({ page }, info) => {
 	test.skip(info.project.name !== 'mobile', 'la règle ne vise que `pointer: coarse`');
 	const depot = await ouvrirAjoutPlan(page);
-	const boite = await depot.locator('.fichiers-ajout').boundingBox();
+	const boite = await boiteStable(depot.locator('.fichiers-ajout'));
 	expect(boite, 'le bouton d’ajout n’a pas été rendu').not.toBeNull();
 	expect(boite!.height, 'hauteur de la cible tactile').toBeGreaterThanOrEqual(44);
 });
@@ -65,7 +65,7 @@ test('au doigt, le bouton 📎 fait au moins 44 px de haut', async ({ page }, in
 test('à la souris, le bouton 📎 garde sa taille', async ({ page }, info) => {
 	test.skip(info.project.name !== 'bureau', 'le pendant : rien ne change au pointeur fin');
 	const depot = await ouvrirAjoutPlan(page);
-	const boite = await depot.locator('.fichiers-ajout').boundingBox();
+	const boite = await boiteStable(depot.locator('.fichiers-ajout'));
 	expect(boite, 'le bouton d’ajout n’a pas été rendu').not.toBeNull();
 	expect(boite!.height, 'la règle tactile déborde sur le bureau').toBeLessThan(44);
 });

@@ -41,7 +41,8 @@ from app.models.core import (
     RoleUtilisateur,
     Batiment,
 )
-from app.schemas import UserCreate, UserRead, LoginRequest
+from app.routers.auth_schemas import LoginRequest, UserCreate
+from app.schemas import UserRead
 from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.limiter import (
     LIMITE_CONTROLE_FICHIER,

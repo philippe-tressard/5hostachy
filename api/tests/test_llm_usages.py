@@ -31,7 +31,7 @@ from app.utils.llm_usages import (
 )
 from app.utils.synthese_format import CONSIGNE
 from tests.aides_migrations import charger_migration, chemin_migration
-from tests.tables_supprimees import tables_supprimees
+from tests.aides_tables_supprimees import tables_supprimees
 
 
 def _poser(session, **valeurs):

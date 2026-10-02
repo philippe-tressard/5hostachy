@@ -20,7 +20,7 @@ from app.auth.adresse_compte import compte_par_adresse, normaliser_adresse
 from app.models.core import EmailVerificationToken, PasswordResetToken
 from app.routers import auth, auth_mot_de_passe
 from app.routers.bailleur import baux
-from app.schemas import LoginRequest
+from app.routers.auth_schemas import LoginRequest
 from tests.aides_base import compte
 from tests.conftest import requete_de_test
 

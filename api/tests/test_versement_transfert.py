@@ -33,7 +33,7 @@ from tests.aides_courriel import (  # noqa: F401 — `monde` et `scene` sont des
     monde,
     scene,
 )
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()

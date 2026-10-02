@@ -34,7 +34,7 @@ from app.models.core import StatutTicket, Ticket, Utilisateur
 from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketUpdate
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()

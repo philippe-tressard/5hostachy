@@ -27,7 +27,7 @@ from app.routers.tickets.mise_a_jour import update_ticket
 from app.schemas import TicketEvolutionCreate, TicketUpdate
 from app.utils.visibility import hors_du_hall, reservee_au_conseil, ticket_visible
 from tests.aides_base import compte
-from tests.purge_test import purger_ligne
+from tests.aides_purge import purger_ligne
 
 
 @pytest.fixture()
