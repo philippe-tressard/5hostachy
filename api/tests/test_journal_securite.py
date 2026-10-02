@@ -55,6 +55,8 @@ GESTES_SENSIBLES = {
     ("routers/admin/utilisateurs.py", "ban_communaute"): "un bannissement",
     ("routers/auth.py", "refresh"): "un jeton de rafraîchissement rejoué — le seul "
     "signal d'un vol de session, et toutes les sessions du compte viennent de fermer",
+    ("auth/appartenance.py", "exiger_lot_du_bailleur"): "un bail demandé sur le lot "
+    "d'un autre — l'écran ne le propose pas, la requête a été forgée (#1535)",
 }
 
 
