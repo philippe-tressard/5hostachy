@@ -50,8 +50,10 @@ import { fileURLToPath } from 'node:url';
  *  Puis 419 : « Mes lots » — la vue locataire extraite (`LotsLocataire`), les
  *  caractéristiques d'un lot (`CaracteristiquesLot`), deux modales de
  *  suppression remplacées par `SUPPRESSION` (#779).
+ *  Puis 416 : `LegalEditor` fondu dans `RichEditor` — son espaceur
+ *  `style="flex:1"` part avec lui (#1539).
  */
-const PLAFOND = 417;
+const PLAFOND = 416;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

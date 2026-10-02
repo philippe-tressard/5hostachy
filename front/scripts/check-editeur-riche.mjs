@@ -94,7 +94,9 @@ for (const chemin of fichiersSvelte(RACINE)) {
 }
 
 //  Cas zéro, second volet : aucun éditeur trouvé = le motif ne mord plus.
-if (editeursVus < 2) {
+//  Le seuil était 2 tant que `LegalEditor` doublait `RichEditor` ; ils n'en font
+//  plus qu'un depuis #1539, et `lint:editeur-unique` refuse le second.
+if (editeursVus < 1) {
 	console.error(
 		`\n✗ lint:editeur — ${editeursVus} composant(s) employant Tiptap : le ` +
 			`repérage ne trouve plus les éditeurs, il ne mesure rien.\n`,

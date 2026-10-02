@@ -27,7 +27,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { CONFIG_SITE_DEFAUT, ecrireConfigSite, lireConfigSite } from '$lib/configSite';
-	import LegalEditor from '$lib/components/LegalEditor.svelte';
+	import RichEditor from '$lib/components/RichEditor.svelte';
 	import OngletCopropriete from '$lib/components/OngletCopropriete.svelte';
 	import OngletSite from '$lib/components/OngletSite.svelte';
 	import OngletPerimetres from '$lib/components/OngletPerimetres.svelte';
@@ -284,7 +284,7 @@
 		<p class="muted" style="margin-bottom:1rem">
 			Contenu affiché sur <code>/mentions-legales</code>.
 		</p>
-		<LegalEditor bind:value={siteConfig.mentions_legales} minHeight="380px" />
+		<RichEditor bind:value={siteConfig.mentions_legales} minHeight="380px" titres sourceHtml />
 	</section>
 	<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
 	<section class="card config-section">
@@ -294,7 +294,12 @@
 		<p class="muted" style="margin-bottom:1rem">
 			Contenu affiché sur <code>/politique-de-confidentialite</code>.
 		</p>
-		<LegalEditor bind:value={siteConfig.politique_confidentialite} minHeight="380px" />
+		<RichEditor
+			bind:value={siteConfig.politique_confidentialite}
+			minHeight="380px"
+			titres
+			sourceHtml
+		/>
 	</section>
 	<div class="form-actions">
 		<button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
