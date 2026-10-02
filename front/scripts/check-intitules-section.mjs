@@ -5,7 +5,7 @@
  * ## Le défaut (22/09/2026, signalé à l'écran)
  *
  * `ChampSaisiPour` affichait **« SAISI POUR »** alors que la table déclare
- * « Au nom de » depuis le cadre à treize sections. Deux noms pour une section,
+ * « Au nom de » depuis la recomposition du cadre (#1095). Deux noms pour une section,
  * dont un seul est déclaré — et c'est celui qui ne l'est pas que l'écran
  * montrait. Personne ne pouvait le voir sans ouvrir le formulaire.
  *
@@ -46,12 +46,12 @@ function svelte(dir) {
 // ════════════════════════════════════════════════════════════════════════════
 //
 //  🔴 `ChampSaisiPour` affichait « Saisi pour » alors que la table déclare
-//  « Au nom de » depuis le cadre à treize sections. Deux noms pour une section,
+//  « Au nom de » depuis la recomposition du cadre (#1095). Deux noms pour une section,
 //  dont un seul est déclaré : c'est celui qui n'est pas déclaré que l'écran
 //  montrait, et personne ne pouvait le voir sans ouvrir le formulaire.
 //
 //  ⚠️ Ce qui est refusé : un `titre="…"` de `SectionFormulaire` dont le texte
-//  est l'un des treize intitulés de la table. Les autres restent libres — une
+//  est l'un des intitulés de la table. Les autres restent libres — une
 //  section « Le contrat » ou « Activation » n'appartient pas au cadre, et le
 //  contrôle n'a rien à en dire.
 /**

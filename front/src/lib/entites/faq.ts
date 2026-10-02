@@ -1,5 +1,5 @@
 /**
- * La QUESTION FRÉQUENTE, déclarée une fois — les quatorze sections, ce qu'elles
+ * La QUESTION FRÉQUENTE, déclarée une fois — les sections du cadre, ce qu'elles
  * portent, et pourquoi onze d'entre elles sont sans objet (#1329, 27/09/2026).
  *
  * ## Pourquoi maintenant

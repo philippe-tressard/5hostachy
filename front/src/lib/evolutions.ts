@@ -300,7 +300,7 @@ const SECTIONS_DE_L_HOTE: readonly IdSection[] = [
  *
  * Le créneau d'une section se DÉDUIT de `SECTIONS_ORDRE` — avant le Suivi, avant
  * le Périmètre, ou après les Destinataires — jamais d'une seconde table : c'est
- * elle qui avait laissé la Suite dans l'ordre d'avant les treize sections.
+ * elle qui avait laissé la Suite dans l'ordre d'avant la recomposition du cadre (#1095).
  */
 export type Creneau = 'avant_suivi' | 'specifiques' | 'mise_en_avant';
 

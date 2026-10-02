@@ -447,8 +447,10 @@ importe les gestes du transport.
       **jamais** `objet.auteur_nom` — c'est le rédacteur, et le « Saisi pour » s'y
       substitue (12/09). La case de copie, elle, dit `nomCopie` : deux questions.
       Il y en avait **13** avant #1104 (`npm run lint:nom-proprietaire` le refuse)
-- [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`
-      — **treize**, dans l'ordre de `SECTIONS_ORDRE` — et son **pliage** suit la
+- [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`,
+      dans l'ordre de `SECTIONS_ORDRE` (`$lib/entites/types.ts`) — la liste ET
+      son compte se lisent là, jamais ici : « treize » y est resté écrit six
+      jours pour quatorze (#1541, `npm run lint:consignes`) — et son **pliage** suit la
       règle *obligatoire → déplié · facultatif → plié*, ou porte son
       `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens). Un
       composant qui **porte** une section au lieu de l'écrire dans la page la

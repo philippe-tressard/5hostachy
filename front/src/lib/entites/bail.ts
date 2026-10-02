@@ -1,6 +1,6 @@
 /**
  * Le BAIL — un locataire dans un ou plusieurs lots, déclaré une fois : les
- * quatorze sections, ce qu'elles portent, et pourquoi les autres sont sans
+ * sections du cadre, ce qu'elles portent, et pourquoi les autres sont sans
  * objet (#1329, 28/09/2026).
  *
  * ## Pourquoi maintenant

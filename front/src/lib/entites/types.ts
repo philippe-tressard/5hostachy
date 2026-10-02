@@ -36,7 +36,7 @@
  *
  * `npm run lint:etats` refuse une divergence sans motif, un motif `api` sans
  * ticket, une section rendue hors déclaration et un ordre qui s'écarte de
- * `SECTIONS_ORDRE` — **quatorze** depuis #1342 (treize depuis #1095 : « Champs spécifiques » scindée
+ * `SECTIONS_ORDRE` — « Affaires liées » ajoutée par #1342 ; #1095 avait scindé « Champs spécifiques »
  * en Nature, Au nom de et Mise en avant, trois sections ajoutées (Équipement,
  * Intervenant, Quand), et Photos et
  * Documents n'en font plus qu'une, « Pièces jointes »).
@@ -49,7 +49,9 @@
  * aux statuts de ticket (#415) et aux pages (#401).
  */
 
-/**  Les QUATORZE sections (« Affaires liées » entrée le 26/09/2026, #1342). L'identifiant est technique ; le libellé est à l'écran.
+/**  Les sections du cadre — leur NOMBRE est la longueur de `SECTIONS_ORDRE`, et ne s'écrit nulle part
+ *   en toutes lettres (#1541 : « treize » est resté six jours dans CLAUDE.md et `ux-patterns` après
+ *   l'entrée d'« Affaires liées », le 26/09/2026, #1342). L'identifiant est technique ; le libellé est à l'écran.
  *
  *   ⚠️ Ce nombre a dit « neuf » jusqu'au 21/09/2026 alors que la liste en
  *   portait treize — dans le fichier qui EST la source de l'ordre (#1124). Un
@@ -258,8 +260,8 @@ export interface SectionDeclaree {
 	 *
 	 * 🔴 Ce n'est PAS une absence, et ce n'est pas une fusion : la section garde
 	 * son intitulé, son rang et sa déclaration. C'est un troisième état de
-	 * présence (#1095, 20/09/2026), qui existe parce qu'un formulaire de treize
-	 * sections déplié d'office est illisible au pouce.
+	 * présence (#1095, 20/09/2026), qui existe parce qu'un formulaire dont toutes
+	 * les sections sont dépliées d'office est illisible au pouce.
 	 *
 	 * ## La règle, et elle est mécaniquement vérifiable
 	 *

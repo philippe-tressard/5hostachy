@@ -145,7 +145,7 @@ if (!Array.isArray(ORDRE) || ORDRE.length !== 14) {
 	casZero(`SECTIONS_ORDRE devrait porter les QUATORZE sections (${ORDRE?.length ?? 0} lue(s)).`);
 }
 if (!LIBELLES || ORDRE.some((id) => !LIBELLES[id])) {
-	casZero('SECTIONS_LIBELLE ne nomme pas les dix sections.');
+	casZero('SECTIONS_LIBELLE ne nomme pas toutes les sections de SECTIONS_ORDRE.');
 }
 
 const fichiersEntites = existsSync(DOSSIER_ENTITES)

@@ -1,6 +1,6 @@
 /**
  * L'ACCÈS du parc — un badge Vigik, une télécommande —, déclaré une fois : les
- * quatorze sections, ce qu'elles portent, et pourquoi huit sont sans objet
+ * sections du cadre, ce qu'elles portent, et pourquoi huit sont sans objet
  * (#1329, 27/09/2026).
  *
  * ## Pourquoi maintenant
