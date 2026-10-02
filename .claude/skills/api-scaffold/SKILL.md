@@ -50,6 +50,8 @@ jamais `datetime.utcnow()` : déprécié depuis Python 3.12, et refusé par Ruff
 toutes les dates en base — `now(timezone.utc)` rendrait une date consciente,
 qui lève à la première comparaison avec une date lue en base. Et **par son
 module**, jamais importée seule : treize fichiers ont une variable `maintenant`.
+Un champ `date` (jour civil) : `Field(default_factory=horloge.aujourd_hui)`,
+le jour de Paris — jamais `date.today` (#1565, règle dans `CLAUDE.md`).
 
 Puis **l'enregistrer** dans `app/models/__init__.py` — c'est cet import qui
 déclare la table à SQLModel. Oublié, elle manque à `create_all` sans un mot.

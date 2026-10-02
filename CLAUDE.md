@@ -161,6 +161,13 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   **`NaiveDatetime`** (pydantic), jamais `datetime` : depuis sqlmodel 0.0.45 ce
   dernier devient une colonne consciente du fuseau qui refuse la date naïve à
   l'écriture (#1412). 🔒 `test_horloge.py`
+- Le **jour** du résident (calendrier, échéance, date affichée, `default_factory`
+  d'un champ `date`) : `horloge.aujourd_hui()` — le jour de **Paris**, quel que
+  soit le fuseau du conteneur ; celui d'un instant de la base :
+  `horloge.jour_civil(x)`, son heure murale `horloge.a_paris(x)`, le fuseau
+  `horloge.TZ_PARIS`. Jamais `date.today()`, `datetime.now()` sans fuseau ni
+  `maintenant.date()` — le jour UTC, faux d'un jour entre 0 h et 2 h (#1565).
+  🔒 `test_horloge.py` (forme `default_factory` comprise) et Ruff `DTZ005/011`
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
 - **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les
