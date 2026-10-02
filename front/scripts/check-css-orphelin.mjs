@@ -46,12 +46,95 @@
  * pas est « une définition **s'applique-t-elle** à ce balisage ? ». Angle mort
  * relevé en #562.
  *
+ * ## Deux portées, deux relevés (#1537, 02/10/2026)
+ *
+ * | Portée | Qui mesure |
+ * |---|---|
+ * | le `<style>` d'un composant | `svelte-check` (`Unused CSS selector`) |
+ * | les feuilles globales (`app.css`, `src/styles/*.css`) | `lib-classes-globales.mjs` |
+ *
+ * 🔴 Jusqu'au 02/10/2026, seule la première existait, et le verdict disait
+ * « CSS : aucun sélecteur orphelin » — 23 classes globales étaient mortes.
+ *
  * Usage : `npm run lint:css-orphelin`
- *   exit 0 = aucun sélecteur orphelin hors exception
+ *   exit 0 = aucun sélecteur orphelin hors exception, dans les deux portées
  *   exit 1 = sélecteur orphelin, ou exception devenue inutile
- *   exit 2 = INCONNU (svelte-check n'a pas pu être mesuré)
+ *   exit 2 = INCONNU (svelte-check n'a pas pu être mesuré, ou le relevé des
+ *            feuilles globales n'a rien lu)
  */
 import { avertissements, lignesDuRapport } from './lib-svelte-check.mjs';
+import { releveDuDepot } from './lib-classes-globales.mjs';
+
+//  ══ 1. LES FEUILLES GLOBALES (#1537, 02/10/2026) ════════════════════════════
+//
+//  🔴 Ce contrôle a dit « aucun sélecteur orphelin » pendant que 23 classes de
+//  `src/styles/*.css` n'étaient plus employées nulle part. Il ne lisait que ce
+//  que `svelte-check` lit — les `<style>` des composants — et une feuille
+//  globale n'est le `<style>` de personne : l'outil ne peut pas dire qui
+//  l'emploie, donc il se tait, et le verdict héritait de ce silence en parlant
+//  de « CSS » sans borne (`standards/04` §12, §26, §38).
+//
+//  Le relevé et ses limites — indulgent, jamais sévère — sont décrits et
+//  éprouvés dans `lib-classes-globales.mjs` (`--selftest`).
+
+/**
+ * Classes globales que le relevé croit orphelines et qui ne le sont PAS, avec
+ * leur raison — typiquement une classe construite par morceaux
+ * (`class="badge-{x}"`), dont le nom complet n'est écrit nulle part.
+ *
+ * ⚠️ Une entrée qui ne sert plus — classe redevenue employée en toutes lettres,
+ * ou retirée de la feuille — FAIT ÉCHOUER le contrôle. Vide au 02/10/2026 :
+ * aucune des 23 orphelines du relevé n'était construite dynamiquement.
+ */
+const EXCEPTIONS_GLOBALES = {};
+
+/**
+ * Le TÉMOIN : une classe que l'on SAIT employée partout. Si le relevé ne la
+ * voit pas employée, c'est la lecture qui est cassée — le contrôle rend
+ * INCONNU au lieu de crier sur 250 classes, ou pire, de se taire.
+ *
+ * Un relevé dont le résultat normal est zéro ne distingue pas « rien trouvé »
+ * de « rien lu » sans témoin extérieur (`standards/04` §27).
+ */
+const TEMOIN_GLOBAL = 'btn';
+
+const RACINE_SRC = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const globales = releveDuDepot(RACINE_SRC, EXCEPTIONS_GLOBALES, TEMOIN_GLOBAL);
+let globalesKo = false;
+let globalesInconnu = false;
+
+if (!globales.definies || !globales.lues || !globales.temoinVu) {
+	//  Cas zéro (`standards/04` §2) : aucune feuille, aucune source, ou un témoin
+	//  invisible — rien n'a été mesuré, et « 0 orpheline » serait un faux vert.
+	console.error(
+		`\n? INCONNU — feuilles globales : ${globales.feuilles} feuille(s), ` +
+			`${globales.definies} classe(s) définie(s), ${globales.lues} source(s) lue(s), ` +
+			`témoin \`.${TEMOIN_GLOBAL}\` ${globales.temoinVu ? 'vu' : 'NON vu employé'}.\n` +
+			'  La lecture est cassée : ce relevé ne conclut pas.\n',
+	);
+	globalesInconnu = true;
+} else if (globales.orphelines.length || globales.mortes.length) {
+	console.error(
+		`\n✗ ${globales.orphelines.length} classe(s) des feuilles globales employée(s) nulle part\n`,
+	);
+	for (const o of globales.orphelines)
+		console.error(`   src/${o.fichier}:${o.ligne}  .${o.classe}`);
+	for (const m of globales.mortes) {
+		console.error(
+			`   ✗ exception « ${m.classe} » devenue inutile (elle ${m.motif}) : ` +
+				'la retirer de EXCEPTIONS_GLOBALES',
+		);
+	}
+	console.error(
+		'\n  Une classe globale que plus aucun balisage ne porte est le reste d’un écran\n' +
+			'  parti. ⚠️ Avant de la supprimer, chercher une construction par morceaux\n' +
+			'  (`class="kb-{x}"`, `` `kb-${x}` ``) : si elle en est une, la DÉCLARER dans\n' +
+			'  EXCEPTIONS_GLOBALES avec sa raison, au lieu de la supprimer.\n',
+	);
+	globalesKo = true;
+}
+
+//  ══ 2. LES COMPOSANTS — ce que `svelte-check` sait dire ══════════════════════
 
 /**
  * Sélecteurs orphelins TOLÉRÉS, avec leur raison.
@@ -228,7 +311,17 @@ if (aveugles.length !== PLAFOND_NON_MESURES) {
 	process.exit(1);
 }
 
-console.log(`✓ CSS : aucun sélecteur orphelin (${orphelins.length} toléré(s) et déclaré(s))`);
+if (globalesKo) process.exit(1);
+if (globalesInconnu) process.exit(2);
+
+console.log(
+	`✓ CSS des composants : aucun sélecteur orphelin (${orphelins.length} toléré(s) et déclaré(s))`,
+);
+console.log(
+	`✓ CSS des feuilles globales : ${globales.definies} classes définies dans ` +
+		`${globales.feuilles} feuilles, toutes employées par ${globales.lues} sources ` +
+		`(${Object.keys(EXCEPTIONS_GLOBALES).length} exception(s) déclarée(s))`,
+);
 console.log(
 	`  ⚠️ portée réelle : ${mesures}/${tous.length} fichiers mesurés — ` +
 		`${aveugles.length} portent une classe interpolée (plafond ${PLAFOND_NON_MESURES}, #810).`,

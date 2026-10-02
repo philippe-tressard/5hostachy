@@ -1159,6 +1159,12 @@ jobs:
           # zéro, témoin, exceptions qui doivent servir, commentaires blanchis.
           # Six contrôles le recopiaient, et `lint:type-lot` sans cas zéro.
           node scripts/lib-source-unique.mjs --selftest
+          # Le relevé des classes des FEUILLES GLOBALES que plus rien n'emploie
+          # (#1537) : `lint:css-orphelin` disait « aucun sélecteur orphelin » en
+          # ne lisant que les `<style>` des composants — 23 classes de
+          # `src/styles/` étaient mortes. Commentaires, `<style>` locaux,
+          # sélecteurs d'attribut et témoin y sont éprouvés.
+          node scripts/lib-classes-globales.mjs --selftest
           # Le pré-remplissage du kanban par les prestataires (#605) : deux
           # boucles quasi identiques dans une page de 848 lignes, qu'aucun
           # contrôle ne touchait. Les fonctions pures vivent désormais dans
