@@ -94,6 +94,10 @@ class RegleArchivage:
     statuts_terminaux: tuple[str, ...] = ()
     #: L'archivage à la main. Décision humaine : elle prime sur tout.
     champ_archive_manuel: Optional[str] = None
+    #: La même décision, portée par un booléen INVERSE hérité : `actif` faux =
+    #: archivé (#1538). Prestataires et contrats l'avaient avant ce module ; le
+    #: déclarer ici évite une migration ET une seconde lecture de la règle.
+    champ_actif: Optional[str] = None
     #: L'épinglage : « garder en vue ». Il interdit l'archivage automatique.
     champ_epingle: Optional[str] = None
     #: Un brouillon n'est pas encore publié — il n'a rien à quitter.
@@ -204,6 +208,20 @@ REGLES: dict[str, RegleArchivage] = {
         champs_date=("envoye_le",),
         champ_archive_manuel="archivee",
         declencheur="30 jours après l'envoi.",
+    ),
+    #  📦 L'annuaire et ses contrats (#1538, 02/10/2026) : aucun archivage par le
+    #  temps — une entreprise ne périme pas, un contrat se clôt par décision.
+    #  `champs_date` vide = pas de date de référence = jamais d'archivage seul.
+    #  Le geste du conseil passe par `PATCH …/archivage`, qui écrit `actif`.
+    "prestataire": RegleArchivage(
+        champs_date=(),
+        champ_actif="actif",
+        declencheur="📦 Archivé par le conseil : immédiat. Aucun archivage automatique.",
+    ),
+    "contrat": RegleArchivage(
+        champs_date=(),
+        champ_actif="actif",
+        declencheur="📦 Archivé par le conseil : immédiat. Aucun archivage automatique.",
     ),
 }
 
@@ -324,6 +342,9 @@ def est_archivable(
         return False
 
     if regle.champ_archive_manuel and getattr(objet, regle.champ_archive_manuel, False):
+        return True
+    #  ⚠️ Défaut `True` : un objet sans la colonne n'est pas réputé archivé.
+    if regle.champ_actif and not getattr(objet, regle.champ_actif, True):
         return True
     if regle.champ_brouillon and getattr(objet, regle.champ_brouillon, False):
         return False

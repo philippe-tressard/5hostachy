@@ -108,6 +108,7 @@ from app.routers import (
     acces,
     calendrier,
     prestataires,
+    prestataires_archivage,
     compteurs,
     sondages,
     idees,
@@ -408,6 +409,8 @@ app.include_router(prestataires.router)
 #  Même préfixe : les relevés de compteurs sont sortis de `prestataires.py`
 #  (modularité, 29/08/2026), pas de l'API — les chemins n'ont pas bougé.
 app.include_router(compteurs.router)
+#  Le geste 📦 des prestataires et des contrats (#1538), même préfixe aussi.
+app.include_router(prestataires_archivage.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)

@@ -18,8 +18,16 @@ export const prestataires = {
 	list: () => api.get<any[]>('/prestataires'),
 	create: (data: unknown) => api.post<any>('/prestataires', data),
 	update: (id: number, data: unknown) => api.patch<any>(`/prestataires/${id}`, data),
-	delete: (id: number) => api.delete(`/prestataires/${id}`),
+	//  📦 UN mot pour UN geste (#1538) : c'était `delete`, une route `DELETE`
+	//  qui ne supprimait rien, sous une corbeille intitulée « Archiver ».
+	//  `archivee: false` ressort l'objet des Archives.
+	archiver: (id: number, archivee: boolean) =>
+		api.patch<void>(`/prestataires/${id}/archivage`, { archivee }),
+	/**  Ce qui est rangé — à part, pour que les autres lecteurs de `list` ne
+	 *   voient pas surgir une entreprise archivée. */
+	archives: () => api.get<any[]>('/prestataires/archives'),
 	contrats: () => api.get<any[]>('/prestataires/contrats'),
+	contratsArchives: () => api.get<any[]>('/prestataires/contrats/archives'),
 	/**  Propose la synthèse d'un contrat — et n'enregistre RIEN.
 	 *
 	 *   🔴 Appelée UNIQUEMENT par l'icône ✨ d'une carte de contrat, cliquée par
@@ -30,7 +38,8 @@ export const prestataires = {
 	createContrat: (data: unknown) => api.post<any>('/prestataires/contrats', data),
 	updateContrat: (id: number, data: unknown) =>
 		api.patch<any>(`/prestataires/contrats/${id}`, data),
-	deleteContrat: (id: number) => api.delete(`/prestataires/contrats/${id}`),
+	archiverContrat: (id: number, archivee: boolean) =>
+		api.patch<void>(`/prestataires/contrats/${id}/archivage`, { archivee }),
 	releves: (type_compteur?: string) =>
 		api.get<any[]>(
 			`/prestataires/releves${type_compteur ? '?type_compteur=' + encodeURIComponent(type_compteur) : ''}`,

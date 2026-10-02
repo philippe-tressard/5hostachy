@@ -58,6 +58,8 @@ class PrestataireRead(AssisteIASortie):
     adresse: Optional[str] = None
     description: Optional[str] = None
     actif: bool
+    #: Calculé par `REGLES["prestataire"]` (#1538) — ce que lit l'écran.
+    archivee: bool = False
 
     class Config:
         from_attributes = True

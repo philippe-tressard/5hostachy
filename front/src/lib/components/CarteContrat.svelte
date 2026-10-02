@@ -51,6 +51,9 @@
 	export let enRetard = false;
 	export let documents: any[] = [];
 	export let peutModifier = false;
+	/**  Rendue aux Archives : ↩️ y remplace 📦, et ✨ ✏️ se taisent — on
+	 *   ressort un contrat avant de le corriger (#1538). */
+	export let archive = false;
 
 	/**  Le contrat en cours de correction — `null` quand aucun ne l'est. La carte
 	 *   cède sa place au formulaire quand c'est le sien. */
@@ -62,7 +65,8 @@
 
 	export let onBasculer: (id: number) => void = () => {};
 	export let onModifier: (c: any) => void = () => {};
-	export let onArchiver: (id: number) => void = () => {};
+	/** 📦 `true` range le contrat, `false` le ressort des Archives. */
+	export let onArchiver: (id: number, archivee: boolean) => void = () => {};
 	export let onSupprimerDoc: (contratId: number, docId: number) => void = () => {};
 	export let onAjouteDoc: (contratId: number) => void = () => {};
 	export let onAnnuler: () => void = () => {};
@@ -111,6 +115,7 @@
 	class="carte-liste"
 	class:expanded={expanded || enEdition}
 	class:urgent={enRetard}
+	class:attenue={archive && !expanded}
 	id="contrat-{contrat.id}"
 	role="presentation"
 	on:click={() => {
@@ -168,12 +173,12 @@
 
 		<svelte:fragment slot="actions">
 			<!--  🔗 d'abord : c'est le seul geste que TOUT le monde a, et l'ordre
-			      🔗 ✏️ 🗑️ est celui de toutes les cartes (`ux-patterns` §3).
+			      🔗 ✏️ 📦 est celui de toutes les cartes (`ux-patterns` §3).
 			      Il manquait ici alors que l'ancre existait déjà et que le carnet
 			      d'entretien y renvoie — le lien était donc utilisable par tous SAUF
 			      depuis l'écran qui le porte. -->
 			<BoutonLien ancre="contrat-{contrat.id}" quoi="le contrat" />
-			{#if peutModifier}
+			{#if peutModifier && !archive}
 				{#if contrat.synthese_disponible}
 					<!--  ✨ avant ✏️ : du moins destructeur au plus. Proposer un texte
 					      l'est moins qu'ouvrir la correction, qui l'est moins qu'archiver. -->
@@ -199,11 +204,20 @@
 					on:click|stopPropagation={() => (enEdition ? onAnnuler() : onModifier(contrat))}
 					>&#x270F;&#xFE0F;</button
 				>
+				<!--  📦 et non 🗑️ (#1538) : la corbeille disait « supprimer » pour un
+				      geste qui range — et le contrat se retrouve aux Archives. -->
 				<button
-					class="btn-icon-danger"
+					class="btn-icon"
 					aria-label="Archiver"
-					title="Archiver"
-					on:click|stopPropagation={() => onArchiver(contrat.id)}>🗑️</button
+					title="Archiver — rejoint les Archives, en bas de la liste"
+					on:click|stopPropagation={() => onArchiver(contrat.id, true)}>&#x1F4E6;</button
+				>
+			{:else if peutModifier && archive}
+				<button
+					class="btn-icon"
+					aria-label="Restaurer"
+					title="Restaurer — le contrat revient dans la liste"
+					on:click|stopPropagation={() => onArchiver(contrat.id, false)}>&#x21A9;&#xFE0F;</button
 				>
 			{/if}
 		</svelte:fragment>

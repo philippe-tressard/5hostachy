@@ -39,6 +39,9 @@
 	export let expanded = false;
 	export let compactPrests = false;
 	export let peutModifier = false;
+	/**  Rendue aux Archives : ↩️ y remplace 📦, et le crayon se tait — on
+	 *   ressort une fiche avant de la corriger (#1538). */
+	export let archive = false;
 	export let telephonesDe: (t: string) => string[] = () => [];
 
 	/**  Le prestataire en cours de correction — la carte cède sa place au
@@ -52,7 +55,8 @@
 
 	export let onBasculer: (id: number) => void = () => {};
 	export let onModifier: (p: any) => void = () => {};
-	export let onArchiver: (id: number) => void = () => {};
+	/** 📦 `true` range la fiche, `false` la ressort des Archives. */
+	export let onArchiver: (id: number, archivee: boolean) => void = () => {};
 	export let onAnnuler: () => void = () => {};
 	export let onEnregistrer: () => void = () => {};
 
@@ -79,6 +83,7 @@
 <div
 	class="carte-liste"
 	class:expanded={expanded || enEdition}
+	class:attenue={archive && !expanded}
 	id="presta-{p.id}"
 	role="presentation"
 	on:click={() => {
@@ -106,7 +111,7 @@
 
 		<svelte:fragment slot="actions">
 			<BoutonLien ancre="presta-{p.id}" quoi="la fiche prestataire" />
-			{#if peutModifier}
+			{#if peutModifier && !archive}
 				<!--  `aria-pressed` : le mode se lit sur l'icône qui l'a ouvert
 				      (`ux-patterns` §13 bis), jamais sur un titre au-dessus. -->
 				<button
@@ -116,11 +121,20 @@
 					aria-pressed={enEdition}
 					on:click|stopPropagation={() => (enEdition ? onAnnuler() : onModifier(p))}>✏️</button
 				>
+				<!--  📦 et non 🗑️ (#1538) : la corbeille disait « supprimer » pour un
+				      geste qui range — et la fiche se retrouve aux Archives. -->
 				<button
-					class="btn-icon-danger"
+					class="btn-icon"
 					aria-label="Archiver"
-					title="Archiver"
-					on:click|stopPropagation={() => onArchiver(p.id)}>🗑️</button
+					title="Archiver — rejoint les Archives, en bas de la liste"
+					on:click|stopPropagation={() => onArchiver(p.id, true)}>&#x1F4E6;</button
+				>
+			{:else if peutModifier && archive}
+				<button
+					class="btn-icon"
+					aria-label="Restaurer"
+					title="Restaurer — la fiche revient dans l'annuaire"
+					on:click|stopPropagation={() => onArchiver(p.id, false)}>&#x21A9;&#xFE0F;</button
 				>
 			{/if}
 		</svelte:fragment>

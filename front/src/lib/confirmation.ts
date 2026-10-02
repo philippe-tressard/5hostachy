@@ -89,9 +89,9 @@ Cette action est irréversible.`,
  * **Confirmer, agir, et le dire** — le geste destructif complet, en un appel.
  *
  * ```ts
- * await confirmerPuis('Archiver ce contrat ?', 'Archivé', async () => {
- * 	await prestApi.deleteContrat(id);
- * 	contrats = contrats.filter((c) => c.id !== id);
+ * await confirmerPuis(SUPPRESSION('Ce relevé'), 'Supprimé', async () => {
+ * 	await prestApi.deleteReleve(id);
+ * 	releves = releves.filter((r) => r.id !== id);
  * });
  * ```
  *
@@ -136,4 +136,34 @@ export async function confirmerPuis(
 	//  deux gestions d'erreur pour une intention, et c'est précisément ce que ce
 	//  lot retire.
 	return tenter(action, succes, repli);
+}
+
+/**
+ * Les options d'un ARCHIVAGE — le pendant de `SUPPRESSION`, et volontairement
+ * SANS le rouge : archiver se défait (`standards/11` §14).
+ *
+ * La phrase dit où l'objet se retrouve. Elle était écrite dans l'écran des
+ * affaires ; les prestataires et les contrats la prennent ici (#1538) plutôt
+ * que d'en écrire deux autres.
+ */
+export function ARCHIVAGE(quoi: string, ou = "l'onglet Archives") {
+	return { titre: 'Archiver', message: `${quoi} rejoindra ${ou}.`, libelleConfirmer: 'Archiver' };
+}
+
+/**
+ * **📦 Ranger ou ressortir** — le geste réversible complet, en un appel.
+ *
+ * Ranger demande confirmation (`ARCHIVAGE`) ; ressortir non : le geste ne
+ * retire rien de la vue de personne, il rend. Écrit une fois pour les deux
+ * onglets qui l'emploient — prestataires et contrats (#1538).
+ */
+export function archiverPuis(
+	quoi: string,
+	ou: string,
+	archivee: boolean,
+	action: () => Promise<unknown>,
+): Promise<boolean> {
+	return archivee
+		? confirmerPuis(ARCHIVAGE(quoi, ou), 'Archivé', action)
+		: tenter(action, 'Restauré');
 }
