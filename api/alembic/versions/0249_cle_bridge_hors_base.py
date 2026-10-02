@@ -14,15 +14,15 @@ vers le standby et chaque copie hors site. Elle s'efface.
 Pas de retour : la valeur faisait double emploi avec `.env`, qui fait foi. La
 rétablir recréerait la seconde écriture que ce lot supprime.
 
-Revision ID: 0247
-Revises: 0246
+Revision ID: 0249
+Revises: 0248
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0247"
-down_revision = "0246"
+revision = "0249"
+down_revision = "0248"
 branch_labels = None
 depends_on = None
 

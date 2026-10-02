@@ -15,15 +15,15 @@ existante — CLAUDE.md, « Migrations Alembic »).
 
 ⚠️ Le nom de table et de colonne sont des CONSTANTES du fichier.
 
-Revision ID: 0247
-Revises: 0246
+Revision ID: 0248
+Revises: 0247
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0247"
-down_revision = "0246"
+revision = "0248"
+down_revision = "0247"
 branch_labels = None
 depends_on = None
 
