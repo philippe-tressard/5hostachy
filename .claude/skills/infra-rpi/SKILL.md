@@ -430,6 +430,37 @@ bien qu'un verrou orphelin le figeait **indéfiniment**, sans plus aucun
 déploiement et en silence. `api/tests/test_verrou_bascule.py` refuse une
 quatrième copie.
 
+### C31 — health-watch, qui décide du failover, sonde-t-il encore ? (02/10/2026, #1586)
+
+`health-watch.sh` ne disait **rien** quand le site répondait : le 02/10/2026, la
+dernière ligne de son journal datait de 34 h sur les deux nœuds, pour un cron
+`*/5`. Rien ne distinguait ce calme d'un script mort — cron perdu, bit x, module
+absent avant la sonde, verrou bloqué —, donc d'un failover automatique
+inexistant, et aucun contrôle ne mesurait son passage.
+
+Il écrit désormais une ligne datée à **chaque sonde**, avant toute décision
+(`Site OK (HTTP 200) — RPi: rpi1`, ou `⚠ Site HS (HTTP …)`). C31 mesure l'âge de
+la dernière sur les **deux** nœuds — c'est la ligne de la **sonde** qui compte, pas
+n'importe quelle ligne datée : « Autre instance en cours » n'a rien sondé. Écriture,
+collecte et verdict vivent ensemble dans `scripts/lib/lib-health-watch.sh`.
+
+| Ce que C31 rend | Ce que ça veut dire | Conduite |
+|---|---|---|
+| `health-watch sonde sur <nœud> : dernier passage il y a N min` | il tourne et va jusqu'à la sonde, **mesuré** | — |
+| `health-watch ne sonde plus sur <nœud>` (FAIL, > 20 min) | plus de failover automatique **par ce nœud** | `sudo crontab -l` (ligne `health-watch.sh`), bit x, `tail /var/log/hostachy-health-watch.log` : une erreur non datée juste avant le trou dit la cause ; un « Autre instance en cours » répété dit un verrou `/tmp/health-watch.lock` tenu |
+| `health-watch INCONNU sur <nœud>` (FAIL) | aucune sonde datée lisible — journal absent, illisible, ou format changé | présence et droits du journal ; jamais lu comme un vert |
+
+Le constat ne nomme qu'un nœud : il est dit **une fois**, par lui — ou par l'autre
+s'il est muet (#1402). Pair injoignable : C31 se tait sur lui, C15 et « Peer
+injoignable » le disent.
+
+**Côté auto-deploy (#1587)**, chaque ligne est datée **à son écriture** (`log`,
+`scripts/lib/lib-journal.sh`) : « Déployé » porte l'heure de la fin et sa durée
+(`Déployé: <sha> (en N s)`). Un `git fetch` en échec écrit `⚠ git fetch
+impossible (…) — déploiement reporté` (C27 : WARN), toute autre sortie imprévue
+`⚠ ÉCHEC inattendu (code N, dernière commande : …)` (C27 : FAIL). Toutes deux
+font battre C14 — le script tourne — et c'est C27 qui dit qu'il n'a rien déployé.
+
 ### C1 — « site public KO » demande DEUX sondes, pas une (01/09/2026)
 
 Une alerte critique est partie à 01:21 pour un `HTTP 503` qui a duré moins de
