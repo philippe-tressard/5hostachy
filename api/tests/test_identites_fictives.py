@@ -20,18 +20,27 @@ qu'il est inventé. Un mot repéré qui n'est pas un nom (« STOCK », « Témoi
 va dans `PAS_DES_NOMS`. Une entrée qui ne sert plus fait échouer le contrôle.
 
 Formes repérées :
-- une civilité suivie d'un nom (« Mme DUPONT »), partout ;
+- une civilité suivie d'un nom en toute casse, avec ou sans prénom ni
+  particule (« Mme DUPONT », « Madame Hélène Dupont », « M. de LeRoy »),
+  partout ;
 - « Prénom NOM » ou « NOM Prénom » en littéral entier ou entre guillemets
   français, partout — et un prénom composé suivi d'un nom à casse mixte
   (« Jean-Hervé ForT »), qui avait échappé au premier passage ;
 - la valeur d'un champ de nom (`nom=`, `prenom=`, `auteur_nom:`…), dans les
   tests et l'e2e — dans l'application, ces champs portent des libellés.
 
-⚠️ Ce qu'il ne voit pas : un nom isolé hors de ces formes, ni ce qui est public
-sans être du code — documents, messages de commit, tickets GitHub. La consigne
-qui couvre le reste : `.claude/skills/security-audit`. L'attribution légale
-(licences, SPDX, mentions légales des migrations) est hors de sa portée, et
-c'est voulu : elle doit nommer l'auteur.
+Portée (`PORTEE`, `DOCUMENTS_RACINE`) : le code et les tests, les migrations
+(`api/alembic`) et les documents (`docs/`, `specs/`, `infra/`, `.claude/skills/`,
+`.github/`, et les `.md` de la racine) — les deux derniers depuis #1544 : une
+docstring de migration nommait deux employées du syndic, hors de toute portée.
+
+⚠️ Ce qu'il ne voit pas : un nom isolé hors de ces formes — « Prénom Nom » sans
+civilité ni capitales, par exemple : à casse mixte, la forme attraperait chaque
+paire de mots entre guillemets —, ni ce qui est public sans être un fichier :
+messages de commit, tickets et PR GitHub. La consigne qui couvre le reste :
+`.claude/skills/security-audit`. L'attribution légale (`NOTICE.md`,
+`LICENSE-5Hostachy.md`, SPDX) est hors de sa portée, et c'est voulu : elle doit
+nommer l'auteur.
 """
 
 from __future__ import annotations
@@ -46,11 +55,21 @@ from tests.aides_sources import modules_app
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 CE_FICHIER = pathlib.Path(__file__).name
 SUFFIXES = {".py", ".ts", ".svelte", ".mjs", ".js", ".sh"}
+#: Les suffixes des documents publiés avec le dépôt (`DOCUMENTS`, plus bas).
+SUFFIXES_DOCUMENTS = {".md", ".html", ".json", ".js", ".yml"}
 
 #: Où vivent les jeux de données : les champs de nom y portent des personnes.
 DONNEES = ("api/tests", "front/e2e")
 #: Le code hors `app/` (lu par `modules_app`) : seuls les noms en clair comptent.
-CODE = ("front/src", "front/scripts", "scripts")
+#: `api/alembic` y est depuis #1544 : la docstring d'une migration nommait deux
+#: employées du syndic, et aucun contrôle ne lisait ce dossier.
+CODE = ("front/src", "front/scripts", "scripts", "api/alembic")
+#: Les documents : ils sont publics au même titre que le code (#1544).
+DOCUMENTS = ("docs", "specs", "infra", ".claude/skills", ".github")
+#: Les documents de la racine, nommés un à un. `NOTICE.md` et
+#: `LICENSE-5Hostachy.md` n'y sont PAS : l'attribution légale nomme l'auteur,
+#: et c'est voulu.
+DOCUMENTS_RACINE = ("README.md", "CLAUDE.md", "CONTRIBUTING.md", "SECURITY.md")
 
 #: Les noms inventés. En ajouter un, c'est affirmer qu'il ne désigne personne
 #: de la résidence, du syndic ni de ses prestataires.
@@ -70,7 +89,7 @@ FICTIFS = frozenset(
 PAS_DES_NOMS = frozenset(
     """
     ADMIN ANCIEN ASCENSEURS ASSUREUR AULNAY AUTRE BAILLEUR BEARER BONJOUR CAS CLE
-    COMPTEURS CONSEIL CONSTATE COPRO COTE CRAYON CSS DEGAT DEJA DEMANDEUR DUREE
+    COMPTEURS CONSEIL CONSTATE COPRO CORPS COTE CRAYON CSS DEGAT DEJA DEMANDEUR DUREE
     ENTREE ESSAI EXTERNE FAQ GEST HTML INCONNU LIE LOC LOCATAIRE MIS MIXTE MME NOM
     NOUVEAU NOUVEL NOUVELLE NOYAU ORPHELINE OTIS PARC PARTI PDF PLANS PLOMBERIE
     PRENOM PROPRIO REGLEMENT REJEU RESIDENCE RESIDENT SANS SANSBAT SCAN SERIE
@@ -90,8 +109,12 @@ _PERSONNE = (
     rf"|(?:{_PRENOM_COMPOSE}\s+[{_MAJ}][{_MAJ}{_MIN}'-]+)"
 )
 
+#: Après une civilité, le nom s'écrit en toute casse : capitales, « Zorglub »,
+#: « LeZorglub » (majuscule intérieure), précédé ou non d'un prénom et d'une
+#: particule — qui reste hors des groupes : elle n'est pas un nom (#1544).
 CIVILITE = re.compile(
-    rf"\b(?:M\.|Mme|Madame|Monsieur)\s+((?:{_PRENOM}\s+)?(?:{_NOM}|[{_MAJ}][{_MIN}]+))"
+    rf"\b(?:M\.|Mme|Madame|Monsieur)\s+(?:({_PRENOM})\s+)?(?:(?:de|du)\s+|d')?"
+    rf"([{_MAJ}][{_MAJ}{_MIN}'-]*[{_MAJ}{_MIN}])"
 )
 LITTERAL = re.compile(rf"[\"']({_PERSONNE})[\"']")
 GUILLEMETS = re.compile(rf"«\s*\**({_PERSONNE})")
@@ -118,21 +141,43 @@ def noms_dans(source: str, *, donnees: bool) -> list[str]:
         _normaliser(mot)
         for motif in motifs
         for trouve in motif.finditer(source)
-        for mot in _MOT.findall(trouve.group(1))
+        for groupe in trouve.groups()
+        if groupe
+        for mot in _MOT.findall(groupe)
     ]
+
+
+#: (dossier, est-ce un jeu de données, suffixes lus) — la portée, écrite une fois.
+PORTEE = (
+    [(d, True, SUFFIXES) for d in DONNEES]
+    + [(d, False, SUFFIXES) for d in CODE]
+    + [(d, False, SUFFIXES_DOCUMENTS) for d in DOCUMENTS]
+)
+
+
+def _lu(chemin: pathlib.Path, donnees: bool) -> tuple[str, str, bool]:
+    return (chemin.relative_to(RACINE).as_posix(), chemin.read_text(encoding="utf-8"), donnees)
 
 
 def _sources() -> list[tuple[str, str, bool]]:
     """(chemin relatif, texte, est-ce un jeu de données) pour toute la portée."""
     lus = [(f"api/app/{m.rel}", m.source, False) for m in modules_app()]
-    for dossier, donnees in [(d, True) for d in DONNEES] + [(d, False) for d in CODE]:
+    for dossier, donnees, suffixes in PORTEE:
         racine = RACINE / dossier
         assert racine.is_dir(), f"`{dossier}/` introuvable : la portée du contrôle a bougé."
-        lus += [
-            (p.relative_to(RACINE).as_posix(), p.read_text(encoding="utf-8"), donnees)
+        fichiers = [
+            p
             for p in sorted(racine.rglob("*"))
-            if p.suffix in SUFFIXES and p.name != CE_FICHIER and "node_modules" not in p.parts
+            if p.suffix in suffixes and p.name != CE_FICHIER and "node_modules" not in p.parts
         ]
+        #  Cas zéro PAR dossier : un document porte rarement un nom repéré, et le
+        #  plancher global ne verrait pas un dossier devenu muet.
+        assert fichiers, f"`{dossier}/` ne rend aucun fichier lu : la portée a bougé."
+        lus += [_lu(p, donnees) for p in fichiers]
+    for nom in DOCUMENTS_RACINE:
+        chemin = RACINE / nom
+        assert chemin.is_file(), f"`{nom}` introuvable : la portée du contrôle a bougé."
+        lus.append(_lu(chemin, False))
     return lus
 
 
@@ -161,6 +206,13 @@ def test_chaque_forme_est_reperee():
     #  Prénom composé + nom à casse mixte : la forme d'un signalement à l'écran,
     #  « Prénom NomMalSaisi » — elle avait échappé au premier passage (01/10/2026).
     assert noms_dans("« Jean-Hervé ZorgluB », signalé", donnees=False) == ["JEAN-HERVE", "ZORGLUB"]
+    #  Civilité + nom en casse mixte : la forme d'une formule d'appel recopiée
+    #  dans une docstring de migration (#1544) — prénom, particule, majuscule
+    #  intérieure. « Mme LeZorglub » ne rendait que « Le », trop court pour compter.
+    assert noms_dans("« Madame Hélène Zorglub, »", donnees=False) == ["HELENE", "ZORGLUB"]
+    assert noms_dans("Mme LeZorglub a répondu", donnees=False) == ["LEZORGLUB"]
+    assert noms_dans("Madame de Zorglub,", donnees=False) == ["ZORGLUB"]
+    assert noms_dans("M. Paul d'Zorglub", donnees=False) == ["PAUL", "ZORGLUB"]
 
 
 def test_aucun_nom_reel_dans_le_code_ni_les_tests():
