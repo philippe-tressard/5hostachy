@@ -25,12 +25,24 @@ export function typeAccesLabel(val: string | null | undefined): string {
  * connaissait pas et prévoyait un « desactive » que le modèle n'a jamais eu.
  * Et le statut s'affichait BRUT (« actif ») dans cinq écrans. Les valeurs sont
  * celles de `StatutAcces` côté serveur.
+ *
+ * 🔴 Une troisième table vivait encore dans `FormulaireAcces` (#1575, 02/10/2026)
+ * — les pastilles du choix d'état —, avec son propre libellé (« ✅ Actif ») : le
+ * même statut se disait de deux façons selon qu'on le lisait ou qu'on le
+ * choisissait. Le pictogramme rejoint donc l'entrée (`emoji`), et le choix se
+ * dérive d'ici (`STATUT_ACCES_OPTIONS`). 🔒 `npm run lint:statuts-acces`.
  */
 export const STATUTS_ACCES = [
-	{ val: 'actif', label: 'Actif', badge: 'badge-green' },
-	{ val: 'suspendu', label: 'Suspendu', badge: 'badge-orange' },
-	{ val: 'perdu', label: 'Perdu', badge: 'badge-red' },
+	{ val: 'actif', label: 'Actif', emoji: '✅', badge: 'badge-green' },
+	{ val: 'suspendu', label: 'Suspendu', emoji: '⏸️', badge: 'badge-orange' },
+	{ val: 'perdu', label: 'Perdu', emoji: '\u{1F50E}', badge: 'badge-red' },
 ] as const;
+
+/** Les pastilles d'un choix d'état — pictogramme compris, comme `STATUT_TICKET_OPTIONS`. */
+export const STATUT_ACCES_OPTIONS = STATUTS_ACCES.map((s) => ({
+	val: s.val,
+	label: `${s.emoji} ${s.label}`,
+}));
 
 /** Le libellé d'un statut d'accès ; la valeur brute si elle est inconnue (elle se voit). */
 export function statutAccesLabel(val: string | null | undefined): string {
