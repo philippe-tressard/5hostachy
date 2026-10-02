@@ -279,11 +279,18 @@ def test_chaque_evenement_journalise_est_declare():
                 continue
             appels += 1
             premier = n.args[0] if n.args else None
+            #  Un choix entre deux codes (`"compte_valide" if … else "compte_refuse"`)
+            #  reste lisible : chaque branche doit être un littéral déclaré.
+            if isinstance(premier, ast.IfExp):
+                feuilles = [premier.body, premier.orelse]
+            else:
+                feuilles = [premier]
             ou = f"app/{module.rel}:{n.lineno}"
-            if not (isinstance(premier, ast.Constant) and isinstance(premier.value, str)):
-                inconnus.append(f"{ou} — code non littéral")
-            elif premier.value not in _NIVEAUX:
-                inconnus.append(f"{ou} — {premier.value!r}")
+            for f in feuilles:
+                if not (isinstance(f, ast.Constant) and isinstance(f.value, str)):
+                    inconnus.append(f"{ou} — code non littéral")
+                elif f.value not in _NIVEAUX:
+                    inconnus.append(f"{ou} — {f.value!r}")
     #  Cas ZÉRO : un relevé qui ne voit aucun appel ne vérifie aucun code.
     assert appels, f"aucun appel à `{FONCTION}` trouvé dans app/ : le relevé ne voit plus rien"
     assert not inconnus, "Codes d'événement absents de `_NIVEAUX` :\n" + "\n".join(inconnus)

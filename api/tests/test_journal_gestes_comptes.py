@@ -95,6 +95,27 @@ def test_refuser_un_compte_laisse_une_trace(session, journal):
     assert journal() == [f"securite compte_refuse acteur={cs.id} cible={arrivant.id}"]
 
 
+def test_valider_un_aidant_journalise_la_delegation_posee_d_office(session, journal):
+    """Valider un aidant crée une délégation ACTIVE : elle a sa propre ligne."""
+    from app.models.core import StatutUtilisateur
+
+    cs = _cs(session)
+    aidee = compte(session, prefixe="aidee", prenom="Odile", nom="DURAND")
+    aidant = compte(
+        session,
+        prefixe="aidant",
+        actif=False,
+        statut=StatutUtilisateur.aidant,
+        prenom_aide="Odile",
+        nom_aide="Durand",
+    )
+    traiter_compte(aidant.id, CompteAction(action="valider"), BackgroundTasks(), session, cs)
+    assert journal() == [
+        f"securite compte_valide acteur={cs.id} cible={aidant.id}",
+        f"securite delegation_creee acteur={cs.id} cible={aidee.id} aidant={aidant.id} automatique",
+    ]
+
+
 def test_desactiver_puis_reactiver_un_compte(session, journal):
     admin, resident = _admin(session), compte(session, prefixe="resident")
     modifier_utilisateur(resident.id, AdminUserUpdate(actif=False), session, admin)
