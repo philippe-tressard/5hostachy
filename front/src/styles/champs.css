@@ -226,13 +226,11 @@
     ⚠️ À poser sur le CHAMP, jamais sur la grille : c'est le contenu qui décide
     de sa largeur, pas l'écran qui l'accueille. */
 .field.champ-court input,
-.field.champ-court select,
-.input-champ-court {
+.field.champ-court select {
 	max-width: 8rem;
 }
 .field.champ-moyen input,
-.field.champ-moyen select,
-.input-champ-moyen {
+.field.champ-moyen select {
 	max-width: 14rem;
 }
 /*  Un champ posé dans une RANGÉE — barre d’outils, ligne d’action, formulaire

@@ -156,12 +156,6 @@
 	margin-top: 0.25rem;
 	gap: 0.3rem;
 }
-.kanban-card-actions {
-	display: flex;
-	gap: 0.3rem;
-	align-items: center;
-	flex-shrink: 0;
-}
 /* ── Le KANBAN CONDENSÉ du tableau de bord ─────────────────────────────────────
    Le même objet que `.kanban` ci-dessus, dans son rendu d'aperçu : cinq colonnes
    resserrées au large, une colonne à la fois quand l'écran est étroit.
@@ -298,55 +292,6 @@
 	font-weight: 700;
 	padding: 0.1rem 0.4rem;
 	border-radius: 1rem;
-}
-/*  🔴 `block` et non `flex` depuis le 18/09/2026 : l'icône occupait une colonne
-    à gauche, et cette marge coûtait sa largeur à TOUTES les lignes du titre.
-    Elle vit maintenant sur la dernière ligne, avec le périmètre. */
-.kb-item {
-	display: block;
-	padding: 0.45rem 0.6rem;
-	border-top: 1px solid var(--color-border);
-	cursor: pointer;
-	transition: background var(--duree-geste);
-}
-.kb-item:first-of-type {
-	border-top: none;
-}
-@media (hover: hover) and (pointer: fine) {
-	.kb-item:hover {
-		background: var(--color-bg);
-	}
-}
-.kb-item:focus-visible {
-	outline: 2px solid var(--color-primary);
-	outline-offset: -2px;
-}
-.kb-item-icon {
-	flex-shrink: 0;
-	font-size: 0.85rem;
-	line-height: 1.3;
-}
-/*  La dernière ligne de la vignette : l'icône du type, puis le périmètre. */
-.kb-item-bas {
-	display: flex;
-	align-items: center;
-	gap: 0.3rem;
-	margin-top: 0.1rem;
-	min-width: 0;
-}
-.kb-item-titre {
-	display: block;
-	font-size: 0.8rem;
-	color: var(--color-text);
-	line-height: 1.3;
-}
-.kb-item-perim {
-	font-size: var(--fs-2xs);
-	color: var(--color-text-muted);
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 .kb-mobile-nav {
 	display: flex;

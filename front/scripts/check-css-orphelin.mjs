@@ -46,6 +46,10 @@
  * pas est « une définition **s'applique-t-elle** à ce balisage ? ». Angle mort
  * relevé en #562.
  *
+ * ⚠️ Remontée, elle est ensuite morte DANS la feuille globale — ses quatre
+ * emplois partis un à un — sans que ce contrôle le voie : c'est l'une des 23
+ * classes retirées le 02/10/2026 (#1537), quand il a appris à lire les feuilles.
+ *
  * ## Deux portées, deux relevés (#1537, 02/10/2026)
  *
  * | Portée | Qui mesure |
@@ -323,6 +327,6 @@ console.log(
 		`(${Object.keys(EXCEPTIONS_GLOBALES).length} exception(s) déclarée(s))`,
 );
 console.log(
-	`  ⚠️ portée réelle : ${mesures}/${tous.length} fichiers mesurés — ` +
+	`  ⚠️ portée réelle des composants : ${mesures}/${tous.length} fichiers mesurés — ` +
 		`${aveugles.length} portent une classe interpolée (plafond ${PLAFOND_NON_MESURES}, #810).`,
 );

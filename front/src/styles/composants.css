@@ -533,12 +533,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     groupés à droite, comme sur tous les formulaires du site (`ux-patterns` §9
     quinquies). La classe part avec elles : la garder inviterait la quatrième. */
 
-/*  Un événement urgent, marqué par un filet rouge à gauche. Défini par
-    `CarteEvenement`, employé aussi par la page du calendrier. */
-.event-urgent {
-	border-left: 3px solid var(--color-danger);
-}
-
 /*  Une colonne pleine largeur sous 900 px : empilées, elles se lisent ; côte à
     côte, elles imposent un défilement horizontal sur un téléphone. */
 
@@ -618,11 +612,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	background: #e6f4ee;
 	color: #2e7d52;
 	border: 1px solid #9dcfb3;
-}
-.alert-info {
-	background: var(--color-primary-light);
-	color: var(--color-primary-dark);
-	border: 1px solid #9bb3cc;
 }
 
 /* ── Empty state ── */
@@ -1109,12 +1098,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	margin-bottom: 1rem;
 	padding: 0.4rem 0;
 }
-.header-edit-actions {
-	display: flex;
-	gap: 0.5rem;
-	align-items: center;
-	padding-top: 0.25rem;
-}
 
 /*  ── La FRISE du fil d'actualité ────────────────────────────────────────────
     Le trait vertical, les pastilles qui s'y accrochent et les libellés de jour.
@@ -1264,17 +1247,6 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
     `.aide-case` et `.aide-bloc` — quatre marges pour une même notion. Les fondre
     changerait l'espacement de tous les formulaires du site : ce n'est pas une
     factorisation à faire au détour d'un lot, c'est une décision d'écran (#870). */
-/*  Le libellé d'un mois, en tête d'un groupe de lignes datées. Employé par le
-    calendrier et par ses archives — deux vues de la même liste. */
-.month-label {
-	font-size: 0.8rem;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--color-text-muted);
-	margin-bottom: 0.5rem;
-}
-
 /*  Le séparateur vertical d'une barre d'outils d'éditeur. Les deux éditeurs
     riches du site en ont une. */
 .sep {
