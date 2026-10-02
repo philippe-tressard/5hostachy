@@ -50,8 +50,11 @@ import { fileURLToPath } from 'node:url';
  *  Puis 419 : « Mes lots » — la vue locataire extraite (`LotsLocataire`), les
  *  caractéristiques d'un lot (`CaracteristiquesLot`), deux modales de
  *  suppression remplacées par `SUPPRESSION` (#779).
+ *  Puis 397 : la télémétrie anonyme — le tableau « Utilisateurs les plus
+ *  actifs », la colonne « Utilisateurs » et les boutons d'export et
+ *  d'effacement du profil retirés avec l'identifiant (#1545).
  */
-const PLAFOND = 417;
+const PLAFOND = 397;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

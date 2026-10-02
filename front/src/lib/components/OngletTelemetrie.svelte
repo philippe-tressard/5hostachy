@@ -1,5 +1,11 @@
 <!--
-  L'onglet **Télémétrie** de l'administration : qui utilise quoi, et quand.
+  L'onglet **Télémétrie** de l'administration : quelles pages servent, et quand.
+
+  🔴 SANS SAVOIR QUI depuis le 02/10/2026 (#1545). La mesure d'audience ne porte
+  plus d'identifiant : les indicateurs d'utilisateurs (actifs, uniques, moyenne
+  par utilisateur), la colonne « Utilisateurs » des pages et le tableau
+  « Utilisateurs les plus actifs » sont retirés. Le jour le plus actif et les
+  records se jugent aux vues.
 
   POURQUOI CE COMPOSANT (19/08/2026). Les sept écrans d'administration qui
   vivaient sur leur propre route sont devenus des onglets — pour qu'on n'en sorte
@@ -24,7 +30,6 @@
 	import TopPages from '$lib/components/TopPages.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
-	import { fmtDatetimeShort as fmt } from '$lib/date';
 
 	let telemetryData: any = null;
 	let telemetryLoading = true;
@@ -68,7 +73,8 @@
 		<Icon name="bar-chart-3" size={17} />Télémétrie — Utilisation de l'application
 	</h2>
 	<p class="muted" style="font-size:var(--fs-md)">
-		Statistiques d'utilisation : qui utilise quoi et quand.
+		Statistiques d'utilisation : quelles pages servent, et quand. La mesure est anonyme — elle ne
+		dit pas qui.
 	</p>
 
 	<!-- Sélecteur Jour / Mois / Année -->
@@ -103,14 +109,6 @@
 							: 'Pages vues (total)'}
 				</div>
 			</div>
-			{#if telemetryData.kpi.utilisateurs != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.utilisateurs}</div>
-					<div class="tl-kpi-label">
-						{tlScope === 'jour' ? "Utilisateurs actifs aujourd'hui" : 'Utilisateurs uniques (pic)'}
-					</div>
-				</div>
-			{/if}
 			<div class="tl-kpi">
 				<div class="tl-kpi-value">{telemetryData.kpi.pages ?? 0}</div>
 				<div class="tl-kpi-label">Pages distinctes visitées</div>
@@ -121,22 +119,10 @@
 					<div class="tl-kpi-label">🔺 Heure de pointe</div>
 				</div>
 			{/if}
-			{#if telemetryData.kpi.moy_vues_utilisateur != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_vues_utilisateur}</div>
-					<div class="tl-kpi-label">Moy. vues / utilisateur</div>
-				</div>
-			{/if}
 			{#if telemetryData.kpi.moy_vues_jour != null}
 				<div class="tl-kpi">
 					<div class="tl-kpi-value">{telemetryData.kpi.moy_vues_jour}</div>
 					<div class="tl-kpi-label">Moy. vues / jour</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.moy_utilisateurs_jour != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_utilisateurs_jour}</div>
-					<div class="tl-kpi-label">Moy. utilisateurs / jour</div>
 				</div>
 			{/if}
 			{#if telemetryData.kpi.mois_actifs != null}
@@ -158,8 +144,8 @@
 			<div class="tl-kpi-row" style="margin-top:.75rem">
 				<div class="tl-kpi">
 					<div class="tl-kpi-value">
-						{telemetryData.kpi.jour_pointe.uniques}
-						<span style="font-size:.6em;font-weight:400">utilisateurs</span>
+						{telemetryData.kpi.jour_pointe.vues}
+						<span style="font-size:.6em;font-weight:400">vues</span>
 					</div>
 					<div class="tl-kpi-label">
 						🏆 Jour le plus actif — {telemetryData.kpi.jour_pointe.jour}
@@ -174,8 +160,8 @@
 				{#if telemetryData.kpi.record_jour}
 					<div class="tl-kpi">
 						<div class="tl-kpi-value">
-							{telemetryData.kpi.record_jour.uniques}
-							<span style="font-size:.6em;font-weight:400">utilisateurs</span>
+							{telemetryData.kpi.record_jour.vues}
+							<span style="font-size:.6em;font-weight:400">vues</span>
 						</div>
 						<div class="tl-kpi-label">🏆 Record jour — {telemetryData.kpi.record_jour.jour}</div>
 					</div>
@@ -183,8 +169,8 @@
 				{#if telemetryData.kpi.record_mois}
 					<div class="tl-kpi">
 						<div class="tl-kpi-value">
-							{telemetryData.kpi.record_mois.uniques}
-							<span style="font-size:.6em;font-weight:400">utilisateurs</span>
+							{telemetryData.kpi.record_mois.vues}
+							<span style="font-size:.6em;font-weight:400">vues</span>
 						</div>
 						<div class="tl-kpi-label">🏆 Record mois — {telemetryData.kpi.record_mois.mois}</div>
 					</div>
@@ -230,9 +216,7 @@
 								<div
 									class="tl-bar-col"
 									class:tl-bar-col-month={tlScope === 'annee'}
-									title="{d.label} — {d.total} vues{d.uniques != null
-										? `, ${d.uniques} uniques`
-										: ''}"
+									title="{d.label} — {d.total} vues"
 								>
 									<div
 										class="tl-bar"
@@ -249,46 +233,7 @@
 		{/if}
 
 		<!-- Top pages — tableau et total extraits en composant (#total des vues) -->
-		<TopPages
-			pages={telemetryData.top_pages}
-			vuesNonAttribuees={telemetryData.kpi?.vues_non_attribuees ?? 0}
-		/>
-
-		<!-- Utilisateurs les plus actifs (scope jour et mois) -->
-		{#if telemetryData.top_users && telemetryData.top_users.length > 0}
-			<div class="card" style="margin-top:1.25rem">
-				<h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
-				<table class="table">
-					<thead
-						><tr
-							><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right"
-								>Vues</th
-							><th style="text-align:right">Pages diff.</th><th style="text-align:right"
-								>Dernière connexion</th
-							></tr
-						></thead
-					>
-					<tbody>
-						{#each telemetryData.top_users as u (u.nom)}
-							<tr>
-								<td style="font-size:var(--fs-md)">{u.nom}</td>
-								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-									>{u.statut ?? '—'}</td
-								>
-								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-									>{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td
-								>
-								<td style="text-align:right;font-weight:600">{u.total}</td>
-								<td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
-								<td style="text-align:right;font-size:var(--fs-md);color:var(--color-text-muted)"
-									>{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td
-								>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
+		<TopPages pages={telemetryData.top_pages} />
 	</EtatListe>
 </section>
 

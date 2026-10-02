@@ -1,21 +1,31 @@
 <!--
-  **Les droits RGPD sur SA télémétrie** — opposition, portabilité, effacement.
+  **Le refus de la mesure d'audience** — la seule chose que le résident règle sur
+  sa télémétrie.
 
   ## Pourquoi ce composant (#835, 08/09/2026)
 
   Extrait de `profil/+page.svelte` quand le garde-fou de modularité a refusé de
-  le laisser grossir (739 → 754 lignes). Le refus disait vrai : cent onze lignes,
-  cinq variables d'état, trois appels d'API et aucun lien avec le reste de la
-  page — celle-ci en portait pourtant tout l'état.
+  le laisser grossir : cinq variables d'état, trois appels d'API et aucun lien
+  avec le reste de la page.
 
-  Les trois routes servies vivent elles-mêmes à part depuis le même lot
-  (`routers/auth_telemetrie.py`), pour la même raison : elles ne parlent pas
-  d'authentification.
+  ## 🔴 Plus d'export ni d'effacement (#1545, 02/10/2026)
+
+  Le composant offrait aussi « Exporter » et « Effacer mes données de
+  navigation ». La mesure d'audience ne porte plus d'identifiant : il n'y a plus
+  de données de navigation À SOI — exporter rendrait une liste vide, effacer ne
+  toucherait rien, et les deux boutons prétendraient répondre à un droit.
+
+  Le refus reste, et c'est voulu : une collecte anonyme peut garder un refus
+  volontaire. Il s'applique dans le navigateur (`$lib/telemetry`) — qui refuse
+  n'envoie plus rien — et le compte le retient d'un appareil à l'autre.
+
+  ⚠️ Le texte sous la case disait que, sans ces statistiques, le résident « nous
+  prive d'informations précieuses » : un refus doit être aussi simple et aussi
+  neutre que l'acceptation (`standards/14` §4). La phrase est retirée.
 
   ⚠️ **Aucune prop.** Le composant lit l'utilisateur courant dans le store et
-  parle directement à l'API. La page n'a rien à lui dire et rien à en apprendre :
-  lui passer `opt_out_telemetrie` en prop aurait créé une seconde vérité sur une
-  valeur que le serveur détient déjà.
+  parle directement à l'API : lui passer `opt_out_telemetrie` en prop aurait créé
+  une seconde vérité sur une valeur que le serveur détient déjà.
 -->
 <script lang="ts">
 	import { auth as authApi } from '$lib/api';
@@ -25,9 +35,6 @@
 
 	let optOutTelemetrie = false;
 	let savingOptOut = false;
-	let deletingTelemetrie = false;
-	let exportingTelemetrie = false;
-	let confirmDeleteTelemetrie = false;
 
 	//  ⚠️ Lu à l'ouverture ET non lié en deux sens au store : la case reflète ce
 	//  que le serveur a enregistré, et c'est l'appel qui fait foi. Un `$:` sur le
@@ -38,7 +45,7 @@
 	});
 </script>
 
-<!-- Télémétrie opt-out -->
+<!-- Mesure d'audience : refus -->
 <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--color-warning-bordure)">
 	<label class="checkbox-field" style="margin-bottom:.4rem">
 		<input
@@ -67,84 +74,9 @@
 		/>
 		Refuser la collecte de statistiques de navigation
 	</label>
-	<p
-		style="font-size:var(--fs-sm);color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem"
-	>
-		Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les
-		plus utilisées, de détecter d'éventuels problèmes de navigation et d'orienter les améliorations
-		futures vers ce qui vous est réellement utile au quotidien. Elles ne contiennent aucune donnée
-		personnelle sensible et ne sont jamais partagées avec des tiers. En les désactivant, vous nous
-		privez d'informations précieuses pour vous offrir une meilleure expérience.
+	<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin:0;padding-left:1.55rem">
+		Ces statistiques comptent les pages consultées pour savoir quels écrans servent. Elles sont
+		enregistrées <strong>sans identifiant</strong> — ni votre compte, ni votre adresse IP — et à l'heure
+		près. Si vous cochez la case, votre navigateur ne les envoie plus.
 	</p>
-
-	<div style="display:flex;gap:.5rem;flex-wrap:wrap">
-		<button
-			type="button"
-			class="btn btn-sm"
-			style="font-size:var(--fs-sm)"
-			disabled={exportingTelemetrie}
-			on:click={async () => {
-				exportingTelemetrie = true;
-				try {
-					const data = await authApi.exportTelemetrie();
-					const json = JSON.stringify(data, null, 2);
-					const blob = new Blob([json], { type: 'application/json' });
-					const url = URL.createObjectURL(blob);
-					const a = document.createElement('a');
-					a.href = url;
-					a.download = 'mes-donnees-telemetrie.json';
-					a.click();
-					URL.revokeObjectURL(url);
-					toast('success', 'Export téléchargé.');
-				} catch {
-					toast('error', "Erreur lors de l'export.");
-				}
-				exportingTelemetrie = false;
-			}}
-		>
-			📥 Exporter mes données de navigation
-		</button>
-
-		{#if !confirmDeleteTelemetrie}
-			<button
-				type="button"
-				class="btn btn-sm btn-danger"
-				style="font-size:var(--fs-sm)"
-				on:click={() => (confirmDeleteTelemetrie = true)}
-			>
-				🗑️ Effacer mes données de navigation
-			</button>
-		{:else}
-			<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:var(--fs-sm)">
-				<strong style="color:var(--color-danger)">Confirmer ?</strong>
-				<button
-					type="button"
-					class="btn btn-sm btn-danger"
-					style="font-size:var(--fs-sm)"
-					disabled={deletingTelemetrie}
-					on:click={async () => {
-						deletingTelemetrie = true;
-						try {
-							await authApi.effacerTelemetrie();
-							toast('success', 'Données de navigation effacées.');
-						} catch {
-							toast('error', 'Erreur lors de la suppression.');
-						}
-						deletingTelemetrie = false;
-						confirmDeleteTelemetrie = false;
-					}}
-				>
-					Oui, effacer
-				</button>
-				<button
-					type="button"
-					class="btn btn-sm"
-					style="font-size:var(--fs-sm)"
-					on:click={() => (confirmDeleteTelemetrie = false)}
-				>
-					Annuler
-				</button>
-			</span>
-		{/if}
-	</div>
 </div>
