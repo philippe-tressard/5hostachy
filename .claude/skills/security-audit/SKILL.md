@@ -248,13 +248,17 @@ Get-Content .gitignore | Select-String -Pattern "\.env"
 if (Test-Path .env.example) { Get-Content .env.example }
 ```
 
-#### Un secret s'écrit une fois, et jamais dans une URL (#1596)
+#### Un secret s'écrit une fois, et jamais dans une URL (#1596, #1598)
 
 - **La clé du bridge WhatsApp** : `.env` seulement (`WHATSAPP_API_KEY`), lue par
   le bridge et par `utils/whatsapp.entetes_bridge` — `ConfigSite` la refuse
   (`_CLES_HORS_BASE`). Le bridge refuse au démarrage une clé vide, d'exemple ou
   trop courte, et ignore `?apikey=`. 🔒 `api/tests/test_cle_bridge_whatsapp.py`,
   `whatsapp-bridge/tests/contrat-http.test.js`.
+- **Le SSH entre les nœuds** authentifie aussi le SERVEUR : clé d'hôte épinglée
+  dans `/root/.ssh/known_hosts_bascule`, commande écrite dans
+  `scripts/lib/lib-ssh-noeuds.sh` seulement. 🔒 `scripts/poste/scripts-ci-ssh-noeuds.sh`
+  (job `test-scripts`) refuse la confiance d'office (`StrictHostKeyChecking` à `no`) et toute copie.
 
 #### Aucune personne réelle dans le dépôt — il est PUBLIC (#1493)
 
