@@ -28,6 +28,22 @@ elif command -v python3 >/dev/null 2>&1; then
     python3 "$(git rev-parse --show-toplevel)/scripts/poste/verifier-fins-de-ligne.py" || exit 1
 fi
 
+# ── Marqueurs de conflit : un conflit « résolu » à moitié ne se committe pas ──
+#  02/10/2026 (#1616) : un `cherry-pick` a créé un commit portant `<<<<<<< HEAD`
+#  en tête d'un module — la regex de résolution attendait du LF, le fichier était
+#  en CRLF, `git add` a suivi. Rien ne l'a refusé. Ce contrôle passe AVANT la
+#  sortie d'ALLOW_STALE : il ne répond pas à la même question (le retard sur
+#  l'amont), et un marqueur n'est pas « périmé ». Dérogation : ALLOW_MARQUEURS=1
+#  Verdicts du script : 0 propre · 1 marqueur (refus) · autre = INCONNU (dit, ne bloque pas).
+if [ -z "$ALLOW_MARQUEURS" ] && command -v bash >/dev/null 2>&1; then
+    bash "$(git rev-parse --show-toplevel)/scripts/poste/verifier-marqueurs-conflit.sh"
+    case $? in
+        0) ;;
+        1) exit 1 ;;
+        *) echo "⚠ pre-commit : marqueurs de conflit NON mesurés (INCONNU) — voir ci-dessus." >&2 ;;
+    esac
+fi
+
 [ -n "$ALLOW_STALE" ] && exit 0
 
 upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)

@@ -551,6 +551,9 @@ jobs:
           bash scripts/exploitation/maintenance.sh       --selftest
           bash scripts/poste/rejouer-ci.sh        --selftest
           python scripts/poste/verifier-fins-de-ligne.py --selftest
+          # 🔒 Le hook pre-commit refuse un index à marqueurs de conflit (#1616) :
+          # LF et CRLF, la dérogation, et le VRAI hook joué dans un dépôt jetable.
+          bash scripts/poste/verifier-marqueurs-conflit.sh --selftest
           python scripts/poste/verifier-variables-shell.py --selftest
           # Le poste a-t-il ce que le lot épingle ? Sinon le rejeu rend INCONNU (#1417).
           python scripts/poste/verifier-dependances-poste.py --selftest
