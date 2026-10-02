@@ -431,8 +431,8 @@ importe les gestes du transport.
       les tags sur la carte repliée (`npm run lint:entete-carte` exige qu'une
       carte passe par lui)
 - [ ] Corps déplié d'une carte : `class="carte-corps …"` — c'est ce qui le fait
-      entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. *Non mesurable
-      pour l'instant : aucun linter n'exige cette classe (#1579).* Un survol
+      entrer (fondu 200 ms) ; sans elle il apparaît sec, sans un mot. 🔒 `npm run
+      lint:entete-carte` l'exige de tout fichier qui rend `.carte-liste` (#1579). Un survol
       qui ne sert qu'à la souris vit sous `@media (hover: hover) and (pointer:
       fine)` — au doigt, `:hover` reste collé (`ux-patterns` §17)
 - [ ] Dernière ligne d'une carte d'affaire, d'actualité ou du fil : `PastillesAffaire`,
@@ -485,8 +485,9 @@ importe les gestes du transport.
       jamais `titre="… *"` (#1329, 27/09/2026). Les
       libellés de champ sont en MAJUSCULES par le style (`champs.css`), comme
       les intitulés de section — jamais tapées (`npm run lint:champs`)
-- [ ] Libellés et nommage en français — *non mesurable : `lint:texte` (normalisation
-      Unicode) et le contrôle de casse de `lint:champs` ne jugent pas la langue (#1579)*
+- [ ] Libellés et nommage en français — 🔒 les mots d'interface anglais sont refusés par
+      `npm run lint:vocabulaire-ecran` (`lib-mots-anglais.mjs`, #1579) ; *le reste de la langue
+      reste non mesurable : `lint:texte` et `lint:champs` ne la jugent pas*
 - [ ] Couleur et taille de texte : `var(--color-…)`, `var(--fs-…)` (`socle.css`),
       jamais une valeur en dur — `npm run lint:charte-valeurs`, plafond qui ne
       fait que baisser (#1055). Arbitré sur maquette le 27/09/2026 : une taille
@@ -570,7 +571,7 @@ importe les gestes du transport.
 
 Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
 - **`test_email_templates.py`** — verrouille les variables Jinja2 de chaque template
-  (`EXPECTED_VARS`, déclaré dans `tests/contrats_email.py`). Complète le **point 9** (réactif) côté template.
+  (`EXPECTED_VARS`, déclaré dans `tests/aides_contrats_email.py`). Complète le **point 9** (réactif) côté template.
   ⚠️ Si tu modifies les variables d'un template (`seed.EMAIL_TEMPLATES`), **mets à jour
   `EXPECTED_VARS`** ET vérifie que le `send_email(code=...)` correspondant fournit ces
   variables — sinon échec silencieux à l'envoi (cf. bug `'destinataire' is undefined`).
@@ -590,7 +591,8 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   de ce qu'elles remplacent se lit dans `MOTIFS` de
   🔒 `test_aides_de_tests_source_unique.py` — balayage de `app/`, base en mémoire
   (la fixture `session` vient du conftest), comptes, migrations, horloge, scripts
-  shell. Une aide partagée vit dans un `tests/aides_*.py`, **jamais** dans un
+  shell. Seuls `test_*.py`, `aides_*.py` et `conftest` vivent dans `tests/`
+  (`test_nommage_modules_de_tests.py`, `api/pytest.ini`). Une aide partagée vit dans un `tests/aides_*.py`, **jamais** dans un
   fichier de tests qu'un autre importerait. Il y en avait 162 copies.
 - **Un contrôle front « une notion, une source »** — la forme d'une copie refusée
   hors du fichier qui porte la notion — s'écrit sur `front/scripts/lib-source-unique.mjs`
@@ -630,6 +632,10 @@ motif d'interception vise le chemin `/api/` du serveur seulement : sinon il attr
 les modules source `/src/lib/api/…` et la page tombe en 500 (`standards/05` §13).
 Cette ligne disait jusqu'au 27/09/2026 que ces tests « s'arrêtent aux écrans
 publics » : c'était vrai, et ce n'est plus une limite.
+
+🔒 **Une position ou une taille lue juste après l'ouverture d'une boîte** se mesure par
+`boiteStable` (`e2e/aides.ts`), jamais par `boundingBox()` seul : la boîte entre en 200 ms
+à 96 % de sa taille, et la mesure faussée faisait échouer un test sur trente (#1625).
 
 🔒 **Un spec prend `test` et `expect` dans `./aides`**, jamais dans
 `@playwright/test` (`npm run lint:e2e-test`) : ce `test`-là fait échouer toute

@@ -700,6 +700,11 @@ alerte quand sa fenêtre de rattrapage s'épuise sans envoi réussi.
   cd /opt/5hostachy && docker compose up -d whatsapp-bridge
   ```
 - `bascule.sh` ne propage jamais un `creds.json` vide vers le peer
+- **Arrêt propre** (#1590, 03/10/2026) : le bridge traite `SIGTERM` et `SIGINT` (`arret.js`) —
+  il ferme le socket, attend les écritures de `creds.json` et des clés, puis sort en 0,
+  borné à 8 s ; `stop_grace_period: 20s` dans `docker-compose.yml`. Un **exit 137** sur
+  `hostachy_whatsapp` est désormais une anomalie : `docker inspect hostachy_whatsapp
+  --format '{{.State.ExitCode}}'` doit rendre 0 après un arrêt.
 - **La clé du bridge** (#1596, 02/10/2026) : une seule source, `WHATSAPP_API_KEY`
   dans `.env`, lue par le bridge (`WA_API_KEY`) **et** par l'API
   (`utils/whatsapp.entetes_bridge`) — plus rien ne se saisit à l'écran. Le bridge
