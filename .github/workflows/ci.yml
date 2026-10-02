@@ -1511,7 +1511,9 @@ jobs:
         # « Tout le monde » sur Résidence, dont le carnet est fermé aux
         # locataires (signalé à l'écran le 24/09/2026). Celui-ci confronte au
         # code les onglets réservés, la table des sections vue du
-        # résident et les catégories qu'il peut choisir.
+        # résident et les catégories qu'il peut choisir — que le README, lui,
+        # ne doit ni énumérer ni compter (#1540 : « Huit catégories », dont une
+        # réservée au conseil depuis #1098).
         working-directory: front
         run: npm run lint:manuel-profils
 
