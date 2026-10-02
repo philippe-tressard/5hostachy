@@ -57,9 +57,32 @@
  *  Le compte est à **deux** depuis le 12/09/2026, tous deux nommés dans
  *  `FETCH_LEGITIMES` ci-dessous — et le contrôle échoue si l'un d'eux cesse de
  *  servir, donc la liste ne peut pas pourrir.
+ *
+ *  ## 🔴 Il ne voyait pas non plus les routes qui ne sont pas des APPELS (#1578)
+ *
+ *  Jusqu'au 02/10/2026, il ne cherchait que `api.<verbe>(` et `fetch('/api/…`.
+ *  Une route vers l'API qui sert d'ADRESSE — un `href` de téléchargement, le
+ *  `src` d'une image, une constante — lui échappait, et il y en avait cinq :
+ *
+ *  | où | route | dans le client ? |
+ *  |---|---|---|
+ *  | `SectionContratReference` | `/documents/{id}/télécharger` | **oui** — `documents.downloadUrl`, recopiée |
+ *  | `LiensGuide` et la FAQ | `/manuel/pdf` | non — et écrite deux fois |
+ *  | `LienConsignes` | `/admin/fiche-arrivant` | non |
+ *  | `OngletWhatsApp` | `/config/whatsapp-qr` | non |
+ *
+ *  Une adresse est une écriture du contrat au même titre qu'un appel : la route
+ *  renommée côté serveur laisse un lien mort, et rien ne lève. Le contrôle
+ *  refuse donc toute chaîne qui COMMENCE par `/api` hors du client (`ROUTE`
+ *  ci-dessous) ; le client rend l'adresse (`…Url()`), l'écran l'appelle.
+ *
+ *  Les commentaires sont blanchis par `lib-commentaires` — y compris le
+ *  commentaire Svelte de plusieurs lignes, que l'ancien filtre « la ligne
+ *  commence par `//` ou `*` » laissait passer.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = 'src';
 const CLIENT = 'src/lib/api';
@@ -94,9 +117,19 @@ const APPEL = /(?<![.\w])api\.(get|post|patch|put|delete)\s*(?:<.*?>)?\s*\(/g;
 const FETCH_API =
 	/(?<![.\w])fetch\s*\(\s*[`'"]\s*\/api\/|(?<![.\w])fetch\s*\(\s*(?:ENDPOINT|`\$\{apiBase\})/g;
 
+//  Une chaîne qui COMMENCE par `/api` — `'/api/x'`, `"/api/x"`, `` `/api/${id}` ``,
+//  `'/api'` seul ou suivi d'une requête : une route ou la base de l'API, écrite
+//  hors du client. Le guillemet est exigé JUSTE AVANT `/api` : une chaîne dont
+//  `/api` n'est que la suite (`'https://tiers/api/x'`, un service tiers) n'est
+//  pas visée, ni `'/apiculture'` grâce au regard avant.
+const ROUTE = /[`'"]\/api(?=[/`'"?])/;
+
 /**
  * Les deux `fetch()` directs qui ne PEUVENT pas passer par le client, avec leur
  * raison. Le contrôle échoue si l'une de ces entrées cesse de servir.
+ *
+ * ⚠️ La route que ces fichiers écrivent (`ROUTE`) y est admise pour la même
+ * raison : `telemetry.ts` nomme `/api/telemetry/collect` pour `sendBeacon`.
  */
 const FETCH_LEGITIMES = {
 	'src/lib/telemetry.ts':
@@ -116,18 +149,33 @@ function fichiers(dir, acc = []) {
 	return acc;
 }
 
+/**
+ * Ce qu'un fichier écrit de l'API hors du client, ligne par ligne. PURE.
+ *
+ * `nature` : `appel` (`api.<verbe>(`), `fetch` (`fetch` vers l'API) ou `route`
+ * (une chaîne qui commence par `/api`). Une ligne qui porte un `fetch('/api/…')`
+ * le compte une fois, en `fetch` : c'est le même geste.
+ *
+ * Les commentaires sont blanchis d'abord : ce contrôle en cite plusieurs dans
+ * son propre en-tête, et les fichiers du client aussi — les compter ferait
+ * échouer sur de la prose.
+ */
 function analyser(source) {
-	const lignes = source.split('\n');
+	const lignes = neutraliserCommentaires(source).split('\n');
 	const trouves = [];
 	for (let i = 0; i < lignes.length; i++) {
-		//  Une ligne de commentaire ne pose pas d'appel. Le contrôle en cite
-		//  plusieurs dans son propre en-tête, et les fichiers du client en citent
-		//  aussi : les compter ferait échouer sur de la prose.
-		const nue = lignes[i].trim();
-		if (nue.startsWith('//') || nue.startsWith('*') || nue.startsWith('/*')) continue;
+		const ligne = i + 1;
 		APPEL.lastIndex = 0;
 		let m;
-		while ((m = APPEL.exec(lignes[i]))) trouves.push({ ligne: i + 1, verbe: m[1] });
+		while ((m = APPEL.exec(lignes[i]))) {
+			trouves.push({ ligne, nature: 'appel', quoi: `api.${m[1]}(…)` });
+		}
+		FETCH_API.lastIndex = 0;
+		if (FETCH_API.test(lignes[i])) {
+			trouves.push({ ligne, nature: 'fetch', quoi: "fetch('/api/…') écrit à la main" });
+		} else if (ROUTE.test(lignes[i])) {
+			trouves.push({ ligne, nature: 'route', quoi: "route '/api/…' écrite à la main" });
+		}
 	}
 	return trouves;
 }
@@ -151,8 +199,29 @@ function selftest() {
 		//  Deux niveaux d'imbrication, pour que le cas ne soit pas tenu par
 		//  chance : un générique dont l'argument est lui-même paramétré.
 		['const m = await api.get<Map<string, Array<number>>>(url);', 1],
+		//  🔴 Les cinq routes de #1578, telles qu'elles étaient écrites : des
+		//  ADRESSES, pas des appels — l'ancien motif n'en voyait aucune.
+		['<a href="/api/documents/{documentId}/télécharger">Télécharger</a>', 1],
+		['<a href="/api/manuel/pdf" target="_blank" rel="noopener">en PDF</a>.', 1],
+		["const ADRESSE = '/api/admin/fiche-arrivant';", 1],
+		['src="/api/config/whatsapp-qr?t={waQrTimestamp}"', 1],
+		['<a href={`/api/documents/${id}/telecharger`}>', 1],
+		//  La base elle-même, recopiée dans un écran.
+		["const base = '/api';", 1],
+		//  Un `fetch('/api/…')` se compte une fois, pas deux (fetch + route).
+		["const r = await fetch('/api/config');", 1],
 	];
 	const doitAccepter = [
+		//  L'adresse rendue par le client : la forme voulue.
+		'<a href={manuel.pdfUrl()} target="_blank" rel="noopener">',
+		'src={configApi.whatsappQrUrl(waQrTimestamp)}',
+		//  Un fichier statique, un service tiers, un mot qui commence par « api ».
+		'<a href="/manuel-utilisateur.html" target="_blank">',
+		"const url = 'https://tiers.example/api/v1/x';",
+		"const mot = '/apiculture';",
+		//  🔴 Un commentaire Svelte de plusieurs lignes : l'ancien filtre (« la
+		//  ligne commence par `//` ou `*` ») l'aurait compté.
+		'<!--  le lien était écrit\n      href="/api/manuel/pdf"\n      ici -->',
 		"//  l'écran écrivait api.get('/admin/modeles-email') en dur",
 		' *  `api.post` rend `{}` sans argument de type',
 		'adminApi.emailTemplates()',
@@ -193,23 +262,16 @@ const fetchsVus = new Set();
 for (const p of fichiers(RACINE)) {
 	const chemin = p.split('\\').join('/');
 	if (chemin.startsWith(CLIENT + '/') || chemin === CLIENT) continue;
-	const source = readFileSync(p, 'utf8');
-	for (const t of analyser(source)) {
-		ecarts.push(`${chemin}:${t.ligne} — api.${t.verbe}(…)`);
-	}
-	//  Les `fetch()` vers l'API, hors commentaires — même neutralisation que
-	//  ci-dessus : cet en-tête en cite plusieurs.
-	source.split('\n').forEach((ligne, i) => {
-		const nue = ligne.trim();
-		if (nue.startsWith('//') || nue.startsWith('*') || nue.startsWith('/*')) return;
-		FETCH_API.lastIndex = 0;
-		if (!FETCH_API.test(ligne)) return;
-		if (chemin in FETCH_LEGITIMES) {
-			fetchsVus.add(chemin);
-			return;
+	for (const t of analyser(readFileSync(p, 'utf8'))) {
+		//  Un `api.<verbe>(` n'a AUCUNE exception ; un `fetch` ou une route,
+		//  seulement dans les fichiers déclarés — et c'est le `fetch` qui prouve
+		//  que l'entrée sert encore.
+		if (t.nature !== 'appel' && chemin in FETCH_LEGITIMES) {
+			if (t.nature === 'fetch') fetchsVus.add(chemin);
+			continue;
 		}
-		ecarts.push(`${chemin}:${i + 1} — fetch('/api/…') écrit à la main`);
-	});
+		ecarts.push(`${chemin}:${t.ligne} — ${t.quoi}`);
+	}
 }
 
 //  Une entrée qui ne sert plus laisserait repasser un contournement dans ce
