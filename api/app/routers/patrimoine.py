@@ -41,6 +41,7 @@ from app.models.core import (
     Ticket,
     Utilisateur,
 )
+from app.utils.lecture import lire_objet
 from app.utils.perimetres import invalider_cache, parse_json_perimetres, parse_perimetres
 from app.utils.recuperer import ou_404
 
@@ -192,6 +193,27 @@ def _concerne_tous(noeud: Perimetre, par_id: dict[int, Perimetre]) -> bool:
     return False
 
 
+def _lu(
+    noeud: Perimetre, cites: set[str], parent: Optional[str], profondeur: int, concerne_tous: bool
+) -> PerimetreRead:
+    """Un nœud lu sur le modèle, avec ce que l'arbre seul sait dire.
+
+    🔴 Ce `PerimetreRead` était écrit DEUX FOIS, colonne par colonne, ici même —
+    l'arbre et l'orphelin, qui ne diffèrent que par les trois valeurs passées en
+    paramètre (#1563). Un champ ajouté au schéma devait l'être aux deux.
+    """
+    return lire_objet(
+        PerimetreRead,
+        noeud,
+        parent=parent,
+        profondeur=profondeur,
+        concerne_tous=concerne_tous,
+        libelle_court=noeud.libelle_court or noeud.libelle,
+        description=noeud.description or "",
+        utilise=noeud.code.lower() in cites,
+    )
+
+
 def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]:
     """L'arborescence à plat, en ordre d'affichage (parcours en profondeur).
 
@@ -215,25 +237,10 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
             if noeud.id in vus:
                 continue
             vus.add(noeud.id)
+            parent = par_id[noeud.parent_id].code if noeud.parent_id in par_id else None
             sortie.append(
-                PerimetreRead(
-                    id=noeud.id,
-                    code=noeud.code,
-                    parent=par_id[noeud.parent_id].code if noeud.parent_id in par_id else None,
-                    libelle=noeud.libelle,
-                    libelle_court=noeud.libelle_court or noeud.libelle,
-                    description=noeud.description or "",
-                    icone=noeud.icone,
-                    batiment_id=noeud.batiment_id,
-                    profondeur=profondeur.get(noeud.id, 0),
-                    ordre=noeud.ordre,
-                    actif=noeud.actif,
-                    portee_globale=noeud.portee_globale,
-                    concerne_tous=_concerne_tous(noeud, par_id),
-                    selectionnable=noeud.selectionnable,
-                    privatif=noeud.privatif,
-                    hors_copropriete=noeud.hors_copropriete,
-                    utilise=noeud.code.lower() in cites,
+                _lu(
+                    noeud, cites, parent, profondeur.get(noeud.id, 0), _concerne_tous(noeud, par_id)
                 )
             )
             descendre(noeud.id)
@@ -243,27 +250,7 @@ def _en_lecture(noeuds: list[Perimetre], cites: set[str]) -> list[PerimetreRead]
     #  rend quand même, sinon l'écran ne permettrait pas de le réparer.
     for noeud in noeuds:
         if noeud.id not in vus:
-            sortie.append(
-                PerimetreRead(
-                    id=noeud.id,
-                    code=noeud.code,
-                    parent=None,
-                    libelle=noeud.libelle,
-                    libelle_court=noeud.libelle_court or noeud.libelle,
-                    description=noeud.description or "",
-                    icone=noeud.icone,
-                    batiment_id=noeud.batiment_id,
-                    profondeur=0,
-                    ordre=noeud.ordre,
-                    actif=noeud.actif,
-                    portee_globale=noeud.portee_globale,
-                    concerne_tous=noeud.portee_globale,
-                    selectionnable=noeud.selectionnable,
-                    privatif=noeud.privatif,
-                    hors_copropriete=noeud.hors_copropriete,
-                    utilise=noeud.code.lower() in cites,
-                )
-            )
+            sortie.append(_lu(noeud, cites, None, 0, noeud.portee_globale))
     return sortie
 
 

@@ -234,9 +234,7 @@ def locataires_suggeres(
             continue
         np = u.nom_proprietaire.lower()
         if any(mot in np for mot in bailleur_mots):
-            result.append(
-                LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)
-            )
+            result.append(LocataireInfo.model_validate(u))
     return result
 
 
@@ -261,7 +259,4 @@ def search_locataire(
             .where((Utilisateur.nom.ilike(pattern)) | (Utilisateur.prenom.ilike(pattern)))
             .limit(10)
         ).all()
-    return [
-        LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)
-        for u in results
-    ]
+    return [LocataireInfo.model_validate(u) for u in results]

@@ -187,6 +187,30 @@ def test_evolution_read_sans_perimetre_rend_none_et_non_liste_vide(session):
     assert lu.perimetre_cible is None and lu.fichiers_urls == []
 
 
+# ── L'aide elle-même : `utils/lecture.lire_objet` ─────────────────────────────
+
+
+def test_lire_objet_refuse_un_derive_que_le_schema_ne_declare_pas():
+    """Pydantic ignorerait la clé : le champ n'atteindrait jamais l'API."""
+    import pytest
+
+    from app.routers.lots import LotRead
+    from app.utils.lecture import lire_objet
+
+    lot = Lot(id=1, numero="12", type=TypeLot.cave)
+    with pytest.raises(TypeError, match="batiment_libelle"):
+        lire_objet(LotRead, lot, type="cave", batiment_libelle="Bât. B")
+
+
+def test_lire_objet_le_derive_prime_sur_l_attribut_et_se_valide():
+    from app.routers.lots import LotRead
+    from app.utils.lecture import lire_objet
+
+    lot = Lot(id=1, numero="12", type=TypeLot.cave, etage=3)
+    lu = lire_objet(LotRead, lot, type="parking", etage="4")
+    assert (lu.type, lu.etage, lu.numero) == ("parking", 4, "12")
+
+
 # ── lots et bailleur : LotRead, AccesOut, BailLocataireOut, LocataireInfo ─────
 
 

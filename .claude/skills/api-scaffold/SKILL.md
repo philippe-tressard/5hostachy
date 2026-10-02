@@ -201,6 +201,11 @@ def modifier(entite_id: int, body: EntiteUpdate, session: Session = Depends(get_
 - **`ou_404(session, Modele, id, "libellé")`**, jamais `session.get` + `raise
   HTTPException(404)` : le 404 nomme ce qui manque, et c'est écrit une fois.
 - **`model_dump()`**, pas `.dict()` (déprécié).
+- **Rendre un objet** : `return obj` ou `EntiteRead.model_validate(obj)` ; s'il
+  y a des champs CALCULÉS, `lire_objet(EntiteRead, obj, champ_calcule=…)`
+  (`app/utils/lecture.py`) — jamais `EntiteRead(id=obj.id, nom=obj.nom, …)`,
+  où un champ oublié part à son défaut sans un mot.
+  🔒 `test_lecture_colonne_par_colonne.py` (#1563).
 - **Suppression** : physique réservée à `require_admin`. Ce que le résident voit
   disparaître s'**archive** (`utils/archivage`), il ne se supprime pas.
 - Une règle d'appartenance (« cet objet est-il le mien ? ») va dans

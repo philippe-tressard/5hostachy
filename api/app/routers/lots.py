@@ -16,6 +16,7 @@ from app.auth.deps import (
     require_cs_or_admin,
 )
 from app.database import get_session
+from app.utils.lecture import lire_objet
 from app.utils.recuperer import ou_404
 from app.utils.etages import (
     ETAGE_HORS_BORNES,
@@ -68,14 +69,10 @@ class LotRead(BaseModel):
 
 
 def _lot_read(lot: Lot) -> LotRead:
-    return LotRead(
-        id=lot.id,
-        numero=lot.numero,
+    return lire_objet(
+        LotRead,
+        lot,
         type=type_de_lot(lot),
-        type_appartement=lot.type_appartement,
-        etage=lot.etage,
-        superficie=lot.superficie,
-        batiment_id=lot.batiment_id,
         batiment_nom=libelle_batiment_ou(lot.batiment, None),
     )
 

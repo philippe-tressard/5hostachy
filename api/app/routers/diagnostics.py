@@ -15,6 +15,7 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
+from app.utils.lecture import lire_objet
 from app.utils.recuperer import ou_404
 
 logger = logging.getLogger(__name__)
@@ -77,29 +78,25 @@ def list_types(
         .where(DiagnosticType.actif == True)  # noqa: E712
         .order_by(DiagnosticType.ordre)
     ).all()
-    result = []
-    for t in types:
-        rapports = session.exec(
-            select(DiagnosticRapport)
-            .where(DiagnosticRapport.diagnostic_type_id == t.id)
-            .order_by(
-                DiagnosticRapport.date_rapport.desc().nullslast(),
-                DiagnosticRapport.publie_le.desc(),
-            )
-        ).all()
-        result.append(
-            DiagnosticTypeRead(
-                id=t.id,
-                code=t.code,
-                nom=t.nom,
-                texte_legislatif=t.texte_legislatif,
-                frequence=t.frequence,
-                ordre=t.ordre,
-                non_applicable=t.non_applicable,
-                rapports=[RapportRead.model_validate(r) for r in rapports],
-            )
+    return [_type_lu(session, t) for t in types]
+
+
+def _type_lu(session: Session, t: DiagnosticType) -> DiagnosticTypeRead:
+    """Un type de diagnostic et ses rapports, le plus récent d'abord.
+
+    🔴 Écrit DEUX FOIS, colonne par colonne — la liste et la bascule « non
+    applicable » — jusqu'au 02/10/2026 (#1563).
+    """
+    rapports = session.exec(
+        select(DiagnosticRapport)
+        .where(DiagnosticRapport.diagnostic_type_id == t.id)
+        .order_by(
+            DiagnosticRapport.date_rapport.desc().nullslast(), DiagnosticRapport.publie_le.desc()
         )
-    return result
+    ).all()
+    return lire_objet(
+        DiagnosticTypeRead, t, rapports=[RapportRead.model_validate(r) for r in rapports]
+    )
 
 
 @router.patch("/types/{type_id}/non-applicable", response_model=DiagnosticTypeRead)
@@ -114,23 +111,7 @@ def toggle_non_applicable(
     session.add(diag_type)
     session.commit()
     session.refresh(diag_type)
-    rapports = session.exec(
-        select(DiagnosticRapport)
-        .where(DiagnosticRapport.diagnostic_type_id == diag_type.id)
-        .order_by(
-            DiagnosticRapport.date_rapport.desc().nullslast(), DiagnosticRapport.publie_le.desc()
-        )
-    ).all()
-    return DiagnosticTypeRead(
-        id=diag_type.id,
-        code=diag_type.code,
-        nom=diag_type.nom,
-        texte_legislatif=diag_type.texte_legislatif,
-        frequence=diag_type.frequence,
-        ordre=diag_type.ordre,
-        non_applicable=diag_type.non_applicable,
-        rapports=[RapportRead.model_validate(r) for r in rapports],
-    )
+    return _type_lu(session, diag_type)
 
 
 @router.post("/types/{type_id}/rapports", response_model=RapportRead, status_code=201)

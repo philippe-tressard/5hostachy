@@ -23,6 +23,7 @@ from app.models.core import LocationBail, Lot, Batiment, StatutBail, Utilisateur
 from pydantic import BaseModel
 from app.auth.appartenance import exiger_bail_du_bailleur
 from app.utils.acces_bail import confies, remettre, rendre_au_bailleur
+from app.utils.lecture import lire_objet
 from app.utils.porteurs_acces import acces_de
 from app.utils.types_acces import TYPES_ACCES
 from app.utils.valeurs import valeur
@@ -90,19 +91,7 @@ _CHAMP_IDS = {"vigik": "vigik_ids", "telecommande": "tc_ids"}
 def _sortie(session: Session, lot_map: dict, cle: str, o, **extra) -> AccesOut:
     """Un badge tel que les écrans du bail le lisent — une écriture pour les deux types."""
     lot_type, lot_label = _lot_info(lot_map, session, o.lot_id)
-    return AccesOut(
-        id=o.id,
-        code=o.code,
-        type=cle,
-        lot_id=o.lot_id,
-        lot_type=lot_type,
-        lot_label=lot_label,
-        statut=o.statut,
-        chez_locataire=o.chez_locataire,
-        bail_id=o.bail_id,
-        cree_le=o.cree_le,
-        **extra,
-    )
+    return lire_objet(AccesOut, o, type=cle, lot_type=lot_type, lot_label=lot_label, **extra)
 
 
 def _motif_non_transferable(cle: str, o, bail, nature_bail: str, lot_map: dict) -> Optional[str]:
@@ -294,9 +283,9 @@ def mon_bail(
         session.get(Batiment, bail_lot.batiment_id) if (bail_lot and bail_lot.batiment_id) else None
     )
     acces_list = [_sortie(session, {}, cle, o) for cle, o in confies(session, bail.id)]
-    return BailLocataireOut(
-        id=bail.id,
-        lot_id=bail.lot_id,
+    return lire_objet(
+        BailLocataireOut,
+        bail,
         lot_numero=bail_lot.numero if bail_lot else None,
         lot_type=valeur(bail_lot.type) if bail_lot else None,
         lot_type_appartement=bail_lot.type_appartement if bail_lot else None,
@@ -310,8 +299,5 @@ def mon_bail(
         bailleur_prenom=bailleur.prenom if bailleur else "",
         bailleur_email=bailleur.email if bailleur else None,
         bailleur_telephone=bailleur.telephone if bailleur else None,
-        date_entree=bail.date_entree,
-        date_sortie_prevue=bail.date_sortie_prevue,
-        statut=bail.statut,
         acces=acces_list,
     )

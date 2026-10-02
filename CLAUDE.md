@@ -163,9 +163,13 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - La valeur d'une énumération (`categorie`, `statut`…) : `utils/valeurs.valeur(x)`,
   jamais `str(x)` — qui rend « CategorieTicket.etude_travaux » — ni un
   `getattr(x, "value", x)` recopié (il l'était neuf fois ; 🔒 `test_valeur_source_unique`).
-- Lire un objet pour le RENDRE : `Schema.model_validate(objet)` puis les seuls
-  champs dérivés — jamais une recopie colonne par colonne, où tout oubli part à
-  sa valeur par défaut sans un mot (🔒 `test_ticket_read_rend_le_modele`, #1092).
+- Lire un objet pour le RENDRE : `Schema.model_validate(objet)`, ou
+  `utils/lecture.lire_objet(Schema, objet, **dérivés)` quand des champs se
+  calculent — jamais une recopie colonne par colonne, où tout oubli part à sa
+  valeur par défaut sans un mot : l'historique d'une affaire a ainsi perdu
+  `assiste_ia` et `contenu_origine` (#1563). 🔒 `test_lecture_colonne_par_colonne`
+  refuse la recopie pour TOUT schéma de l'application (il ne gardait que
+  `TicketRead`, #1092) ; `test_lectures_rendent_le_modele` relit les sorties.
 
 > 🔴 Cette section décrivait jusqu'au 23/09/2026 un backend disparu : « modèle
 > dans `models/core.py` », « trois schémas dans `schemas.py` », « soft delete par
