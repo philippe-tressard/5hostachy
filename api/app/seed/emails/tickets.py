@@ -2,13 +2,8 @@
 
 C'est le seul circuit qui sort de la copropriété : `ticket_syndic`, `ticket_externe` et `relance_syndic` s'adressent au syndic ou à un tiers, et leur ton engage le conseil syndical. Ils changent quand ce circuit change.
 
-Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
-`<html>` ni de `<body>` ici, seulement le corps riche.
-
-⚠️ La mise en forme vient de `fragments.py` — encarts, cadre de commentaire,
-boutons, titres. Ce fichier partageait une vingtaine de lignes de HTML avec
-`vie_collective.py`, au pixel près (#959). Ne pas réécrire un `<table>` ici :
-ajouter un paramètre là-bas.
+Corps riche seulement, mis en forme par `fragments.py` : voir son en-tête pour le
+gabarit commun et la règle « ne pas réécrire un `<table>` ici » (#959, #1564).
 """
 
 from app.seed.emails.fragments import (

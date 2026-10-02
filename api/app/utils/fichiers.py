@@ -464,3 +464,22 @@ def enregistrer_televersement(file, raw_name: str, user=None) -> str:
     with open(dest, "wb") as sortie:
         shutil.copyfileobj(file.file, sortie)
     return dest
+
+
+async def lire_tableur_recu(fichier, user=None) -> bytes:
+    """Lit un classeur importé et applique la famille « tableur » AVANT de l'analyser.
+
+    🔴 Les trois règles précèdent la lecture du classeur (#1026). Les imports
+    n'avaient AUCUN contrôle : ni type, ni taille — le corps entier était lu en
+    mémoire puis passé à l'analyseur. Le plafond de la famille protège donc la
+    mémoire du Raspberry Pi autant qu'il contrôle l'entrée : un fichier d'import
+    est une LISTE, pas un scan, et rien ne borne le corps d'une requête en amont.
+
+    ⚠️ Rien n'est écrit sur disque, et c'est voulu : le classeur est analysé puis
+    jeté. On appelle donc `verifier_fichier_recu`, pas `enregistrer_fichier_recu`.
+    Écrit une seule fois pour les trois imports (télécommandes, Vigik, lots) : la
+    recopie du geste en était à dix lignes de commentaire par routeur.
+    """
+    contenu = await fichier.read()
+    verifier_fichier_recu(contenu, fichier.filename, fichier.content_type, "tableur", user)
+    return contenu

@@ -2,13 +2,8 @@
 
 Publications, calendrier, documents, boîte à idées, annonces de hall. Tous annoncent quelque chose que le destinataire peut aussi voir dans l'application : l'e-mail est un rappel, pas le canal principal.
 
-Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
-`<html>` ni de `<body>` ici, seulement le corps riche.
-
-⚠️ La mise en forme vient de `fragments.py` — encarts, cadre de commentaire,
-boutons, titres. Ce fichier partageait une vingtaine de lignes de HTML avec
-`tickets.py`, au pixel près (#959). Ne pas réécrire un `<table>` ici : ajouter
-un paramètre là-bas.
+Corps riche, sans `<html>` ni `<body>` : la mise en forme et sa règle (jamais un
+`<table>` réécrit ici) sont dans l'en-tête de `fragments.py` (#959).
 """
 
 from app.seed.emails.fragments import (

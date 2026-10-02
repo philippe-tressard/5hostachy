@@ -180,7 +180,16 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`. Les
   404 bruts qui restent sont un **plafond décroissant**, `PLAFOND_404_BRUTS` dans
   `api/tests/test_recuperer_source_unique.py` — la valeur se lit là, et la carte
-  des plafonds est #1571 (#1047, qui le citait, est fermé).
+  des plafonds est #1571 (#1047, qui le citait, est fermé). Le 404 d'un objet
+  qui doit porter son parent (`sous={"bail_id": …}`) passe aussi par lui.
+- Lire un objet, puis refuser en **403** si le prédicat de l'entité dit non
+  (`ticket_visible`, `sondage_accessible`…) : `auth/appartenance.exiger_objet_autorise`
+  — jamais `ou_404` suivi d'un `if not visible: raise HTTPException(403)`, qui
+  était écrit à l'identique dans six routeurs (#1564).
+- Deux tables qui portent le même objet (Vigik/Télécommande et leurs deux
+  stagings d'import) : une **classe de base non-table** (`models/acces.py`,
+  `_ObjetAcces`), jamais deux déclarations de colonnes. Un import xlsx déclare
+  son `_traiter_rows` et nomme ses deux importeurs par `import_xlsx.importeurs`.
 - La valeur d'une énumération (`categorie`, `statut`…) : `utils/valeurs.valeur(x)`,
   jamais `str(x)` — qui rend « CategorieTicket.etude_travaux » — ni un
   `getattr(x, "value", x)` recopié (il l'était neuf fois ; 🔒 `test_valeur_source_unique`).
@@ -600,6 +609,11 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   six contrôles en recopiaient le squelette, et l'un n'avait pas de cas zéro (#779).
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
+- 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,
+  jscpd épinglé) mesure les duplications exactes de `api/app` et échoue **dans les
+  deux sens** — un clone ajouté, ou un retiré sans baisser `PLAFOND_CLONES`. Les
+  six qui restent sont des déclarations que le langage force à répéter (blocs
+  d'imports, signatures), nommées dans l'en-tête du script.
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)

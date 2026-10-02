@@ -1,6 +1,16 @@
 """
 Règles de visibilité centralisées — source de vérité unique.
 
+⚠️ **La règle reste unique** : elle a seulement cessé de tenir dans un seul fichier
+(#547, 20/08/2026). Le paquet expose la même surface qu'avant — `from
+app.utils.visibility import …` ne change pas d'une ligne pour ses seize importateurs.
+
+Le découpage suit une couture réelle, pas la ligne où le compteur a dépassé :
+`socle` porte les deux primitives que tout le reste compose (géographie et public
+visé), `objets` les règles par entité, `documents` l'algorithme d'accès en cinq
+étapes — le seul qui interroge la base, et le seul adossé à un modèle de profil
+d'accès. Chaque fragment renvoie ici au lieu de redire ce paragraphe (#1564).
+
 Toute logique de filtrage par rôle/périmètre/profil doit passer par ce module.
 Ne jamais dupliquer ces règles dans les routers.
 

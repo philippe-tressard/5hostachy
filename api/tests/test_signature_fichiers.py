@@ -133,6 +133,7 @@ _APPELS_ADMIS = (
     "enregistrer_televersement",
     "verifier_fichier_recu",
     "enregistrer_fichier_recu",
+    "lire_tableur_recu",  # lit puis appelle `verifier_fichier_recu` (#1564)
 )
 
 

@@ -32,6 +32,54 @@ from app.utils.telemetrie_calculs import (
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
 
+def _top_utilisateurs(session: Session, depuis):
+    """Les trente utilisateurs les plus actifs depuis `depuis` : (id, vues, pages distinctes).
+
+    Écrit trois fois (portées `jour` et `mois`, route `users-active`) jusqu'au
+    02/10/2026, la borne basse étant la seule différence (#1564).
+    """
+    return session.exec(
+        select(
+            TelemetryEvent.user_id,
+            func.count().label("total"),
+            func.count(func.distinct(TelemetryEvent.page)).label("pages"),
+        )
+        .where(TelemetryEvent.cree_le >= depuis, TelemetryEvent.user_id.isnot(None))
+        .group_by(TelemetryEvent.user_id)
+        .order_by(func.count().desc())
+        .limit(30)
+    ).all()
+
+
+def _uniques_par_jour(session: Session, paris_offset_str: str, depuis=None) -> dict[str, int]:
+    """Les utilisateurs uniques de chaque jour — les évènements bruts d'abord, puis l'agrégat.
+
+    Un jour dont les évènements bruts ont été purgés (30 jours) n'existe plus que
+    dans `TelemetryDaily` : son total comble alors le trou, sans jamais écraser
+    un jour que les évènements savent encore compter. `depuis` borne les deux
+    sources (portée `mois`) ; sans lui, tout l'historique (portée `annee`).
+    """
+    jour = func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str)
+    evenements = (
+        select(
+            jour.label("jour"), func.count(func.distinct(TelemetryEvent.user_id)).label("uniques")
+        )
+        .where(TelemetryEvent.user_id.isnot(None))
+        .group_by(jour)
+    )
+    totaux = select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
+        TelemetryDaily.page == "__total__"
+    )
+    if depuis is not None:
+        evenements = evenements.where(TelemetryEvent.cree_le >= depuis)
+        totaux = totaux.where(TelemetryDaily.jour >= depuis)
+    uniques = {r[0]: r[1] for r in session.exec(evenements).all()}
+    for r in session.exec(totaux).all():
+        if r[0] not in uniques:
+            uniques[r[0]] = r[1]
+    return uniques
+
+
 # ── Dashboard admin ───────────────────────────────────────────────────────────
 
 
@@ -162,17 +210,7 @@ def dashboard(
         moy_vues = round(total_today / active_today, 1) if active_today else None
 
         # Top users today
-        user_rows = session.exec(
-            select(
-                TelemetryEvent.user_id,
-                func.count().label("total"),
-                func.count(func.distinct(TelemetryEvent.page)).label("pages"),
-            )
-            .where(TelemetryEvent.cree_le >= today_start_utc, TelemetryEvent.user_id.isnot(None))
-            .group_by(TelemetryEvent.user_id)
-            .order_by(func.count().desc())
-            .limit(30)
-        ).all()
+        user_rows = _top_utilisateurs(session, today_start_utc)
 
         fiches = _fiches_utilisateurs(session, user_rows)
 
@@ -202,24 +240,7 @@ def dashboard(
         ).all()
 
         # Vrais uniques par jour
-        daily_uniques_raw = session.exec(
-            select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
-                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
-            )
-            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
-        ).all()
-        daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
-
-        total_rows = session.exec(
-            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
-                TelemetryDaily.jour >= thirty_days_ago, TelemetryDaily.page == "__total__"
-            )
-        ).all()
-        for r in total_rows:
-            if r[0] not in daily_uniques_map:
-                daily_uniques_map[r[0]] = r[1]
+        daily_uniques_map = _uniques_par_jour(session, paris_offset_str, thirty_days_ago)
 
         # Chart par jour
         daily_chart: dict[str, dict] = {}
@@ -291,17 +312,7 @@ def dashboard(
             peak_hour = f"{(best[0] + paris_offset) % 24}h"
 
         # Top users 30j
-        user_rows = session.exec(
-            select(
-                TelemetryEvent.user_id,
-                func.count().label("total"),
-                func.count(func.distinct(TelemetryEvent.page)).label("pages"),
-            )
-            .where(TelemetryEvent.cree_le >= thirty_days_ago, TelemetryEvent.user_id.isnot(None))
-            .group_by(TelemetryEvent.user_id)
-            .order_by(func.count().desc())
-            .limit(30)
-        ).all()
+        user_rows = _top_utilisateurs(session, thirty_days_ago)
 
         fiches = _fiches_utilisateurs(session, user_rows)
 
@@ -375,24 +386,7 @@ def dashboard(
 
         # Records
         best_day = None
-        daily_uniques_raw = session.exec(
-            select(
-                func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str).label("jour"),
-                func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
-            )
-            .where(TelemetryEvent.user_id.isnot(None))
-            .group_by(func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, paris_offset_str))
-        ).all()
-        daily_uniques_map = {r[0]: r[1] for r in daily_uniques_raw}
-        # Add fallback from daily totals
-        total_daily_all = session.exec(
-            select(TelemetryDaily.jour, TelemetryDaily.utilisateurs_uniques).where(
-                TelemetryDaily.page == "__total__"
-            )
-        ).all()
-        for r in total_daily_all:
-            if r[0] not in daily_uniques_map:
-                daily_uniques_map[r[0]] = r[1]
+        daily_uniques_map = _uniques_par_jour(session, paris_offset_str)
 
         if daily_uniques_map:
             best_jour = max(daily_uniques_map, key=daily_uniques_map.get)  # type: ignore[arg-type]
@@ -427,20 +421,7 @@ def users_active(
 ):
     """Top utilisateurs actifs sur les 30 derniers jours."""
     thirty_days_ago = (horloge.aujourd_hui() - timedelta(days=30)).isoformat()
-    rows = session.exec(
-        select(
-            TelemetryEvent.user_id,
-            func.count().label("total"),
-            func.count(func.distinct(TelemetryEvent.page)).label("pages"),
-        )
-        .where(
-            TelemetryEvent.cree_le >= thirty_days_ago,
-            TelemetryEvent.user_id.isnot(None),
-        )
-        .group_by(TelemetryEvent.user_id)
-        .order_by(func.count().desc())
-        .limit(30)
-    ).all()
+    rows = _top_utilisateurs(session, thirty_days_ago)
 
     #  Le même relevé que les deux autres, en abrégé : il ne lisait que le nom.
     #  Prendre la version complète coûte quatre colonnes de plus sur trente

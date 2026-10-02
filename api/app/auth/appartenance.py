@@ -173,6 +173,34 @@ def exiger_cible_visible(
     return cible
 
 
+def exiger_objet_autorise(
+    session: Session,
+    modele: type,
+    objet_id: int,
+    libelle: str,
+    user: Utilisateur,
+    autorise_de: Callable[[Any, Utilisateur], bool],
+    refus: str = "Accès refusé",
+) -> Any:
+    """L'objet existe (404 sinon) ET l'utilisateur y a droit — **403** sinon (#1564).
+
+    Le pendant de `exiger_cible_visible`, avec la décision inverse : ici le refus
+    dit « interdit », parce que l'existence de l'objet n'apprend rien (une affaire,
+    un sondage, une annonce sont listés à tous ceux qui ont un compte). Le motif
+    « `ou_404`, puis `if not autorise: raise HTTPException(403)` » était écrit à
+    l'identique dans six routeurs, avec trois formulations du refus : `refus` la
+    garde, pour que le message vu par l'utilisateur ne change pas.
+
+    Le prédicat reste celui de l'entité (`ticket_visible`, `sondage_accessible`…) :
+    ce qui rend un objet accessible n'est pas une règle commune, la façon de le
+    refuser l'est.
+    """
+    objet = ou_404(session, modele, objet_id, libelle)
+    if not autorise_de(objet, user):
+        raise HTTPException(403, refus)
+    return objet
+
+
 def peut_defaire_le_versement(v, user: Utilisateur, *, deplacer: bool) -> bool:
     """Ce lecteur peut-il défaire ce transfert ? — le PRÉDICAT, que le refus appelle.
 

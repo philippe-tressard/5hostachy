@@ -11,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import get_current_user, peut_editer, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
@@ -88,9 +89,15 @@ def get_sondage(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    s = ou_404(session, Sondage, sondage_id, "Sondage")
-    if not sondage_accessible(s, user):
-        raise HTTPException(403, "Vous n'êtes pas autorisé à accéder à ce sondage")
+    s = exiger_objet_autorise(
+        session,
+        Sondage,
+        sondage_id,
+        "Sondage",
+        user,
+        sondage_accessible,
+        "Vous n'êtes pas autorisé à accéder à ce sondage",
+    )
 
     options_db = session.exec(
         select(OptionSondage).where(OptionSondage.sondage_id == sondage_id)

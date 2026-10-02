@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import est_auteur, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
@@ -234,9 +235,9 @@ def update_annonce(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
-    if not _can_manage(annonce, user):
-        raise HTTPException(403, "Non autorisé")
+    annonce = exiger_objet_autorise(
+        session, PetiteAnnonce, annonce_id, "Annonce", user, _can_manage, "Non autorisé"
+    )
     maj = data.model_dump(exclude_none=True)
     #  La marque « assistant IA » ne s'écrit que dans UN sens (`utils/assiste_ia`).
     marquer_assiste_ia(annonce, data)
@@ -273,9 +274,9 @@ def update_statut(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
-    if not _can_manage(annonce, user):
-        raise HTTPException(403, "Non autorisé")
+    annonce = exiger_objet_autorise(
+        session, PetiteAnnonce, annonce_id, "Annonce", user, _can_manage, "Non autorisé"
+    )
     #  🔴 `statut_change_le` ne bouge QUE sur un vrai changement. Le poser à
     #  chaque appel ferait repartir le compte à rebours d'archivage même quand
     #  on repose l'état déjà en place — un double-clic suffirait.
@@ -294,9 +295,9 @@ def delete_annonce(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    annonce = ou_404(session, PetiteAnnonce, annonce_id, "Annonce")
-    if not _can_manage(annonce, user):
-        raise HTTPException(403, "Non autorisé")
+    annonce = exiger_objet_autorise(
+        session, PetiteAnnonce, annonce_id, "Annonce", user, _can_manage, "Non autorisé"
+    )
     # Réponses associées supprimées en cascade
     reps = session.exec(
         select(ReponseCommunaute).where(

@@ -102,11 +102,6 @@ EXCEPTIONS = {
     ): "détache les liens d'un compte supprimé — l'exception porte sur la "
     "suppression, pas sur une appartenance",
     (
-        "routers/lots_imports.py",
-        "resoudre_import",
-    ): "crée et retire les liens d'un import de lots — c'est elle qui décide "
-    "quels rattachements existent",
-    (
         "routers/admin/comptes.py",
         "traiter_compte",
     ): "recopie les rattachements d'un compte aidé vers celui qu'il aide, en "

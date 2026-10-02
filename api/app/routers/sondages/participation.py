@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.utils.liens import lien_sondage
+from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import (
@@ -113,9 +114,7 @@ def commenter(
     user: Utilisateur = Depends(get_current_user),
 ):
     exiger_acces(user)
-    s = ou_404(session, Sondage, sondage_id, "Sondage")
-    if not sondage_accessible(s, user):
-        raise HTTPException(403, "Accès refusé")
+    s = exiger_objet_autorise(session, Sondage, sondage_id, "Sondage", user, sondage_accessible)
     if not body.contenu.strip():
         raise HTTPException(400, "Le commentaire ne peut pas être vide")
     contenu = body.contenu.strip()

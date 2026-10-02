@@ -125,6 +125,29 @@ def importer_fichier(chemin: str, remplacer: bool, traiter: Traitement) -> dict:
     return stats
 
 
+def importeurs(traiter: Traitement) -> tuple[Callable[..., dict], Callable[..., dict]]:
+    """Les deux points d'entrée d'un import — `(depuis_bytes, depuis_fichier)` (#1564).
+
+    Chacun des trois modules d'import redéfinissait ces deux fonctions, à la
+    docstring près : seul le `traiter` passé à `importer_bytes` / `importer_fichier`
+    changeait. Le module n'écrit plus que ce traitement, et nomme ses deux
+    importeurs en une ligne, juste après lui.
+    """
+
+    def depuis_bytes(contenu: bytes, session: Session, remplacer: bool = False) -> dict:
+        """Import depuis des octets en mémoire (téléversement HTTP)."""
+        return importer_bytes(contenu, session, remplacer, traiter)
+
+    def depuis_fichier(chemin: str, remplacer: bool = False) -> dict:
+        """Importe depuis un xlsx (script en ligne de commande).
+
+        Rend un dict aux clés ``importes``, ``ignores``, ``doublons``, ``erreurs``.
+        """
+        return importer_fichier(chemin, remplacer, traiter)
+
+    return depuis_bytes, depuis_fichier
+
+
 def purger_staging(session: Session, modele, statuts) -> int:
     """Vide le staging avant un réimport « Remplacer » — et rend ce qu'on efface.
 
