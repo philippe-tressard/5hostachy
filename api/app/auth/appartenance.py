@@ -173,6 +173,26 @@ def exiger_cible_visible(
     return cible
 
 
+def peut_defaire_le_versement(v, user: Utilisateur, *, deplacer: bool) -> bool:
+    """Ce lecteur peut-il défaire ce transfert ? — le PRÉDICAT, que le refus appelle.
+
+    Celui qui a transféré, et l'administrateur ; déplacer exige en plus de
+    modérer (voir `exiger_auteur_du_versement`, qui en fait un 403).
+
+    🔴 Il était recopié dans `routers/tickets/transferts.py::lister_transferts`,
+    qui filtrait par `continue` sur `v.transfere_par_id != user.id` et calculait
+    `peut_deplacer` à part (#1551). Identiques ce jour-là ; mais la liste et le
+    geste doivent dire la même chose, sinon l'écran propose un bouton qui rend
+    403, ou tait un geste permis. `tests/test_appartenance_source_unique.py`
+    refuse une comparaison de `transfere_par_id` à un utilisateur hors d'`auth/`.
+    """
+    from app.models.core import RoleUtilisateur
+
+    if user.has_role(RoleUtilisateur.admin):
+        return True
+    return v.transfere_par_id == user.id and (not deplacer or est_moderateur(user))
+
+
 def exiger_auteur_du_versement(
     session: Session, ticket_id: int, versement_id: int, user: Utilisateur, *, deplacer: bool
 ):
@@ -191,11 +211,9 @@ def exiger_auteur_du_versement(
     404 pour un transfert d'une AUTRE affaire : l'adresse dit laquelle, et la
     lecture de l'affaire a déjà été vérifiée par le routeur.
     """
-    from app.models.core import RoleUtilisateur
     from app.models.courriel import VersementCourriel
 
     v = ou_404(session, VersementCourriel, versement_id, "Transfert", sous={"ticket_id": ticket_id})
-    admin = user.has_role(RoleUtilisateur.admin)
-    if not admin and (v.transfere_par_id != user.id or (deplacer and not est_moderateur(user))):
+    if not peut_defaire_le_versement(v, user, deplacer=deplacer):
         raise HTTPException(403, "Seul celui qui a transféré, ou l'administrateur, peut le défaire")
     return v
