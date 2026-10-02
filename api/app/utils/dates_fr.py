@@ -20,10 +20,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from app.utils import horloge
-from zoneinfo import ZoneInfo
-
-TZ_PARIS = ZoneInfo("Europe/Paris")
-_TZ_UTC = ZoneInfo("UTC")
 
 MOIS = (
     "janvier",
@@ -79,10 +75,10 @@ def datetime_longue_paris(dt: datetime) -> str:
 
     Était dupliqué à l'identique sous le nom `_fmt_paris` dans `routers/tickets.py`
     et `routers/publications.py` (corps des e-mails). Les horodatages de la base
-    sont naïfs et en UTC : c'est ce module qui porte cette convention, pour que le
-    décalage ne soit pas réécrit à chaque point d'appel.
+    sont naïfs et en UTC : la conversion vit dans `horloge.a_paris` (#1565), pour
+    que le décalage ne soit pas réécrit à chaque point d'appel.
     """
-    return datetime_longue(dt.replace(tzinfo=_TZ_UTC).astimezone(TZ_PARIS))
+    return datetime_longue(horloge.a_paris(dt))
 
 
 def mois_ecoules(depuis: datetime, maintenant: datetime | None = None) -> int:

@@ -294,7 +294,8 @@ def construire_matiere(
     budget = MAX_CARACTERES_DOCUMENT
     budget_octets = MAX_OCTETS_JOINTS
     for doc in documents_du_contrat(session, contrat):
-        quand = doc.publie_le.date().isoformat() if doc.publie_le else "date inconnue"
+        #  `publie_le` est un instant de la base (UTC) : son jour se lit à Paris.
+        quand = horloge.jour_civil(doc.publie_le).isoformat() if doc.publie_le else "date inconnue"
         texte_doc = texte_du_document(doc)
         if texte_doc and budget > 0:
             extrait = texte_doc[:budget]

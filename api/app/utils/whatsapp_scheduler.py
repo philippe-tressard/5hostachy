@@ -32,7 +32,7 @@ import calendar
 import logging
 from datetime import datetime, timedelta, timezone
 from app.utils import horloge
-from zoneinfo import ZoneInfo
+from app.utils.horloge import TZ_PARIS
 
 from sqlmodel import Session, select
 
@@ -91,7 +91,7 @@ def check_and_send():
     """Vérifie les messages planifiés et envoie ceux qui correspondent à aujourd'hui."""
     from app.utils.whatsapp import envoyer_whatsapp_raw
 
-    now = datetime.now(ZoneInfo("Europe/Paris"))
+    now = datetime.now(TZ_PARIS)
     is_last_attempt = (now.hour, now.minute) == (CATCHUP_END_HOUR, CATCHUP_END_MINUTE)
     logger.info("WhatsApp scheduler check at %s", now.strftime("%Y-%m-%d %H:%M"))
 

@@ -316,7 +316,7 @@ def get_fiche_arrivant(
     _: Utilisateur = Depends(get_current_user),
 ):
     """Génère la fiche arrivant HTML à partir des données annuaire actuelles."""
-    from datetime import date
+    from app.utils import horloge
     from fastapi.responses import HTMLResponse
     from app.utils.fiche_arrivant import generer_fiche_arrivant
 
@@ -350,7 +350,7 @@ def get_fiche_arrivant(
             "membres": syndic_membres,
         },
         whatsapp_url=whatsapp_url,
-        annee=date.today().year,
+        annee=horloge.aujourd_hui().year,
     )
     # Jamais de cache : la fiche est régénérée à chaque appel depuis l'annuaire
     # (membres du CS, syndic, date d'AG). Sans ces en-têtes, un navigateur pouvait

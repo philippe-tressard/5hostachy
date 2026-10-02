@@ -118,6 +118,8 @@ def test_jour_civil_d_un_instant_de_la_base():
     """Un horodatage lu en base (UTC naïf) se lit au jour de Paris, pas au jour UTC."""
     assert horloge.jour_civil(datetime(2026, 7, 14, 22, 15)) == date(2026, 7, 15)
     assert horloge.jour_civil(datetime(2026, 7, 14, 21, 59)) == date(2026, 7, 14)
+    #  Une date est déjà un jour civil : rendue telle quelle, jamais décalée.
+    assert horloge.jour_civil(date(2026, 7, 14)) == date(2026, 7, 14)
 
 
 def test_a_paris_rend_l_heure_murale_consciente():

@@ -34,12 +34,12 @@ from app.utils.noeud import noeud_courant
 
 logger = logging.getLogger(__name__)
 
-_PARIS = ZoneInfo("Europe/Paris")
+_PARIS = horloge.TZ_PARIS
 
 
 def _paris_now() -> datetime:
-    """Heure actuelle en Europe/Paris (aware)."""
-    return datetime.now(_PARIS)
+    """Heure actuelle à Paris (consciente)."""
+    return horloge.a_paris(horloge.maintenant())
 
 
 def _paris_midnight(dt_paris: datetime) -> datetime:

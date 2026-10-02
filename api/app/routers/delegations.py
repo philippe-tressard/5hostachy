@@ -121,7 +121,7 @@ def create_delegation(
         mandant_id=body.mandant_id,
         aidant_id=body.aidant_id,
         motif=body.motif,
-        date_debut=date.today(),
+        date_debut=horloge.aujourd_hui(),
         date_fin=date.fromisoformat(body.date_fin) if body.date_fin else None,
         cree_par_id=user.id,
         cree_le=horloge.maintenant(),

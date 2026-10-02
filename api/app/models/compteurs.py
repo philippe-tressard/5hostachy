@@ -25,7 +25,7 @@ class ReleveCompteur(SQLModel, table=True):
     __tablename__ = "releve_compteur"
     id: Optional[int] = Field(default=None, primary_key=True)
     type_compteur: str  # "eau_general", …
-    date_releve: date = Field(default_factory=date.today)
+    date_releve: date = Field(default_factory=horloge.aujourd_hui)
     index: Optional[int] = None  # index lu (None si non relevé / changement)
     note: Optional[str] = None  # ex : "Changement compteur"
     photo_url: Optional[str] = None

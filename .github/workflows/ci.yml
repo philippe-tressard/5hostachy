@@ -182,8 +182,13 @@ jobs:
         # `utils/horloge.maintenant()`, qui rend le même UTC naïf. Les tests et
         # les migrations le gardent : ils ne tournent pas en production, et une
         # migration appliquée ne se modifie jamais.
+        # DTZ005/006/011 (`datetime.now()`, `fromtimestamp()` sans fuseau,
+        # `date.today()`) depuis #1565 (02/10/2026) : l'heure et le jour du
+        # CONTENEUR. Le jour du résident est `horloge.aujourd_hui()` (Paris),
+        # l'instant de la base `horloge.maintenant()`. Ruff ne voit que les
+        # appels : `default_factory=date.today` est refusé par `test_horloge.py`.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003,DTZ005,DTZ006,DTZ011
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
           ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
 

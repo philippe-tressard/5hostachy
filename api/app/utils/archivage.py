@@ -278,12 +278,17 @@ def est_perime(
     type_objet: str = "ticket",
     maintenant: Optional[datetime] = None,
 ) -> bool:
-    """Ce jour-la est-il PASSE ? Le soir du jour dit, jamais son matin."""
+    """Ce jour-la est-il PASSE ? Le soir du jour dit, jamais son matin.
+
+    Le jour de PARIS (#1565) : `maintenant` est l'instant de la base, en UTC, et
+    son `.date()` laissait au fil jusqu'a deux heures du matin ce qui avait fini
+    la veille.
+    """
     echeance = perime_le(objet, type_objet)
     if echeance is None:
         return False
     maintenant = maintenant or horloge.maintenant()
-    return maintenant.date() > echeance
+    return horloge.jour_civil(maintenant) > echeance
 
 
 def est_archivable(

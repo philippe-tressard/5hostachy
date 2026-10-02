@@ -5,7 +5,7 @@ depuis le 28/09/2026 (#779) : écrire et lire sont deux notions, et ce fichier
 dépassait 500 lignes.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -14,6 +14,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import require_admin
 from app.database import get_session
+from app.utils import horloge
 from app.utils.noms import nom_affiche
 from app.models.core import (
     TelemetryEvent,
@@ -93,9 +94,7 @@ def dashboard(
     """
     from zoneinfo import ZoneInfo
 
-    _PARIS = ZoneInfo("Europe/Paris")
-
-    now_paris = datetime.now(_PARIS)
+    now_paris = horloge.a_paris(horloge.maintenant())
     # Minuit Paris aujourd'hui → converti en UTC naïf pour requête sur cree_le
     today_start_utc = (
         now_paris.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -433,11 +432,7 @@ def users_active(
     _: Utilisateur = Depends(require_admin),
 ):
     """Top utilisateurs actifs sur les 30 derniers jours."""
-    from zoneinfo import ZoneInfo
-
-    thirty_days_ago = (datetime.now(ZoneInfo("Europe/Paris")) - timedelta(days=30)).strftime(
-        "%Y-%m-%d"
-    )
+    thirty_days_ago = (horloge.aujourd_hui() - timedelta(days=30)).isoformat()
     rows = session.exec(
         select(
             TelemetryEvent.user_id,

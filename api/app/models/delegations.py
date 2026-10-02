@@ -32,7 +32,7 @@ class Delegation(SQLModel, table=True):
     aidant_id: int = Field(foreign_key="utilisateur.id")  # le proche aidant
     statut: StatutDelegation = StatutDelegation.en_attente
     motif: str = ""  # raison de la délégation
-    date_debut: date = Field(default_factory=date.today)
+    date_debut: date = Field(default_factory=horloge.aujourd_hui)
     date_fin: Optional[date] = None  # null = pas de limite
     cree_par_id: int = Field(foreign_key="utilisateur.id")  # CS/admin qui a créé
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)

@@ -237,7 +237,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         _prechauffer_manuel,
         "date",
-        run_date=datetime.now() + _timedelta(seconds=20),
+        #  Conscient, donc indépendant du fuseau du planificateur (#1565).
+        run_date=horloge.a_paris(horloge.maintenant()) + _timedelta(seconds=20),
         id="manuel_pdf_prechauffage",
     )
     scheduler.add_job(_prechauffer_manuel, "cron", hour=0, minute=5, id="manuel_pdf_quotidien")

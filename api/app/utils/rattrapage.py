@@ -190,7 +190,10 @@ def planifier_rattrapages(scheduler, differe_minutes: int = 1) -> list[str]:
                 tache.periode_h,
             ),
             "date",
-            run_date=datetime.now() + timedelta(minutes=differe_minutes),
+            #  Instant CONSCIENT : un `run_date` naïf est lu dans le fuseau du
+            #  planificateur (Paris) — y poser `horloge.maintenant()` (UTC naïf)
+            #  le décalerait de deux heures sans un mot (#1565).
+            run_date=horloge.a_paris(horloge.maintenant()) + timedelta(minutes=differe_minutes),
             id=tache.job_id,
         )
         poses.append(tache.job_id)

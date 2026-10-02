@@ -28,6 +28,7 @@ from fastapi import BackgroundTasks
 from sqlmodel import Session
 
 from app.models.core import AnnonceHall, Utilisateur
+from app.utils import horloge
 from app.utils.annonce_hall import APERCU_MAX, date_longue, format_libelle, texte_brut
 
 from app.utils.copie_auteur import copie_demandee
@@ -83,7 +84,7 @@ def contexte_annonce_hall(annonce: AnnonceHall, user: Utilisateur) -> dict:
             "titre": annonce.titre,
             "perimetre": perimetre_label_liste(perimetres),
             "format": format_libelle(annonce.format_effectif),
-            "date": date_longue(annonce.cree_le),
+            "date": date_longue(horloge.jour_civil(annonce.cree_le)),
             "apercu": texte_brut(annonce.message)[:APERCU_MAX],
             "fichier": annonce.pdf_nom,
             #  Le bouton du gabarit est conditionné à cette clé — voir `lien_affiche`.

@@ -92,10 +92,8 @@ def _check_whatsapp(session: Session) -> list[str]:
         .limit(5)
     ).all()
     if len(logs) >= 3 and all(log.statut == "échec" for log in logs[:3]):
-        from zoneinfo import ZoneInfo
-
         extrait = "\n".join(
-            f"    [{log.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
+            f"    [{horloge.a_paris(log.envoye_le):%d/%m %H:%M}] "
             f"« {log.label[:40]} » → {log.erreur or 'erreur inconnue'}"
             for log in logs[:3]
         )
@@ -404,8 +402,6 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
     """
     import asyncio
 
-    from zoneinfo import ZoneInfo
-
     from app.utils.email import send_email
 
     cfg = config_site(session)
@@ -418,7 +414,7 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         # Heure de Paris : ce message est lu par une personne, pas par une
         # machine. `datetime_longue` et non `datetime_longue_paris` — la
         # conversion de fuseau est faite ici, sur un instant réellement daté.
-        "date_controle": datetime_longue(datetime.now(ZoneInfo("Europe/Paris"))),
+        "date_controle": datetime_longue(horloge.a_paris(horloge.maintenant())),
         "residence": {"nom": site_nom},
         "app": {"url": site_url},
     }

@@ -25,6 +25,7 @@ désormais, et la règle le lit.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session
@@ -69,7 +70,7 @@ def apres_cloture(ticket, session: Session) -> None:
     depuis = (
         ticket.debut.date()
         if isinstance(ticket.debut, datetime)
-        else (ticket.debut or date.today())
+        else (ticket.debut or horloge.aujourd_hui())
     )
     suivante = date_prochaine_visite(retenu, depuis)
     if suivante:

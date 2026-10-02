@@ -8,7 +8,6 @@ quatre modules partagent. Les redéclarer donnerait deux formes de la même
 réponse, libres de diverger au premier champ ajouté.
 """
 
-from datetime import date
 from app.utils import horloge
 from typing import List, Optional
 
@@ -191,7 +190,7 @@ def terminer_bail(
     #  Retour automatique de tous les accès confiés — la règle : `utils/acces_bail`.
     rendre_au_bailleur(session, bail)
     bail.statut = StatutBail.termine
-    bail.date_sortie_reelle = data.date_sortie_reelle or date.today()
+    bail.date_sortie_reelle = data.date_sortie_reelle or horloge.aujourd_hui()
     bail.mis_a_jour_le = horloge.maintenant()
     session.add(bail)
     session.commit()

@@ -143,7 +143,7 @@ class ContratEntretien(SQLModel, table=True):
     type_equipement: TypeEquipement = TypeEquipement.autre
     libelle: str
     numero_contrat: Optional[str] = None
-    date_debut: date = Field(default_factory=date.today)
+    date_debut: date = Field(default_factory=horloge.aujourd_hui)
     duree_initiale_valeur: Optional[int] = None
     duree_initiale_unite: Optional[str] = None  # "mois" ou "ans"
     frequence_type: Optional[str] = None  # "semaines", "mois", "fois_par_an"
