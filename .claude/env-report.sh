@@ -5,6 +5,7 @@
 # lancement, pas du contenu de la demande : une session ouverte ailleurs et
 # pilotée en chemins absolus écrit ses mémoires au mauvais endroit et n'exécute
 # pas ce pré-flight (constaté le 31/07/2026).
+set -uo pipefail
 ATTENDU="/c/Dev/5hostachy"
 COURANT=$(pwd)
 echo "═══════════════ ENVIRONNEMENT DE TRAVAIL ═══════════════"
