@@ -1454,6 +1454,14 @@ jobs:
         working-directory: front
         run: npm run lint:editeur-unique
 
+      - name: Fiches de l'annuaire montées par une seule liste
+        # 🔴 `AnnuaireConseil` et `AnnuaireSyndic` montaient chacun `CarteMembre`
+        # dans leur boucle, sept événements câblés à l'identique (#1539) : la
+        # fiche était factorisée, son câblage non. `<CarteMembre` hors
+        # d'`AnnuaireMembres` est refusé.
+        working-directory: front
+        run: npm run lint:annuaire-membres
+
       - name: Classe relayée à un composant, stylée en :global() borné
         #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
         #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.
