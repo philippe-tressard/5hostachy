@@ -234,3 +234,9 @@ COLLECT="$COLLECT$COLLECT_MAJ"
 # dérivation et décision vivent avec leurs épreuves dans `lib-points-entree.sh`,
 # qui doit donc être sourcé AVANT ce module.
 COLLECT="$COLLECT$(fragment_bits_exec "$(scripts_a_mesurer "$(dirname "${BASH_SOURCE[0]}")/../..")")"
+
+# C31 (#1586) : la date de la derniere SONDE de health-watch. Ce qu il ecrit, ce
+# que la collecte en lit et ce que C31 en conclut vivent ensemble, dans
+# `lib-health-watch.sh` ; `healthwatch_verdicts` y est donc defini aussi.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-health-watch.sh"
+COLLECT="$COLLECT$COLLECT_HW"

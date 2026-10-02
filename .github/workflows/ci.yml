@@ -527,6 +527,9 @@ jobs:
           bash scripts/lib/lib-volumes.sh           --selftest
           bash scripts/exploitation/boot-role-guard.sh   --selftest
           bash scripts/exploitation/health-watch.sh      --selftest
+          # C31 (#1586) : health-watch écrit son battement AVANT de décider, la
+          # collecte le lit, et un silence rend FAIL sur le nœud qu'il concerne.
+          bash scripts/lib/lib-health-watch.sh      --selftest
           # La ligne datée À L'ÉCRITURE et le contrat de sortie d'auto-deploy
           # (#1587) : chaque `exit` daté, aucun `git fetch` sans repli.
           bash scripts/lib/lib-journal.sh           --selftest
