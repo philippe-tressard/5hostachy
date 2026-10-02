@@ -37,6 +37,15 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+#  Droits du jeton, écrits au lieu d'être hérités du réglage du dépôt (#1584) :
+#  `default_workflow_permissions: read` les garde aujourd'hui, mais un réglage
+#  qui change sans qu'un octet du dépôt bouge n'est pas un contrôle. AUCUN job
+#  n'écrit (ni `gh`, ni `GITHUB_TOKEN`, ni `secrets.`, ni push, ni commentaire
+#  de PR, ni dépôt d'artefact par API) : la lecture du contenu suffit au
+#  `checkout`. Un job qui devra écrire déclarera SA permission, dans le job.
+permissions:
+  contents: read
+
 #  ⚠️ Tout job porte un `timeout-minutes` (18/08/2026). Sans lui, GitHub laisse
 #  pendre jusqu'à SIX HEURES : le 18/08, « Tests Python » est resté bloqué deux
 #  fois sur l'installation des bibliothèques système PDF (apt-get), et comme ce
@@ -77,7 +86,11 @@ jobs:
       # ⚠️ Un audit qui ne peut pas s'exécuter rend INCONNU et sort en 2 — jamais
       # OK. C'est exactement le défaut que ce ticket corrigeait.
       - name: Installer pip-audit
-        run: pip install pip-audit
+        # ÉPINGLÉ le 02/10/2026 (#1584) : le verdict d'audit dépendait du jour où
+        # l'outil se résolvait. 🔒 `test_ci_installations_epinglees.py` refuse tout
+        # `pip install` non épinglé dans ce fichier. Monter la version = un lot
+        # dédié, qui relit le rapport de `check_audit_python.py`.
+        run: pip install pip-audit==2.10.1
 
       # La première exécution a trouvé une vulnérabilité RÉELLE : PYSEC-2026-3552
       # sur `cryptography` 49.0.0 — un oracle de Bleichenbacher sur le
