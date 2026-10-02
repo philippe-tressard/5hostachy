@@ -29,6 +29,14 @@ classe de plus (#779 l'a ramené sous 500 lignes ; le contrôle de modularité n
 juge que sa longueur, pas ce qu'on y range).
 
 ```python
+from typing import Optional
+
+from pydantic import NaiveDatetime
+from sqlmodel import Field, SQLModel
+
+from app.utils import horloge
+
+
 class NouvelleEntite(SQLModel, table=True):
     __tablename__ = "nouvelle_entite"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -49,7 +57,7 @@ jamais `datetime.utcnow()` : déprécié depuis Python 3.12, et refusé par Ruff
 `DTZ003` sur `api/app/` (#1047). Elle rend de l'**UTC naïf**, la forme de
 toutes les dates en base — `now(timezone.utc)` rendrait une date consciente,
 qui lève à la première comparaison avec une date lue en base. Et **par son
-module**, jamais importée seule : treize fichiers ont une variable `maintenant`.
+module**, jamais importée seule : des variables locales s'appellent déjà `maintenant`.
 Un champ `date` (jour civil) : `Field(default_factory=horloge.aujourd_hui)`,
 le jour de Paris — jamais `date.today` (#1565, règle dans `CLAUDE.md`).
 
@@ -81,6 +89,12 @@ ne charge pas.
 Trois formes par entité exposée :
 
 ```python
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
+
 class EntiteCreate(BaseModel):      # entrée : ni id, ni horodatage
     nom: str
 
@@ -89,12 +103,16 @@ class EntiteRead(BaseModel):        # sortie
     nom: str
     cree_le: datetime
 
-    class Config:                   # la forme de TOUT le dépôt — pas `model_config`
+    class Config:                   # `from_attributes` s'écrit ainsi dans le dépôt
         from_attributes = True
 
 class EntiteUpdate(BaseModel):      # PATCH partiel : tout Optional
     nom: Optional[str] = None
 ```
+
+`model_config = ConfigDict(extra="forbid")` n'existe que là où un schéma d'entrée
+doit **refuser** les champs inconnus (`routers/tickets/lot.py`) : c'est une autre
+décision que `from_attributes`, pas une seconde manière de l'écrire.
 
 **Où les mettre :**
 - partagés par plusieurs routeurs → `app/schemas_<domaine>.py`, ré-exporté par
@@ -127,6 +145,9 @@ def upgrade():
         TABLE,
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("nom", sa.String, nullable=False),
+        #  La clé étrangère s'écrit ICI, dans `create_table` d'une table NEUVE :
+        #  c'est dans un `add_column` qu'elle est refusée (`test_migrations.py`).
+        sa.Column("batiment_id", sa.Integer, sa.ForeignKey("batiment.id"), nullable=True),
         sa.Column("cree_le", sa.DateTime, nullable=False),
         sa.Column("mis_a_jour_le", sa.DateTime, nullable=True),
     )
@@ -151,8 +172,6 @@ valeurs, identifiants depuis une constante, jamais de `foreign_key` dans un
 
 ```python
 """Ce que ce routeur sert, à qui, et pourquoi il est à part."""
-from datetime import datetime
-
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 
@@ -161,9 +180,11 @@ from app.database import get_session
 from app.models.<domaine> import NouvelleEntite
 from app.models.core import Utilisateur
 from app.schemas_<domaine> import EntiteCreate, EntiteRead, EntiteUpdate
+from app.utils import horloge
 from app.utils.recuperer import ou_404
 
-router = APIRouter(prefix="/nouvelle-entite", tags=["nouvelle-entite"])
+#  Préfixe au pluriel, tag en minuscules à tirets (`CLAUDE.md`, « Nommage »).
+router = APIRouter(prefix="/nouvelles-entites", tags=["nouvelles-entites"])
 
 
 @router.get("", response_model=list[EntiteRead])
@@ -226,7 +247,7 @@ Inclure le plus spécifique d'abord ; `test_routes_masquees.py` le tient pour
 
 ⚠️ Un fichier de routeur qui dépasse 500 lignes se découpe par NOTION, pas par
 intervalle de lignes, avec le même préfixe : les URL publiques ne bougent pas
-(`copropriete_patrimoine`, `calendrier_historique`, `auth_profil`).
+(`copropriete_patrimoine`, `prestataires_archivage`, `auth_profil`).
 
 **Dépendances d'auth :** le tableau fait foi dans `CLAUDE.md` (« Dépendances
 d'auth ») — avec les **prédicats** (`est_moderateur`, `peut_editer`…), qui
@@ -241,11 +262,11 @@ l'étaient avant le 06/09).
 
 ```typescript
 export const nouvelleEntite = {
-    list: () => api.get<NouvelleEntite[]>('/nouvelle-entite'),
-    get: (id: number) => api.get<NouvelleEntite>(`/nouvelle-entite/${id}`),
-    create: (body: Partial<NouvelleEntite>) => api.post<NouvelleEntite>('/nouvelle-entite', body),
+    list: () => api.get<NouvelleEntite[]>('/nouvelles-entites'),
+    get: (id: number) => api.get<NouvelleEntite>(`/nouvelles-entites/${id}`),
+    create: (body: Partial<NouvelleEntite>) => api.post<NouvelleEntite>('/nouvelles-entites', body),
     update: (id: number, body: Partial<NouvelleEntite>) =>
-        api.patch<NouvelleEntite>(`/nouvelle-entite/${id}`, body),
+        api.patch<NouvelleEntite>(`/nouvelles-entites/${id}`, body),
 };
 ```
 
@@ -270,6 +291,32 @@ produit des mois en anglais sur la fiche arrivant (26/07/2026).
 ⚠️ Les `strftime("%Y-%m-%d")` / `("%Y-%m")` restants sont des **clés machine**
 (requêtes SQL, agrégats de télémétrie, noms de sauvegarde) : **ne pas les
 « factoriser »**, ce ne sont pas des formats d'affichage.
+
+### 6 bis. Avant d'écrire un utilitaire : celui-là existe peut-être (#1561)
+
+Les modules de `api/app/utils/` les plus importés n'étaient enseignés par aucune
+consigne — « grep le pattern existant » était la seule. **Une ligne de routage
+par notion** ; le nombre d'importeurs se compte par `grep`, il ne s'écrit pas ici.
+Chacun porte, en tête de fichier, le pourquoi et la règle arbitrée :
+
+| Ce qu'on veut faire | Le module |
+|---|---|
+| prévenir quelqu'un **dans l'application** (la cloche) | `utils/cloche` (`sonner`, `sonner_systeme`) — la porte unique, qui obéit au profil ; jamais une ligne écrite dans la table à la main |
+| savoir **ce qu'est** une affaire (actualité, affaire suivie, catégorie réservée, statut de départ) | `utils/nature_affaire` — dérivé, jamais saisi ; `utils/categories_ticket.libelle_categorie` pour le libellé français d'une catégorie |
+| marquer un texte « Rédigé avec l'assistant IA » | `utils/assiste_ia` (`marquer`) ; les usages de l'assistant (modèle, prompt, plafond) se déclarent dans `utils/llm_usages` |
+| décrire un **badge d'accès** (Vigik, télécommande) | `utils/types_acces` ; ses porteurs se LISENT par `utils/porteurs_acces`, la ligne d'import se rattache par `utils/resolution_acces` — rien n'enregistre un porteur |
+| lire la **configuration du site** | `utils/config_site` (`config_site`, `contexte_site`) — pas un `select` sur la table dans un routeur |
+| savoir **à qui part « une copie à moi »** | `utils/copie_auteur` — l'auteur de l'objet, pas celui du message |
+| lier des affaires entre elles | `utils/affaires_liees` — un lien ne révèle rien qu'on ne puisse lire |
+| relever une **réponse par courriel** | `utils/courriel_entrant` (le jeton) ; du MIME au texte : `utils/courriel_decodage` |
+| lire un **classeur Excel d'import** | `utils/import_xlsx` — écrit une fois pour les trois imports |
+| comparer deux **noms de personnes** | `utils/rapprochement_noms` |
+| dire qui a **lancé une tâche planifiée** | `utils/declenchement` — un vocabulaire, un geste |
+| le **libellé d'un étage** | `utils/etages` (et non `dates_fr`, qui ne parle que de dates) |
+
+Côté front, les familles équivalentes (composants `Section*`, `Onglet*`,
+`Formulaire*`, `$lib/table-statuts`, `$lib/types-acces`) sont routées dans
+`svelte-patterns`.
 
 ### 7. Checklist finale
 
