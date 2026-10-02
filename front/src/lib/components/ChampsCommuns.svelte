@@ -62,7 +62,7 @@
 
   Il se lit dans `SECTIONS_ORDRE` (`$lib/entites/types`), tenu par
   `lint:ordre-sections`. Ce bloc en portait une copie — neuf sections, quand le
-  cadre en compte treize : une liste recopiée ment dès le lot suivant.
+  cadre en comptait davantage : une liste recopiée ment dès le lot suivant.
 -->
 <script lang="ts">
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
@@ -90,7 +90,7 @@
 	/**
 	 * L'entité rendue — elle sert à lire le PLIAGE déclaré (#1095).
 	 *
-	 * 🔴 Une prop plutôt que treize booléens : le pliage se LIT dans la
+	 * 🔴 Une prop plutôt qu'un booléen par section : le pliage se LIT dans la
 	 * déclaration, il ne se décide pas ici — ni par chaque écran.
 	 *
 	 * ⚠️ Absente, rien n'est plié : ce composant sert aussi des écrans qui ne

@@ -267,7 +267,7 @@ def nom_fichier(titre: str, cree_le: date | datetime) -> str:
     sans_accent = unicodedata.normalize("NFKD", texte_brut(titre))
     sans_accent = sans_accent.encode("ascii", "ignore").decode()
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", sans_accent).strip("-").lower()[:60]
-    return f"annonce-{cree_le:%Y%m%d}-{slug or 'hall'}.pdf"
+    return f"annonce-{horloge.jour_civil(cree_le):%Y%m%d}-{slug or 'hall'}.pdf"
 
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
@@ -414,7 +414,9 @@ def construire_html(
 ) -> str:
     """Assemble le HTML autonome de l'annonce (images et QR en data-URI)."""
     g = _GABARITS[format_effectif]
-    d = date_affichage or horloge.maintenant()
+    #  Un instant de la base (UTC) se lit au jour de Paris : à 00:30, l'affiche
+    #  portait encore la date de la veille (#1565).
+    d = horloge.jour_civil(date_affichage or horloge.maintenant())
     url_complete = site_url if site_url.startswith("http") else f"https://{site_url}"
     site_affiche = re.sub(r"^https?://", "", site_url).rstrip("/")
 

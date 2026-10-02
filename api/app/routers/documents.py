@@ -24,13 +24,12 @@ from app.schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 
 # Toute règle de visibilité — documents compris — vient du module central.
-from app.utils.visibility import document_visible
+from app.utils.visibility import document_visible, profil_admet
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.recuperer import ou_404
 from app.config import get_settings
 from app.utils.cloche import sonner
-from app.utils.valeurs import valeur
 
 logger = logging.getLogger(__name__)
 
@@ -158,16 +157,13 @@ def list_categories(
     # CS et admin voient toutes les catégories
     if est_moderateur(user):
         return [{"id": c.id, "code": c.code, "libelle": c.libelle} for c in cats]
-    # Pour les autres : ne retourner que les catégories dont le profil d'accès autorise le rôle
-    user_idents = set(user.roles) | {valeur(user.statut)}
-    result = []
-    for c in cats:
-        profil = session.get(ProfilAccesDocument, c.profil_acces_id)
-        if profil:
-            roles_autorises = json.loads(profil.roles_autorises)
-            if any(r in roles_autorises for r in user_idents):
-                result.append({"id": c.id, "code": c.code, "libelle": c.libelle})
-    return result
+    #  Pour les autres : les catégories dont le profil admet le lecteur — la règle
+    #  de `document_visible`, appelée et non recopiée (#1551).
+    return [
+        {"id": c.id, "code": c.code, "libelle": c.libelle}
+        for c in cats
+        if profil_admet(user, session.get(ProfilAccesDocument, c.profil_acces_id))
+    ]
 
 
 @router.get("", response_model=list[DocumentRead])

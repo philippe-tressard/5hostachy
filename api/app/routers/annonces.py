@@ -5,7 +5,7 @@ from app.utils import horloge
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.auth.deps import est_auteur, get_current_user, peut_commenter
@@ -29,7 +29,7 @@ from app.routers.reponses_communaute import (
     reponses_de,
 )
 from app.utils.communaute import exiger_acces
-from app.utils.perimetres import parse_json_perimetres
+from app.utils.perimetres import parse_json_perimetres, perimetre_defaut_liste
 from app.utils.visibility import annonce_visible
 from app.utils.assiste_ia import (
     AssisteIACorrection,
@@ -132,7 +132,7 @@ class AnnonceCreate(AssisteIAEntree):
     #  Section 4 du cadre #430. Reçu en LISTE, stocké en JSON — même contrat que
     #  `TicketCreate` : la conversion se fait ici, à la frontière, et une
     #  seule fois.
-    perimetre_cible: List[str] = ["résidence"]
+    perimetre_cible: List[str] = Field(default_factory=perimetre_defaut_liste)
     #  Section 5 du cadre #430 (#782). Liste VIDE = tout le monde : c'est ce que
     #  `public_cible_visible` fait d'une valeur absente, et l'inverse rendrait
     #  l'annonce invisible de tous, sans message ni ligne de journal.

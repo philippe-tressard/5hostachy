@@ -111,9 +111,18 @@ jobs:
         # dans le PATH d'un poste Windows, et le rejeu local rendait INCONNU —
         # c'est-à-dire ni vert ni rouge, donc un contrôle qu'on ne peut pas
         # relire avant de pousser. Le module, lui, s'appelle partout pareil.
+        #
+        # ÉPINGLÉ le 02/10/2026 (#1543) : l'étape suivante lit `reuse lint --json`,
+        # dont le format suit la version de l'outil.
         run: |
-          python -m pip install reuse
+          python -m pip install reuse==6.2.0
           python -m reuse lint
+
+      # `reuse lint` vérifie qu'une licence est DÉCLARÉE pour chaque fichier, pas
+      # qu'elle est vraie : les tracés Lucide recopiés passaient sous la licence
+      # du projet (#1543). Le détail : l'en-tête de `scripts/ci/contenus_tiers.py`.
+      - name: Contenus tiers attribués à leur licence (REUSE)
+        run: python scripts/ci/contenus_tiers.py
 
       - name: Run Ruff
         # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
@@ -182,8 +191,13 @@ jobs:
         # `utils/horloge.maintenant()`, qui rend le même UTC naïf. Les tests et
         # les migrations le gardent : ils ne tournent pas en production, et une
         # migration appliquée ne se modifie jamais.
+        # DTZ005/006/011 (`datetime.now()`, `fromtimestamp()` sans fuseau,
+        # `date.today()`) depuis #1565 (02/10/2026) : l'heure et le jour du
+        # CONTENEUR. Le jour du résident est `horloge.aujourd_hui()` (Paris),
+        # l'instant de la base `horloge.maintenant()`. Ruff ne voit que les
+        # appels : `default_factory=date.today` est refusé par `test_horloge.py`.
         run: |
-          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003
+          ruff check api/app/ --select E9,F63,F7,F82,F401,S608,F811,F841,E711,E712,E741,E731,DTZ003,DTZ005,DTZ006,DTZ011
           ruff check api/alembic/ --select E9,F63,F7,F82,F811,F841,E711,E712,E741,E731
           ruff check api/tests/ --select E9,F63,F7,F82,F401,F841,E711,E712,E741,E731
 
@@ -268,6 +282,15 @@ jobs:
         # ÉPINGLÉ (#1048, 24/09/2026). Il était installé ici sans version : les
         # tests changeaient de moteur d'un run à l'autre sans que le dépôt bouge.
         run: pip install -r requirements-dev.txt
+
+      # Licences des dépendances tierces (#1542, 02/10/2026) — front, bridge et
+      # API. Ici parce que c'est le seul job où les distributions de l'API sont
+      # installées. Le détail (liste blanche, exceptions, document comparé) :
+      # l'en-tête de `scripts/ci/licences_tierces.py`.
+      - name: Licences tierces (liste blanche, exceptions nominatives)
+        run: |
+          python scripts/ci/licences_tierces.py --selftest
+          python scripts/ci/licences_tierces.py
 
       - name: Run pytest
         working-directory: api
@@ -504,6 +527,12 @@ jobs:
           bash scripts/lib/lib-volumes.sh           --selftest
           bash scripts/exploitation/boot-role-guard.sh   --selftest
           bash scripts/exploitation/health-watch.sh      --selftest
+          # C31 (#1586) : health-watch écrit son battement AVANT de décider, la
+          # collecte le lit, et un silence rend FAIL sur le nœud qu'il concerne.
+          bash scripts/lib/lib-health-watch.sh      --selftest
+          # La ligne datée À L'ÉCRITURE et le contrat de sortie d'auto-deploy
+          # (#1587) : chaque `exit` daté, aucun `git fetch` sans repli.
+          bash scripts/lib/lib-journal.sh           --selftest
           # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
           bash scripts/lib/lib-jeton-tunnel.sh      --selftest
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest
@@ -548,7 +577,10 @@ jobs:
         #     fin (hostachy-reliability.log : 1,7 Mo, jamais roté) ;
         #   • un chemin de sortie muet dans auto-deploy.sh fait croire au
         #     contrôle de battement que le script est mort.
-        # Ces deux contrats sont statiques : ils se vérifient ici, sans les RPi.
+        # Ces deux contrats sont statiques : ils se vérifient sans les RPi. Le
+        # second vit depuis #1587 dans `lib-journal.sh` (`contrat_journal`),
+        # lancé par l'étape des self-tests avec ses cas fautifs : il lisait ici
+        # `$LOG_DATE`, la variable figée au démarrage que #1587 a retirée.
         run: |
           st=0
           for f in $(git ls-files -- '*.sh'); do
@@ -571,13 +603,6 @@ jobs:
             grep -qE '^[^#]*docker system prune' "$f" \
               && { echo "::error file=$f::\`docker system prune\` est interdit — il détruirait volumes et réseaux de l'application co-hébergée"; st=1; }
           done
-          awk '
-            /\$LOG_DATE/                  { last = NR }
-            /^[[:space:]]*exit [0-9]/     { if (NR - last > 4) {
-                printf "::error file=scripts/exploitation/auto-deploy.sh,line=%d::sortie sans ligne horodatée — contrat de battement rompu (C14 conclurait que le script est mort)\n", NR
-                bad = 1 } }
-            END { exit bad }
-          ' scripts/exploitation/auto-deploy.sh || st=1
           # 🔴 Le moteur d'envoi d'e-mail vit dans lib-alert.sh, et NULLE PART
           # ailleurs. `bascule.sh` a gardé le sien jusqu'au 30/08/2026 — trente
           # lignes de smtplib recopiées, et pire : envoyées par `docker exec
@@ -1136,6 +1161,12 @@ jobs:
           # zéro, témoin, exceptions qui doivent servir, commentaires blanchis.
           # Six contrôles le recopiaient, et `lint:type-lot` sans cas zéro.
           node scripts/lib-source-unique.mjs --selftest
+          # Le relevé des classes des FEUILLES GLOBALES que plus rien n'emploie
+          # (#1537) : `lint:css-orphelin` disait « aucun sélecteur orphelin » en
+          # ne lisant que les `<style>` des composants — 23 classes de
+          # `src/styles/` étaient mortes. Commentaires, `<style>` locaux,
+          # sélecteurs d'attribut et témoin y sont éprouvés.
+          node scripts/lib-classes-globales.mjs --selftest
           # Le pré-remplissage du kanban par les prestataires (#605) : deux
           # boucles quasi identiques dans une page de 848 lignes, qu'aucun
           # contrôle ne touchait. Les fonctions pures vivent désormais dans
@@ -1264,7 +1295,11 @@ jobs:
       # produit était CORRECT — c'est sa raison d'être qui était périmée. La CI ne
       # lisait ni CLAUDE.md ni .claude/skills/. Celui-ci les lit, et compare à ce
       # que `sanitize.ts` exporte réellement.
-      - name: Consignes complètes (assainisseurs réellement exportés)
+      #
+      # Il refuse aussi un COMPTE recopié (#1541) : CLAUDE.md et `ux-patterns`
+      # disaient « treize » sections six jours après l'entrée de la quatorzième,
+      # tout en renvoyant à `SECTIONS_ORDRE`. Juste ou faux, un nombre se périme.
+      - name: Consignes complètes (listes et comptes lus à leur source)
         working-directory: front
         run: npm run lint:consignes
 
@@ -1423,6 +1458,22 @@ jobs:
         working-directory: front
         run: npm run lint:editeur
 
+      - name: Un seul éditeur riche
+        # 🔴 `LegalEditor` recopiait l'amorçage de `RichEditor` (#1539) : 53
+        # lignes sur 104, et `lint:editeur` les COMPTAIT sans refuser le second.
+        # Un `new Editor(` ou un import `@tiptap/…` hors de `RichEditor` est
+        # refusé ; ce qui manque à un écran s'y ajoute en prop.
+        working-directory: front
+        run: npm run lint:editeur-unique
+
+      - name: Fiches de l'annuaire montées par une seule liste
+        # 🔴 `AnnuaireConseil` et `AnnuaireSyndic` montaient chacun `CarteMembre`
+        # dans leur boucle, sept événements câblés à l'identique (#1539) : la
+        # fiche était factorisée, son câblage non. `<CarteMembre` hors
+        # d'`AnnuaireMembres` est refusé.
+        working-directory: front
+        run: npm run lint:annuaire-membres
+
       - name: Classe relayée à un composant, stylée en :global() borné
         #  🔴 Une classe passée en prop `classe=` est appliquée par le COMPOSANT,
         #  sur son balisage : elle y prend SON scope, pas celui de qui la passe.
@@ -1461,8 +1512,10 @@ jobs:
         # `lint:manuel-menus` vérifie qui voit une ENTRÉE ; il laissait passer
         # « Tout le monde » sur Résidence, dont le carnet est fermé aux
         # locataires (signalé à l'écran le 24/09/2026). Celui-ci confronte au
-        # code les onglets réservés, la table des treize sections vue du
-        # résident et les catégories qu'il peut choisir.
+        # code les onglets réservés, la table des sections vue du
+        # résident et les catégories qu'il peut choisir — que le README, lui,
+        # ne doit ni énumérer ni compter (#1540 : « Huit catégories », dont une
+        # réservée au conseil depuis #1098).
         working-directory: front
         run: npm run lint:manuel-profils
 
@@ -2025,6 +2078,14 @@ jobs:
       - name: Une table d'états n'est pas énumérée deux fois
         working-directory: front
         run: npm run lint:tables-statuts
+
+      # Les statuts d'un accès ne s'écrivent que dans `$lib/types-acces` (#1575,
+      # 02/10/2026) : le formulaire en gardait une table à lui, « ✅ Actif » où
+      # tous les autres écrans disaient « Actif ». Le contrôle précédent ne
+      # compare que deux tables d'un même fichier ; celle-ci était seule.
+      - name: Statuts d'accès écrits une seule fois
+        working-directory: front
+        run: npm run lint:statuts-acces
 
       # 🔴 LE LOCK MENTAIT SUR DEUX DÉPENDANCES DEPUIS QUINZE VERSIONS (15/09/2026).
       #

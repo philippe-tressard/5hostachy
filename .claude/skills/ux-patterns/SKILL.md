@@ -53,7 +53,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
 | 8 | **Un workflow se déclare, le tracer est une AUTRE décision** — cinq états sur une annonce, aucun fil | §16 |
-| 9 | **L'archivage se calcule** : 30 j après un état terminal, sur `statut_change_le` — ⚠️ révisé le 24/09/2026 : sur une affaire ou une actualité, le conseil **peut aussi archiver d'un geste 📦**, à la place du 🗑️ de la liste | §8, §16 |
+| 9 | **L'archivage se calcule** : 30 j après un état terminal, sur `statut_change_le` — ⚠️ révisé le 24/09/2026 : sur une affaire ou une actualité, le conseil **peut aussi archiver d'un geste 📦**, à la place du 🗑️ de la liste ; prestataires et contrats n'ont **que** ce geste, et ↩️ pour ressortir (02/10/2026, #1538) | §8, §16 |
 | 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
 | 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
 | 12 | **L'objet DOCUMENTS a UNE forme** — pastilles « TYPE: nom », bouton puis champ de libellé, sans exception | §0 bis |
@@ -90,7 +90,7 @@ lignes. Trois réponses possibles, une seule mauvaise :
 
 ### Ce qui n'a PAS bougé
 
-Le cadre lui-même — **les 10 sections, les 4 rendus, les 3 motifs de divergence** —
+Le cadre lui-même — **ses sections, les 4 rendus, les 3 motifs de divergence** —
 n'a pas changé d'une ligne en deux jours. Ce sont les **entités** qui ont appris,
 pas la grammaire. C'est le signe que la grammaire est la bonne.
 
@@ -114,19 +114,24 @@ vocabulaire du code (`TicketEvolution`, `EvolForm`).
 ⚠️ Le cadre parle d'évolutions ; **l'écran parle de gestes** — « Ajouter une
 suite » (`$lib/gestes.ts`, depuis la v2.7.0 ; « Commenter » est le mot abandonné).
 
-### Les TREIZE sections, dans cet ordre — il ne se discute pas
+### Les sections, dans cet ordre — il ne se discute pas
 
-L'ordre et les libellés se lisent dans `front/src/lib/entites/types.ts`
+L'ordre, les libellés **et le nombre** se lisent dans `front/src/lib/entites/types.ts`
 (`SECTIONS_ORDRE`, `SECTIONS_LIBELLE`), et **nulle part ailleurs** : cette skill en
 tenait une copie, qui plaçait encore « Mise en avant » avant « Destinataires » le
 23/09/2026, jour où l'utilisateur les a inversées (#1096 : « elles sont
 complémentaires »). `lint:ordre-sections` et `lint:etats` tiennent l'ordre.
 
+🔴 Le **compte** se recopiait encore après la liste : ce titre annonçait
+« treize » six jours après l'entrée de la quatorzième (#1342), comme
+CLAUDE.md (#1541). `npm run lint:consignes` refuse désormais un nombre de
+sections écrit dans une consigne — juste ou faux, il se périme.
+
 Deux voisines à ne pas confondre : **Destinataires** = qui est concerné *dans
 l'application* ; **Diffusion** = par quels canaux on prévient *à l'extérieur*.
 
-🔴 **Treize depuis le 21/09/2026 (#1095)**, neuf le matin même. Trois
-changements, et un seul touche un rang existant :
+🔴 **Le cadre recomposé le 21/09/2026 (#1095).** Trois changements, et un seul
+touche un rang existant :
 
 | | |
 |---|---|
@@ -136,8 +141,8 @@ changements, et un seul touche un rang existant :
 
 ⚠️ **Destinataires passe donc après Description**, ce que la phrase « aucune
 section existante ne change de rang relatif » du ticket ne disait pas. C'est le
-tableau des treize qui fait foi : il est la spécification, la phrase en était le
-résumé.
+tableau du ticket qui faisait foi : il était la spécification, la phrase en était
+le résumé.
 
 ### Le PLIAGE — un troisième état de présence (#1095)
 
@@ -268,7 +273,7 @@ CONSOMME.**
 - **R1** squelette de page immuable (titre + action primaire en haut · corps ·
   soumission en bas à droite) — **et c'est LUI qui porte la responsivité**, une
   seule fois pour toutes les pages.
-- **R2** ordre des 10 sections immuable, **et valable pour l'affichage**.
+- **R2** ordre des sections (`SECTIONS_ORDRE`) immuable, **et valable pour l'affichage**.
 - **R3** un champ est un **objet** à trois rendus, qui se rend **toujours pareil**,
   avec **le même libellé partout**, le requis marqué par **`*` et rien d'autre**
   (jamais « (optionnel) »), **le fond de saisie** s'il est éditable — le mode se lit
@@ -291,10 +296,10 @@ CONSOMME.**
 
 | Quoi | Où | À faire avant d'écrire un écran |
 |---|---|---|
-| Les sections, leur ordre, leurs libellés, les états, les motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table — ni son **compte** : cette ligne a dit « 10 » jusqu'au 27/09/2026, pour quatorze |
+| Les sections, leur ordre, leurs libellés, les états, les motifs | `front/src/lib/entites/types.ts` | ne jamais recopier cette table — ni son **compte** : cette ligne a dit « 10 » jusqu'au 27/09/2026, et la skill « treize » jusqu'au 02/10 (#1541) |
 | La déclaration d'une entité et **ses divergences motivées** | `front/src/lib/entites/<entite>.ts` | la lire ; si elle n'existe pas, l'écrire |
 | Le squelette de **lecture** (R1 pour l'affichage) | `FicheLecture.svelte` | l'affichage passe par lui, il tient l'ordre |
-| Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | sections 4→9, jamais réécrites |
+| Le squelette de **saisie** | `FormulaireCreation.svelte` + `ChampsCommuns.svelte` | les sections qu'il porte, jamais réécrites — leur rang se lit dans `SECTIONS_ORDRE` |
 | La rubrique **Historique** (le fil) | `RubriqueHistorique.svelte` | **6 recopies sur 6 remplacées** |
 | L'**en-tête d'une carte de liste** | `EnteteCarte.svelte` | titre / tags · date · actions — voir §3 |
 | La rangée d'**états en pastilles** | `WorkflowPastilles.svelte` | jamais un `<select>` nu (R3) |
@@ -477,8 +482,8 @@ vérifie à l'écran.
 
 ### ⚠️ Où l'objet Documents se place
 
-En **section 8, « Pièces jointes »**, avec les photos — elles n'en font plus
-qu'une depuis le 21/09/2026 (#1095). L'ordre des treize sections vaut pour cet
+En **section « Pièces jointes »**, avec les photos — elles n'en font plus
+qu'une depuis le 21/09/2026 (#1095). L'ordre des sections vaut pour cet
 objet comme pour les autres : un dépôt de fichier correct dans une section mal
 placée reste un écran faux.
 
@@ -1153,6 +1158,16 @@ Vue archives unifiée dans `tickets/+page.svelte` (onglet Archives) depuis que l
 
 🔴 Les affaires et actualités ne le respectaient pas jusqu'au 24/09/2026 : le 🗑️ de l'admin était dans la liste, et une actualité s'y effaçait entière. Pour une affaire, l'archivage est `archive_manuel` (`utils/archivage.REGLES`). 🔒 `api/tests/test_suppression_aux_archives.py`.
 
+🔴 **Prestataires et contrats, jusqu'au 02/10/2026 (#1538)** : un 🗑️ intitulé « Archiver », sur la vue principale, pour tout le conseil — l'icône disait « supprimer », la boîte « archiver », la route `DELETE` — et l'objet rangé n'avait **plus d'écran**. Ils suivent désormais l'affaire :
+
+| | Vue principale | Archives |
+|---|---|---|
+| Geste | 📦 Archiver (CS + admin), confirmé par `ARCHIVAGE` | ↩️ Restaurer, sans confirmation — ✏️ et ✨ se taisent : on ressort avant de corriger |
+| Écran | la liste de l'onglet | section `TITRE_ARCHIVES` repliée sous elle, par `ListeEtArchives` — le même rendu, atténué (`.attenue`) |
+| API | `PATCH …/archivage {archivee}` — UN mot pour ranger et ressortir (`archiverPuis`) | `GET …/archives`, à part : les autres lecteurs de la liste (formulaire d'affaire, reporting) ne voient pas surgir ce qu'on a rangé |
+
+Aucune suppression définitive : il n'y a rien à garder derrière `archive`. La règle est déclarée dans `REGLES` (`champ_actif` : la colonne héritée `actif`, inversée) — aucun archivage par le temps. 🔒 Le même test refuse un 🗑️ hors d'un bloc `archive` dans **toute carte qui archive** (`_QUI_ARCHIVENT`), et un bouton « Archiver » qui ne montre pas 📦 ; `e2e/archives-prestataires` éprouve l'écran rendu.
+
 ## 9. Champs de formulaire
 
 > 🔴 **La largeur de saisie appartient au SQUELETTE, pas à la page (R1) — et elle
@@ -1191,7 +1206,7 @@ calendrier reste à 640 px, délibérément).
   🔴 Elle est **collée** au libellé — `TITRE*` — et **ROUGE tant que le champ
   est vide**, la couleur du libellé sinon (livré le 22/09/2026, #1121). Elle
   cesse d'être une décoration : c'est l'**état** du champ, lisible d'un coup
-  d'œil sur un formulaire de treize sections.
+  d'œil sur un formulaire où toutes les sections s'alignent.
 
   🔴 **Une valeur par défaut ACTIVE est une valeur** (27/09/2026, signalé à
   l'écran : « * rouge, c'est uniquement s'il n'y a aucune valeur »). Destinataires
@@ -1542,7 +1557,7 @@ type neuf serait passé à côté des six, et une AG commentée serait devenue
 visible de tous, en silence. **C'est la donnée qui porte la différence** :
 `evol_contenu` présent ⇒ la carte rend le bloc de suivi.
 
-### 9 septies. Les sections 4 à 9 ne se réécrivent plus : `ChampsCommuns.svelte`
+### 9 septies. Les sections communes ne se réécrivent plus : `ChampsCommuns.svelte`
 
 **L'ordre ci-dessus a un point d'héritage depuis le 16/08/2026.** Périmètre,
 Destinataires, Description, Pièces jointes et Diffusion sont rendus par UN
@@ -2268,6 +2283,14 @@ essayées sans que je les ouvre : la question « où mettre la boîte ? » avait
 sa réponse dans le produit. C'est la **sixième** fois — voir la mémoire
 `project_le_composant_existait_deja`. Le réflexe reste le même : chercher la
 **notion** (« corriger un objet d'une liste »), jamais le nom de l'écran.
+
+🔒 **Depuis le 02/10/2026 (#1539), ce squelette a UN composant : `CarteModifiable`**
+— conteneur, `EnteteCarte`, 🔗 ✏️ 📦 (↩️ aux Archives, #1538), corps qui cède la place à
+`FormulaireCreation` (`encadre={false}`), titre inerte pendant la correction.
+`CarteContrat` et `CartePrestataire` le recopiaient l'une sur l'autre ; une carte
+neuve qui se corrige en place le monte et remplit ses emplacements (`tags`,
+`apercu`, `gestes`, `edition`, `detail`). ⚠️ `AnnonceCard` et `CarteActualite`
+portent encore leur propre `formulaireOuvert` : même notion, pas encore migrée.
 
 🔴 **Et ce n'était toujours pas fini : le formulaire DÉFILAIT.** Troisième
 signalement du même symptôme — *« le contrat édité remonte en haut »* — alors que

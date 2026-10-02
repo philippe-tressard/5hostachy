@@ -16,7 +16,8 @@
 #  ici, une fois, avec leur self-test — qui est leur contrat.
 #
 #  Ces fonctions sont PURES : aucun SSH, aucun sudo, aucune écriture — sauf
-#  `points_entree_verdicts_locaux`, isolée plus bas et signalée comme telle.
+#  `points_entree_verdicts_locaux`, isolée plus bas et signalée comme telle, et
+#  `scripts_a_mesurer` (C6), qui lit les fichiers du DÉPÔT et rien d'autre.
 #
 #  ── POURQUOI C22 EXISTE, ET POURQUOI IL EST EN WARN ─────────────────────────
 #
@@ -147,6 +148,105 @@ agreger_points_entree() {
   else echo "OK|"; fi
 }
 
+# ── C6 (#1546) — les scripts que lancent les points d'entrée sont exécutables ─
+#
+#  🔴 POURQUOI ICI. C6 mesurait une liste RECOPIÉE de sept relais à la racine du
+#  dépôt ; six ont été retirés le 16/08/2026, la liste n'a pas suivi, et
+#  `[ -f ] && [ ! -x ]` faux sur six noms rendait « ok » : faux vert sur les deux
+#  nœuds jusqu'à l'audit du 02/10/2026. La liste se DÉRIVE donc désormais des
+#  fichiers de ce répertoire-ci (`infra/points-entree/`), qui disent ce que les
+#  nœuds lancent — et un chemin attendu qui manque se dit, il ne se tait plus.
+
+#  Les chemins de scripts 5Hostachy cités par un texte (crontab, unité systemd),
+#  un par ligne. Lignes commentées et vides écartées. PURE (stdin → stdout).
+#  C'est la SEULE écriture pure du motif : `crontab_scripts` (C18) s'en sert, et
+#  `verdicts_selftest` la compare au jumeau inline de `lib-collecte.sh`.
+scripts_cites() {
+  grep -vE '^\s*(#|$)' | grep -oE '/opt/5hostachy/[A-Za-z0-9_./-]+\.sh'
+}
+
+#  Un relais (`boot-role-guard.sh` à la racine, que vise l'unité systemd) exécute
+#  sa cible par `exec` : la cible doit donc AUSSI porter son bit x, sinon le
+#  garde-fou anti-split-brain échoue au démarrage — le seul moment où il sert.
+#  Rend le chemin de la cible relatif au relais, ou rien. PURE (stdin → stdout).
+cible_relais() {
+  grep -oE '^exec "\$\(dirname "\$0"\)/[A-Za-z0-9_./-]+\.sh"' | head -1 \
+    | sed -E 's#^.*\)/##; s#"$##'
+}
+
+#  La liste à mesurer, dérivée du dépôt : chemins absolus séparés par des espaces.
+#  ⚠️ LIT des fichiers du dépôt (jamais le système) : ni SSH, ni sudo, ni écriture.
+#  Un répertoire introuvable rend une liste VIDE — jamais une liste par défaut —,
+#  que `verdict_bits_exec` traduit en INCONNU. Les chemins ne contiennent que
+#  `[A-Za-z0-9_./-]` (les deux motifs ci-dessus) : c'est ce qui permet de les
+#  injecter tels quels dans le code exécuté sur les nœuds.
+scripts_a_mesurer() {  # $1 = racine du dépôt
+  local racine="$1" base="$1/infra/points-entree" p cible
+  for p in $(cat "$base"/*.crontab "$base"/*.service 2>/dev/null | scripts_cites | sort -u); do
+    echo "$p"
+    cible=$(cible_relais < "$racine/${p#/opt/5hostachy/}" 2>/dev/null)
+    [ -n "$cible" ] && echo "$(dirname "$p")/$cible"
+  done | sort -u | tr '\n' ' ' | sed 's/ $//'
+}
+
+#  Le code de mesure exécuté sur CHAQUE nœud (local et pair), sous forme de
+#  chaîne : `lib-collecte.sh` l'ajoute à COLLECT. Il rapporte des FAITS BRUTS,
+#  `chemin:x|nx|absent`, derrière un marqueur `ok:` qui distingue « mesuré » de
+#  « pas pu mesurer » ; c'est `verdict_bits_exec` qui conclut. PURE (rend du texte).
+fragment_bits_exec() {  # $1 = chemins séparés par des espaces
+  printf '\n%s\n%s\n' \
+    "BITS=ok:; for _bx in $1; do if [ ! -e \"\$_bx\" ]; then _be=absent; elif [ -x \"\$_bx\" ]; then _be=x; else _be=nx; fi; BITS=\"\$BITS\$_bx:\$_be,\"; done" \
+    'echo "exec_bits=$BITS"'
+}
+
+#  La décision de C6. PURE. Rend `OK|n`, `FAIL|détail` ou `INCONNU|raison`.
+#  Un défaut AVÉRÉ (bit perdu) prime sur tout le reste, comme dans
+#  `agreger_points_entree`. Trois façons de ne RIEN savoir, toutes INCONNU :
+#  relevé absent (collecte muette, pair injoignable), liste vide (zéro fichier
+#  mesuré n'est pas zéro fichier fautif), et aucun chemin attendu présent — la
+#  racine elle-même manque, c'est le cas exact où l'ancienne boucle disait « ok ».
+verdict_bits_exec() {  # $1 = relevé « ok:chemin:état,… »
+  local releve="$1" e chemin n=0 presents=0 nx="" absent="" illisible=""
+  local -a entrees=()
+  case "$releve" in
+    ok:*) releve=${releve#ok:} ;;
+    *)    echo "INCONNU|relevé absent"; return ;;
+  esac
+  IFS=, read -r -a entrees <<< "$releve"
+  for e in ${entrees[@]+"${entrees[@]}"}; do
+    [ -n "$e" ] || continue
+    n=$((n+1)); chemin=${e%:*}; chemin=${chemin#/opt/5hostachy/}
+    case "${e##*:}" in
+      x)      presents=$((presents+1)) ;;
+      nx)     presents=$((presents+1)); nx+=" $chemin" ;;
+      absent) absent+=" $chemin" ;;
+      *)      illisible+=" $chemin" ;;
+    esac
+  done
+  if   [ "$n" -eq 0 ]; then echo "INCONNU|aucun script mesuré"
+  elif [ -n "$nx" ];   then echo "FAIL|sans bit x :${nx}${absent:+ ; absent :$absent}"
+  elif [ "$presents" -eq 0 ] && [ -z "$illisible" ]; then echo "INCONNU|aucun script attendu présent"
+  elif [ -n "$absent" ];    then echo "FAIL|absent :$absent"
+  elif [ -n "$illisible" ]; then echo "INCONNU|état illisible :$illisible"
+  else echo "OK|$n"; fi
+}
+
+#  Les constats de C6, un par nœud — appelée par check-reliability, dont elle
+#  emploie `ok`/`warn`/`fail`, `$SELF`, `$PEER`, `$PEER_OK` et les champs
+#  `S_exec_bits`/`P_exec_bits` (comme `healthwatch_verdicts`, #1586).
+bits_exec_verdicts() {
+  local _n _v
+  for _n in "$SELF:${S_exec_bits:-}" "$PEER:${P_exec_bits:-}"; do
+    [ "${_n%%:*}" = "$PEER" ] && [ "$PEER_OK" -ne 0 ] && continue
+    _v=$(verdict_bits_exec "${_n#*:}")
+    case "${_v%%|*}" in
+      OK)   ok "Bits exec OK sur ${_n%%:*} (${_v#*|} scripts lancés par crons et unité)" ;;
+      FAIL) fail "Scripts lancés NON exécutables sur ${_n%%:*} — ${_v#*|}" ;;
+      *)    warn "Bits exec INCONNUS sur ${_n%%:*} — ${_v#*|} — ni vert ni rouge" ;;
+    esac
+  done
+}
+
 # ── Self-test — le contrat des trois fonctions ───────────────────────────────
 points_entree_selftest() {
   local echecs=0
@@ -234,6 +334,108 @@ ECART|unité role-guard"                                 "ECART|cron root, unit�
   te "service désactivé"              "disabled" ECART
   te "état illisible (SSH refusé)"    ""         INCONNU
 
+  bits_exec_selftest || echecs=$((echecs+1))
+
   [ "$echecs" -eq 0 ] && echo "== TOUS OK ==" || echo "== $echecs ÉCHEC(S) =="
+  return $((echecs > 0))
+}
+
+# ── C6 (#1546) — les scripts que lancent les points d'entrée sont exécutables ─
+#
+#  Le contrat de `scripts_cites`, `cible_relais`, `scripts_a_mesurer`,
+#  `verdict_bits_exec` et `fragment_bits_exec`. Appelé par
+#  `points_entree_selftest`, donc par les DEUX self-tests qui le lancent :
+#  `check-reliability.sh --selftest` et `verifier-points-entree.sh --selftest`.
+#
+#  🔴 Le cas qui l'a fait naître : C6 mesurait sept relais de la racine du dépôt,
+#  dont six avaient été retirés le 16/08/2026. `[ -f ]` faux sur six noms, la
+#  boucle ne mesurait rien et le relevé restait « ok » — vert sur les deux nœuds
+#  pendant que les crons visaient `scripts/exploitation/`, que personne ne
+#  regardait (audit du 02/10/2026).
+bits_exec_selftest() {
+  local echecs=0 obtenu tmp
+  teq() {  # $1 = libellé, $2 = attendu, $3 = obtenu
+    if [ "$3" = "$2" ]; then echo "PASS  $1"
+    else echo "ÉCHEC $1 — attendu [$2], obtenu [$3]"; echecs=$((echecs+1)); fi
+  }
+  echo "== self-test C6 : bits d'exécution des scripts lancés =="
+
+  echo "-- scripts_cites : les chemins que citent crontabs et unité --"
+  obtenu=$(printf '%s\n' '# 0 2 * * * /opt/5hostachy/scripts/exploitation/vieux.sh' '' \
+    '0 2 * * * /opt/5hostachy/scripts/exploitation/bascule.sh >> /var/log/hostachy-bascule.log 2>&1' \
+    'ExecStart=/opt/5hostachy/boot-role-guard.sh' | scripts_cites | paste -sd' ' -)
+  teq "ligne commentée écartée, cron et ExecStart retenus" \
+    "/opt/5hostachy/scripts/exploitation/bascule.sh /opt/5hostachy/boot-role-guard.sh" "$obtenu"
+  teq "texte sans script 5Hostachy → rien" "" "$(printf '%s\n' '0 5 * * * /usr/bin/autre' | scripts_cites)"
+
+  echo "-- cible_relais : un relais désigne le script qu'il exécute --"
+  teq "relais de la racine" "scripts/exploitation/boot-role-guard.sh" \
+    "$(printf '%s\n' '#!/bin/bash' 'exec "$(dirname "$0")/scripts/exploitation/boot-role-guard.sh" "$@"' | cible_relais)"
+  teq "script ordinaire : aucune cible" "" "$(printf '%s\n' '#!/bin/bash' 'echo bonjour' | cible_relais)"
+
+  echo "-- scripts_a_mesurer : la liste DÉRIVÉE du dépôt réel --"
+  local racine liste s
+  racine="$(dirname "${BASH_SOURCE[0]}")/../.."
+  liste=$(scripts_a_mesurer "$racine")
+  for s in scripts/exploitation/bascule.sh scripts/exploitation/health-watch.sh \
+           scripts/exploitation/maintenance.sh scripts/exploitation/check-reliability.sh \
+           scripts/exploitation/auto-deploy.sh boot-role-guard.sh \
+           scripts/exploitation/boot-role-guard.sh; do
+    case " $liste " in
+      *" /opt/5hostachy/$s "*) echo "PASS  mesuré : $s" ;;
+      *) echo "ÉCHEC $s absent de la liste dérivée [$liste]"; echecs=$((echecs+1)) ;;
+    esac
+  done
+  #  Chaque chemin mesuré existe DANS LE DÉPÔT : un point d'entrée qui vise un
+  #  script disparu échoue ici, en CI, avant d'échouer sur les nœuds.
+  for s in $liste; do
+    [ -f "$racine/${s#/opt/5hostachy/}" ] \
+      || { echo "ÉCHEC point d'entrée vers un script absent du dépôt : $s"; echecs=$((echecs+1)); }
+  done
+  #  Cas zéro : pas de répertoire `infra/points-entree` → liste VIDE, jamais
+  #  une liste par défaut recopiée ici.
+  teq "dépôt introuvable → liste vide" "" "$(scripts_a_mesurer /chemin/inexistant)"
+
+  echo "-- verdict_bits_exec : la décision --"
+  local P=/opt/5hostachy/scripts/exploitation
+  teq "tous exécutables"            "OK|2" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:x,$P/health-watch.sh:x,")"
+  teq "un bit x perdu"              "FAIL|sans bit x : scripts/exploitation/bascule.sh" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:nx,$P/health-watch.sh:x,")"
+  teq "un script attendu absent"    "FAIL|absent : scripts/exploitation/maintenance.sh" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:x,$P/maintenance.sh:absent,")"
+  #  🔴 LE CAS DU TICKET : aucun des chemins listés n'existe. L'ancienne boucle
+  #  rendait « ok » ; c'est la racine elle-même qui manque — on ne sait rien.
+  teq "aucun chemin listé n'existe" "INCONNU|aucun script attendu présent" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:absent,$P/health-watch.sh:absent,")"
+  teq "relevé vide (collecte muette)" "INCONNU|relevé absent" "$(verdict_bits_exec "")"
+  teq "pair injoignable (unknown)"  "INCONNU|relevé absent" "$(verdict_bits_exec "unknown")"
+  #  Zéro fichier mesuré n'est PAS « zéro fichier fautif ».
+  teq "liste vide : rien mesuré"    "INCONNU|aucun script mesuré" "$(verdict_bits_exec "ok:")"
+  teq "état illisible"              "INCONNU|état illisible : scripts/exploitation/bascule.sh" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:??,")"
+  #  Un défaut AVÉRÉ prime sur un état illisible — même règle que C22.
+  teq "bit perdu ET état illisible" "FAIL|sans bit x : scripts/exploitation/bascule.sh" \
+    "$(verdict_bits_exec "ok:$P/bascule.sh:nx,$P/health-watch.sh:??,")"
+
+  echo "-- fragment_bits_exec : le code EXÉCUTÉ sur les nœuds, exécuté ici --"
+  local releve
+  tmp=$(mktemp -d)
+  printf '#!/bin/sh\n' > "$tmp/x.sh";  chmod +x "$tmp/x.sh"
+  printf 'texte\n'     > "$tmp/nx.sh"; chmod -x "$tmp/nx.sh"
+  releve=$(bash -c "$(fragment_bits_exec "$tmp/x.sh")" 2>/dev/null)
+  teq "relevé d'un script exécutable" "exec_bits=ok:$tmp/x.sh:x," "$releve"
+  releve=$(bash -c "$(fragment_bits_exec "$tmp/x.sh $tmp/nx.sh $tmp/absent.sh")" 2>/dev/null)
+  teq "x, sans x et absent, relevés tels quels" \
+    "exec_bits=ok:$tmp/x.sh:x,$tmp/nx.sh:nx,$tmp/absent.sh:absent," "$releve"
+  case "$(verdict_bits_exec "${releve#exec_bits=}")" in
+    FAIL\|*) echo "PASS  …et rendus FAIL de bout en bout" ;;
+    *) echo "ÉCHEC un bit perdu doit finir en FAIL"; echecs=$((echecs+1)) ;;
+  esac
+  releve=$(bash -c "$(fragment_bits_exec "")" 2>/dev/null)
+  teq "liste vide : marqueur seul, donc INCONNU en aval" "exec_bits=ok:" "$releve"
+  rm -rf "$tmp"
+
+  [ "$echecs" -eq 0 ] && echo "== C6 : TOUS OK ==" || echo "== C6 : $echecs ÉCHEC(S) =="
   return $((echecs > 0))
 }

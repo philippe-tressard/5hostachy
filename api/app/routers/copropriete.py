@@ -20,6 +20,7 @@ from app.models.core import (
 from app.utils.destinataires import syndic_principal
 from app.utils.document_contrat import id_document_designe
 from app.utils.echeance_contrat import echeance_du_contrat
+from app.utils.lecture import lire_objet
 from app.utils.syndic import nom_du_syndic
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
@@ -438,13 +439,5 @@ def contrats_candidats(
         ).all()
     }
     return [
-        ContratCandidat(
-            id=c.id,
-            libelle=c.libelle,
-            prestataire=noms.get(c.prestataire_id),
-            numero_contrat=c.numero_contrat,
-            date_debut=c.date_debut,
-            actif=c.actif,
-        )
-        for c in contrats
+        lire_objet(ContratCandidat, c, prestataire=noms.get(c.prestataire_id)) for c in contrats
     ]

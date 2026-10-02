@@ -52,6 +52,7 @@ cas zéro, et il rend `None`.
 """
 
 from datetime import date
+from app.utils import horloge
 from typing import NamedTuple, Optional, Protocol
 from app.utils.valeurs import valeur
 
@@ -142,7 +143,7 @@ def echeance_du_contrat(contrat: _Contrat, aujourdhui: Optional[date] = None) ->
     if not contrat.date_debut:
         return None
 
-    reference = aujourdhui or date.today()
+    reference = aujourdhui or horloge.aujourd_hui()
     duree = contrat.duree_initiale_valeur
     unite = contrat.duree_initiale_unite
     #  `TypeEquipement` est un `str, Enum` : `str(...)` rendrait « TypeEquipement.syndic ».

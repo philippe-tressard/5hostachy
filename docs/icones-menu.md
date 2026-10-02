@@ -16,6 +16,7 @@
 | Icône réellement servie | `front/src/lib/pages-surcharge.ts` : l'icône est **administrable** (Administration → Configuration → Descriptif pages) ; une surcharge absente retombe sur la valeur de `pages.ts` |
 | Noms d'icônes disponibles | `front/src/lib/icones-svg.json` — un nom inconnu échoue **en silence** : le vérifier avant de l'écrire |
 | Rendu | `front/src/lib/components/Icon.svelte` (icônes Lucide, SVG monochrome) — catalogue : https://lucide.dev/icons/ |
+| Licence et origine des tracés | Lucide (ISC ; MIT pour la part issue de Feather), sauf les icônes de `ICONES_HORS_LUCIDE` (`scripts/ci/licences_politique.py`) — une icône qui ne vient pas de Lucide s'y déclare, avec son contenu tiers et `REUSE.toml` (#1543) |
 
 ## Ce qui reste valable des choix d'origine
 

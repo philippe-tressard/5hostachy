@@ -25,9 +25,32 @@ from app.models.core import (
 from app.models.evenement import Evenement
 
 from .objets import evenement_visible, ticket_visible
-from app.auth.deps import est_moderateur
+from app.auth.deps import est_moderateur, est_rattache_au_lot
+from app.utils.valeurs import valeur
 
 # ── Règles document ───────────────────────────────────────────────────────────
+
+
+def profil_admet(user: Utilisateur, profil: ProfilAccesDocument | None) -> bool:
+    """Ce profil d'accès admet-il ce lecteur ? — la règle par RÔLE, et elle seule.
+
+    Comparée aux rôles **et** au statut du lecteur : le syndic n'a aucun rôle de
+    copropriétaire, son statut vaut `syndic`, et c'est ainsi qu'il lit les PV
+    d'AG (migration 0159). Pas de profil → non : « aucune règle » n'est jamais
+    une autorisation (`standards/04`).
+
+    🔴 Écrite deux fois avant #1551, mot pour mot : ici et dans
+    `routers/documents.py::list_categories`, qui choisit les catégories qu'on
+    vous propose. Le jour où le profil apprend quelque chose, l'écran aurait
+    proposé des catégories dont aucun document ne s'ouvre, ou tu les autres.
+    `tests/test_autorisation.py` refuse une lecture de `roles_autorises` hors
+    d'ici. Les modérateurs ne passent pas par là : chaque appelant les admet en
+    tête, avant toute autre règle.
+    """
+    if profil is None:
+        return False
+    roles_autorises = json.loads(profil.roles_autorises)
+    return any(r in roles_autorises for r in set(user.roles) | {valeur(user.statut)})
 
 
 def document_visible(user: Utilisateur, doc: Document, session) -> bool:
@@ -110,14 +133,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     )
     if not profil_id:
         return False
-    profil: ProfilAccesDocument = session.get(ProfilAccesDocument, profil_id)
-    if not profil:
-        return False
-
-    # Vérifier le rôle (supporte valeurs de rôles ET de statuts pour compatibilité)
-    roles_autorises = json.loads(profil.roles_autorises)
-    user_idents = set(user.roles) | {user.statut.value}
-    if not any(r in roles_autorises for r in user_idents):
+    if not profil_admet(user, session.get(ProfilAccesDocument, profil_id)):
         return False
 
     # Vérifier le périmètre
@@ -132,10 +148,19 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     #  une AG invisible aux copropriétaires des autres bâtiments (mesuré le
     #  29/08/2026). Corrigé à la source : l'écran n'en pose plus, et la migration
     #  0159 reverse les documents déjà en base.
-
-    user_batiments = {ul.lot.batiment_id for ul in user.user_lots if ul.actif and ul.lot}
+    #
+    #  🔒 « Détenteur d'un lot du bâtiment » : un lot de CE bâtiment auquel le
+    #  lecteur est rattaché — et « rattaché » se demande à `est_rattache_au_lot`,
+    #  qui exige le lien actif. Ce bloc jugeait `ul.actif` lui-même avant #1551.
+    #  ⚠️ Plus étroit que `utils/mes_batiments`, et VOULU : le bâtiment de
+    #  rattachement (`user.batiment_id`) n'y entre pas — un diagnostic ou une
+    #  attestation de bâtiment concernent qui y détient un lot, pas qui y est
+    #  domicilié sans lot. Ce n'est donc pas une copie de « mes bâtiments ».
     if doc.perimetre == "bâtiment" and doc.batiment_id:
-        if doc.batiment_id not in user_batiments:
+        lots_du_batiment = {
+            ul.lot_id for ul in user.user_lots if ul.lot and ul.lot.batiment_id == doc.batiment_id
+        }
+        if not any(est_rattache_au_lot(user, lot_id) for lot_id in lots_du_batiment):
             return False
 
     #  ── `batiments_ids_json` NE RESTREINT PAS, et c'est une décision ─────────
@@ -158,8 +183,7 @@ def document_visible(user: Utilisateur, doc: Document, session) -> bool:
     #  l'écran et la migration, et non par un second filtre ici.
 
     if doc.perimetre == "lot" and doc.lot_id:
-        user_lots = {ul.lot_id for ul in user.user_lots if ul.actif}
-        if doc.lot_id not in user_lots:
+        if not est_rattache_au_lot(user, doc.lot_id):
             return False
 
     return True

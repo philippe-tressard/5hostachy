@@ -28,3 +28,47 @@ path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Philippe TRESSARD"
 SPDX-License-Identifier = "LicenseRef-5Hostachy"
+
+#  ── Contenus repris de projets tiers (#1543, 02/10/2026) ──────────────────
+#  Les blocs ci-dessous sont les « exceptions futures » annoncées en tête : des
+#  fichiers qui mêlent l'œuvre du projet et des tracés d'icônes recopiés.
+#  Jusqu'ici, `**` leur attribuait la seule licence du projet et `reuse lint`
+#  restait vert — il vérifie qu'une licence est DÉCLARÉE, pas qu'elle est vraie.
+#
+#  ⚠️ Le titulaire du projet y est RÉPÉTÉ, et c'est voulu : quand plusieurs
+#  blocs correspondent au même fichier, REUSE retient le DERNIER, il ne les
+#  cumule pas. Sans cette ligne, le fichier perdrait la mention du projet.
+#
+#  La source de vérité de ce qui est repris, d'où et sous quelle licence est
+#  `scripts/ci/licences_politique.py` (CONTENUS_TIERS) ; `contenus_tiers.py`
+#  échoue si ces blocs ne lui correspondent plus, ou si un autre fichier
+#  recopie un tracé du catalogue sans y être déclaré.
+
+#  Le catalogue d'icônes et sa copie côté API (tenus égaux à l'octet par
+#  `test_icones_svg.py`) : Lucide (ISC ; MIT pour la part issue de Feather),
+#  le logo WhatsApp de Simple Icons (CC0-1.0), et l'icône `stairs`.
+[[annotations]]
+path = ["front/src/lib/icones-svg.json", "api/app/utils/icones-svg.json"]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2026 Philippe TRESSARD",
+  "2026 Lucide Icons and Contributors",
+  "2013-present Cole Bemis",
+]
+SPDX-License-Identifier = "LicenseRef-5Hostachy AND ISC AND MIT AND CC0-1.0"
+
+#  Le manuel utilisateur (deux exemplaires) et la page de maintenance
+#  Cloudflare : texte du projet, pictogrammes Lucide en SVG en ligne.
+[[annotations]]
+path = [
+  "docs/manuel-utilisateur.html",
+  "front/static/manuel-utilisateur.html",
+  "infra/cloudflare-worker.js",
+]
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2026 Philippe TRESSARD",
+  "2026 Lucide Icons and Contributors",
+  "2013-present Cole Bemis",
+]
+SPDX-License-Identifier = "LicenseRef-5Hostachy AND ISC AND MIT"

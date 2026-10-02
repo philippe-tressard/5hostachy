@@ -108,10 +108,10 @@ class _ResidentDuBatiment:
     règle. Même parti pris que `_SessionSansBase` plus haut.
     """
 
-    def __init__(self, numero: int):
+    def __init__(self, numero: int, *, actif: bool = True):
         lot = type("Lot", (), {"batiment_id": numero, "id": 500 + numero})()
         self.user_lots = [
-            type("UserLot", (), {"actif": True, "lot": lot, "lot_id": 500 + numero})()
+            type("UserLot", (), {"actif": actif, "lot": lot, "lot_id": 500 + numero})()
         ]
         self.statut = StatutUtilisateur.locataire
         self.roles = ["resident"]
@@ -179,6 +179,49 @@ def test_pv_ag_ciblage_illisible_ne_ferme_rien():
 def test_document_de_batiment_lisible_par_son_batiment():
     doc = _cr_ag(perimetre="bâtiment", batiment_id=1)
     assert document_visible(_resident_du_batiment(1), doc, _SessionProfil()) is True
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  #1551 — « rattaché » se demande à `est_rattache_au_lot`, jamais relu ici
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  `document_visible` jugeait `ul.actif` lui-même, deux fois (bâtiment, lot). Ces
+#  tests fixent les cas limites où une copie divergerait de la source : le lien
+#  DÉSACTIVÉ (l'ancien occupant), et le bâtiment de RATTACHEMENT sans lot — où la
+#  règle est plus étroite que `utils/mes_batiments`, et c'est voulu.
+
+
+def _doc_du_lot(lot_id: int):
+    doc = _cr_ag()
+    doc.perimetre, doc.lot_id = "lot", lot_id
+    return doc
+
+
+def test_document_de_batiment_refuse_a_l_ancien_occupant():
+    """Un lien désactivé est l'historique d'un rattachement, pas un rattachement."""
+    doc = _cr_ag(perimetre="bâtiment", batiment_id=1)
+    ancien = _ResidentDuBatiment(1, actif=False)
+    assert document_visible(ancien, doc, _SessionProfil()) is False
+
+
+def test_document_de_lot_lisible_par_son_detenteur_et_pas_par_l_ancien():
+    assert document_visible(_resident_du_batiment(1), _doc_du_lot(501), _SessionProfil()) is True
+    ancien = _ResidentDuBatiment(1, actif=False)
+    assert document_visible(ancien, _doc_du_lot(501), _SessionProfil()) is False
+
+
+def test_document_de_batiment_refuse_au_domicilie_sans_lot():
+    """⚠️ Plus étroit que « mes bâtiments » (rattachement + lots), et VOULU.
+
+    Un diagnostic ou une attestation de bâtiment concernent qui y détient un lot.
+    Un compte domicilié dans le bâtiment 1 (`batiment_id`) mais dont le seul lot
+    est au 3 ne le lit pas : appeler `batiments_de_l_utilisateur` ici aurait
+    élargi la règle sans que rien ne le dise.
+    """
+    domicilie = _resident_du_batiment(3)
+    domicilie.batiment_id = 1
+    doc = _cr_ag(perimetre="bâtiment", batiment_id=1)
+    assert document_visible(domicilie, doc, _SessionProfil()) is False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

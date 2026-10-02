@@ -23,6 +23,8 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.utils.perimetres import perimetre_cible_json
+
 from app.utils.assiste_ia import AssisteIAMixin
 from pydantic import NaiveDatetime
 
@@ -142,11 +144,11 @@ class PetiteAnnonce(AssisteIAMixin, table=True):
     #  absence de notion que l'écran avait décrétée, pas le produit.
     #
     #  ⚠️ Même forme que `Publication.perimetre_cible` et `Evenement.perimetre` :
-    #  du JSON de codes (`["résidence"]`, `["bat:1","parking"]`), pas un texte
+    #  du JSON de codes (`["bat:1","parking"]`), pas un texte
     #  libre. La forme se recopie parce que la NOTION est la même — c'est
     #  `PerimetrePicker` et `perimetreLabel` qui la lisent, et ils ne savent lire
     #  que celle-là.
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')
+    perimetre_cible: Optional[str] = Field(default_factory=perimetre_cible_json)
     #  Le PUBLIC CIBLE — section 5 du cadre #430, ajouté le 06/09/2026 (#782).
     #  Le périmètre dit *de quoi* il s'agit ; celui-ci dit *à qui* on s'adresse.
     #
@@ -209,7 +211,7 @@ class Idee(AssisteIAMixin, table=True):
     #  `Sondage` : du JSON de codes. Une quatrième forme diverge — c'est ce que le
     #  sondage avait fait (`batiments_ids`), et il a fallu une migration pour l'en
     #  sortir (#316, 0147). Migration 0153.
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')
+    perimetre_cible: Optional[str] = Field(default_factory=perimetre_cible_json)
     #  Le PUBLIC CIBLE — même champ, même forme et même règle que la petite
     #  annonce ci-dessus et que le sondage (#782, migration 0176). `None` = tout
     #  le monde : les idées déjà déposées ne changent pas d'audience.

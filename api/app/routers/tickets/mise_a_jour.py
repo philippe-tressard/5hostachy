@@ -39,11 +39,11 @@ from app.utils.intervenant import appliquer_intervenant
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.nature_affaire import (
     ACTUALITE,
-    PERIMETRE_BUG,
     categorie_reservee,
     change_de_nature,
     est_actualite,
     est_bug,
+    perimetre_bug,
     statut_pour,
 )
 from app.utils.valeurs import valeur
@@ -249,7 +249,7 @@ def update_ticket(
             raise HTTPException(403, "Modification impossible : le ticket n'est plus ouvert")
         changes += _appliquer_contenu(body, ticket, est_cs=is_cs_admin)
         if est_bug(ticket.categorie):  # le périmètre d'un bogue est verrouillé (#1191)
-            ticket.perimetre_cible = PERIMETRE_BUG
+            ticket.perimetre_cible = perimetre_bug()
         if nature_changee:
             #  L'état que le conseil a demandé dans la même correction est
             #  retenu (la liste blanche est celle de `statut_pour`) : il avait

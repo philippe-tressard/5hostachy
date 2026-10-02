@@ -120,6 +120,16 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
    chaque vrai lieu 📍 se **déclarent** dans le contrôle, avec leur nombre
    d'occurrences. Il a trouvé « 📍 Concerne votre bâtiment » et « 📍 Dépannage ».
 
+   **Côté API, la même règle** vit dans `app/utils/perimetres/arbre.py` :
+   `est_perimetre_par_defaut(codes)` pose la question, `perimetre_cible_json(codes)`
+   écrit une sélection (vide → le défaut ; sans argument, c'est le
+   `default_factory` des colonnes `perimetre_cible`), `perimetre_defaut_liste()`
+   la donne en liste — toutes lisent la racine dans l'arbre (`code_par_defaut`).
+   Le code « résidence » n'est écrit que par le **seed** qui pose le nœud ; il
+   l'était 23 fois avant #1567. 🔒 `test_perimetre_racine_source_unique.py`
+   (exceptions déclarées : la granularité documentaire `Document.perimetre`,
+   autre axe — *qui lit* un fichier, pas *où* se passe un contenu).
+
 ---
 
 ## Conventions Backend (Python / FastAPI)
@@ -151,6 +161,13 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   **`NaiveDatetime`** (pydantic), jamais `datetime` : depuis sqlmodel 0.0.45 ce
   dernier devient une colonne consciente du fuseau qui refuse la date naïve à
   l'écriture (#1412). 🔒 `test_horloge.py`
+- Le **jour** du résident (calendrier, échéance, date affichée, `default_factory`
+  d'un champ `date`) : `horloge.aujourd_hui()` — le jour de **Paris**, quel que
+  soit le fuseau du conteneur ; celui d'un instant de la base :
+  `horloge.jour_civil(x)`, son heure murale `horloge.a_paris(x)`, le fuseau
+  `horloge.TZ_PARIS`. Jamais `date.today()`, `datetime.now()` sans fuseau ni
+  `maintenant.date()` — le jour UTC, faux d'un jour entre 0 h et 2 h (#1565).
+  🔒 `test_horloge.py` (forme `default_factory` comprise) et Ruff `DTZ005/011`
 - FK : `{modele}_id = Field(default=None, foreign_key="table.id")`
 - Enums : `class MonEnum(str, Enum)` → slugs français lowercase
 - **Archiver, pas une colonne `actif` par réflexe.** Les objets qui quittent les
@@ -163,9 +180,13 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
 - La valeur d'une énumération (`categorie`, `statut`…) : `utils/valeurs.valeur(x)`,
   jamais `str(x)` — qui rend « CategorieTicket.etude_travaux » — ni un
   `getattr(x, "value", x)` recopié (il l'était neuf fois ; 🔒 `test_valeur_source_unique`).
-- Lire un objet pour le RENDRE : `Schema.model_validate(objet)` puis les seuls
-  champs dérivés — jamais une recopie colonne par colonne, où tout oubli part à
-  sa valeur par défaut sans un mot (🔒 `test_ticket_read_rend_le_modele`, #1092).
+- Lire un objet pour le RENDRE : `Schema.model_validate(objet)`, ou
+  `utils/lecture.lire_objet(Schema, objet, **dérivés)` quand des champs se
+  calculent — jamais une recopie colonne par colonne, où tout oubli part à sa
+  valeur par défaut sans un mot : l'historique d'une affaire a ainsi perdu
+  `assiste_ia` et `contenu_origine` (#1563). 🔒 `test_lecture_colonne_par_colonne`
+  refuse la recopie pour TOUT schéma de l'application (il ne gardait que
+  `TicketRead`, #1092) ; `test_lectures_rendent_le_modele` relit les sorties.
 
 > 🔴 Cette section décrivait jusqu'au 23/09/2026 un backend disparu : « modèle
 > dans `models/core.py` », « trois schémas dans `schemas.py` », « soft delete par
@@ -263,6 +284,21 @@ sous le nom `peut_commander` : un nom qui décrivait **un geste** (fixer les cha
 commandement d'un ticket) n'est appelé que par ce geste, et les vingt-cinq autres
 points d'usage n'ont jamais vu qu'ils posaient la même question (#1028).
 
+🔴 **Une liste qui FILTRE appelle le prédicat du geste qui REFUSE** — jamais sa
+copie. Une règle qui rend `False` (visibilité) ou fait `continue` (une liste) ne
+lève rien, et les contrôles qui reconnaissaient une règle à sa **levée** ou à son
+**nom** ne la voyaient pas : la liste des transferts recopiait
+`exiger_auteur_du_versement` (→ `peut_defaire_le_versement`), celle des
+catégories de documents le profil d'accès de `document_visible`
+(→ `visibility.profil_admet`), et `document_visible` jugeait `ul.actif` à côté
+d'`est_rattache_au_lot` (#1551). Les trois contrôles lisent désormais le
+**contenu** sur l'AST : `roles_autorises` lu hors de `profil_admet`
+(`test_autorisation.py`), un élément de `user_lots` jugé sur `actif` hors
+d'`est_rattache_au_lot` (`test_appartenance_lot_source_unique.py`), un champ que
+`auth/appartenance.py` compare à un utilisateur recomparé ailleurs
+(`test_appartenance_source_unique.py` — les champs sont **lus** dans le module,
+une règle neuve étend le contrôle d'elle-même).
+
 ### Documents imprimables (PDF)
 - Thème commun : `app/utils/pdf_theme.py` — logo, palette de la charte, data-URI (image/QR), `html_to_pdf()`.
   **Ne jamais** redéfinir une palette, un logo ou un moteur PDF ailleurs.
@@ -323,12 +359,31 @@ importe les gestes du transport.
   dans le cookie ou le lien. Une copie de la base donnait des jetons
   utilisables (#1389). Changer `SECRET_KEY` ferme donc toutes les sessions et
   invalide les liens en attente — voulu. 🔒 `test_jetons_empreinte.py`.
+- **« Le compte de cette adresse » : une seule porte.** `auth/adresse_compte` —
+  `compte_par_adresse` (insensible à la casse et aux espaces, des deux côtés) et
+  `normaliser_adresse`, la forme sous laquelle une adresse s'écrit ET se cherche.
+  Deux écritures divergeaient sur la casse : un compte à majuscule se connectait
+  mais ne recevait ni lien de vérification ni mot de passe oublié (#1550).
+  🔒 `test_adresse_compte_source_unique.py` refuse une comparaison sur
+  `Utilisateur.email` ou une normalisation d'adresse recopiée.
+- **Changer l'adresse d'un compte est une DEMANDE, jamais une écriture** —
+  `utils/verification_adresse.demander_changement_adresse`, pour le profil comme
+  pour l'administrateur : mot de passe de **qui agit**, lien à la nouvelle
+  adresse (le jeton de l'inscription, qui porte alors `nouvelle_adresse`), avis
+  à l'ancienne, qui reste celle du compte jusqu'au clic, journal. Une session
+  volée suffisait à détourner un compte (#1549). 🔒 `test_changement_adresse.py`
+  refuse aussi `x.email = …` hors de la confirmation du lien.
 - **Journal de sécurité : une seule porte.** Un geste sensible — connexion
   refusée, mot de passe changé ou réinitialisé, rôle ajouté ou retiré,
-  bannissement, jeton de rafraîchissement rejoué — appelle `utils/journal_securite.journaliser_securite`, et
+  bannissement, jeton de rafraîchissement rejoué, changement d'adresse demandé
+  ou confirmé ; la liste fait foi dans `GESTES_SENSIBLES` — appelle `utils/journal_securite.journaliser_securite`, et
   **aucun** n'écrit dans un `logger` local. Rien n'était journalisé avant le
   20/09/2026 : un compte compromis ou une élévation de rôle ne laissait aucune
-  trace exploitable (#1040).
+  trace exploitable (#1040). Depuis #1548, le **cycle de vie d'un compte** aussi :
+  validé ou refusé, désactivé ou réactivé, supprimé, et une délégation créée,
+  acceptée ou révoquée. Le geste suivant n'attend pas un audit : 🔒 `test_journal_securite.py`
+  confronte `GESTES_SENSIBLES` à ce que les routeurs **écrivent** (décision sur
+  un compte, rôles, effacement, délégation) et refuse un code absent de `_NIVEAUX`.
   🔴 **Jamais de donnée personnelle dans une ligne de journal** — un identifiant,
   jamais une adresse, un mot de passe ou un jeton, même tronqué. Le défaut
   inverse existe dans ce dépôt (#777, adresses journalisées en clair), et
@@ -392,8 +447,10 @@ importe les gestes du transport.
       **jamais** `objet.auteur_nom` — c'est le rédacteur, et le « Saisi pour » s'y
       substitue (12/09). La case de copie, elle, dit `nomCopie` : deux questions.
       Il y en avait **13** avant #1104 (`npm run lint:nom-proprietaire` le refuse)
-- [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`
-      — **treize**, dans l'ordre de `SECTIONS_ORDRE` — et son **pliage** suit la
+- [ ] Section d'un formulaire : elle est déclarée dans `$lib/entites/<entité>`,
+      dans l'ordre de `SECTIONS_ORDRE` (`$lib/entites/types.ts`) — la liste ET
+      son compte se lisent là, jamais ici : « treize » y est resté écrit six
+      jours pour quatorze (#1541, `npm run lint:consignes`) — et son **pliage** suit la
       règle *obligatoire → déplié · facultatif → plié*, ou porte son
       `exceptionPliage` (`npm run lint:etats` refuse dans les deux sens). Un
       composant qui **porte** une section au lieu de l'écrire dans la page la
@@ -408,9 +465,11 @@ importe les gestes du transport.
       30/09/2026, #1177) ; l'écran dit « Affaire » et « Actualité ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut — le badge passe par
       `BadgePerimetre`, qui le tait (`npm run lint:pictogrammes`)
-- [ ] Archiver (pas supprimer) sur la vue principale — la corbeille ne s'offre
-      qu'aux Archives (`api/tests/test_suppression_aux_archives.py`, affaires et
-      actualités) ; le titre des archives vient d'une constante (`lint:archives`)
+- [ ] Archiver (pas supprimer) sur la vue principale — 📦, jamais un 🗑️ intitulé
+      « Archiver » ; la corbeille ne s'offre qu'aux Archives, et ce qu'on range a
+      son écran (`api/tests/test_suppression_aux_archives.py` : affaires,
+      actualités, prestataires, contrats — une carte qui archive s'y ajoute) ;
+      le titre des archives vient d'une constante (`lint:archives`)
 - [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
       tapée. Elle est **collée** au libellé et **rouge tant que le champ est
       vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Une
@@ -460,6 +519,10 @@ importe les gestes du transport.
       `test_routes_masquees.py` le tient pour `acces`
 - [ ] Lecture d'un objet par `ou_404`, pas `session.get` + 404
 - [ ] Client TypeScript ajouté dans le paquet `front/src/lib/api/` — dans le module de son domaine (`acces`, `patrimoine`, `communaute`…), jamais dans un `api.ts` ressuscité à la racine
+- [ ] …**y compris pour une adresse** — lien de téléchargement, `src` d'image : le
+      client la rend (`documents.downloadUrl`, `manuel.pdfUrl`), et aucune chaîne
+      `/api` ne s'écrit dans un écran (`npm run lint:client-api` ; il en manquait
+      cinq, qu'il ne voyait pas, avant #1578)
 - [ ] …et il **rend le type** de ce que le serveur renvoie, déclaré à côté de lui —
       jamais `any` qu'un écran retype. Un type d'entité (champ `id`) déclaré dans un
       écran est refusé (`npm run lint:types-locaux`, #1044 ; l'existant y est déclaré)
@@ -503,6 +566,16 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   variables — sinon échec silencieux à l'envoi (cf. bug `'destinataire' is undefined`).
 - **`test_migrations.py`** — chaîne Alembic : head unique, base unique, révisions uniques
   (attrape un `down_revision` erroné qui bloquerait `alembic upgrade head` au démarrage).
+- **Licences tierces** (#1542, #1543) — `scripts/ci/licences_tierces.py` (job
+  `test-backend`) juge chaque dépendance de `front/`, `whatsapp-bridge/` et `api/`
+  contre une liste blanche. Une licence hors liste s'ajoute en **exception nommée**
+  avec son motif dans `scripts/ci/licences_politique.py` — jamais en élargissant la
+  liste ; une exception qui ne sert plus fait échouer. Un paquet qui entre ou
+  change de licence : relire, puis `--ecrire` régénère `docs/licences-tierces.md`,
+  jamais tenu à la main. Un fichier ou un tracé **repris** d'un projet tiers se
+  déclare dans `CONTENUS_TIERS` et dans `REUSE.toml` — `contenus_tiers.py` (job
+  `lint-backend`) le vérifie : `reuse lint` dit qu'une licence est déclarée, pas
+  qu'elle est vraie.
 - **Le code de test ne se recopie pas non plus** (#1495) : la liste des aides et
   de ce qu'elles remplacent se lit dans `MOTIFS` de
   🔒 `test_aides_de_tests_source_unique.py` — balayage de `app/`, base en mémoire
@@ -609,8 +682,8 @@ drapeau `Secure`. C'est le « gap .env du 15/07/2026 ». La règle vit dans
 |---|---|
 | `0 2 * * *` `bascule.sh` | bascule active/standby, puis le nouveau standby pose sa **révision** de noyau et redémarre (`noyau-standby.sh`, #1395) — une nouvelle **série** reste manuelle, C30 la signale avec la commande |
 | `0 3 * * 0` `maintenance.sh` | purges **demandées à l'API** (`POST /admin/maintenance/purges` — jamais `docker exec … python`, #1232), VACUUM API arrêtée ; sur les **deux** nœuds, images de base re-tirées (#1379) et rotation des logs |
-| `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS |
-| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C30** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
+| `*/5 * * * *` `health-watch.sh` | failover automatique si le site est HS — et une ligne datée à **chaque** sonde, site OK compris : son battement, que **C31** mesure sur les deux nœuds (#1586). Il se taisait quand tout allait bien, donc rien ne distinguait ce calme d'un failover mort |
+| `*/15 * * * *` `check-reliability.sh` | contrôles de fiabilité **C1 à C31** (C8 retiré le 17/07/2026 : il causait les pertes qu'il devait prévenir) + alerte e-mail sur `FAIL`, digest quotidien sur `WARN` — chaque fait envoyé **une fois**, par le nœud qu'il concerne (#1402) —, et constats en cours dans **Admin › Maintenance** (rapport sur changement, **battement à chaque passage** qui dit « dernier contrôle », et chaque constat affiché **une fois** — sous le nœud qu'il nomme, ou sous « Les deux nœuds » par l'actif, #1396). ⚠️ La moitié vit dans les modules de `scripts/lib/`, et greper « C25 » dans le script ne le trouve pas. **Où vit chacun** : `grep -rn "── C[0-9]" scripts/` — cette ligne en tenait la liste, et elle plaçait C27 dans le mauvais module (23/09/2026) |
 
 **Les tâches de l'API**, elles, tournent **dans le process** et se déclarent dans
 `app/utils/taches.TACHES_PERMANENTES` — avec, pour chacune, **ce qu'on perd** si

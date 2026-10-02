@@ -39,7 +39,11 @@ from app.routers.annonces_hall_courriels import (
     _envoyer_email_annonce,
     _partager_sur_le_groupe,
 )
-from app.utils.perimetres import parse_json_perimetres, perimetre_label_liste
+from app.utils.perimetres import (
+    parse_json_perimetres,
+    perimetre_defaut_liste,
+    perimetre_label_liste,
+)
 from app.utils.config_site import config_site
 from app.utils.photos import parse_photos
 from app.utils.noms import nom_affiche
@@ -283,7 +287,7 @@ def creer_annonce_hall(
     body = AnnonceHallCreate(
         titre=titre,
         message=message,
-        perimetre_cible=perimetre_cible or ["résidence"],
+        perimetre_cible=perimetre_cible or perimetre_defaut_liste(),
         format_demande=format_demande,
         images=(images or [])[:MAX_PHOTOS],
     )

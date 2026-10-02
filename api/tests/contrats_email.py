@@ -79,6 +79,8 @@ EXPECTED_VARS: dict[str, set[str]] = {
     # quotidien découvre les problèmes ensemble et n'envoie qu'un message.
     "alerte_systeme": {"problemes", "nb_problemes", "date_controle"},
     "verification_email": {"expire_heures", "lien", "prenom"},
+    #  L'avis à l'ancienne adresse d'un compte dont l'adresse va changer (#1549).
+    "adresse_changement_avis": {"destinataire", "nouvelle_adresse", "par_un_administrateur"},
     "annonce_hall": {"annonce", "auteur"},
     # Prévient le gestionnaire du site quand l'appariement a créé des accès
     # sans validation préalable. `resultat` porte aussi les accords en français,

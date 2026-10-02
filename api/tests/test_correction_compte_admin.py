@@ -11,7 +11,7 @@ Mêmes règles qu'à l'inscription : l'étage dans ses bornes, les noms en capit
 from __future__ import annotations
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 
 from app.routers.admin.utilisateurs import AdminUserUpdate, modifier_utilisateur
 from tests.aides_badges import _compte
@@ -19,7 +19,13 @@ from tests.aides_badges import _compte
 
 def _corriger(session, cible, **champs):
     admin = _compte(session, "Admin")
-    return modifier_utilisateur(cible.id, AdminUserUpdate(**champs), session=session, admin=admin)
+    return modifier_utilisateur(
+        cible.id,
+        AdminUserUpdate(**champs),
+        background_tasks=BackgroundTasks(),
+        session=session,
+        admin=admin,
+    )
 
 
 def test_l_administrateur_corrige_l_etage_et_le_bailleur(session):

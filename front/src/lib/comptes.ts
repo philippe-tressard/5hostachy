@@ -222,3 +222,38 @@ export const ETIQUETTES_COMPTE: readonly {
 		sansObjet: 'Sans objet : ni bailleur, ni locataire',
 	},
 ];
+
+/**
+ * L'adresse saisie est-elle une AUTRE adresse que celle du compte (#1549) ?
+ *
+ * Changer l'adresse d'un compte demande le mot de passe de qui agit, puis la
+ * confirmation de la nouvelle par un lien : l'écran ne demande le mot de passe
+ * que si c'est bien un changement. La casse et les espaces n'en font pas un —
+ * le serveur compare de même (`auth/adresse_compte.normaliser_adresse`), et il
+ * reste seul juge : l'écran ne fait que savoir quoi demander.
+ */
+export function adresseChangee(
+	saisie: string | null | undefined,
+	actuelle: string | null | undefined,
+): boolean {
+	return formeAdresse(saisie) !== '' && formeAdresse(saisie) !== formeAdresse(actuelle);
+}
+
+/** Minuscules, espaces retirés — rien de plus, comme côté serveur. */
+function formeAdresse(adresse: string | null | undefined): string {
+	return (adresse ?? '').trim().toLowerCase();
+}
+
+/**
+ * Ce que l'écran annonce une fois le changement demandé — la nouvelle adresse
+ * n'est PAS encore celle du compte, et c'est ce qu'il faut dire.
+ *
+ * `parUnTiers` : l'administrateur change l'adresse d'un autre compte ; c'est
+ * alors le titulaire qui confirmera, pas celui qui lit l'annonce.
+ */
+export function annonceLienEnvoye(nouvelle: string, parUnTiers = false): string {
+	const adresse = formeAdresse(nouvelle);
+	return parUnTiers
+		? `Un lien de confirmation a été envoyé à ${adresse}. L’adresse actuelle reste celle du compte jusqu’à ce que son titulaire clique dessus.`
+		: `Un lien de confirmation a été envoyé à ${adresse}. Votre adresse actuelle reste celle du compte jusqu’à ce que vous cliquiez dessus.`;
+}

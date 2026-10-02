@@ -28,6 +28,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.utils.perimetres import perimetre_cible_json
+
 from app.utils.assiste_ia import AssisteIAMixin
 from pydantic import NaiveDatetime
 
@@ -135,13 +137,13 @@ class ContratEntretien(SQLModel, table=True):
     #: « Caves », qui n'en sont pas. C'est l'arborescence administrée qui décrit
     #: le patrimoine, pas la table des bâtiments — et elle s'enrichit sans
     #: migration, ce qu'une colonne ne sait pas faire.
-    perimetre_cible: Optional[str] = Field(default='["résidence"]')
+    perimetre_cible: Optional[str] = Field(default_factory=perimetre_cible_json)
     prestataire_id: int = Field(foreign_key="prestataire.id")
 
     type_equipement: TypeEquipement = TypeEquipement.autre
     libelle: str
     numero_contrat: Optional[str] = None
-    date_debut: date = Field(default_factory=date.today)
+    date_debut: date = Field(default_factory=horloge.aujourd_hui)
     duree_initiale_valeur: Optional[int] = None
     duree_initiale_unite: Optional[str] = None  # "mois" ou "ans"
     frequence_type: Optional[str] = None  # "semaines", "mois", "fois_par_an"

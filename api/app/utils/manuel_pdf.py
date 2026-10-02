@@ -44,6 +44,7 @@ import re
 import threading
 import urllib.request
 from datetime import date
+from app.utils import horloge
 from html import escape, unescape
 from pathlib import Path
 
@@ -308,7 +309,7 @@ def composer_html(
     se branche.
     """
     html = html_manuel if html_manuel is not None else lire_manuel()
-    edite_le = edite_le or date.today()
+    edite_le = edite_le or horloge.aujourd_hui()
     version = version_du_manuel(html)
     #  Le corps et le relevé viennent de la MÊME passe : voir `titres_ancres`.
     corps, releve = titres_ancres(html)
@@ -371,7 +372,7 @@ def generer_manuel_pdf(
     import hashlib
 
     html = html_manuel if html_manuel is not None else lire_manuel()
-    edite_le = edite_le or date.today()
+    edite_le = edite_le or horloge.aujourd_hui()
     cle = (
         hashlib.sha256(html.encode("utf-8")).hexdigest(),
         site_nom,

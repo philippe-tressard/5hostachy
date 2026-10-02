@@ -47,7 +47,9 @@ def test_seul_le_gestionnaire_est_prevenu(session):
     assert destinataires == {gestionnaire.id}, "le conseil syndical a été prévenu d'un bogue"
 
 
-def test_le_perimetre_d_un_bogue_est_verrouille(session):
+def test_le_perimetre_d_un_bogue_est_verrouille(session, batiments):
+    #  `batiments` sème l'arbre : le défaut d'un bogue est la racine désignée par
+    #  les DONNÉES, plus une chaîne écrite dans le code (#1567).
     _avec_gestionnaire(session)
     lu = _creer(session, _compte(session, "Resident"), categorie="bug", perimetre_cible=["bat:1"])
     assert lu.perimetre_cible == ["résidence"]

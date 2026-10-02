@@ -70,6 +70,20 @@ class Settings(BaseSettings):
     # Laisser vide pour désactiver l'enregistrement depuis le script cron
     maintenance_key: str = ""
 
+    #  Clé du bridge WhatsApp — la MÊME variable que lit le bridge : compose la
+    #  lui donne sous le nom `WA_API_KEY`, l'API la reçoit par `env_file: .env`.
+    #
+    #  🔴 Elle était écrite DEUX fois avant le 02/10/2026 (#1596) : dans `.env`
+    #  pour le bridge, et dans `ConfigSite.whatsapp_api_key`, saisie à l'écran
+    #  d'administration pour l'API. Rien ne les confrontait, et un écart ne se
+    #  voyait qu'au 401 de l'envoi. Elle ne se lit que par
+    #  `utils/whatsapp.entetes_bridge`.
+    #
+    #  Pas de refus au démarrage ICI, contrairement à `secret_key` : c'est le
+    #  bridge qui refuse une clé vide, d'exemple ou trop courte. Arrêter le site
+    #  entier pour la clé d'un canal de diffusion serait disproportionné.
+    whatsapp_api_key: str = ""
+
     #  Budget d'une photo jointe à un message WhatsApp, en kio.
     #
     #  🔴 Déclaré dans `docker-compose.yml` (`WA_PHOTO_BUDGET_KO`) et lu des DEUX

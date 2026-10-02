@@ -14,7 +14,7 @@
   2. elle est **rouge tant que le champ est vide**, et reprend la couleur du
      libellé dès qu'il porte une valeur ;
   3. elle cesse ainsi d'être une décoration : c'est l'**état** du champ, lisible
-     d'un coup d'œil sur un formulaire de treize sections.
+     d'un coup d'œil sur un long formulaire.
 
   ## Pourquoi un composant pour un caractère (#1121)
 

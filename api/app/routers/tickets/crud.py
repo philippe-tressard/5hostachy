@@ -10,12 +10,13 @@ from sqlmodel import Session, select
 from app.utils.affaires_liees import index_des_liens, poser_liens, supprimer_liens_de
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import (
-    PERIMETRE_BUG,
     categorie_reservee,
     est_actualite,
     est_bug,
+    perimetre_bug,
     statut_pour,
 )
+from app.utils.perimetres import perimetre_cible_json
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
 
@@ -151,13 +152,7 @@ def create_ticket(
         auteur_id=user.id,
         lot_id=body.lot_id,
         batiment_id=body.batiment_id,
-        perimetre_cible=(
-            PERIMETRE_BUG
-            if bug
-            else json.dumps(body.perimetre_cible)
-            if body.perimetre_cible
-            else '["résidence"]'
-        ),
+        perimetre_cible=perimetre_bug() if bug else perimetre_cible_json(body.perimetre_cible),
         #  Posée juste en dessous par `appliquer_options`, depuis la case
         #  « Urgent » — plus jamais déduite de la catégorie (`CategorieTicket`).
         priorite="normale",

@@ -11,12 +11,13 @@
  */
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const PORT = 18090 + Math.floor(Math.random() * 500);
 const BASE = `http://127.0.0.1:${PORT}`;
-const CLE = "cle-de-test";
+const CLE = "cle-de-test-assez-longue";
 const JSON_CLE = { "x-api-key": CLE, "content-type": "application/json" };
 
 let bridge;
@@ -52,11 +53,48 @@ test("sans clé d'API : 401", async () => {
   assert.equal((await appel("/status")).statut, 401);
 });
 
-test("clé en paramètre de requête : acceptée", async () => {
-  const r = await appel(`/status?apikey=${CLE}`);
-  assert.equal(r.statut, 200);
-  assert.equal(r.corps.state, "open");
+// #1596 : un secret en paramètre d'URL finit dans les journaux d'accès.
+test("clé en paramètre de requête : ignorée, 401", async () => {
+  assert.equal((await appel(`/status?apikey=${CLE}`)).statut, 401);
 });
+
+test("mauvaise clé, même longueur ou plus longue que 64 : 401, jamais 500", async () => {
+  assert.equal((await appel("/status", { headers: { "x-api-key": "x".repeat(CLE.length) } })).statut, 401);
+  assert.equal((await appel("/status", { headers: { "x-api-key": "x".repeat(200) } })).statut, 401);
+});
+
+// ── Démarrage refusé sur une clé faible (#1596) ─────────────────────
+// Le bridge ne doit pas écouter du tout : on lance index.js et on attend sa
+// sortie. Le message dit pourquoi, et ne cite JAMAIS la valeur reçue.
+function demarrer(cle) {
+  return spawnSync(process.execPath, ["-r", "./tests/baileys-simule.js", "index.js"], {
+    cwd: path.join(__dirname, ".."),
+    env: { ...process.env, WA_PORT: "0", WA_API_KEY: cle, WA_LOG_LEVEL: "silent" },
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+}
+
+// La valeur d'exemple est lue dans `.env.example` lui-même : si le gabarit
+// change de valeur sans que le bridge suive, ce test échoue (contrat entre
+// les deux fichiers, `standards/05` §3).
+const EXEMPLE = fs
+  .readFileSync(path.join(__dirname, "..", "..", ".env.example"), "utf8")
+  .match(/^WHATSAPP_API_KEY=(.*)$/m)[1]
+  .trim();
+
+for (const [cas, cle] of [
+  ["valeur de .env.example", EXEMPLE],
+  ["clé trop courte", "court-15-carac."],
+  ["clé vide", ""],
+]) {
+  test(`démarrage refusé : ${cas}`, () => {
+    const r = demarrer(cle);
+    assert.equal(r.status, 1, `sortie ${r.status} — le bridge a démarré`);
+    assert.match(r.stderr, /démarrage refusé — WA_API_KEY/);
+    if (cle) assert.ok(!r.stderr.includes(cle), "le message cite la valeur de la clé");
+  });
+}
 
 test("envoi d'un texte : 200 avec l'identifiant du message", async () => {
   const r = await appel("/send", {

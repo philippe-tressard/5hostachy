@@ -8,7 +8,6 @@ import shutil
 from datetime import datetime, timedelta, timezone
 from app.utils import horloge
 
-import httpx
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
@@ -49,7 +48,12 @@ def _heures_depuis(horodatage: str | None) -> float | None:
 
 def _check_whatsapp(session: Session) -> list[str]:
     """Retourne une liste de problèmes WhatsApp détectés."""
-    from app.utils.whatsapp import config_whatsapp, whatsapp_actif
+    from app.utils.whatsapp import (
+        CleBridgeRefusee,
+        config_whatsapp,
+        get_whatsapp_status,
+        whatsapp_actif,
+    )
 
     issues = []
     #  Ce contrôle n'a besoin que de trois clés, mais c'est la MÊME notion que
@@ -60,16 +64,12 @@ def _check_whatsapp(session: Session) -> list[str]:
     if not whatsapp_actif(cfg):
         return []
 
-    api_url = cfg.get("whatsapp_api_url", "").strip()
-    api_key = cfg.get("whatsapp_api_key", "").strip()
-    if not api_url:
+    if not cfg.get("whatsapp_api_url", "").strip():
         return []
 
-    # Vérifier le statut du bridge
+    # Vérifier le statut du bridge — la requête de l'écran d'administration.
     try:
-        with httpx.Client(timeout=5) as client:
-            resp = client.get(f"{api_url.rstrip('/')}/status", headers={"x-api-key": api_key})
-            statut = resp.json()
+        statut = get_whatsapp_status(cfg)
         #  Coupure ordinaire ou blocage possible : `utils/verdict_whatsapp` (#1061).
         probleme = verdict_whatsapp(
             statut.get("state", "unknown"),
@@ -78,6 +78,8 @@ def _check_whatsapp(session: Session) -> list[str]:
         )
         if probleme:
             issues.append(probleme)
+    except CleBridgeRefusee as exc:  # joignable, mais pas avec cette clé (#1596)
+        return [str(exc)]
     except Exception as exc:
         issues.append(f"Bridge WhatsApp injoignable : {exc}")
         return issues
@@ -92,10 +94,8 @@ def _check_whatsapp(session: Session) -> list[str]:
         .limit(5)
     ).all()
     if len(logs) >= 3 and all(log.statut == "échec" for log in logs[:3]):
-        from zoneinfo import ZoneInfo
-
         extrait = "\n".join(
-            f"    [{log.envoye_le.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m %H:%M')}] "
+            f"    [{horloge.a_paris(log.envoye_le):%d/%m %H:%M}] "
             f"« {log.label[:40]} » → {log.erreur or 'erreur inconnue'}"
             for log in logs[:3]
         )
@@ -404,8 +404,6 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
     """
     import asyncio
 
-    from zoneinfo import ZoneInfo
-
     from app.utils.email import send_email
 
     cfg = config_site(session)
@@ -418,7 +416,7 @@ def _send_alert(to: str, issues: list[str], session: Session) -> None:
         # Heure de Paris : ce message est lu par une personne, pas par une
         # machine. `datetime_longue` et non `datetime_longue_paris` — la
         # conversion de fuseau est faite ici, sur un instant réellement daté.
-        "date_controle": datetime_longue(datetime.now(ZoneInfo("Europe/Paris"))),
+        "date_controle": datetime_longue(horloge.a_paris(horloge.maintenant())),
         "residence": {"nom": site_nom},
         "app": {"url": site_url},
     }

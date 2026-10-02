@@ -23,7 +23,7 @@ from app.models.core import (
 )
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
-from app.utils.perimetres import parse_json_perimetres
+from app.utils.perimetres import parse_json_perimetres, perimetre_cible_json
 from app.utils.visibility import idee_visible
 from app.routers.reponses_communaute import (
     enregistrer_routes_reponses,
@@ -199,7 +199,7 @@ def create_idee(
         assiste_ia=body.assiste_ia,
         #  Liste vide == aucune restriction : on retombe sur le défaut, comme le
         #  serveur le fait déjà pour les publications et les sondages.
-        perimetre_cible=json.dumps(body.perimetre_cible or ["résidence"], ensure_ascii=False),
+        perimetre_cible=perimetre_cible_json(body.perimetre_cible),
         #  Liste vide → `None`, PAS `"[]"` : c'est ce que portent les idées
         #  déposées avant la migration 0176, et deux écritures pour un même
         #  sens finissent par se traiter différemment quelque part.

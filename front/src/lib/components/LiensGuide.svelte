@@ -21,6 +21,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import { manuel } from '$lib/api';
 
 	/** `nav-item` dans le menu latéral, `overlay-item` dans le menu mobile. */
 	export let classe: string;
@@ -39,7 +40,7 @@
 {#if avecPdf}
 	<!--  Le guide en PDF : il était enterré au bas du manuel (03/09/2026) — un
 	      document qu'on ne trouve pas n'existe pas. -->
-	<a href="/api/manuel/pdf" target="_blank" rel="noopener" class="{classe} nav-guide">
+	<a href={manuel.pdfUrl()} target="_blank" rel="noopener" class="{classe} nav-guide">
 		<span class="nav-icon"><Icon name="file-text" size={taille} /></span>
 		<span>Guide PDF</span>
 	</a>

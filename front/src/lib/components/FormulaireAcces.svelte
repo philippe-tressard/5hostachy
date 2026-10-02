@@ -32,6 +32,7 @@
 	import { libelleLotPourBadge, lotsPourBadge, type LotPourBadge } from '$lib/imports-acces';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { ACCES } from '$lib/entites/acces';
+	import { STATUT_ACCES_OPTIONS } from '$lib/types-acces';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { pliageDe, requisDe } from '$lib/pliage';
 	import type { ChoixAcces } from '$lib/api/acces';
@@ -83,14 +84,6 @@
 	export let cle: unknown = undefined;
 	/** `false` quand le formulaire s'ouvre DANS une ligne : pas de cadre imbriqué. */
 	export let encadre = true;
-
-	//  Les états d'un accès, et leur libellé. Trois valeurs : sous le seuil des
-	//  listes courtes, donc des pastilles (`ux-patterns` §0).
-	const STATUTS = [
-		{ val: 'actif', label: '✅ Actif' },
-		{ val: 'suspendu', label: '⏸️ Suspendu' },
-		{ val: 'perdu', label: '🔎 Perdu' },
-	];
 
 	//  Un lot OU un détenteur : le serveur accepte l'un ou l'autre (#1194).
 	$: incomplet = !saisie.code.trim() || (!saisie.lot_id && !saisie.porteur_id);
@@ -165,7 +158,10 @@
 			pliable={pliageDe(ACCES, 'suivi')}
 			rempli={!!saisie.statut}
 		>
-			<ChoixPastilles options={STATUTS} bind:valeur={saisie.statut} tous={false} />
+			<!--  Les états d'un accès, libellé compris, viennent de `$lib/types-acces`
+			      (#1575). Trois valeurs : sous le seuil des listes courtes, donc des
+			      pastilles (`ux-patterns` §0). -->
+			<ChoixPastilles options={STATUT_ACCES_OPTIONS} bind:valeur={saisie.statut} tous={false} />
 			<p class="aide">
 				Un badge perdu ou suspendu reste dans le parc&nbsp;: c'est ce qui permet de savoir qu'il
 				circule. Seul un administrateur peut retirer une ligne saisie par erreur.

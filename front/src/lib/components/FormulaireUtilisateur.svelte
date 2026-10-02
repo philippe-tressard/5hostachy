@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChampAdresseCompte from '$lib/components/ChampAdresseCompte.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { ETAGE_MAX, ETAGE_MIN } from '$lib/utils';
 
@@ -31,6 +32,10 @@
 	 * n'utilisait, sur un ton qui invitait le prochain appelant à le rétablir.
 	 */
 	export let editForm: any;
+	/** L'adresse du compte aujourd'hui : en changer est une DEMANDE (#1549). */
+	export let adresseActuelle = '';
+	/** Le mot de passe de l'ADMINISTRATEUR, exigé seulement si l'adresse change. */
+	export let motDePasse = '';
 	/** Les statuts proposables, tels que l'écran les connaît — jamais réécrits ici. */
 	export let statutLabels: Record<string, string>;
 	export let batimentsList: { id: number; numero: string | number }[] = [];
@@ -50,7 +55,14 @@
 	<div class="form-grid">
 		<label class="field">Prénom<input type="text" bind:value={editForm.prenom} /></label>
 		<label class="field">Nom<input type="text" bind:value={editForm.nom} /></label>
-		<label class="field">E-mail<input type="email" bind:value={editForm.email} /></label>
+		<ChampAdresseCompte
+			id="edit-email"
+			bind:adresse={editForm.email}
+			{adresseActuelle}
+			bind:motDePasse
+			libelleMotDePasse="Votre mot de passe"
+			parUnTiers
+		/>
 		<label class="field">Téléphone<input type="text" bind:value={editForm.telephone} /></label>
 		<label class="field">Société<input type="text" bind:value={editForm.societe} /></label>
 		<label class="field"

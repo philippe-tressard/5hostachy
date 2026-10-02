@@ -108,6 +108,7 @@ from app.routers import (
     acces,
     calendrier,
     prestataires,
+    prestataires_archivage,
     compteurs,
     sondages,
     idees,
@@ -237,7 +238,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         _prechauffer_manuel,
         "date",
-        run_date=datetime.now() + _timedelta(seconds=20),
+        #  Conscient, donc indépendant du fuseau du planificateur (#1565).
+        run_date=horloge.a_paris(horloge.maintenant()) + _timedelta(seconds=20),
         id="manuel_pdf_prechauffage",
     )
     scheduler.add_job(_prechauffer_manuel, "cron", hour=0, minute=5, id="manuel_pdf_quotidien")
@@ -407,6 +409,8 @@ app.include_router(prestataires.router)
 #  Même préfixe : les relevés de compteurs sont sortis de `prestataires.py`
 #  (modularité, 29/08/2026), pas de l'API — les chemins n'ont pas bougé.
 app.include_router(compteurs.router)
+#  Le geste 📦 des prestataires et des contrats (#1538), même préfixe aussi.
+app.include_router(prestataires_archivage.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)

@@ -20,22 +20,32 @@
  *  Ce contrôle refuse la quatrième copie : l'adresse de la fiche écrite hors du
  *  composant.
  *
+ *  02/10/2026 (#1578) : l'adresse elle-même a quitté le composant pour le client
+ *  d'API (`admin.ficheArrivantUrl`, `lib/api/administration.ts`), seule porte de
+ *  l'API — `lint:client-api` refuse désormais toute route écrite dans un écran.
+ *  Ce contrôle garde ce qui lui est propre : seul `LienConsignes` appelle la
+ *  méthode, et la route ne s'écrit nulle part ailleurs que dans le client.
+ *
  *  Lancer : node scripts/check-lien-consignes.mjs [--selftest]
  */
 import { controler, lignesPortant } from './lib-source-unique.mjs';
 
-/**  L'adresse de la fiche, quelle que soit la façon de l'écrire. */
-const COPIE = /\/admin\/fiche-arrivant\b/;
+/**  L'adresse de la fiche, quelle que soit la façon de l'écrire — ou l'appel de
+ *   la méthode du client qui la rend. */
+const COPIE = /\/admin\/fiche-arrivant\b|\bficheArrivantUrl\b/;
 
 process.exit(
 	controler({
 		extensions: ['.svelte', '.ts'],
+		sources: ['src/lib/api/administration.ts'],
 		temoin: 'src/lib/components/LienConsignes.svelte',
 		fautes: lignesPortant(COPIE),
 		cas: [
 			['\t\thref="/api/admin/fiche-arrivant"', 1],
 			["\tconst url = '/api/admin/fiche-arrivant';", 1],
 			['\t<a href={`/api/admin/fiche-arrivant`} target="_blank">', 1],
+			//  La méthode du client appelée par un autre écran que `LienConsignes`.
+			['\t<a href={adminApi.ficheArrivantUrl()} target="_blank">', 1],
 			//  La forme voulue, jamais signalée.
 			['\t<LienConsignes forme="bouton" />', 0],
 			//  Une autre route d'administration des arrivants : hors portée.

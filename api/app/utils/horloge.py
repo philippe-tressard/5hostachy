@@ -30,11 +30,40 @@ modèles et comparaisons ensemble —, pas un remplacement de fonction.
 ⚠️ **S'appelle par son module** — `horloge.maintenant()`, jamais importée seule :
 treize fichiers ont déjà une variable ou un paramètre nommé `maintenant`
 (`maintenant = maintenant or …`), qu'une fonction du même nom aurait masqué.
+
+## Une question, une fonction (#1565, 02/10/2026)
+
+| La question | La réponse |
+|---|---|
+| quel **instant**, pour la base ? | `maintenant()` — UTC naïf |
+| quel **jour** est-on pour le résident ? (calendrier, échéance, date affichée) | `aujourd_hui()` — le jour de Paris |
+| quel jour était-ce, à Paris, à cet instant de la base ? | `jour_civil(instant)` |
+| quelle heure est-il / était-il à Paris ? (fenêtre d'envoi, minuit, libellé) | `a_paris(instant)` — conscient |
+
+Deux « aujourd'hui » coexistaient : `date.today()` (dix fois — le jour du
+**conteneur**, parisien en production par `TZ=Europe/Paris` et UTC sur un poste
+ou une CI qui ne le pose pas) et `maintenant().date()` (le jour **UTC**). Entre
+minuit et deux heures à Paris, ils diffèrent d'un jour : une délégation commencée
+« aujourd'hui » se comparait au jour UTC, une actualité périmait à 02:00.
+
+Le jour du résident est celui de Paris, et il se calcule depuis `maintenant()` :
+il ne dépend plus du fuseau du conteneur, et figer `maintenant` dans un test
+fige aussi le jour. `TZ_PARIS` est le seul endroit où le fuseau se nomme — le
+planificateur (`backup.setup_scheduler`) compris.
+
+🔒 `test_horloge.py` refuse, hors de ce module, `date.today`, `datetime.today`,
+`datetime.now` sans fuseau — appelés **ou** référencés, la forme
+`default_factory` qu'aucune règle Ruff ne voit — et `maintenant.date()` ; et
+« Europe/Paris » écrit ailleurs qu'ici.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
+
+#: Le fuseau du résident — et du planificateur. Nommé ici, et nulle part ailleurs.
+TZ_PARIS = ZoneInfo("Europe/Paris")
 
 
 def maintenant() -> datetime:
@@ -43,3 +72,35 @@ def maintenant() -> datetime:
     Sert aussi de `default_factory` : `Field(default_factory=horloge.maintenant)`.
     """
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def a_paris(instant: datetime) -> datetime:
+    """Un instant — UTC naïf comme en base, ou conscient — à l'heure de Paris (conscient).
+
+    Conscient à dessein : rendu naïf, il serait repris pour de l'UTC à la
+    première comparaison avec une date de la base, deux heures plus loin.
+    """
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    return instant.astimezone(TZ_PARIS)
+
+
+def jour_civil(instant: date | datetime) -> date:
+    """Le jour qu'il était **à Paris** à cet instant de la base (UTC naïf).
+
+    Une `date` est déjà un jour civil : elle est rendue telle quelle — ce qui
+    laisse un appelant accepter l'un ou l'autre (« affiché le », nom de fichier).
+    ⚠️ `datetime` hérite de `date` : c'est lui qu'on teste.
+    """
+    if not isinstance(instant, datetime):
+        return instant
+    return a_paris(instant).date()
+
+
+def aujourd_hui() -> date:
+    """Le jour qu'il est pour le résident — celui de Paris, quel que soit le conteneur.
+
+    Sert aussi de `default_factory` : `Field(default_factory=horloge.aujourd_hui)`.
+    Tiré de `maintenant()` (cherché à l'appel) : figer l'un fige l'autre.
+    """
+    return jour_civil(maintenant())

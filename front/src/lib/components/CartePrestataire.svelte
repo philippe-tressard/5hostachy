@@ -22,13 +22,12 @@
 -->
 <script lang="ts">
 	import { fmtDateShort } from '$lib/date';
+	import { PRESTATAIRE } from '$lib/entites/prestataire';
 	import { equipLabel, typePrestataireLabel } from '$lib/prestataires';
 	import { safeDescription } from '$lib/sanitize';
 	import { nomAffiche } from '$lib/noms';
-	import BoutonLien from './BoutonLien.svelte';
-	import EnteteCarte from './EnteteCarte.svelte';
+	import CarteModifiable from './CarteModifiable.svelte';
 	import NotationsPrestataire from './NotationsPrestataire.svelte';
-	import FormulaireCreation from './FormulaireCreation.svelte';
 	import ChampsPrestataire from './ChampsPrestataire.svelte';
 	import PiedFormulaire from './PiedFormulaire.svelte';
 
@@ -39,6 +38,9 @@
 	export let expanded = false;
 	export let compactPrests = false;
 	export let peutModifier = false;
+	/**  Rendue aux Archives : ↩️ y remplace 📦, et le crayon se tait — on
+	 *   ressort une fiche avant de la corriger (#1538). */
+	export let archive = false;
 	export let telephonesDe: (t: string) => string[] = () => [];
 
 	/**  Le prestataire en cours de correction — la carte cède sa place au
@@ -52,11 +54,10 @@
 
 	export let onBasculer: (id: number) => void = () => {};
 	export let onModifier: (p: any) => void = () => {};
-	export let onArchiver: (id: number) => void = () => {};
+	/** 📦 `true` range la fiche, `false` la ressort des Archives. */
+	export let onArchiver: (id: number, archivee: boolean) => void = () => {};
 	export let onAnnuler: () => void = () => {};
 	export let onEnregistrer: () => void = () => {};
-
-	$: enEdition = editPrestId === p.id;
 </script>
 
 <!--  🔴 L'en-tête passe par `EnteteCarte` (12/09/2026) — comme les ONZE autres
@@ -73,136 +74,106 @@
           asymétrique — repliée, toute la carte ouvre ; dépliée, seul le titre
           referme.
 
-      Le chevron suit : `›` qui pivote, comme partout, et non `▲/▼` — deux formes
-      pour un même signal, c'est ce que `ux-patterns` §0 appelle une décision
-      qu'on reprend à chaque écran. -->
-<div
-	class="carte-liste"
-	class:expanded={expanded || enEdition}
-	id="presta-{p.id}"
-	role="presentation"
-	on:click={() => {
-		if (!expanded && !enEdition) onBasculer(p.id);
-	}}
+      Le squelette — conteneur, en-tête, 🔗 ✏️ 📦, corps qui cède la place au
+      formulaire — vit dans `CarteModifiable` depuis le 02/10/2026 (#1539) :
+      `CarteContrat` le recopiait. -->
+<CarteModifiable
+	entite={PRESTATAIRE}
+	ancreId="presta-{p.id}"
+	quoi="la fiche prestataire"
+	titre={p.nom}
+	date={nextVisit && (!compactPrests || expanded) ? fmtDateShort(nextVisit) : ''}
+	{expanded}
+	enEdition={editPrestId === p.id}
+	{peutModifier}
+	{archive}
+	titreRestaurer="Restaurer — la fiche revient dans l'annuaire"
+	onBasculer={() => onBasculer(p.id)}
+	onModifier={() => onModifier(p)}
+	{onAnnuler}
+	onArchiver={(archivee) => onArchiver(p.id, archivee)}
 >
-	<EnteteCarte
-		titre={p.nom}
-		date={nextVisit && (!compactPrests || expanded) ? fmtDateShort(nextVisit) : ''}
-		basculable
-		on:toggle={() => onBasculer(p.id)}
-	>
-		<svelte:fragment slot="tags">
-			<span class="badge badge-type">{typePrestataireLabel(p.type_prestataire)}</span>
-			<span class="badge badge-blue">{equipLabel(p.specialite)}</span>
-			<NotationsPrestataire resume {notations} />
-			<!--  « Sous contrat » se LIT sur les contrats actifs, il ne se saisit pas
-			      (#1444) : c'était une catégorie, et une entreprise qui entretient
-			      sous contrat et dépanne hors contrat n'y tenait pas. Rien quand il
-			      n'y en a aucun — « 0 contrat » n'apprenait rien. -->
-			{#if cs.length}
-				<span class="badge badge-gray">&#x1F4C4; Sous contrat ({cs.length})</span>
-			{/if}
-		</svelte:fragment>
+	<svelte:fragment slot="tags">
+		<span class="badge badge-type">{typePrestataireLabel(p.type_prestataire)}</span>
+		<span class="badge badge-blue">{equipLabel(p.specialite)}</span>
+		<NotationsPrestataire resume {notations} />
+		<!--  « Sous contrat » se LIT sur les contrats actifs, il ne se saisit pas
+		      (#1444) : c'était une catégorie, et une entreprise qui entretient
+		      sous contrat et dépanne hors contrat n'y tenait pas. Rien quand il
+		      n'y en a aucun — « 0 contrat » n'apprenait rien. -->
+		{#if cs.length}
+			<span class="badge badge-gray">&#x1F4C4; Sous contrat ({cs.length})</span>
+		{/if}
+	</svelte:fragment>
 
-		<svelte:fragment slot="actions">
-			<BoutonLien ancre="presta-{p.id}" quoi="la fiche prestataire" />
-			{#if peutModifier}
-				<!--  `aria-pressed` : le mode se lit sur l'icône qui l'a ouvert
-				      (`ux-patterns` §13 bis), jamais sur un titre au-dessus. -->
-				<button
-					class="btn-icon-edit"
-					aria-label={enEdition ? 'Annuler la correction' : 'Modifier'}
-					title={enEdition ? 'Annuler la correction' : 'Modifier'}
-					aria-pressed={enEdition}
-					on:click|stopPropagation={() => (enEdition ? onAnnuler() : onModifier(p))}>✏️</button
-				>
-				<button
-					class="btn-icon-danger"
-					aria-label="Archiver"
-					title="Archiver"
-					on:click|stopPropagation={() => onArchiver(p.id)}>🗑️</button
-				>
-			{/if}
-		</svelte:fragment>
-
-		<svelte:fragment slot="apercu">
-			<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
+	<svelte:fragment slot="apercu">
+		<!--  Les contacts sont l'APERÇU de la carte : ils viennent sous l'en-tête, à
 		      la place que le modèle leur donne, et non serrés dans sa ligne de titre. -->
-			{#if !compactPrests || expanded}
-				<div class="prest-contacts">
-					{#if p.contacts && p.contacts.length > 0}
-						{#each p.contacts as c (c.id ?? c)}
-							<span class="prest-contact">
-								📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
-										c,
-									)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
-							</span>
-						{/each}
-					{:else if p.telephone}
-						{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
-							<span class="prest-contact">📞 {tel.trim()}</span>
-						{/each}
-					{/if}
-					{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
+		{#if !compactPrests || expanded}
+			<div class="prest-contacts">
+				{#if p.contacts && p.contacts.length > 0}
+					{#each p.contacts as c (c.id ?? c)}
+						<span class="prest-contact">
+							📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
+									c,
+								)}{/if}{#if c.fonction}&nbsp;({c.fonction}){/if}
+						</span>
+					{/each}
+				{:else if p.telephone}
+					{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
+						<span class="prest-contact">📞 {tel.trim()}</span>
+					{/each}
+				{/if}
+				{#if p.email}<span class="prest-contact">✉️ {p.email}</span>{/if}
+			</div>
+		{/if}
+	</svelte:fragment>
+
+	<svelte:fragment slot="edition">
+		<form on:submit|preventDefault={onEnregistrer}>
+			<ChampsPrestataire
+				bind:prestForm
+				bind:prestContacts
+				{typesPrestataire}
+				{equipements}
+				etat="edition"
+			/>
+			<PiedFormulaire enCours={submitting} on:annule={onAnnuler} />
+		</form>
+	</svelte:fragment>
+
+	<svelte:fragment slot="detail">
+		<div class="detail-grid">
+			{#if p.telephone}
+				<div>
+					<span class="detail-label">Téléphone</span>
+					{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
+						<span style="display:block">📞 {tel.trim()}</span>
+					{/each}
 				</div>
 			{/if}
-		</svelte:fragment>
-	</EnteteCarte>
-	{#if enEdition}
-		<!--  Le corps ne referme pas la carte : sans `stopPropagation`, un clic
-		      dans le formulaire remonterait à la ligne de titre et replierait ce
-		      qu'on est en train de corriger (`ux-patterns` §3). -->
-		<div class="prest-body" role="presentation" on:click|stopPropagation on:keydown|stopPropagation>
-			<!--  `encadre={false}` : la carte EST le cadre, et sa ligne de titre en
-			      est l'en-tête — une carte dans une carte, c'est deux bordures pour
-			      un seul objet (#425). -->
-			<FormulaireCreation titre="Modifier le prestataire" encadre={false}>
-				<form on:submit|preventDefault={onEnregistrer}>
-					<ChampsPrestataire
-						bind:prestForm
-						bind:prestContacts
-						{typesPrestataire}
-						{equipements}
-						etat="edition"
-					/>
-					<PiedFormulaire enCours={submitting} on:annule={onAnnuler} />
-				</form>
-			</FormulaireCreation>
-		</div>
-	{:else if expanded}
-		<div class="prest-body">
-			<div class="detail-grid">
-				{#if p.telephone}
-					<div>
-						<span class="detail-label">Téléphone</span>
-						{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
-							<span style="display:block">📞 {tel.trim()}</span>
-						{/each}
-					</div>
-				{/if}
-				{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
-				{#if p.adresse}<div>
-						<span class="detail-label">Adresse</span><span class="adresse">📮 {p.adresse}</span>
-					</div>{/if}
-				<div><span class="detail-label">Contrats</span>{cs.length}</div>
-				{#if nextVisit}<div>
-						<span class="detail-label">Prochaine visite</span><span
-							style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(nextVisit)}</span
-						>
-					</div>{/if}
-			</div>
-			<!--  La description (#1327), assainie comme partout. -->
-			{#if p.description}<div class="prest-description">
-					{@html safeDescription(p.description)}
+			{#if p.email}<div><span class="detail-label">Email</span>✉️ {p.email}</div>{/if}
+			{#if p.adresse}<div>
+					<span class="detail-label">Adresse</span><span class="adresse">📮 {p.adresse}</span>
 				</div>{/if}
-			<!--  Les avis, enfin visibles un par un (#807). L'écran n'en montrait
-			      que la MOYENNE, dans un badge : impossible de savoir qui avait
-			      noté quoi, et donc impossible de retirer une note posée par
-			      erreur — alors que l'endpoint de suppression existait. -->
-			<NotationsPrestataire {notations} peutSupprimer={peutModifier} on:supprimee />
+			<div><span class="detail-label">Contrats</span>{cs.length}</div>
+			{#if nextVisit}<div>
+					<span class="detail-label">Prochaine visite</span><span
+						style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(nextVisit)}</span
+					>
+				</div>{/if}
 		</div>
-	{/if}
-</div>
+		<!--  La description (#1327), assainie comme partout. -->
+		{#if p.description}<div class="prest-description">
+				{@html safeDescription(p.description)}
+			</div>{/if}
+		<!--  Les avis, enfin visibles un par un (#807). L'écran n'en montrait
+		      que la MOYENNE, dans un badge : impossible de savoir qui avait
+		      noté quoi, et donc impossible de retirer une note posée par
+		      erreur — alors que l'endpoint de suppression existait. -->
+		<NotationsPrestataire {notations} peutSupprimer={peutModifier} on:supprimee />
+	</svelte:fragment>
+</CarteModifiable>
 
 <style>
 	/*  L'adresse s'écrit sur plusieurs lignes, comme sur une enveloppe. */
@@ -238,8 +209,5 @@
 		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 	}
-	.prest-body {
-		padding: 0.25rem 1rem 1rem 1rem;
-		border-top: 1px solid var(--color-border);
-	}
+	/*  `.prest-body` est partie avec le corps, dans `CarteModifiable` (#1539). */
 </style>

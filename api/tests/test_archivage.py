@@ -37,6 +37,7 @@ import pytest
 
 from app.models.annonce_hall import AnnonceHall
 from app.models.communaute import Idee, PetiteAnnonce, Sondage, StatutAnnonce
+from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import StatutTicket
 from app.utils.archivage import (
     ARCHIVAGE_DELAI_JOURS,
@@ -199,6 +200,8 @@ MODELES = {
     "idee": Idee,
     "sondage": Sondage,
     "annonce_hall": AnnonceHall,
+    "prestataire": Prestataire,
+    "contrat": ContratEntretien,
 }
 
 #  `Ticket` vit dans `models.core` mais son énumération dans `models.tickets` :
@@ -222,6 +225,8 @@ STATUTS_POSSIBLES = {
     "idee": {"ouverte", "retenue", "rejetee", "realisee"},
     "sondage": set(),
     "annonce_hall": set(),
+    "prestataire": set(),
+    "contrat": set(),
 }
 
 
@@ -250,6 +255,7 @@ def test_les_champs_declares_existent_sur_le_modele(type_objet):
     for champ in (
         regle.champ_statut,
         regle.champ_archive_manuel,
+        regle.champ_actif,
         regle.champ_epingle,
         regle.champ_brouillon,
     ):

@@ -1,3 +1,36 @@
+<!--
+  **L'éditeur de texte riche du site — le seul** (Tiptap).
+
+  ## 🔴 Il y en avait DEUX jusqu'au 02/10/2026 (#1539)
+
+  `LegalEditor` (mentions légales et politique de confidentialité, un écran)
+  recopiait l'amorçage de celui-ci au caractère près : `new Editor`, le
+  `StarterKit`, `onDestroy(() => editor?.destroy())`, la resynchronisation par
+  `setContent(…, { emitUpdate: false })`, et neuf règles `:global(.tiptap …)`
+  parallèles aux six d'ici. Cinquante-trois lignes sur cent quatre.
+
+  L'écriture retenue est CELLE-CI, la plus déployée (sept formulaires contre un
+  écran), enrichie de ce que l'autre savait faire et qui lui manquait :
+
+  | Ce que `LegalEditor` apportait | Devenu ici |
+  |---|---|
+  | titres H2/H3 et filet de séparation | `titres` |
+  | le mode « source HTML » (`</>`) | `sourceHtml` |
+  | l'en-tête `label` / `hint` | **retiré** : son unique appelant ne le passait pas |
+
+  Les deux props DÉCLARENT la divergence : un texte long et structuré, qu'un
+  administrateur corrige parfois à la main, n'a pas la barre d'une description
+  de trois lignes. Ce n'est pas une seconde écriture, c'est un paramètre.
+
+  ⚠️ Ce que l'éditeur légal a GAGNÉ en passant ici, et qui ne se voit pas :
+  `BlocDepliable` (un `<details>` collé n'est plus aplati), le texte indicatif,
+  et les `aria-label` d'« Annuler » / « Rétablir » qui lui manquaient. Le
+  rendu du contenu suit les valeurs d'ici (marges, interligne) — même arbitrage
+  que le cadre et la barre, déjà communs (`styles/champs.css`).
+
+  🔒 `npm run lint:editeur-unique` refuse un second `new Editor(` ou un import
+  de `@tiptap/core` / `@tiptap/starter-kit` hors de ce fichier.
+-->
 <script lang="ts">
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import { Editor } from '@tiptap/core';
@@ -32,11 +65,19 @@
 	 *   le titre de section porte le libellé (`SectionFormulaire`), c'est lui
 	 *   qu'on désigne ici. */
 	export let ariaLabelledby: string | undefined = undefined;
+	/**  Les titres H2 / H3 et le filet de séparation dans la barre — pour un
+	 *   document long et structuré (mentions légales, confidentialité). Une
+	 *   description n'en a pas l'usage. */
+	export let titres = false;
+	/**  Le bouton `</>` : corriger le HTML à la main. Réservé à l'administration,
+	 *   qui colle parfois un texte juridique déjà mis en forme. */
+	export let sourceHtml = false;
 
 	const dispatch = createEventDispatcher<{ change: string }>();
 
 	let editorEl: HTMLDivElement;
 	let editor: Editor;
+	let modeSource = false;
 
 	onMount(() => {
 		editor = new Editor({
@@ -74,87 +115,127 @@
 		editor?.destroy();
 	});
 
-	// Sync external value change (e.g. when form is reset)
-	$: if (editor && value !== editor.getHTML()) {
+	//  Une valeur changée du dehors (formulaire remis à zéro, chargement par
+	//  l'API) — sauf en mode source, où c'est la zone de texte qui la tient.
+	$: if (editor && !modeSource && value !== editor.getHTML()) {
 		editor.commands.setContent(value ?? '', { emitUpdate: false });
+	}
+
+	/**  Retour à l'édition visuelle : la valeur corrigée à la main est rendue par
+	 *   la synchronisation ci-dessus, dès que `modeSource` retombe. */
+	function basculerSource() {
+		modeSource = !modeSource;
 	}
 </script>
 
 <div class="editeur-cadre">
 	<!-- Toolbar -->
 	<div class="editeur-barre">
-		<button
-			type="button"
-			class:active={editor?.isActive('bold')}
-			on:click={() => editor.chain().focus().toggleBold().run()}
-			aria-label="Gras"
-			title="Gras"
-		>
-			<b>B</b>
-		</button>
-		<button
-			type="button"
-			class:active={editor?.isActive('italic')}
-			on:click={() => editor.chain().focus().toggleItalic().run()}
-			aria-label="Italique"
-			title="Italique"
-		>
-			<i>I</i>
-		</button>
-		<button
-			type="button"
-			class:active={editor?.isActive('underline')}
-			on:click={() => editor.chain().focus().toggleUnderline().run()}
-			aria-label="Souligné"
-			title="Souligné"
-		>
-			<u>U</u>
-		</button>
-		<div class="sep"></div>
-		<button
-			type="button"
-			class:active={editor?.isActive('bulletList')}
-			on:click={() => editor.chain().focus().toggleBulletList().run()}
-			aria-label="Liste à puces"
-			title="Liste à puces"
-		>
-			≡
-		</button>
-		<button
-			type="button"
-			class:active={editor?.isActive('orderedList')}
-			on:click={() => editor.chain().focus().toggleOrderedList().run()}
-			aria-label="Liste numérotée"
-			title="Liste numérotée"
-		>
-			1≡
-		</button>
-		<div class="sep"></div>
-		<button
-			type="button"
-			class:active={editor?.isActive('blockquote')}
-			on:click={() => editor.chain().focus().toggleBlockquote().run()}
-			aria-label="Citation"
-			title="Citation"
-		>
-			«»
-		</button>
-		<button
-			aria-label="Annuler"
-			type="button"
-			on:click={() => editor.chain().focus().undo().run()}
-			title="Annuler"
-		>
-			↩
-		</button>
-		<button
-			aria-label="Rétablir"
-			type="button"
-			on:click={() => editor.chain().focus().redo().run()}
-			title="Rétablir"
-		>
-			↪
-		</button>
+		{#if !modeSource}
+			{#if titres}
+				<button
+					type="button"
+					class:active={editor?.isActive('heading', { level: 2 })}
+					on:click={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+					aria-label="Titre H2"
+					title="Titre H2"
+				>
+					H2
+				</button>
+				<button
+					type="button"
+					class:active={editor?.isActive('heading', { level: 3 })}
+					on:click={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+					aria-label="Titre H3"
+					title="Titre H3"
+				>
+					H3
+				</button>
+				<div class="sep"></div>
+			{/if}
+			<button
+				type="button"
+				class:active={editor?.isActive('bold')}
+				on:click={() => editor.chain().focus().toggleBold().run()}
+				aria-label="Gras"
+				title="Gras"
+			>
+				<b>B</b>
+			</button>
+			<button
+				type="button"
+				class:active={editor?.isActive('italic')}
+				on:click={() => editor.chain().focus().toggleItalic().run()}
+				aria-label="Italique"
+				title="Italique"
+			>
+				<i>I</i>
+			</button>
+			<button
+				type="button"
+				class:active={editor?.isActive('underline')}
+				on:click={() => editor.chain().focus().toggleUnderline().run()}
+				aria-label="Souligné"
+				title="Souligné"
+			>
+				<u>U</u>
+			</button>
+			<div class="sep"></div>
+			<button
+				type="button"
+				class:active={editor?.isActive('bulletList')}
+				on:click={() => editor.chain().focus().toggleBulletList().run()}
+				aria-label="Liste à puces"
+				title="Liste à puces"
+			>
+				≡
+			</button>
+			<button
+				type="button"
+				class:active={editor?.isActive('orderedList')}
+				on:click={() => editor.chain().focus().toggleOrderedList().run()}
+				aria-label="Liste numérotée"
+				title="Liste numérotée"
+			>
+				1≡
+			</button>
+			<div class="sep"></div>
+			<button
+				type="button"
+				class:active={editor?.isActive('blockquote')}
+				on:click={() => editor.chain().focus().toggleBlockquote().run()}
+				aria-label="Citation"
+				title="Citation"
+			>
+				«»
+			</button>
+			{#if titres}
+				<button
+					type="button"
+					on:click={() => editor.chain().focus().setHorizontalRule().run()}
+					aria-label="Ligne de séparation"
+					title="Ligne de séparation"
+				>
+					―
+				</button>
+			{/if}
+			<button
+				aria-label="Annuler"
+				type="button"
+				on:click={() => editor.chain().focus().undo().run()}
+				title="Annuler"
+			>
+				↩
+			</button>
+			<button
+				aria-label="Rétablir"
+				type="button"
+				on:click={() => editor.chain().focus().redo().run()}
+				title="Rétablir"
+			>
+				↪
+			</button>
+		{/if}
 		<!--  🔴 Ce qui n'appartient pas à la MISE EN FORME va à droite (22/09/2026).
 		      Demandé à l'écran : *« l'icône IA … ne peut pas être dans la boîte
 		      description sur la ligne d'icône Gras Italique (cadré à droite) ? »*
@@ -166,17 +247,47 @@
 
 		      ⚠️ Le séparateur ne s'affiche QUE si le slot est rempli
 		      (`$$slots.outils`) : un filet vertical seul en bout de barre annoncerait
-		      un groupe vide. -->
-		{#if $$slots.outils}
+		      un groupe vide. Le bouton `</>` vit dans le même groupe : il ne met pas
+		      en forme, il change de mode. -->
+		{#if $$slots.outils || sourceHtml}
 			<div class="editeur-barre-fin">
-				<div class="sep"></div>
-				<slot name="outils" />
+				{#if $$slots.outils}
+					<div class="sep"></div>
+					<slot name="outils" />
+				{/if}
+				{#if sourceHtml}
+					<button
+						type="button"
+						class="source-btn"
+						class:active={modeSource}
+						aria-label={modeSource ? 'Mode éditeur' : 'Source HTML'}
+						title={modeSource ? 'Mode éditeur' : 'Source HTML'}
+						on:click={basculerSource}
+					>
+						&lt;/&gt;
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<!-- Editor area -->
-	<div class="rich-content-editable" style="min-height:{minHeight}" bind:this={editorEl}></div>
+	<!-- Editor area — masquée, et non démontée, en mode source : Tiptap y reste
+	     attaché et reprend la valeur corrigée au retour. -->
+	<div
+		class="rich-content-editable"
+		hidden={modeSource}
+		style="min-height:{minHeight}"
+		bind:this={editorEl}
+	></div>
+
+	{#if modeSource}
+		<textarea
+			class="rich-source"
+			style="min-height:{minHeight}"
+			bind:value
+			aria-label="Source HTML"
+			spellcheck="false"></textarea>
+	{/if}
 </div>
 
 <style>
@@ -192,6 +303,12 @@
 		margin-left: auto;
 	}
 
+	.source-btn {
+		font-family: monospace;
+		font-size: var(--fs-sm);
+		letter-spacing: -0.02em;
+	}
+
 	.rich-content-editable {
 		padding: 0.55rem 0.75rem;
 		font-size: var(--fs-base);
@@ -199,6 +316,21 @@
 		color: var(--color-text);
 		outline: none;
 		cursor: text;
+	}
+
+	.rich-source {
+		display: block;
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0.55rem 0.75rem;
+		font-family: monospace;
+		font-size: var(--fs-sm);
+		line-height: 1.6;
+		color: var(--color-text);
+		background: var(--color-bg-subtle, #f9fafb);
+		border: none;
+		outline: none;
+		resize: vertical;
 	}
 
 	/* Placeholder via TipTap */
@@ -224,10 +356,30 @@
 		padding-left: 1.4rem;
 		margin: 0.25rem 0;
 	}
+	:global(.rich-content-editable .tiptap li) {
+		margin-bottom: 0.15rem;
+	}
 	:global(.rich-content-editable .tiptap blockquote) {
 		border-left: 3px solid var(--color-border);
 		padding-left: 0.75rem;
 		color: var(--color-text-muted);
 		margin: 0.4rem 0;
+	}
+	/*  Titres et filet : la barre ne les propose qu'avec `titres`, mais un texte
+	    collé peut en porter partout — ils ont donc leur rendu partout. */
+	:global(.rich-content-editable .tiptap h2) {
+		font-size: 1.15rem;
+		font-weight: 600;
+		margin: 1rem 0 0.4rem;
+	}
+	:global(.rich-content-editable .tiptap h3) {
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0.8rem 0 0.3rem;
+	}
+	:global(.rich-content-editable .tiptap hr) {
+		border: none;
+		border-top: 1px solid var(--color-border);
+		margin: 0.75rem 0;
 	}
 </style>

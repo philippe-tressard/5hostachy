@@ -35,6 +35,8 @@ plusieurs lignes ou renommé à l'import est vu pareil.
 import ast
 from pathlib import Path
 
+from tests.aides_sources import modules_app
+
 RACINE = Path(__file__).resolve().parents[1] / "app"
 
 #: La fonction d'audit, et le module qui la porte.
@@ -57,7 +59,36 @@ GESTES_SENSIBLES = {
     "signal d'un vol de session, et toutes les sessions du compte viennent de fermer",
     ("auth/appartenance.py", "exiger_lot_du_bailleur"): "un bail demandé sur le lot "
     "d'un autre — l'écran ne le propose pas, la requête a été forgée (#1535)",
+    #  Le cycle de vie d'un compte (#1548, audit du 02/10/2026) : #1040 avait posé
+    #  la porte, la liste s'arrêtait aux mots de passe et aux rôles.
+    ("routers/admin/comptes.py", "traiter_compte"): "un compte validé ou refusé — "
+    "le geste qui OUVRE l'accès, fait par le conseil syndical",
+    ("routers/admin/utilisateurs.py", "modifier_utilisateur"): "un compte désactivé ou "
+    "réactivé par l'administration",
+    ("routers/admin/utilisateurs.py", "supprimer_utilisateur"): "un compte effacé "
+    "définitivement — après lui, il ne reste QUE cette ligne pour dire qui l'a fait",
+    ("routers/delegations.py", "create_delegation"): "une délégation créée : un "
+    "tiers va lire au nom d'un résident",
+    ("routers/delegations.py", "accepter_delegation"): "une délégation acceptée — "
+    "c'est à cet instant que la lecture au nom d'autrui commence",
+    ("routers/delegations.py", "revoquer_delegation"): "une délégation révoquée",
+    ("utils/verification_adresse.py", "demander_changement_adresse"): "un changement "
+    "d'adresse demandé, par le titulaire ou l'administrateur — le premier geste d'un "
+    "détournement de compte, que rien ne traçait (#1549)",
+    ("utils/verification_adresse.py", "_confirmer_changement"): "une nouvelle adresse "
+    "confirmée : c'est désormais elle qui reçoit le mot de passe oublié (#1549)",
 }
+
+#: Ce qui reconnaît un geste sur un compte dans un routeur — le relevé mécanique
+#: que demande #1548 : la liste ci-dessus est tenue à la main, ce relevé dit ce
+#: qu'elle oublie. Chaque signature nomme une ÉCRITURE, jamais une lecture :
+#:   • `marquer_decide(...)` — la décision sur un compte (valider, refuser,
+#:     désactiver) : `utils/comptes.py` la rend obligatoire pour les trois ;
+#:   • `.ajouter_role(...)` / `.retirer_role(...)` — les droits ;
+#:   • `purger(session, "utilisateur", ...)` — l'effacement d'un compte ;
+#:   • `Delegation(...)` ou `.statut = StatutDelegation.…` — la lecture au nom
+#:     d'autrui qui commence ou cesse.
+APPELS_SIGNATURES = {"marquer_decide", "ajouter_role", "retirer_role", "Delegation"}
 
 
 def _arbre(chemin: Path) -> ast.Module:
@@ -174,3 +205,94 @@ def test_le_journal_ne_porte_aucune_donnee_personnelle():
                 if any(x in texte for x in ("email", "password", "mot_de_passe", "token")):
                     fautes.append(f"app/{fichier}::{fonction} — {texte[:90]}")
     assert not fautes, "Une adresse ou un mot de passe est passé au journal :\n" + "\n".join(fautes)
+
+
+def _signatures(fn) -> set[str]:
+    """Les gestes sur un compte que cette fonction écrit (voir `APPELS_SIGNATURES`)."""
+    vues = set()
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Call):
+            nom = getattr(n.func, "id", None) or getattr(n.func, "attr", None)
+            if nom in APPELS_SIGNATURES:
+                vues.add(nom)
+            if (
+                nom == "purger"
+                and len(n.args) >= 2
+                and isinstance(n.args[1], ast.Constant)
+                and n.args[1].value == "utilisateur"
+            ):
+                vues.add('purger("utilisateur")')
+        if isinstance(n, ast.Assign) and "StatutDelegation." in ast.unparse(n.value):
+            if any(isinstance(c, ast.Attribute) and c.attr == "statut" for c in n.targets):
+                vues.add(".statut = StatutDelegation")
+    return vues
+
+
+def test_tout_geste_sur_un_compte_est_declare():
+    """Le relevé mécanique (#1548) : la liste tenue à la main ne suffit pas.
+
+    `GESTES_SENSIBLES` comptait huit gestes quand l'audit du 02/10/2026 en a
+    trouvé six autres sans trace — valider, désactiver, supprimer un compte,
+    créer, accepter, révoquer une délégation. Une liste qu'on complète quand on y
+    pense oublie précisément ce à quoi on ne pensait pas : ce test la confronte
+    à ce que les routeurs ÉCRIVENT.
+    """
+    declares = set(GESTES_SENSIBLES)
+    vus, oublies = set(), []
+    for module in modules_app("routers", minimum=20):
+        for n in ast.walk(module.arbre):
+            if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            signatures = _signatures(n)
+            if not signatures:
+                continue
+            vus.add((module.rel, n.name))
+            if (module.rel, n.name) not in declares:
+                oublies.append(f"app/{module.rel}::{n.name} — {sorted(signatures)}")
+    #  Cas ZÉRO : un relevé qui ne trouve plus rien est un relevé cassé, pas un
+    #  dépôt sain — les rôles, au moins, s'écrivent dans un routeur.
+    assert ("routers/admin/utilisateurs.py", "ajouter_role") in vus, (
+        "Le relevé ne reconnaît plus `ajouter_role` : ses signatures ne disent plus "
+        "comment le code écrit un compte, et il ne garde plus rien."
+    )
+    assert not oublies, (
+        "Ces fonctions écrivent un compte (droits, décision, effacement, délégation) "
+        "sans figurer dans GESTES_SENSIBLES :\n"
+        + "\n".join(f"  • {o}" for o in oublies)
+        + "\n\nLes y déclarer — ce qui exigera l'appel à `journaliser_securite` —, "
+        "ou retirer la signature ici en écrivant pourquoi ce n'est pas un geste sensible."
+    )
+
+
+def test_chaque_evenement_journalise_est_declare():
+    """Un code absent de `_NIVEAUX` part en WARNING par défaut, sans un mot.
+
+    La fonction ne refuse pas une clé inconnue — le journal ne doit jamais casser
+    la requête qu'il observe. C'est donc ici que la faute de frappe se voit : un
+    `"compte_valider"` pour `"compte_valide"` serait un geste tracé sous un nom
+    que personne ne cherchera.
+    """
+    from app.utils.journal_securite import _NIVEAUX
+
+    appels, inconnus = 0, []
+    for module in modules_app():
+        for n in ast.walk(module.arbre):
+            if not (isinstance(n, ast.Call) and getattr(n.func, "id", None) == FONCTION):
+                continue
+            appels += 1
+            premier = n.args[0] if n.args else None
+            #  Un choix entre deux codes (`"compte_valide" if … else "compte_refuse"`)
+            #  reste lisible : chaque branche doit être un littéral déclaré.
+            if isinstance(premier, ast.IfExp):
+                feuilles = [premier.body, premier.orelse]
+            else:
+                feuilles = [premier]
+            ou = f"app/{module.rel}:{n.lineno}"
+            for f in feuilles:
+                if not (isinstance(f, ast.Constant) and isinstance(f.value, str)):
+                    inconnus.append(f"{ou} — code non littéral")
+                elif f.value not in _NIVEAUX:
+                    inconnus.append(f"{ou} — {f.value!r}")
+    #  Cas ZÉRO : un relevé qui ne voit aucun appel ne vérifie aucun code.
+    assert appels, f"aucun appel à `{FONCTION}` trouvé dans app/ : le relevé ne voit plus rien"
+    assert not inconnus, "Codes d'événement absents de `_NIVEAUX` :\n" + "\n".join(inconnus)

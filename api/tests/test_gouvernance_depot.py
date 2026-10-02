@@ -68,12 +68,9 @@ GOUVERNANCE = ("README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md", "LICE
 #: *fondée sur les principes de l'AGPLv3* et dit explicitement ne pas lui être
 #: compatible. La citer est exact ; promettre MIT ne l'était pas.
 #:
-#: ⚠️ **Aucune exception n'est déclarée ici, parce qu'aucune ne sert
-#: aujourd'hui** : le jour où `NOTICE.md` devra nommer la licence d'une
-#: dépendance tierce embarquée, ce test échouera — et l'exception s'écrira
-#: alors, avec sa raison et sa date (`standards/05` §2). Une exception posée à
-#: vide ne protège rien et fait croire à une décision (`CLAUDE.md`, exceptions
-#: XSS).
+#: ⚠️ Le jour où `NOTICE.md` devrait nommer la licence d'une dépendance tierce,
+#: ce test échouerait — et l'exception s'écrirait alors, avec sa raison et sa
+#: date (`standards/05` §2). Ce jour est venu : voir `SECTIONS_TIERS`.
 LICENCES_NON_ACCORDEES = (
     "MIT",
     "Apache",
@@ -86,6 +83,15 @@ LICENCES_NON_ACCORDEES = (
     "CC0",
     "Creative Commons",
 )
+
+#: L'exception, et la seule (#1542, #1543 — 02/10/2026) : la section de
+#: `NOTICE.md` qui NOMME les composants tiers. Elle cite des licences que le
+#: dépôt n'accorde pas — il les REÇOIT avec les icônes Lucide, le logo WhatsApp
+#: et les bibliothèques ; les taire serait la faute, ISC et MIT exigeant que
+#: leur mention accompagne chaque copie. Le reste du fichier reste contrôlé, et
+#: le test échoue si la section disparaît : une exception qui ne sert plus se
+#: retire.
+SECTIONS_TIERS = {"NOTICE.md": "## 9. Composants tiers"}
 
 #: Mots dont aucun n'a de sens en français. Ils ne mesurent pas un style : leur
 #: présence dit qu'une phrase entière est en anglais.
@@ -125,6 +131,19 @@ def _prose_seule(texte: str) -> str:
     return texte
 
 
+def _sans_section_tierce(nom: str, texte: str) -> str:
+    """Le texte privé de sa section « Composants tiers », si elle lui est déclarée."""
+    titre = SECTIONS_TIERS.get(nom)
+    if titre is None:
+        return texte
+    debut = texte.find(f"\n{titre}\n")
+    assert debut >= 0, (
+        f"{nom} n'a plus de section « {titre} » : retirer son entrée de SECTIONS_TIERS"
+    )
+    suite = texte.find("\n## ", debut + len(titre) + 1)
+    return texte[:debut] + ("" if suite < 0 else texte[suite:])
+
+
 def identifiant_spdx_accorde() -> str:
     """L'identifiant que le dépôt accorde réellement, lu dans `REUSE.toml`."""
     reuse = _lire("REUSE.toml")
@@ -146,7 +165,7 @@ def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
     """Le défaut exact du 19/09/2026 : « MIT » dans `CONTRIBUTING.md`."""
     fautes = []
     for nom in GOUVERNANCE:
-        prose = _prose_seule(_lire(nom))
+        prose = _prose_seule(_sans_section_tierce(nom, _lire(nom)))
         for licence in LICENCES_NON_ACCORDEES:
             for trouve in re.finditer(rf"\b{re.escape(licence)}\b", prose, re.I):
                 debut = max(0, trouve.start() - 60)

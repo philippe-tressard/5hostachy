@@ -27,37 +27,47 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Concatène `app.css` et tous les fragments de `styles/`, dans l'ordre des
- * `@import` puisque c'est celui de la cascade.
+ * Les FICHIERS du CSS global, chacun avec son contenu — la source des deux
+ * fonctions suivantes.
+ *
+ * Ajouté le 02/10/2026 (#1537) : `lint:css-orphelin` doit dire OÙ une classe
+ * est définie, ce qu'une chaîne concaténée ne sait plus dire. La liste des
+ * fragments s'écrivait déjà DEUX fois dans ce module ; elle ne s'écrit plus
+ * qu'ici.
  *
  * @param racine chemin de `front/src`
- * @returns le CSS global concaténé — chaîne vide si rien n'a pu être lu
+ * @returns [{ fichier: 'styles/x.css', css }] — tableau vide si rien n'a pu être lu
  */
-export function cssGlobal(racine) {
-	const morceaux = [];
+export function feuillesCssGlobal(racine) {
+	const feuilles = [];
 	const appCss = join(racine, 'app.css');
-	if (existsSync(appCss)) morceaux.push(readFileSync(appCss, 'utf8'));
+	if (existsSync(appCss)) feuilles.push({ fichier: 'app.css', css: readFileSync(appCss, 'utf8') });
 
 	const dossier = join(racine, 'styles');
 	if (existsSync(dossier)) {
 		//  Tri alphabétique et non l'ordre des `@import` : ces contrôles cherchent
 		//  ce qui est DÉFINI, pas ce qui l'emporte. La cascade ne les concerne pas.
 		for (const nom of readdirSync(dossier).sort()) {
-			if (nom.endsWith('.css')) morceaux.push(readFileSync(join(dossier, nom), 'utf8'));
+			if (!nom.endsWith('.css')) continue;
+			feuilles.push({ fichier: `styles/${nom}`, css: readFileSync(join(dossier, nom), 'utf8') });
 		}
 	}
-	return morceaux.join('\n');
+	return feuilles;
+}
+
+/**
+ * Concatène `app.css` et tous les fragments de `styles/`.
+ *
+ * @param racine chemin de `front/src`
+ * @returns le CSS global concaténé — chaîne vide si rien n'a pu être lu
+ */
+export function cssGlobal(racine) {
+	return feuillesCssGlobal(racine)
+		.map((f) => f.css)
+		.join('\n');
 }
 
 /** Les fichiers réellement lus — pour qu'un message d'erreur puisse les nommer. */
 export function fichiersCssGlobal(racine) {
-	const liste = [];
-	if (existsSync(join(racine, 'app.css'))) liste.push('app.css');
-	const dossier = join(racine, 'styles');
-	if (existsSync(dossier)) {
-		for (const nom of readdirSync(dossier).sort()) {
-			if (nom.endsWith('.css')) liste.push(`styles/${nom}`);
-		}
-	}
-	return liste;
+	return feuillesCssGlobal(racine).map((f) => f.fichier);
 }

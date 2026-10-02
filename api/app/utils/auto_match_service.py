@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 
 from sqlmodel import Session, select
+from app.auth.adresse_compte import normaliser_adresse
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.noms import contexte_personne
@@ -401,7 +402,7 @@ def _auto_match_baux_locataire(user, session: Session) -> int:
 
     baux = session.exec(
         select(LocationBail).where(
-            LocationBail.locataire_email == user.email.lower().strip(),
+            LocationBail.locataire_email == normaliser_adresse(user.email),
             LocationBail.locataire_id.is_(None),  # type: ignore
             LocationBail.statut != StatutBail.termine,
         )

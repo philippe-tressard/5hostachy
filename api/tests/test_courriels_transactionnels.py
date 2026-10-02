@@ -31,7 +31,9 @@ from tests.aides_sources import modules_app
 
 #: Les codes dont la remise conditionne l'ACCÈS au compte. Un e-mail que
 #: l'utilisateur ne peut pas remplacer par un autre chemin.
-TRANSACTIONNELS = {"reinitialisation_mdp", "verification_email"}
+#: L'avis de changement d'adresse en est (#1549) : c'est l'alerte d'un compte
+#: qu'on détourne, et un refus de notifications ne doit pas la faire taire.
+TRANSACTIONNELS = {"reinitialisation_mdp", "verification_email", "adresse_changement_avis"}
 
 
 def _appels_avec_code(arbre: ast.AST):

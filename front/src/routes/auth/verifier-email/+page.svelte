@@ -8,6 +8,8 @@
 	const _siteNom = getSiteNom();
 
 	let status: 'loading' | 'success' | 'error' | 'expired' = 'loading';
+	/** Le lien confirmait une NOUVELLE adresse (#1549), pas une inscription. */
+	let changementAdresse = false;
 	let errorMessage = '';
 	let resendEmail = '';
 	let resendDone = false;
@@ -21,7 +23,8 @@
 			return;
 		}
 		try {
-			await authApi.verifierEmail(token);
+			const reponse = await authApi.verifierEmail(token);
+			changementAdresse = !!reponse?.changement_adresse;
 			status = 'success';
 		} catch (e: any) {
 			status = 'expired';
@@ -56,10 +59,15 @@
 			<p style="text-align:center; color:var(--color-text-muted)">Vérification en cours…</p>
 		{:else if status === 'success'}
 			<div class="alert alert-success">
-				<strong>Adresse e-mail vérifiée !</strong><br />
-				Votre adresse a été confirmée. Votre compte est maintenant en attente de validation par le conseil
-				syndical.<br />
-				Vous recevrez un e-mail dès qu'il sera activé.
+				{#if changementAdresse}
+					<strong>Nouvelle adresse confirmée !</strong><br />
+					C’est désormais avec elle que vous vous connectez, et elle qui reçoit les courriels du site.
+				{:else}
+					<strong>Adresse e-mail vérifiée !</strong><br />
+					Votre adresse a été confirmée. Votre compte est maintenant en attente de validation par le conseil
+					syndical.<br />
+					Vous recevrez un e-mail dès qu'il sera activé.
+				{/if}
 			</div>
 			<div style="text-align:center; margin-top:1rem">
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>

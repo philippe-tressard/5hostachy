@@ -60,6 +60,7 @@ from sqlmodel import Session, select
 from app.models.core import Batiment, Ticket, Utilisateur
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.nature_affaire import ACTUALITE, statut_pour
+from app.utils.perimetres import perimetre_cible_json
 
 #: Le titre est stable : c'est lui qui sert de garde contre le doublon.
 PREFIXE_TITRE = "Bienvenue à "
@@ -174,7 +175,9 @@ def creer_annonce_arrivee(
     #  Le périmètre suit le bâtiment quand il est connu : une arrivée intéresse
     #  d'abord les voisins de palier. Sans bâtiment, la résidence entière — mieux
     #  vaut une annonce large qu'une annonce que personne ne voit.
-    perimetre_cible = f'["bat:{user.batiment_id}"]' if user.batiment_id else '["résidence"]'
+    perimetre_cible = perimetre_cible_json(
+        [f"bat:{user.batiment_id}"] if user.batiment_id else None
+    )
 
     from app.routers.tickets.commun import generer_numero
 

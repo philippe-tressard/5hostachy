@@ -14,7 +14,7 @@ pris. Restent le profil et l'héritage de lecture (`utils/statuts_lus`).
 
 from __future__ import annotations
 
-from datetime import date
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session, or_, select
@@ -27,7 +27,7 @@ def delegations_de_l_aidant(
 ) -> list[Delegation]:
     """Les délégations actives aujourd'hui où `aidant_id` aide — d'un mandant
     précis si `mandant_id` est donné."""
-    today = date.today()
+    today = horloge.aujourd_hui()
     requete = select(Delegation).where(
         Delegation.aidant_id == aidant_id,
         Delegation.statut == StatutDelegation.active,

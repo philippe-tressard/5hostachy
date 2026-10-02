@@ -22,15 +22,15 @@
 
 	/** Configuration publique déjà chargée par la page (préremplit le formulaire). */
 	export let cfgPublique: Record<string, string> = {};
-	/** Une clé d'API est-elle déjà enregistrée côté serveur ? */
-	export let apiKeySet = false;
 	/** Pied de message — appartient à `siteConfig`, d'où le `bind:`. */
 	export let footer = '';
 	export let footerSaving = false;
 	/** Enregistrement du pied de message, porté par la page. */
 	export let onSaveFooter: () => unknown = () => {};
 
-	let waConfig = { enabled: false, group_name: '', api_url: '', api_key: '', group_jid: '' };
+	//  Pas de clé d'API ici (#1596) : elle se définit dans `.env`
+	//  (`WHATSAPP_API_KEY`), seule source, lue par l'API et par le bridge.
+	let waConfig = { enabled: false, group_name: '', api_url: '', group_jid: '' };
 	let waSaving = false;
 	let waTestMessage =
 		'\u{1F9EA} Test WhatsApp — si vous recevez ce message, la configuration est correcte ✅';
@@ -128,7 +128,6 @@
 				whatsapp_api_url: waConfig.api_url,
 				whatsapp_group_jid: waConfig.group_jid,
 			};
-			if (waConfig.api_key) payload['whatsapp_api_key'] = waConfig.api_key;
 			await configApi.save(payload);
 			configStore.update((c: Record<string, string>) => ({
 				...c,
@@ -137,8 +136,6 @@
 				whatsapp_api_url: waConfig.api_url,
 				whatsapp_group_jid: waConfig.group_jid,
 			}));
-			if (waConfig.api_key) apiKeySet = true;
-			waConfig.api_key = '';
 			toast('success', 'Configuration WhatsApp enregistrée.');
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');
@@ -179,22 +176,12 @@
 				<input type="text" bind:value={waConfig.group_jid} placeholder="1234567890@g.us" />
 				<span class="aide">Identifiant du groupe WhatsApp (format : 123...@g.us).</span>
 			</label>
-			<label class="field" style="grid-column:span 2">
-				Clé API
-				<input
-					type="password"
-					bind:value={waConfig.api_key}
-					placeholder={apiKeySet
-						? '••••••  (clé déjà configurée — laisser vide pour conserver)'
-						: 'Entrez la clé API du bridge WhatsApp'}
-				/>
-				<span class="aide"
-					>{apiKeySet
-						? 'Une clé est déjà configurée. Laissez ce champ vide pour la conserver.'
-						: "Requis pour l'authentification au bridge WhatsApp."}</span
-				>
-			</label>
 		</div>
+		<p class="aide largeur-saisie">
+			La clé d'accès au bridge ne se saisit pas ici : elle se définit sur le serveur, dans le
+			fichier <code>.env</code> (<code>WHATSAPP_API_KEY</code>), et sert à la fois au site et au
+			bridge.
+		</p>
 		<div class="largeur-saisie form-actions">
 			<button class="btn btn-primary" on:click={saveWaConfig} disabled={waSaving}>
 				{waSaving ? 'Enregistrement…' : 'Enregistrer'}
@@ -238,7 +225,7 @@
 							WhatsApp → Appareils connectés → Connecter un appareil
 						</p>
 						<img
-							src="/api/config/whatsapp-qr?t={waQrTimestamp}"
+							src={configApi.whatsappQrUrl(waQrTimestamp)}
 							alt="QR code WhatsApp"
 							style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
 						/>

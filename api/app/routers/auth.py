@@ -12,13 +12,11 @@ soi* reste ici, *décrire qui l'on est* s'en va. Le router garde le préfixe
 URL publiques sont donc rigoureusement inchangées.
 """
 
-import secrets
 from datetime import timedelta
 from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, Cookie, Request
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
@@ -30,6 +28,7 @@ from app.auth.jwt import (
     hash_password,
     verify_and_rehash,
 )
+from app.auth.adresse_compte import compte_par_adresse
 from app.auth.deps import get_current_user
 from app.auth.empreinte_jeton import empreinte
 from app.auth.jetons_rafraichissement import est_rejoue, remplacer, revoquer_sessions
@@ -38,7 +37,6 @@ from app.database import get_session
 from app.models.core import (
     Utilisateur,
     RefreshToken,
-    EmailVerificationToken,
     StatutUtilisateur,
     RoleUtilisateur,
     Batiment,
@@ -57,6 +55,11 @@ from app.utils.mots_de_passe import verifier_robustesse as _check_password_stren
 from app.utils.liens import base_site, nom_site
 
 from app.utils.noms import contexte_personne
+from app.utils.verification_adresse import (
+    emettre_verification_email,
+    invalider_liens_en_attente,
+    servir_lien,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -72,64 +75,10 @@ def list_batiments(request: Request, session: Session = Depends(get_session)):
     return session.exec(select(Batiment).order_by(Batiment.numero)).all()
 
 
-#: La validité d'un lien de vérification d'adresse — **écrite une seule fois**.
-#:
-#: 🔴 Elle l'était QUATRE fois avant le 16/09/2026 : deux `timedelta(hours=24)`
-#: (la durée réelle du jeton) et deux `"expire_heures": 24` (celle annoncée dans
-#: le courriel), aux deux endroits qui émettent ce lien — l'inscription et le
-#: renvoi. Rien ne les liait : changer la durée réelle sans toucher aux deux
-#: littéraux aurait fait **mentir le message** au résident, et l'écart n'aurait
-#: été visible que pour celui dont le lien expire plus tôt qu'annoncé.
-VALIDITE_VERIFICATION_EMAIL = timedelta(hours=24)
-
-
-def emettre_verification_email(
-    session: Session,
-    user: Utilisateur,
-    background_tasks: BackgroundTasks,
-) -> None:
-    """Crée le jeton de vérification d'adresse et envoie le courriel.
-
-    Les deux gestes ne se séparent pas : un jeton posé sans courriel n'atteint
-    personne, un courriel sans jeton porte un lien mort. Ils étaient recopiés à
-    l'identique à l'inscription et au renvoi du lien (16/09/2026), et c'est la
-    durée — quatre littéraux indépendants — qui rendait la copie dangereuse.
-
-    ⚠️ Ce qui reste à l'appelant : invalider les jetons précédents. Le renvoi le
-    fait, l'inscription n'en a pas. Les confondre ferait de cette fonction un
-    endroit qui décide à la place de l'appelant.
-    """
-    raw_token = secrets.token_urlsafe(32)
-    session.add(
-        EmailVerificationToken(
-            user_id=user.id,
-            token=empreinte(raw_token),
-            expires_at=horloge.maintenant() + VALIDITE_VERIFICATION_EMAIL,
-        )
-    )
-    session.commit()
-
-    cfg = config_site(session)
-    site_url = base_site(cfg.get("site_url"))
-    site_nom = nom_site(cfg.get("site_nom"))
-
-    from app.utils.email import send_email as _send_email
-
-    background_tasks.add_task(
-        _send_email,
-        code="verification_email",
-        to=user.email,
-        context={
-            "prenom": user.prenom,
-            "token": raw_token,
-            "lien": f"{site_url}/auth/verifier-email?token={raw_token}",
-            #  Annoncée au résident, DÉDUITE de la validité réelle : les deux ne
-            #  peuvent plus diverger.
-            "expire_heures": int(VALIDITE_VERIFICATION_EMAIL.total_seconds() // 3600),
-            "residence": {"nom": site_nom},
-            "app": {"url": site_url},
-        },
-    )
+#  La vérification d'une adresse — sa durée, l'émission du lien, ce que le servir
+#  fait — vit dans `utils/verification_adresse.py` depuis le 02/10/2026 (#1549) :
+#  le changement d'adresse emploie le même mécanisme, depuis deux routeurs (le
+#  profil et l'administration), et un routeur n'en importe pas un autre.
 
 
 @router.post("/register", response_model=UserRead, status_code=201)
@@ -162,10 +111,7 @@ def register(
         raise HTTPException(400, "Le consentement RGPD est obligatoire.")
     _check_password_strength(body.password)
 
-    existing = session.exec(
-        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-    ).first()
-    if existing:
+    if compte_par_adresse(session, body.email):
         raise HTTPException(400, "Email déjà utilisé.")
 
     user = Utilisateur(
@@ -271,9 +217,7 @@ def login(
     response: Response,
     session: Session = Depends(get_session),
 ):
-    user = session.exec(
-        select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-    ).first()
+    user = compte_par_adresse(session, body.email)
     if not user or not user.hashed_password:
         #  🔴 L'adresse essayée ne s'écrit PAS dans le journal (#777) : la ligne dit
         #  qu'une tentative a échoué sur un compte inconnu, et cela suffit.
@@ -434,27 +378,11 @@ def verify_email(request: Request, token: str, session: Session = Depends(get_se
     de Microsoft avait consommé le jeton une minute avant que le destinataire
     clique, et celui-ci lisait en rouge l'échec d'une vérification réussie.
     Répondre ainsi ne livre rien : seul le porteur du lien connaît le jeton.
+
+    Depuis le 02/10/2026 (#1549), le même lien confirme aussi une NOUVELLE
+    adresse : la réponse porte alors `changement_adresse`, et l'écran le dit.
     """
-    evt = session.exec(
-        select(EmailVerificationToken).where(EmailVerificationToken.token == empreinte(token))
-    ).first()
-    user = session.get(Utilisateur, evt.user_id) if evt else None
-    if not user:
-        raise HTTPException(400, "Lien de vérification invalide ou expiré.")
-
-    if user.email_verifie:
-        return {"message": "Adresse e-mail déjà vérifiée."}
-
-    if evt.used or evt.expires_at < horloge.maintenant():
-        raise HTTPException(400, "Lien de vérification invalide ou expiré.")
-
-    user.email_verifie = True
-    evt.used = True
-
-    session.add(user)
-    session.add(evt)
-    session.commit()
-    return {"message": "Adresse e-mail vérifiée avec succès."}
+    return servir_lien(session, token)
 
 
 @router.post("/renvoyer-verification", status_code=204)
@@ -466,22 +394,12 @@ def resend_verification(
     session: Session = Depends(get_session),
 ):
     """Renvoie un email de vérification (si le compte existe et n'est pas encore vérifié)."""
-    user = session.exec(
-        select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())
-    ).first()
+    user = compte_par_adresse(session, body.email)
 
     if user and not user.email_verifie:
-        # Invalider les anciens tokens
-        old_tokens = session.exec(
-            select(EmailVerificationToken).where(
-                EmailVerificationToken.user_id == user.id,
-                EmailVerificationToken.used == False,  # noqa: E712
-            )
-        ).all()
-        for t in old_tokens:
-            t.used = True
-            session.add(t)
-
+        #  Les liens de l'inscription seulement : un changement d'adresse en cours
+        #  garde le sien.
+        invalider_liens_en_attente(session, user.id, changement=False)
         emettre_verification_email(session, user, background_tasks)
 
     # Toujours 204 (pas d'énumération de comptes)

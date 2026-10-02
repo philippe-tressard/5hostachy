@@ -26,7 +26,7 @@ from sqlmodel import Session, SQLModel, select
 from app.auth.empreinte_jeton import empreinte
 from app.database import engine
 from app.models.core import EmailVerificationToken
-from app.routers.auth import VALIDITE_VERIFICATION_EMAIL, emettre_verification_email
+from app.utils.verification_adresse import VALIDITE_VERIFICATION_EMAIL, emettre_verification_email
 from app.utils import horloge
 from tests.aides_base import compte
 

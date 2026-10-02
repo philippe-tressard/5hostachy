@@ -5,9 +5,10 @@ messages (`utils/courriel_transfert`). Versé au mauvais endroit, il s'annule, s
 réaffecte ou devient une affaire neuve d'un geste : la règle et son pourquoi
 sont dans `utils/versement_transfert`, qui ne sont qu'appelés ici.
 
-Qui : celui qui a transféré, et l'administrateur
-(`auth/appartenance.exiger_auteur_du_versement`). La liste ne rend que les
-transferts que le lecteur peut défaire — les autres ne lui proposent rien.
+Qui : celui qui a transféré, et l'administrateur — `auth/appartenance` :
+`peut_defaire_le_versement` le dit, `exiger_auteur_du_versement` en fait un 403.
+La liste ne rend que les transferts que le lecteur peut défaire, et elle le
+demande au même prédicat que le geste (#1551).
 """
 
 from datetime import datetime
@@ -17,10 +18,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.auth.appartenance import exiger_auteur_du_versement
-from app.auth.deps import est_moderateur, get_current_user
+from app.auth.appartenance import exiger_auteur_du_versement, peut_defaire_le_versement
+from app.auth.deps import get_current_user
 from app.database import get_session
-from app.models.core import RoleUtilisateur, Ticket, Utilisateur
+from app.models.core import Ticket, Utilisateur
 from app.utils import versement_transfert as versements
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
@@ -68,10 +69,10 @@ def lister_transferts(
 ):
     if not ticket_visible(ou_404(session, Ticket, ticket_id, "Ticket"), user):
         raise HTTPException(403, "Accès refusé")
-    admin = user.has_role(RoleUtilisateur.admin)
     rendus = []
     for v in versements.versements_de(session, ticket_id):
-        if not admin and v.transfere_par_id != user.id:
+        #  La liste et le geste posent la même question (#1551).
+        if not peut_defaire_le_versement(v, user, deplacer=False):
             continue
         auteur = session.get(Utilisateur, v.transfere_par_id)
         rendus.append(
@@ -82,7 +83,7 @@ def lister_transferts(
                 suites=len(versements.suites_du(session, v)),
                 affaire_creee=v.affaire_creee,
                 bloque=versements.motif_bloquant(session, v),
-                peut_deplacer=est_moderateur(user),
+                peut_deplacer=peut_defaire_le_versement(v, user, deplacer=True),
             )
         )
     return rendus

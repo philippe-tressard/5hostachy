@@ -98,6 +98,30 @@ type MIME autorisé s'exécuterait sur notre origine.
 standby par `bascule.sh`, ni sauvegardé par `backup.py` — il est perdu à la
 première bascule, sans aucun signal.
 
+### 3 bis. Contrôle d'accès : chercher la règle à son CONTENU (A01:2021)
+
+Une règle d'accès vit dans `auth/deps.py` (dépendances et prédicats),
+`auth/appartenance.py` (« est-ce le vôtre ? ») ou `utils/visibility/` (« qui
+voit quoi ») — la règle d'emplacement est dans `CLAUDE.md`, Backend.
+
+🔴 **Ce que l'audit doit chercher, c'est la règle recopiée qui ne LÈVE pas.**
+Une visibilité rend `False`, une liste fait `continue` : ni l'une ni l'autre ne
+porte de `HTTPException` ni un nom en `*_visible`. L'audit du 02/10/2026 en a
+trouvé trois (#1551), identiques à leur source ce jour-là, donc invisibles à
+l'usage — la divergence n'arrive que le jour où la source apprend quelque chose.
+
+| Contenu qui trahit une copie | Source | Contrôle |
+|---|---|---|
+| `….roles_autorises` lu | `visibility.profil_admet` | `test_autorisation.py` |
+| un élément de `….user_lots` jugé sur `actif` | `deps.est_rattache_au_lot` | `test_appartenance_lot_source_unique.py` |
+| un champ comparé à `user.id` par `auth/appartenance.py`, recomparé ailleurs | le prédicat du module (`peut_defaire_le_versement`…) | `test_appartenance_source_unique.py` |
+
+**Le geste d'audit** : pour une règle neuve, se demander *quelle donnée elle
+lit* (un champ de profil, `actif`, un champ de propriété), puis chercher cette
+lecture sur l'AST hors de la source. Un écran qui **liste** ce qu'un geste
+**autorise** doit appeler le même prédicat : sinon il propose un bouton qui
+rend 403, ou tait un geste permis.
+
 ### 4. Authentication & Session (A07:2021)
 
 #### Cookies JWT
@@ -223,6 +247,14 @@ Get-Content .gitignore | Select-String -Pattern "\.env"
 # .env.example sans vraies valeurs
 if (Test-Path .env.example) { Get-Content .env.example }
 ```
+
+#### Un secret s'écrit une fois, et jamais dans une URL (#1596)
+
+- **La clé du bridge WhatsApp** : `.env` seulement (`WHATSAPP_API_KEY`), lue par
+  le bridge et par `utils/whatsapp.entetes_bridge` — `ConfigSite` la refuse
+  (`_CLES_HORS_BASE`). Le bridge refuse au démarrage une clé vide, d'exemple ou
+  trop courte, et ignore `?apikey=`. 🔒 `api/tests/test_cle_bridge_whatsapp.py`,
+  `whatsapp-bridge/tests/contrat-http.test.js`.
 
 #### Aucune personne réelle dans le dépôt — il est PUBLIC (#1493)
 

@@ -362,8 +362,63 @@ def code_par_defaut() -> Optional[str]:
 def _avec_defaut(codes: list[str]) -> list[str]:
     if codes:
         return codes
+    return perimetre_defaut_liste()
+
+
+# ── Le périmètre par défaut : ce qu'on écrit, et la question qu'on pose ──────
+#
+#  🔴 Le code de la racine n'est écrit QUE par le seed, qui pose le nœud
+#  (#1567, 02/10/2026). Il l'était vingt-trois fois ailleurs côté API — défauts
+#  de colonne, défauts de schéma, replis `x or ["résidence"]`, et deux
+#  comparaisons dans le message du groupe —, pendant que le front n'en avait
+#  plus un seul. Miroirs de `perimetreDefautListe` et `estPerimetreParDefaut`
+#  (`front/src/lib/perimetres/arbre.ts`). 🔒 `test_perimetre_racine_source_unique.py`.
+
+
+def perimetre_defaut_liste() -> list[str]:
+    """La sélection d'un contenu à qui l'on n'en donne pas — « toute la copropriété ».
+
+    Liste vide sur un arbre vide : c'est ce que `perimetre_visible` traite déjà
+    comme « concerne tout le monde », et ce que le front envoie dans ce cas.
+    """
     defaut = code_par_defaut()
     return [defaut] if defaut else []
+
+
+def perimetre_cible_json(codes: Optional[list[str]] = None) -> str:
+    """Une sélection sous sa forme stockée (`perimetre_cible`) — vide, le défaut.
+
+    Remplace le `json.dumps(x or ["résidence"], ensure_ascii=False)` que six
+    écritures recopiaient. Sans argument, c'est le défaut seul : elle sert alors
+    de `default_factory` aux modèles, et la valeur se lit à la CRÉATION de
+    l'objet — ou à l'INSERTION quand on lui a passé `None`, que l'ORM remplace
+    par le défaut —, jamais à l'import : un défaut de colonne figé reprendrait
+    le code en dur qu'elle remplace.
+
+    ⚠️ Les écritures qui stockent `None` pour une sélection vide (sondage,
+    évolution, accès) répondent à une autre règle : « ne restreint rien », lu
+    comme tel. Elles n'ont pas à passer par ici.
+    """
+    return json.dumps(list(codes or []) or perimetre_defaut_liste(), ensure_ascii=False)
+
+
+def perimetre_defaut_texte() -> str:
+    """Le même défaut sous la forme TEXTE (`Evenement.perimetre`, lue par `parse_perimetres`)."""
+    return ",".join(perimetre_defaut_liste())
+
+
+def est_perimetre_par_defaut(codes: Optional[list[str]]) -> bool:
+    """Cette sélection désigne-t-elle toute la copropriété ?
+
+    Vrai pour une sélection vide, ou réduite au seul code par défaut — en toute
+    casse, comme partout dans l'arbre. Faux sur un arbre vide dès qu'un code est
+    cité : on ne peut pas dire qu'il désigne la racine.
+    """
+    liste = [c.strip() for c in (codes or []) if isinstance(c, str) and c.strip()]
+    if not liste:
+        return True
+    defaut = code_par_defaut()
+    return len(liste) == 1 and defaut is not None and liste[0].lower() == defaut.lower()
 
 
 def parse_perimetres(perimetre: Optional[str]) -> list[str]:

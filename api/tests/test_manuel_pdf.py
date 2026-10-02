@@ -340,7 +340,10 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
         ),
         "FAQ": (front / "routes" / "(app)" / "faq" / "+page.svelte").read_text(encoding="utf-8"),
     }
-    manquants = [ou for ou, texte in endroits.items() if "/api/manuel/pdf" not in texte]
+    client = (front / "lib" / "api" / "index.ts").read_text(encoding="utf-8")  # #1578
+    assert "pdfUrl: (): string => `${BASE}/manuel/pdf`" in client
+    lien = ("/api/manuel/pdf", "manuel.pdfUrl()")  # le manuel en clair, les écrans par le client
+    manquants = [ou for ou, t in endroits.items() if not any(x in t for x in lien)]
     assert not manquants, "le lien vers le PDF a disparu de : " + ", ".join(manquants)
 
 

@@ -277,26 +277,10 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	}
 }
 
-/*  Les listes qui portent ENCORE leur propre balisage de ligne, en attendant
-    leur découpage (#432 pour le calendrier, #453 pour l'Espace CS). Leur titre
-    ne s'appelle pas `.ec-titre` — mais la règle, elle, est la même.
-
-    ⚠️ Ces trois lignes vivent ICI et non dans les pages, et ce n'est pas un
-    contournement du garde-fou de modularité : la règle est **globale au site**
-    (« applique partout »). L'écrire dans chaque page en aurait fait une
-    troisième et une quatrième copie, libres de diverger — exactement ce que
-    `.carte-liste` a été créé pour supprimer. Elles disparaîtront avec les
-    balisages qu'elles servent. */
-@media (hover: hover) and (pointer: fine) {
-	.event-row:hover .event-titre,
-	.tk-row:hover .tk-row-titre {
-		color: var(--color-primary);
-	}
-}
-.event-titre,
-.tk-row-titre {
-	transition: color var(--duree-geste);
-}
+/*  ✅ Les règles de survol de `.event-row` et `.tk-row` — les deux listes qui
+    portaient encore leur propre balisage de ligne — sont parties le 02/10/2026
+    (#1537) : elles annonçaient disparaître « avec les balisages qu'elles
+    servent », et ces balisages étaient partis (#432, #1092) sans elles. */
 .carte-liste.urgent {
 	border-left-color: var(--color-danger);
 }

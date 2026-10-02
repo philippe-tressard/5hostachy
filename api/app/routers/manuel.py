@@ -12,7 +12,7 @@ Voir `utils/manuel_pdf` pour le pourquoi.
 
 from __future__ import annotations
 
-from datetime import date
+from app.utils import horloge
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session
@@ -42,7 +42,7 @@ def manuel_pdf(session: Session = Depends(get_session)):
         #  confondue avec la panne d'un nœud.
         raise HTTPException(502, f"Manuel indisponible : {exc}") from exc
 
-    nom = f"manuel-utilisateur-{site_nom.lower().replace(' ', '-')}-{date.today():%Y-%m-%d}.pdf"
+    nom = f"manuel-utilisateur-{site_nom.lower().replace(' ', '-')}-{horloge.aujourd_hui():%Y-%m-%d}.pdf"
     return Response(
         content=pdf,
         media_type="application/pdf",

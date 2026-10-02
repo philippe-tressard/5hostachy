@@ -55,7 +55,7 @@ from app.utils.courriel_decodage import (
     sans_chevrons,
     valeur_d_entete,
 )
-from app.utils.dates_fr import TZ_PARIS
+from app.utils.horloge import TZ_PARIS
 
 
 class FilIllisible(ValueError):

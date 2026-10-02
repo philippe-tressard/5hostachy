@@ -57,6 +57,7 @@ from __future__ import annotations
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.auth.adresse_compte import compte_par_adresse, normaliser_adresse
 from app.auth.deps import est_moderateur
 from app.models.core import Ticket, TicketEvolution, Utilisateur
 from app.models.courriel import FilCourriel, MessageVerse
@@ -121,18 +122,14 @@ DEBUT_COMPARE = 200
 
 
 def compte_a_l_adresse(session: Session, adresse: str | None) -> Utilisateur | None:
-    """Le compte ACTIF à cette adresse (« Nom <a@b.fr> » accepté), sans égard à la casse."""
+    """Le compte ACTIF à cette adresse (« Nom <a@b.fr> » accepté), sans égard à la casse.
+
+    Ce module ne fait qu'extraire l'adresse de l'en-tête : la question « quel
+    compte ? » est celle de `auth.adresse_compte`, posée partout de la même façon.
+    """
     from email.utils import parseaddr
 
-    nue = (parseaddr(adresse or "")[1] or "").strip().lower()
-    if not nue:
-        return None
-    return session.exec(
-        select(Utilisateur).where(
-            func.lower(Utilisateur.email) == nue,
-            Utilisateur.actif == True,  # noqa: E712
-        )
-    ).first()
+    return compte_par_adresse(session, parseaddr(adresse or "")[1], actif_seulement=True)
 
 
 def domaines_du_site(session: Session) -> set[str]:
@@ -333,7 +330,7 @@ def _avant_le_site(session: Session, messages: list[MessageDuFil]) -> list[Messa
 def _transfere_par(qui: Utilisateur, m: MessageDuFil) -> str | None:
     """Qui a transféré — tu quand c'est son propre message : « Mail reçu de
     Philippe …, transféré par Philippe » ne dirait rien de plus."""
-    if m.adresse and m.adresse == (qui.email or "").strip().lower():
+    if m.adresse and m.adresse == normaliser_adresse(qui.email):
         return None
     return nom_affiche(qui.prenom, qui.nom)
 

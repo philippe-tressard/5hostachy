@@ -24,7 +24,6 @@ from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user
@@ -47,6 +46,7 @@ from app.utils.limiter import (
 from app.utils.batiments import libelle_batiment_ou
 from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
 from app.utils.lecture_utilisateur import construire_user_read
+from app.utils.verification_adresse import demander_changement_adresse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -64,7 +64,10 @@ def me(
 class MeUpdate(BaseModel):
     prenom: str | None = None
     nom: str | None = None
+    #  Une adresse DIFFÉRENTE n'est qu'une demande : elle exige le mot de passe
+    #  actuel, et ne remplace l'ancienne qu'une fois confirmée (#1549).
     email: str | None = None
+    mot_de_passe_actuel: str | None = None
     telephone: str | None = None
     societe: str | None = None
     fonction: str | None = None
@@ -97,19 +100,24 @@ def update_me(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
+    if body.email is not None:
+        #  🔴 L'adresse ne s'écrit PAS ici (#1549) : elle s'écrivait sur-le-champ,
+        #  sans mot de passe ni re-vérification, et une session volée suffisait à
+        #  détourner le compte. La demande éprouve le mot de passe, envoie le lien
+        #  à la nouvelle adresse et l'avis à l'ancienne — qui reste celle du
+        #  compte jusqu'au clic. EN PREMIER : un refus n'enregistre rien du reste.
+        demander_changement_adresse(
+            session,
+            cible=user,
+            acteur=user,
+            nouvelle_adresse=body.email,
+            mot_de_passe=body.mot_de_passe_actuel,
+            background_tasks=background_tasks,
+        )
     if body.prenom is not None:
         user.prenom = body.prenom
     if body.nom is not None:
         user.nom = body.nom
-    if body.email is not None:
-        new_email = body.email.strip().lower()
-        if new_email != user.email.lower():
-            existing = session.exec(
-                select(Utilisateur).where(func.lower(Utilisateur.email) == new_email)
-            ).first()
-            if existing:
-                raise HTTPException(400, "Cette adresse e-mail est déjà utilisée")
-            user.email = new_email
     if body.telephone is not None:
         user.telephone = body.telephone
     if body.societe is not None:

@@ -73,8 +73,8 @@
 
 <!--  `rempli` : « En mon nom » EST une réponse — la section n'attend rien
       de plus, donc son astérisque n'est pas rouge (#1121). -->
-<!--  🔴 L'intitulé se LIT dans la table (#1124) : la section 10 s'appelle
-      « Au nom de » depuis le cadre à treize sections, et cet écran affichait
+<!--  🔴 L'intitulé se LIT dans la table (#1124) : la section s'appelle
+      « Au nom de » depuis la recomposition du cadre (#1095), et cet écran affichait
       encore « Saisi pour ». Deux noms pour une section, dont un seul est
       déclaré — signalé à l'écran le 22/09/2026. -->
 <SectionFormulaire

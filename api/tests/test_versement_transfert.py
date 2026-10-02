@@ -331,3 +331,56 @@ def test_un_correspondant_qui_ne_modere_pas_annule_mais_ne_deplace_pas(lieu):
     with pytest.raises(HTTPException) as e:
         exiger_auteur_du_versement(session, ticket.id, v.id, syndic, deplacer=True)
     assert e.value.status_code == 403
+
+
+def _admis(session, ticket, v, user) -> tuple[bool, bool]:
+    """(annuler est admis, déplacer est admis) — ce que les gestes répondent."""
+    reponses = []
+    for deplacer in (False, True):
+        try:
+            exiger_auteur_du_versement(session, ticket.id, v.id, user, deplacer=deplacer)
+        except HTTPException as e:
+            assert e.status_code == 403
+            reponses.append(False)
+        else:
+            reponses.append(True)
+    return reponses[0], reponses[1]
+
+
+def _propose(session, ticket, v, user) -> tuple[bool, bool]:
+    """(la ligne est proposée, le déplacement est proposé) — ce que l'écran reçoit."""
+    from app.routers.tickets.transferts import lister_transferts
+
+    lignes = {t.id: t for t in lister_transferts(ticket.id, session=session, user=user)}
+    return v.id in lignes, v.id in lignes and lignes[v.id].peut_deplacer
+
+
+def test_la_liste_propose_exactement_ce_que_le_geste_admet(lieu):
+    """#1551 : la liste filtrait sur sa propre copie de la règle du geste.
+
+    Lecteur par lecteur, ce que `GET …/transferts` propose (la ligne, et
+    `peut_deplacer`) est ce que les gestes admettent — y compris le cas limite
+    du correspondant qui a transféré sans modérer : il voit la ligne, il peut
+    annuler, il ne peut pas déplacer.
+    """
+    session, ticket, syndic, cs, objet, comptes = lieu
+    v = _dans_le_ticket(session, cs, ticket, syndic, objet)
+    lecteurs = {
+        "celui qui a transféré": cs,
+        "administrateur": _compte(session, comptes, "admin"),
+        "autre membre du conseil": _compte(session, comptes, "conseil_syndical"),
+    }
+    attendu = {
+        "celui qui a transféré": (True, True),
+        "administrateur": (True, True),
+        "autre membre du conseil": (False, False),
+    }
+    for nom, user in lecteurs.items():
+        assert _propose(session, ticket, v, user) == _admis(session, ticket, v, user), nom
+        assert _admis(session, ticket, v, user) == attendu[nom], nom
+
+    v.transfere_par_id = syndic.id  # un correspondant qui ne modère pas
+    session.add(v)
+    session.commit()
+    assert _propose(session, ticket, v, syndic) == _admis(session, ticket, v, syndic)
+    assert _admis(session, ticket, v, syndic) == (True, False)

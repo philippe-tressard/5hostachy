@@ -15,6 +15,7 @@ from app.models.core import Delegation, StatutDelegation, Utilisateur
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
+from app.utils.journal_securite import journaliser_securite
 from app.auth.appartenance import exiger_aidant_de_la_delegation
 
 router = APIRouter(prefix="/delegations", tags=["délégations-aidant"])
@@ -120,7 +121,7 @@ def create_delegation(
         mandant_id=body.mandant_id,
         aidant_id=body.aidant_id,
         motif=body.motif,
-        date_debut=date.today(),
+        date_debut=horloge.aujourd_hui(),
         date_fin=date.fromisoformat(body.date_fin) if body.date_fin else None,
         cree_par_id=user.id,
         cree_le=horloge.maintenant(),
@@ -129,6 +130,12 @@ def create_delegation(
     session.add(delegation)
     session.commit()
     session.refresh(delegation)
+    journaliser_securite(
+        "delegation_creee",
+        acteur_id=user.id,
+        cible_id=delegation.mandant_id,
+        detail=f"aidant={delegation.aidant_id}",
+    )
     return _to_read(delegation, session)
 
 
@@ -174,6 +181,12 @@ def accepter_delegation(
     session.add(d)
     session.commit()
     invalider_statuts_lus(d.aidant_id)  # il lit désormais au titre de l'aidé (#1303)
+    journaliser_securite(
+        "delegation_acceptee",
+        acteur_id=user.id,
+        cible_id=d.mandant_id,
+        detail=f"aidant={d.aidant_id}",
+    )
     session.refresh(d)
     return _to_read(d, session)
 
@@ -204,6 +217,12 @@ def revoquer_delegation(
     session.add(d)
     session.commit()
     invalider_statuts_lus(d.aidant_id)  # l'héritage cesse avec elle (#1303)
+    journaliser_securite(
+        "delegation_revoquee",
+        acteur_id=user.id,
+        cible_id=d.mandant_id,
+        detail=f"aidant={d.aidant_id}",
+    )
     session.refresh(d)
     return _to_read(d, session)
 

@@ -4,14 +4,20 @@
   création, la correction dans la carte, les documents, la synthèse ✨ et la
   notation d'un contrat. La page garde le chargement des listes et le bouton
   « Nouveau contrat » de son en-tête, qui appelle `basculerCreation`.
+
+  📦 Les contrats rangés ont leur écran depuis le 02/10/2026 (#1538) : la section
+  Archives sous la liste, par `ListeEtArchives`. L'onglet les charge lui-même
+  (`contratsArchives()`) ; les décomptes d'échéance ne portent que sur les
+  contrats courants — un contrat rangé n'a plus de visite à faire.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { confirmerPuis } from '$lib/confirmation';
+	import { archiverPuis } from '$lib/confirmation';
 	import { supprimerDocument } from '$lib/gestes-document';
 	import { attacherApres } from '$lib/fichiers';
 	import { messageErreur, tenter } from '$lib/erreurs';
+	import { essayer } from '$lib/chargement';
 	import { basculer } from '$lib/accordeon';
 	import { prestataires as prestApi, documents as docsApi } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -23,6 +29,7 @@
 	import FormulaireContrat from '$lib/components/FormulaireContrat.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import IntertitreGroupe from '$lib/components/IntertitreGroupe.svelte';
+	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 
 	export let prestataires: any[] = [];
 	export let contrats: any[] = [];
@@ -89,6 +96,9 @@
 	//  que la liste, qui appartient à l'onglet puisque c'est lui qui l'affiche.
 	let contratDocsMap: Record<number, any[]> = {};
 
+	/** Les contrats rangés — `archivee` vient du serveur (`REGLES["contrat"]`). */
+	let archives: any[] = [];
+
 	// ── Échéances des contrats ────────────────────────────────────
 	//  🔴 L'onglet « Visites » lisait ces mêmes contrats dans un écran à part
 	//  (#603). Une visite n'est pas un objet : c'est la PROCHAINE ÉCHÉANCE d'un
@@ -117,18 +127,23 @@
 		});
 	}
 
-	onMount(async () => {
-		if (contrats.length === 0) return;
+	/**  Les documents de ces contrats, ajoutés à la table — la carte d'un contrat
+	 *   rangé montre les siens comme une autre. */
+	async function chargerDocs(liste: any[]) {
 		const results = await Promise.allSettled(
-			contrats.map((c) =>
-				docsApi.list(undefined, c.id).then((docs: any[]) => ({ id: c.id, docs })),
-			),
+			liste.map((c) => docsApi.list(undefined, c.id).then((docs: any[]) => ({ id: c.id, docs }))),
 		);
-		const map: Record<number, any[]> = {};
+		const map: Record<number, any[]> = { ...contratDocsMap };
 		for (const r of results) {
 			if (r.status === 'fulfilled') map[r.value.id] = r.value.docs;
 		}
 		contratDocsMap = map;
+	}
+
+	onMount(async () => {
+		//  Sans message : un échec laisse simplement la section absente.
+		[archives] = await essayer(prestApi.contratsArchives(), []);
+		await chargerDocs([...contrats, ...archives]);
 	});
 
 	function resetContratForm() {
@@ -243,10 +258,12 @@
 	const deleteDoc = (contratId: number, docId: number) =>
 		supprimerDocument(docId, 'Ce document', () => rechargerDocs(contratId));
 
-	async function deleteContrat(id: number) {
-		await confirmerPuis('Archiver ce contrat ?', 'Archivé', async () => {
-			await prestApi.deleteContrat(id);
-			contrats = contrats.filter((c) => c.id !== id);
+	/** 📦 Ranger (`true`) ou ressortir (`false`) un contrat — un geste, un mot. */
+	async function archiver(id: number, archivee: boolean) {
+		const libelle = [...contrats, ...archives].find((c) => c.id === id)?.libelle ?? '';
+		await archiverPuis(`Le contrat « ${libelle} »`, 'les Archives', archivee, async () => {
+			await prestApi.archiverContrat(id, archivee);
+			[contrats, archives] = await Promise.all([prestApi.contrats(), prestApi.contratsArchives()]);
 		});
 	}
 </script>
@@ -311,48 +328,58 @@
 </div>
 
 <!-- Groupé par spécialité du prestataire -->
-{#if contrats.length === 0}
+{#if contrats.length === 0 && archives.length === 0}
 	<div class="empty-state card">
 		<h3>Aucun contrat</h3>
 		<p>Ajoutez le premier contrat via le bouton ci-dessus.</p>
 	</div>
 {:else}
-	{#each equipements.filter( (e) => contrats.some((c) => typeEquipementDuContrat(c, prestataires) === e.val) ) as specGroup (specGroup.val)}
-		<IntertitreGroupe libelle={specGroup.label} />
-		{#each parEcheance(contrats.filter((c) => typeEquipementDuContrat(c, prestataires) === specGroup.val)) as c (c.id)}
-			{@const contrat = c}
-			{@const prest = prestataires.find((p) => p.id === c.prestataire_id)}
-			<CarteContrat
-				{contrat}
-				{prest}
-				expanded={ouvert === c.id}
-				enRetard={contratEnRetard(c)}
-				documents={contratDocsMap[contrat.id] ?? []}
-				peutModifier={$isCS}
-				{editContratId}
-				bind:contratForm
-				{prestataires}
-				{equipements}
-				{submitting}
-				onBasculer={(id) => (ouvert = basculer(ouvert, id))}
-				onModifier={startEditContrat}
-				onSynthetiser={synthetiserContrat}
-				{syntheseEnCoursId}
-				onArchiver={deleteContrat}
-				onSupprimerDoc={deleteDoc}
-				onAjouteDoc={rechargerDocs}
-				onAnnuler={closeContratForm}
-				onEnregistrer={saveContrat}
-				onNoter={openNotationForm}
-				noteEnCours={showNotationForm?.contratId === c.id}
-				bind:noteValeur={notationNote}
-				bind:noteCommentaire={notationCommentaire}
-				noteSaving={notationSaving}
-				onAnnulerNote={() => (showNotationForm = null)}
-				onEnregistrerNote={saveNotation}
-			/>
+	<!--  Le même rendu, deux fois : les contrats courants, puis les Archives
+	      repliées sous la liste — `items` est la seule différence. -->
+	<ListeEtArchives
+		liste={[...contrats, ...archives]}
+		titreVideCourant="Aucun contrat actif"
+		messageVideCourant="Les contrats archivés sont rangés dans les Archives, ci-dessous."
+		let:items
+	>
+		{#each equipements.filter( (e) => items.some((c) => typeEquipementDuContrat(c, prestataires) === e.val) ) as specGroup (specGroup.val)}
+			<IntertitreGroupe libelle={specGroup.label} />
+			{#each parEcheance(items.filter((c) => typeEquipementDuContrat(c, prestataires) === specGroup.val)) as c (c.id)}
+				{@const contrat = c}
+				{@const prest = prestataires.find((p) => p.id === c.prestataire_id)}
+				<CarteContrat
+					{contrat}
+					archive={c.archivee}
+					{prest}
+					expanded={ouvert === c.id}
+					enRetard={!c.archivee && contratEnRetard(c)}
+					documents={contratDocsMap[contrat.id] ?? []}
+					peutModifier={$isCS}
+					{editContratId}
+					bind:contratForm
+					{prestataires}
+					{equipements}
+					{submitting}
+					onBasculer={(id) => (ouvert = basculer(ouvert, id))}
+					onModifier={startEditContrat}
+					onSynthetiser={synthetiserContrat}
+					{syntheseEnCoursId}
+					onArchiver={archiver}
+					onSupprimerDoc={deleteDoc}
+					onAjouteDoc={rechargerDocs}
+					onAnnuler={closeContratForm}
+					onEnregistrer={saveContrat}
+					onNoter={openNotationForm}
+					noteEnCours={showNotationForm?.contratId === c.id}
+					bind:noteValeur={notationNote}
+					bind:noteCommentaire={notationCommentaire}
+					noteSaving={notationSaving}
+					onAnnulerNote={() => (showNotationForm = null)}
+					onEnregistrerNote={saveNotation}
+				/>
+			{/each}
 		{/each}
-	{/each}
+	</ListeEtArchives>
 {/if}
 
 <style>

@@ -380,12 +380,21 @@ l'astérisque tapée (claude-config#122, 24/09/2026).
 archivé, et `ListeEtArchives` / `ArchivesParAnnee` en donnent l'accès.
 `npm run lint:archives` tient cette règle.
 
-⚠️ **Il n'y a pas de bouton 📦 « Archiver ».** L'archivage suit l'**état** de
-l'objet — un ticket résolu, un événement passé — et le geste explicite n'existe
-que là où l'utilisateur doit trancher lui-même. Cette section enseignait le
-bouton ; `ux-patterns` §16 l'interdisait au même moment. **Une skill qui se
-contredit avec l'autre n'enseigne rien** : c'est `ux-patterns` §16 qui fait foi,
-et la divergence de `CarteEvenement` y est déclarée.
+**Deux façons de quitter la liste**, et c'est `ux-patterns` §8 et §16 qui font
+foi — cette section n'en recopie que ce qu'un écran doit savoir :
+
+- **le temps** : `archivee` est calculé côté serveur (`utils/archivage.REGLES`) —
+  annonces, idées, sondages, affiches, affaires résolues. Jamais recalculé ici ;
+- **le geste 📦 du conseil** : affaires, actualités (`archive_manuel`),
+  prestataires et contrats (`PATCH …/archivage`, #1538). Le bouton porte
+  `aria-label="Archiver"` et l'icône 📦 — **jamais 🗑️**, qui dit « supprimer ».
+  Le pendant aux Archives est ↩️ Restaurer. La confirmation passe par `ARCHIVAGE`
+  ou `archiverPuis` (`$lib/confirmation`), jamais une phrase écrite dans l'écran.
+
+🔴 Cette section affirmait jusqu'au 02/10/2026 *« il n'y a pas de bouton 📦 »* —
+démenti depuis le 24/09 par les affaires (#1555). Une consigne qui nie un geste
+existant le fait réécrire en 🗑️ : c'est exactement ce que portaient les cartes
+des prestataires et des contrats (#1538).
 
 La **suppression définitive** reste possible pour un administrateur, et c'est le
 seul cas : `require_admin` côté API.

@@ -37,8 +37,8 @@
 # Toute explication va donc ICI, au-dessus ; en dessous, on écrit sans apostrophe.
 #
 # ── Le motif d'extraction des scripts planifiés (C18) ────────────────────────
-# Il doit rester IDENTIQUE à celui de `crontab_scripts()` dans `lib-verdicts.sh`,
-# qui est la version pure et testée. `verdicts_selftest` échoue si les deux
+# Il doit rester IDENTIQUE à celui de `scripts_cites()` dans `lib-points-entree.sh`,
+# la version pure et testée (que `crontab_scripts` emploie). `verdicts_selftest` échoue si les deux
 # divergent — il ne s'agit pas d'un vœu, mais d'un contrôle.
 #
 # ⚠️ Pourquoi la barre oblique est dans la classe : #337 a rangé les scripts dans
@@ -57,8 +57,6 @@ echo "cf_enabled=$(systemctl is-enabled cloudflared 2>/dev/null)"
 echo "head=$(git -C $R rev-parse --short HEAD 2>/dev/null)"
 echo "origin_head=$(git -C $R rev-parse --short origin/main 2>/dev/null)"
 echo "git_root_ok=$(git -C $R rev-parse HEAD >/dev/null 2>&1 && echo yes || echo no)"
-BITS=ok; for s in bascule.sh health-watch.sh maintenance.sh auto-deploy.sh MaJ-Hostachy.sh check-reliability.sh boot-role-guard.sh; do [ -f "$R/$s" ] && [ ! -x "$R/$s" ] && BITS="manque:$s"; done
-echo "exec_bits=$BITS"
 echo "disk=$(df / | awk "NR==2{print \$5}" | tr -d %)"
 echo "ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null)"
 echo "lock=$([ -f $R/.bascule-lock ] && stat -c %Y $R/.bascule-lock || echo 0)"
@@ -161,7 +159,7 @@ esac
 # donc la commande RÉUSSIRAIT en donnant la mauvaise réponse. Un faux vert par
 # succès, le pire des cas.
 if [ "$(id -u)" = "0" ]; then CRONRAW=$(crontab -l 2>/dev/null); else CRONRAW=$(sudo -n crontab -l 2>/dev/null); fi
-# Motif jumeau de crontab_scripts() dans lib-verdicts.sh — voir la note au-dessus
+# Motif jumeau de scripts_cites() dans lib-points-entree.sh — voir la note au-dessus
 # de COLLECT. La barre oblique dans la classe est indispensable depuis #337.
 echo "cronscripts=$(echo "$CRONRAW" | grep -vE "^\s*(#|$)" | grep -oE "/opt/5hostachy/[A-Za-z0-9_./-]+\.sh" | sed "s#.*/##" | sort -u | paste -sd, - | tr -d " \n")"
 # ── C20. Inventaire des permissions élevées — METADONNEES SEULES ─────────────
@@ -228,3 +226,17 @@ echo "sudosurface=$(printf "%s" "$SURF" | sed -n "s/.*NOPASSWD:[[:space:]]*//p" 
 # executee sur les deux noeuds, et donc le `bash -n` de `verdicts_selftest`.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-mises-a-jour.sh"
 COLLECT="$COLLECT$COLLECT_MAJ"
+
+# C6 (#1546) : les bits d'exécution des scripts que lancent crons et unité. La
+# liste se DÉRIVE de `infra/points-entree/` (relais suivis) dans le shell qui
+# assemble — elle était recopiée ici, et six noms sur sept avaient disparu
+# depuis le 16/08/2026 : la boucle ne mesurait rien et rendait « ok ». Mesure,
+# dérivation et décision vivent avec leurs épreuves dans `lib-points-entree.sh`,
+# qui doit donc être sourcé AVANT ce module.
+COLLECT="$COLLECT$(fragment_bits_exec "$(scripts_a_mesurer "$(dirname "${BASH_SOURCE[0]}")/../..")")"
+
+# C31 (#1586) : la date de la derniere SONDE de health-watch. Ce qu il ecrit, ce
+# que la collecte en lit et ce que C31 en conclut vivent ensemble, dans
+# `lib-health-watch.sh` ; `healthwatch_verdicts` y est donc defini aussi.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-health-watch.sh"
+COLLECT="$COLLECT$COLLECT_HW"

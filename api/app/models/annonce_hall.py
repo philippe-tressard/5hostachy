@@ -20,6 +20,8 @@ from typing import Optional
 
 from sqlmodel import Field
 
+from app.utils.perimetres import perimetre_cible_json
+
 from app.utils.assiste_ia import AssisteIAMixin
 from pydantic import NaiveDatetime
 
@@ -36,7 +38,8 @@ class AnnonceHall(AssisteIAMixin, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     titre: str
     message: str  # HTML riche (RichEditor)
-    perimetre_cible: str = '["résidence"]'  # JSON: résidence|bat:{id}|parking|cave|aful
+    #  JSON de codes de l'arbre ; le défaut se lit dans les données (#1567).
+    perimetre_cible: str = Field(default_factory=perimetre_cible_json)
     format_demande: str = "auto"  # auto | a4 | a5
     format_effectif: str = "a4"  # a4 | a5
     images_json: str = "[]"  # JSON: photos facultatives (max 2)

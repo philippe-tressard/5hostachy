@@ -63,8 +63,11 @@ import { fileURLToPath } from 'node:url';
  *  est retiré avec la collecte qu’il lisait (`OngletCsp`, `1.4rem`).
  *  Puis 169 couleurs : le sélecteur de lots de « Mes lots », qui repeignait des
  *  pastilles (`#fff` sur le bleu), passe par `ChoixPastilles` (#779).
+ *  02/10/2026 (#1537) : 168 couleurs et 123 tailles. Les 23 classes des
+ *  feuilles globales que plus rien n'employait sont retirées (`.alert-info`,
+ *  `.imp-header`, `.kb-item-*`, `.month-label`, `.muted-sm`…).
  */
-const PLAFOND = { couleurs: 169, tailles: 128 };
+const PLAFOND = { couleurs: 168, tailles: 123 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

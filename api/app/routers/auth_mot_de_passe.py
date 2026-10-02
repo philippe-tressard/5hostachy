@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
 from app.utils.journal_securite import journaliser_securite
+from app.auth.adresse_compte import compte_par_adresse
 from app.auth.deps import get_current_user
 from app.auth.empreinte_jeton import empreinte
 from app.auth.jwt import verify_password
@@ -88,9 +89,7 @@ def request_password_reset(
     site_url = base_site(cfg.get("site_url"))
     site_nom = nom_site(cfg.get("site_nom"))
 
-    user = session.exec(
-        select(Utilisateur).where(Utilisateur.email == body.email.strip().lower())
-    ).first()
+    user = compte_par_adresse(session, body.email)
     if user and user.actif:
         # Invalider les tokens de reset précédents non utilisés
         old_tokens = session.exec(

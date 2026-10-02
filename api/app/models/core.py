@@ -216,7 +216,7 @@ class Mandat(SQLModel, table=True):
     bailleur_id: int = Field(foreign_key="utilisateur.id")
     lot_id: int = Field(foreign_key="lot.id")
     type_mandat: str = "location"  # location | juridique
-    date_debut: date = Field(default_factory=date.today)
+    date_debut: date = Field(default_factory=horloge.aujourd_hui)
     date_fin: Optional[date] = None
     actif: bool = True
 

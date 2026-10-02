@@ -33,6 +33,7 @@ from app.auth.empreinte_jeton import empreinte, est_empreinte
 from app.database import engine
 from app.models.core import EmailVerificationToken, PasswordResetToken, RefreshToken
 from app.routers import auth, auth_mot_de_passe
+from app.utils import verification_adresse
 from app.schemas import LoginRequest
 from tests.aides_sources import modules_app
 from tests.conftest import requete_de_test
@@ -205,7 +206,8 @@ def test_aucun_jeton_brut_en_base_apres_les_parcours_reels(jetons_emis):
 
 def test_le_parcours_VOIT_un_jeton_stocke_en_clair(jetons_emis, monkeypatch):
     """Garde-fou : une écriture qui stockerait le brut est refusée, dans les trois familles."""
-    for module in (auth, auth_mot_de_passe):
+    #  Le lien de vérification s'émet dans `utils/verification_adresse` (#1549).
+    for module in (auth, auth_mot_de_passe, verification_adresse):
         monkeypatch.setattr(module, "empreinte", lambda brut: brut)
     _, ecarts = jetons_emis()
     for modele in ("EmailVerificationToken", "RefreshToken", "PasswordResetToken"):

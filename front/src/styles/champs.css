@@ -226,13 +226,11 @@
     ⚠️ À poser sur le CHAMP, jamais sur la grille : c'est le contenu qui décide
     de sa largeur, pas l'écran qui l'accueille. */
 .field.champ-court input,
-.field.champ-court select,
-.input-champ-court {
+.field.champ-court select {
 	max-width: 8rem;
 }
 .field.champ-moyen input,
-.field.champ-moyen select,
-.input-champ-moyen {
+.field.champ-moyen select {
 	max-width: 14rem;
 }
 /*  Un champ posé dans une RANGÉE — barre d’outils, ligne d’action, formulaire
@@ -357,9 +355,11 @@ label.field.case {
     écrans contre un). Même arbitrage que `.aide` plus haut dans ce fichier,
     pour la même raison.
 
-    Ce qui reste LOCAL à chaque éditeur est ce qui les distingue vraiment : la
-    zone éditable du premier, l'en-tête à libellé et le bouton « source » du
-    second. */
+    ✅ Le 02/10/2026 (#1539), les deux éditeurs n'en font plus qu'un :
+    `LegalEditor` est fondu dans `RichEditor`, qui déclare ce qui les
+    distinguait (`titres`, `sourceHtml`). Ce cadre et cette barre restent ici
+    parce qu'ils habillent un composant partagé, pas parce qu'il y en aurait
+    encore deux. */
 .editeur-cadre {
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius);

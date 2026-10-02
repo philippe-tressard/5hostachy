@@ -27,7 +27,8 @@
   moins. Ce composant rend le pied dans les deux cas.
 
   Seule la troisième ligne reste une différence, et elle est maintenant
-  **explicite** : deux appels, deux contenus de `<slot>`.
+  **explicite** : deux appels, deux contenus de `<slot>` — relayés depuis le
+  02/10/2026 par `AnnuaireMembres`, qui porte la liste (#1539).
 
   ## 🔴 La fiche est une CARTE DE LISTE, comme les onze autres du site
 
@@ -112,6 +113,16 @@
 	 *  principal du syndic. Un troisième rôle s'ajoute ICI, pas dans une page.
 	 */
 	export let accent: 'president' | 'principal' | null = null;
+	/**
+	 *  Le détail déplié a son contenu PROPRE (emplacement `detail`) ; sinon la
+	 *  fiche dépliée montre son résumé.
+	 *
+	 *  Une prop, et non `$$slots.detail` (#1539) : la fiche est montée par
+	 *  `AnnuaireMembres`, qui RELAIE ses emplacements — un emplacement relayé
+	 *  est toujours « rempli » aux yeux de l'enfant, même vide. C'est la liste,
+	 *  qui voit ce que son appelant a écrit, qui le dit.
+	 */
+	export let detailPropre = false;
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
@@ -237,7 +248,7 @@
 				      repli paresseux : la fiche du syndic avait exactement le même
 				      contenu replié et déplié-non-édité, écrit DEUX fois. L'un des
 				      deux serait tôt ou tard passé à côté d'un champ ajouté. -->
-				{#if $$slots.detail}
+				{#if detailPropre}
 					<slot name="detail" />
 				{:else}
 					<div class="membre-summary"><slot name="resume" /></div>

@@ -15,9 +15,9 @@
 #  seul. `check-reliability.sh --selftest` s'en charge.
 #
 #  ⚠️ `${BASH_SOURCE[0]}` désigne désormais CE fichier. Le contrôle qui compare
-#  les deux écritures du motif de crontab doit donc viser `lib-verdicts.sh`
-#  explicitement — c'est fait par `_LV` ci-dessous. Un contrôle qui se lirait
-#  lui-même trouverait ses propres fixtures et se déclarerait cohérent.
+#  les deux écritures du motif de crontab doit donc viser `lib-points-entree.sh`
+#  (`scripts_cites`, #1546) explicitement — c'est `_LV` ci-dessous. Un contrôle
+#  qui se lirait lui-même trouverait ses fixtures et se déclarerait cohérent.
 # =============================================================================
 
 
@@ -256,10 +256,10 @@ verdicts_selftest() {
   if [ ! -r "$_LC" ]; then
     echo "FAIL  lib-collecte.sh illisible — comparaison impossible, donc INCONNU"; st_fail=1
   else
-    #  ⚠️ `lib-verdicts.sh` explicitement, PAS `${BASH_SOURCE[0]}` : depuis que le
-    #  selftest vit dans son propre fichier, se lire soi-même trouverait les
-    #  fixtures et déclarerait la cohérence sans avoir regardé la fonction.
-    _LV="$(dirname "${BASH_SOURCE[0]}")/lib-verdicts.sh"
+    #  ⚠️ Le module de `scripts_cites` explicitement, PAS `${BASH_SOURCE[0]}` :
+    #  se lire soi-même trouverait les fixtures et déclarerait la cohérence sans
+    #  avoir regardé la fonction. (Le motif a quitté lib-verdicts.sh le 02/10.)
+    _LV="$(dirname "${BASH_SOURCE[0]}")/lib-points-entree.sh"
     _M_PUR=$(grep -oE '/opt/5hostachy/\[[^]]+\]\+' "$_LV" | head -1)
     _M_COL=$(grep -oE '/opt/5hostachy/\[[^]]+\]\+' "$_LC" | head -1)
     if [ -z "$_M_PUR" ] || [ -z "$_M_COL" ]; then
@@ -484,6 +484,10 @@ verdicts_selftest() {
   ba "accent perdu en SSH" FAIL    "[2026-09-21 07:48:01] Aligne (standby - ?CHEC du build)."
   #  Cas zéro : sans ligne, on ne SAIT pas — et INCONNU n'est pas OK.
   ba "ligne absente"       INCONNU ""
+  #  #1587 : ces sorties sont DATÉES, donc C14 les voit vivantes ; C27 dit
+  #  qu'elles n'ont rien déployé. Sans ces cas, elles rendraient OK.
+  ba "fetch en echec (#1587)" REPORTE "[2026-09-29 16:48:01] ⚠ git fetch impossible (fatal: Could not read from remote repository.) — déploiement reporté au prochain passage."
+  ba "sortie imprevue (#1587)" INTERROMPU "[2026-10-02 09:10:30] ⚠ ÉCHEC inattendu (code 1, dernière commande : docker compose up -d) — auto-deploy interrompu sans ligne de sortie."
 
   return $st_fail
 }

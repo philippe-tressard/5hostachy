@@ -12,6 +12,12 @@
  *  • un NOM saisi lie le membre à un inscrit et le localise par le registre
  *    importé, et c'est ce qui PART au serveur ;
  *  • le syndic refuse un membre sans téléphone, sans rien envoyer.
+ *
+ *  Depuis le 02/10/2026 (#1539), les deux listes passent par `AnnuaireMembres`,
+ *  qui RELAIE les emplacements de `CarteMembre`. D'où trois cas de plus, sur ce
+ *  qu'une factorisation perd sans un mot : le détail propre du conseil (un
+ *  emplacement relayé paraît toujours rempli), l'ordre du syndic et son
+ *  interlocuteur principal, et l'en-tête qui envoie la liste entière.
  */
 import type { Page } from '@playwright/test';
 import { attendreHydratation, expect, simulerApi, test } from './aides';
@@ -57,7 +63,7 @@ const IMPORTS = [
 
 type Envoi = { chemin: string; corps: any };
 
-async function ouvrir(page: Page): Promise<Envoi[]> {
+async function ouvrir(page: Page, syndic: typeof SYNDIC = SYNDIC): Promise<Envoi[]> {
 	const envois: Envoi[] = [];
 	page.on('request', (r) => {
 		const chemin = new URL(r.url()).pathname;
@@ -66,7 +72,7 @@ async function ouvrir(page: Page): Promise<Envoi[]> {
 	});
 	await simulerApi(page, (chemin) => {
 		if (chemin === '/api/admin/annuaire/cs') return CS;
-		if (chemin === '/api/admin/annuaire/syndic') return SYNDIC;
+		if (chemin === '/api/admin/annuaire/syndic') return syndic;
 		if (chemin === '/api/admin/utilisateurs') return INSCRITS;
 		if (chemin === '/api/lots/admin/tous') return LOTS;
 		if (chemin === '/api/lots/admin/imports') return IMPORTS;
@@ -125,4 +131,42 @@ test('le syndic refuse un membre sans téléphone, et n’envoie rien', async ({
 	await syndic.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 	await expect(page.getByText('Au moins un téléphone requis')).toBeVisible();
 	expect(envois).toHaveLength(0);
+});
+
+test('déplié, le conseil montre son détail et le syndic son résumé', async ({ page }) => {
+	await ouvrir(page);
+	const conseil = section(page, 'Conseil Syndical');
+	await conseil.getByRole('button', { name: /DURAND/ }).click();
+	await expect(conseil.locator('.localisation-info')).toHaveCount(1);
+	await expect(conseil.locator('.membre-summary')).toHaveCount(0);
+
+	const syndic = section(page, 'Syndic');
+	await syndic.getByRole('button', { name: /MARTIN/ }).click();
+	await expect(syndic.locator('.membre-summary .summary-fonction')).toHaveText('Gestionnaire');
+});
+
+test('le syndic se réordonne, l’ordre part au serveur, un seul principal', async ({ page }) => {
+	const morel = { ...SYNDIC.membres[0], prenom: 'Zoé', nom: 'Morel', est_principal: false };
+	const envois = await ouvrir(page, { ...SYNDIC, membres: [...SYNDIC.membres, morel] });
+	const syndic = section(page, 'Syndic');
+	await syndic.getByRole('button', { name: 'Descendre' }).first().click();
+	await expect.poll(() => envois.length).toBe(1);
+	expect(envois[0].corps.membres.map((m: any) => m.nom)).toEqual(['Morel', 'Martin']);
+	//  Pas de « Monter » en tête ; « principal » se propose au seul membre qui ne l'est pas.
+	await expect(syndic.getByRole('button', { name: 'Monter' })).toHaveCount(1);
+	await expect(syndic.getByRole('button', { name: 'Définir interlocuteur principal' })).toHaveCount(
+		1,
+	);
+});
+
+test('l’en-tête du conseil s’enregistre avec la liste entière', async ({ page }) => {
+	const envois = await ouvrir(page);
+	const conseil = section(page, 'Conseil Syndical');
+	await conseil.locator('.header-summary').getByRole('button', { name: 'Modifier' }).click();
+	await conseil.getByLabel('Voté en AG').fill('2026');
+	await conseil.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+	await expect.poll(() => envois.length).toBe(1);
+	expect(envois[0].corps).toMatchObject({ ag_annee: 2026 });
+	expect(envois[0].corps.membres).toHaveLength(1);
+	await expect(conseil.locator('.header-summary')).toContainText('AG 2026');
 });

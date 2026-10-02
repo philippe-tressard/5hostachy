@@ -51,7 +51,9 @@ from __future__ import annotations
 
 import inspect
 
-from app.utils.envois_uniques import adresses, normaliser, sans_les_deja_servies
+#  La forme d'une adresse vit dans `auth.adresse_compte` depuis #1550.
+from app.auth.adresse_compte import normaliser_adresse
+from app.utils.envois_uniques import adresses, sans_les_deja_servies
 
 
 # ── Le module de déduplication, éprouvé seul ─────────────────────────────────
@@ -59,7 +61,7 @@ from app.utils.envois_uniques import adresses, normaliser, sans_les_deja_servies
 
 def test_les_adresses_se_comparent_sans_casse_ni_espaces():
     """Deux écritures de la même boîte doivent se reconnaître."""
-    assert normaliser("  Jean.Dupont@Exemple.FR  ") == "jean.dupont@exemple.fr"
+    assert normaliser_adresse("  Jean.Dupont@Exemple.FR  ") == "jean.dupont@exemple.fr"
 
 
 def test_la_normalisation_ne_va_PAS_plus_loin():
@@ -69,8 +71,8 @@ def test_la_normalisation_ne_va_PAS_plus_loin():
     des serveurs. Les « normaliser » ensemble retirerait un destinataire légitime
     — et c'est le mauvais côté de l'erreur : un doublon dérange, une absence prive.
     """
-    assert normaliser("jean.dupont@x.fr") != normaliser("jeandupont@x.fr")
-    assert normaliser("a+ticket@x.fr") != normaliser("a@x.fr")
+    assert normaliser_adresse("jean.dupont@x.fr") != normaliser_adresse("jeandupont@x.fr")
+    assert normaliser_adresse("a+ticket@x.fr") != normaliser_adresse("a@x.fr")
 
 
 def test_le_retrait_conserve_l_ORDRE():

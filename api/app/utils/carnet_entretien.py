@@ -55,6 +55,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from app.utils import horloge
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -209,7 +210,7 @@ def _entrees_contrats(session: Session, perimetre: Optional[str]) -> list[Entree
     """
     requete = select(ContratEntretien).where(ContratEntretien.actif == True)  # noqa: E712
 
-    aujourdhui = date.today()
+    aujourdhui = horloge.aujourd_hui()
     entrees: list[EntreeCarnet] = []
     for contrat in session.exec(requete).all():
         debut = _jour(contrat.date_debut)

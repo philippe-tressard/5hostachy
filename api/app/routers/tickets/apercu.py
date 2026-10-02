@@ -70,6 +70,7 @@ from .suite_groupe import message_suite
 from app.utils.liens import base_site
 from app.utils.categories_ticket import ticket_urgent
 from app.utils.nature_affaire import est_actualite, statut_pour
+from app.utils.perimetres import perimetre_cible_json
 from app.utils.recuperer import ou_404
 from app.utils.visibility import reservee_au_conseil
 
@@ -144,7 +145,7 @@ def _ticket_previsionnel(brouillon: BrouillonTicket, auteur: Utilisateur) -> Tic
         if brouillon.public_cible
         else None,
         auteur_id=auteur.id,
-        perimetre_cible=json.dumps(brouillon.perimetre_cible or ["résidence"], ensure_ascii=False),
+        perimetre_cible=perimetre_cible_json(brouillon.perimetre_cible),
         photos_urls=photos_json(brouillon.photos_urls),
         fichiers_urls=photos_json(brouillon.fichiers_urls),
         destinataire_syndic=brouillon.destinataire_syndic,

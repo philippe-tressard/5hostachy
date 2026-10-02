@@ -135,6 +135,19 @@ def test_le_lendemain_elle_sort():
     assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is True
 
 
+def test_a_00h30_a_paris_la_veille_est_passee():
+    """🔴 Le « jour dit » est celui de Paris, pas celui de l'UTC (#1565).
+
+    `maintenant` est l'instant de la base, en UTC naïf. 22:30 UTC le 1er octobre,
+    c'est 00:30 le 2 à Paris : une coupure d'eau finie le 1er est passée. Lire le
+    jour en UTC la laissait au fil jusqu'à deux heures du matin.
+    """
+    #  Créée la semaine même : seule la péremption peut la sortir, pas l'âge.
+    pub = _Pub(fin=datetime(2026, 10, 1, 18, 0), cree_le=datetime(2026, 9, 28))
+    assert est_archivable("ticket", pub, maintenant=datetime(2026, 10, 1, 22, 30)) is True
+    assert est_archivable("ticket", pub, maintenant=datetime(2026, 9, 30, 22, 30)) is False
+
+
 def test_une_date_a_venir_ne_change_rien():
     pub = _Pub(fin=DEMAIN)
     assert est_archivable("ticket", pub, maintenant=AUJOURDHUI) is False

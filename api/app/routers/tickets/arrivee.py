@@ -139,11 +139,12 @@ def adresses_deja_servies(
     #  recouvrement est donc CONDITIONNEL — mais quand il a lieu, il coûte deux
     #  courriels, et le retirer ne coûte rien.
     if (categorie or ticket.categorie) == "bug":
+        from app.auth.adresse_compte import normaliser_adresse
         from app.utils.email import get_site_manager_notification_email
 
         adresse_admin, _ = get_site_manager_notification_email(session)
         if adresse_admin:
-            servies.add(adresse_admin.strip().lower())
+            servies.add(normaliser_adresse(adresse_admin))
 
     return servies
 

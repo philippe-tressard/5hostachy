@@ -15,7 +15,6 @@ sans date.
 quoi que ce soit dans cet inventaire. L'écran manquait, pas le serveur (#806).
 """
 
-from datetime import date
 from app.utils import horloge
 from typing import List
 
@@ -107,7 +106,7 @@ def retour_objet(
     if not objet or objet.bail_id != bail_id:
         raise HTTPException(status_code=404, detail="Objet introuvable")
     objet.statut = StatutObjet.perdu if data.perdu else StatutObjet.rendu
-    objet.rendu_le = data.rendu_le or date.today()
+    objet.rendu_le = data.rendu_le or horloge.aujourd_hui()
     session.add(objet)
     session.commit()
     session.refresh(objet)

@@ -126,12 +126,31 @@ CLES_CONFIG = frozenset(
     {
         "whatsapp_enabled",
         "whatsapp_api_url",
-        "whatsapp_api_key",
         "whatsapp_group_jid",
         "whatsapp_footer",
         "site_url",
     }
 )
+
+
+class CleBridgeRefusee(RuntimeError):
+    """Le bridge répond 401 : la clé de l'API n'est pas la sienne."""
+
+
+def entetes_bridge(json: bool = False) -> dict[str, str]:
+    """Les en-têtes d'une requête au bridge — la clé ne se lit qu'ICI (#1596).
+
+    Elle vient de l'environnement (`WHATSAPP_API_KEY`, celle que compose donne
+    au bridge), jamais de `ConfigSite` : deux écritures d'un même secret
+    divergent en silence. Toujours en EN-TÊTE — le bridge refuse la clé en
+    paramètre d'URL, qui finirait dans les journaux d'accès.
+    """
+    from app.config import get_settings
+
+    entetes = {"x-api-key": get_settings().whatsapp_api_key.strip()}
+    if json:
+        entetes["Content-Type"] = "application/json"
+    return entetes
 
 
 def config_whatsapp(session, *cles_en_plus: str) -> dict:
@@ -180,14 +199,13 @@ def envoyer_whatsapp(
     if config.get("whatsapp_enabled") != "1":
         return
     api_url = config.get("whatsapp_api_url", "").strip()
-    api_key = config.get("whatsapp_api_key", "").strip()
     group_jid = config.get("whatsapp_group_jid", "").strip()
     if not api_url or not group_jid:
         logger.warning("WhatsApp activé mais whatsapp_api_url ou whatsapp_group_jid manquant.")
         return
 
     url = f"{api_url.rstrip('/')}/send"
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
+    headers = entetes_bridge(json=True)
 
     message = construire_message(
         titre,
@@ -314,29 +332,33 @@ def envoyer_whatsapp_avec_log(
 def envoyer_whatsapp_raw(text: str, config: dict) -> dict:
     """Envoie un message brut sur le groupe WhatsApp. Lève une exception en cas d'échec."""
     api_url = config.get("whatsapp_api_url", "").strip()
-    api_key = config.get("whatsapp_api_key", "").strip()
     group_jid = config.get("whatsapp_group_jid", "").strip()
     if not api_url or not group_jid:
         raise ValueError("whatsapp_api_url ou whatsapp_group_jid manquant.")
 
     url = f"{api_url.rstrip('/')}/send"
     payload = {"number": group_jid, "text": text}
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
 
-    return _poster_au_bridge(url, payload, headers).json()
+    return _poster_au_bridge(url, payload, entetes_bridge(json=True)).json()
 
 
 def get_whatsapp_status(config: dict) -> dict:
-    """Interroge le bridge pour connaître l'état de la connexion WhatsApp."""
+    """Interroge le bridge pour connaître l'état de la connexion WhatsApp.
+
+    Un 401 se NOMME (#1596) : la clé de l'API n'est pas celle du bridge, et
+    « 401 Unauthorized » n'aurait rien dit de plus qu'une panne.
+    """
     api_url = config.get("whatsapp_api_url", "").strip()
-    api_key = config.get("whatsapp_api_key", "").strip()
     if not api_url:
         raise ValueError("whatsapp_api_url manquant.")
 
-    url = f"{api_url.rstrip('/')}/status"
-    headers = {"x-api-key": api_key}
-
     with httpx.Client(timeout=5) as client:
-        resp = client.get(url, headers=headers)
-        resp.raise_for_status()
-        return resp.json()
+        resp = client.get(f"{api_url.rstrip('/')}/status", headers=entetes_bridge())
+    if resp.status_code == 401:
+        raise CleBridgeRefusee(
+            "Le bridge WhatsApp refuse la clé de l'API : WHATSAPP_API_KEY n'est pas la même "
+            "des deux côtés. Après toute modification de .env : "
+            "docker compose up -d api whatsapp-bridge"
+        )
+    resp.raise_for_status()
+    return resp.json()

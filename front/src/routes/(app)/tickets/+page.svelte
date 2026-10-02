@@ -13,7 +13,7 @@
 	import { tickets as ticketsApi, type Ticket, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { optionsRapides } from '$lib/options-rapides';
-	import { SUPPRESSION, confirmerPuis } from '$lib/confirmation';
+	import { ARCHIVAGE, SUPPRESSION, confirmerPuis } from '$lib/confirmation';
 	import type { GestesTicket } from '$lib/tickets';
 	import { TICKET } from '$lib/entites/ticket';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -359,12 +359,7 @@
 	//  📦 Archiver, et non supprimer, depuis la liste (24/09/2026, `ux-patterns`
 	//  §8) : le 🗑️ y effaçait une actualité entière, sans retour possible.
 	async function archiverTicket(t: Ticket) {
-		const question = {
-			titre: 'Archiver',
-			message: `${designation(t)} rejoindra l'onglet Archives.`,
-			libelleConfirmer: 'Archiver',
-		};
-		await confirmerPuis(question, 'Archivée', async () => {
+		await confirmerPuis(ARCHIVAGE(designation(t)), 'Archivée', async () => {
 			const maj = await ticketsApi.update(t.id, { archive_manuel: true });
 			ticketList = ticketList.map((x) => (x.id === t.id ? { ...x, ...maj } : x));
 		});

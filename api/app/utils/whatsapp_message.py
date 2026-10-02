@@ -16,6 +16,40 @@ import json
 import re
 
 from app.utils.liens import base_site
+from app.utils.perimetres import est_perimetre_par_defaut
+
+
+def _libelle_perimetre(perimetre_cible: str | list | None) -> str:
+    """Le périmètre affiché dans l'en-tête — « Copropriété » quand c'est le défaut.
+
+    Écrit DEUX fois dans ce module jusqu'au 02/10/2026, chaque copie comparant
+    `lieux[0] == "résidence"` : le code de la racine en dur, là où l'arbre le
+    désigne (#1567). La question se pose maintenant à `est_perimetre_par_defaut`,
+    comme `estPerimetreParDefaut` côté front.
+    """
+    try:
+        lieux = (
+            json.loads(perimetre_cible)
+            if isinstance(perimetre_cible, str)
+            else (perimetre_cible or [])
+        )
+    except Exception:
+        lieux = []
+    if not isinstance(lieux, list) or est_perimetre_par_defaut(lieux):
+        return "Copropriété"
+    return ", ".join(str(lieu) for lieu in lieux)
+
+
+def _entete(titre: str, urgente: bool, perimetre_cible: str | list | None) -> str:
+    """La première ligne du message — commune au message complet et au restreint.
+
+    Écrite dans chacun des deux jusqu'au 02/10/2026, avec le calcul du périmètre
+    qu'elle affiche (#1567).
+    """
+    perimetre_label = _libelle_perimetre(perimetre_cible)
+    if urgente:
+        return f"🚨 URGENT — 🔹 {perimetre_label} — *{titre}*"
+    return f"📢 🔹 {perimetre_label} — *{titre}*"
 
 
 def _build_message(
@@ -40,24 +74,7 @@ def _build_message(
     l'écran (R5 — un enrichissement se propage, donc il se constate d'abord
     sur UN cas).
     """
-    # Périmètre
-    try:
-        lieux = (
-            json.loads(perimetre_cible)
-            if isinstance(perimetre_cible, str)
-            else (perimetre_cible or [])
-        )
-    except Exception:
-        lieux = []
-    if lieux and not (len(lieux) == 1 and lieux[0] == "résidence"):
-        perimetre_label = ", ".join(lieux)
-    else:
-        perimetre_label = "Copropriété"
-
-    if urgente:
-        header = f"🚨 URGENT — 🔹 {perimetre_label} — *{titre}*"
-    else:
-        header = f"📢 🔹 {perimetre_label} — *{titre}*"
+    header = _entete(titre, urgente, perimetre_cible)
 
     # Contenu : convertir le formatage HTML en markdown WhatsApp
     # Gras : <b>, <strong>  → *texte*
@@ -133,23 +150,7 @@ def _build_message_restreint(
     seconde fonction jumelle aurait divergé dès la première retouche de l'en-tête
     ou du lien (`standards/02-factorisation.md` §2).
     """
-    try:
-        lieux = (
-            json.loads(perimetre_cible)
-            if isinstance(perimetre_cible, str)
-            else (perimetre_cible or [])
-        )
-    except Exception:
-        lieux = []
-    if lieux and not (len(lieux) == 1 and lieux[0] == "résidence"):
-        perimetre_label = ", ".join(lieux)
-    else:
-        perimetre_label = "Copropriété"
-
-    if urgente:
-        header = f"🚨 URGENT — 🔹 {perimetre_label} — *{titre}*"
-    else:
-        header = f"📢 🔹 {perimetre_label} — *{titre}*"
+    header = _entete(titre, urgente, perimetre_cible)
 
     avertissement = (
         "🔒 Cette publication est réservée à un public ciblé.\n"

@@ -4,11 +4,17 @@
   création, la correction dans la carte et le lien profond `#presta-<id>`. La
   page garde le chargement des listes et le bouton « Nouveau prestataire » de
   son en-tête, qui appelle `basculerCreation`.
+
+  📦 Les fiches rangées ont leur écran depuis le 02/10/2026 (#1538) : la section
+  Archives sous la liste, par `ListeEtArchives` — le motif des trois onglets de
+  la Communauté. L'onglet les charge lui-même (`archives()`) : la page partage
+  sa liste avec les contrats et les relevés, qui n'ont pas à les voir.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { confirmerPuis } from '$lib/confirmation';
+	import { archiverPuis } from '$lib/confirmation';
 	import { tenter } from '$lib/erreurs';
+	import { essayer } from '$lib/chargement';
 	import { basculer } from '$lib/accordeon';
 	import { prestataires as prestApi } from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
@@ -31,6 +37,7 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import IntertitreGroupe from '$lib/components/IntertitreGroupe.svelte';
+	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 
 	export let prestataires: any[] = [];
 	export let contrats: any[] = [];
@@ -47,8 +54,14 @@
 	let prestForm = prestataireDepuis();
 	let prestContacts = contactsDepuis();
 
+	/** Les fiches rangées — `archivee` vient du serveur (`REGLES["prestataire"]`). */
+	let archives: any[] = [];
+
 	let filtres = filtresVides();
 	$: filteredPrests = filtrerPrestataires(prestataires, contrats, filtres);
+	//  Les filtres valent aussi pour les Archives : chercher « ascenseur » doit
+	//  retrouver l'ancien ascensoriste rangé.
+	$: archivesFiltrees = filtrerPrestataires(archives, contrats, filtres);
 	$: compactPrests = filteredPrests.length > 7;
 
 	//  Tous les contrats du prestataire, assurances et mandats compris : la carte
@@ -69,6 +82,8 @@
 	//  Lien profond `#presta-<id>` : la page a déjà conduit ici l'adresse qui le
 	//  portait (elle s'ouvre sur « Contrats » par défaut — signalé le 28/07/2026).
 	onMount(() => {
+		//  Sans message : un échec laisse simplement la section absente.
+		essayer(prestApi.archives(), []).then(([a]) => (archives = a));
 		const idPresta = cibleDuHash('presta');
 		if (idPresta === null) return;
 		ouvert = idPresta;
@@ -128,10 +143,12 @@
 		submitting = false;
 	}
 
-	async function deletePrest(id: number) {
-		await confirmerPuis('Archiver ce prestataire ?', 'Archivé', async () => {
-			await prestApi.delete(id);
-			prestataires = prestataires.filter((p) => p.id !== id);
+	/** 📦 Ranger (`true`) ou ressortir (`false`) une fiche — un geste, un mot. */
+	async function archiver(id: number, archivee: boolean) {
+		const nom = [...prestataires, ...archives].find((p) => p.id === id)?.nom ?? '';
+		await archiverPuis(`Le prestataire « ${nom} »`, 'les Archives', archivee, async () => {
+			await prestApi.archiver(id, archivee);
+			[prestataires, archives] = await Promise.all([prestApi.list(), prestApi.archives()]);
 		});
 	}
 </script>
@@ -158,38 +175,48 @@
 	</FormulaireCreation>
 {/if}
 
-{#if filteredPrests.length === 0}
+{#if filteredPrests.length === 0 && archivesFiltrees.length === 0}
 	<div class="empty-state card">
 		<h3>Aucun prestataire{filtresActifs(filtres) ? ' pour ces critères' : ''}</h3>
 	</div>
 {:else}
-	{#each typesPrestataire.filter( (t) => filteredPrests.some((p) => p.type_prestataire === t.val) ) as typeGroup (typeGroup.val)}
-		{#if !filtres.type}
-			<IntertitreGroupe libelle={typeGroup.label} descriptif={typeGroup.desc} />
-		{/if}
-		{#each filteredPrests.filter((p) => p.type_prestataire === typeGroup.val) as p (p.id)}
-			<CartePrestataire
-				{p}
-				cs={contratsForPrest(p.id)}
-				nextVisit={nextVisitForPrest(p.id)}
-				notations={notations.filter((n) => n.prestataire_id === p.id)}
-				expanded={ouvert === p.id}
-				{compactPrests}
-				peutModifier={$isCS}
-				{telephonesDe}
-				{editPrestId}
-				bind:prestForm
-				bind:prestContacts
-				{typesPrestataire}
-				{equipements}
-				{submitting}
-				onBasculer={(id) => (ouvert = basculer(ouvert, id))}
-				onModifier={startEditPrest}
-				onArchiver={deletePrest}
-				onAnnuler={fermerCreation}
-				onEnregistrer={savePrest}
-				on:supprimee={(e) => (notations = notations.filter((n) => n.id !== e.detail))}
-			/>
+	<!--  Le même rendu, deux fois : les fiches courantes, puis les Archives
+	      repliées sous la liste — `items` est la seule différence. -->
+	<ListeEtArchives
+		liste={[...filteredPrests, ...archivesFiltrees]}
+		titreVideCourant="Aucun prestataire actif{filtresActifs(filtres) ? ' pour ces critères' : ''}"
+		messageVideCourant="Les fiches archivées sont rangées dans les Archives, ci-dessous."
+		let:items
+	>
+		{#each typesPrestataire.filter( (t) => items.some((p) => p.type_prestataire === t.val) ) as typeGroup (typeGroup.val)}
+			{#if !filtres.type}
+				<IntertitreGroupe libelle={typeGroup.label} descriptif={typeGroup.desc} />
+			{/if}
+			{#each items.filter((p) => p.type_prestataire === typeGroup.val) as p (p.id)}
+				<CartePrestataire
+					{p}
+					archive={p.archivee}
+					cs={contratsForPrest(p.id)}
+					nextVisit={nextVisitForPrest(p.id)}
+					notations={notations.filter((n) => n.prestataire_id === p.id)}
+					expanded={ouvert === p.id}
+					{compactPrests}
+					peutModifier={$isCS}
+					{telephonesDe}
+					{editPrestId}
+					bind:prestForm
+					bind:prestContacts
+					{typesPrestataire}
+					{equipements}
+					{submitting}
+					onBasculer={(id) => (ouvert = basculer(ouvert, id))}
+					onModifier={startEditPrest}
+					onArchiver={archiver}
+					onAnnuler={fermerCreation}
+					onEnregistrer={savePrest}
+					on:supprimee={(e) => (notations = notations.filter((n) => n.id !== e.detail))}
+				/>
+			{/each}
 		{/each}
-	{/each}
+	</ListeEtArchives>
 {/if}

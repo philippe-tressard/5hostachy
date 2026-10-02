@@ -35,6 +35,7 @@ from app.models.core import (
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.schemas import AffaireLieeLue, ContratDeLAffaire, TicketEvolutionRead, TicketRead
 from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
+from app.utils.lecture import lire_objet
 from app.utils.photos import parse_photos
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
@@ -155,17 +156,15 @@ def evol_read(
     e: TicketEvolution, session: Session, statut_avant: Optional[str] = None
 ) -> TicketEvolutionRead:
     auteur = session.get(Utilisateur, e.auteur_id)
-    return TicketEvolutionRead(
-        id=e.id,
-        ticket_id=e.ticket_id,
-        type=e.type,
-        contenu=e.contenu,
-        ancien_statut=e.ancien_statut,
-        nouveau_statut=e.nouveau_statut,
-        auteur_id=e.auteur_id,
+    #  🔴 Lu sur le modèle depuis le 02/10/2026 (#1563). La recopie colonne par
+    #  colonne avait oublié `assiste_ia` et `contenu_origine` : le fil d'une
+    #  affaire n'a jamais montré la marque « rédigé avec l'assistant » ni le
+    #  « Message d'origine » d'une réponse reçue par courriel. `fichiers_urls`
+    #  se désérialise par son type (`ListeJson`).
+    return lire_objet(
+        TicketEvolutionRead,
+        e,
         auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else "?",
-        cree_le=e.cree_le,
-        fichiers_urls=json.loads(e.fichiers_urls) if e.fichiers_urls else [],
         #  `None` — et non `[]` — quand l'entrée ne parle pas du périmètre : le
         #  front distingue « n'en parle pas » de « plus aucun périmètre » (#497).
         #
@@ -271,30 +270,32 @@ def ticket_read(
     #  `epingle` et `assiste_ia`. Une liste recopiée se complète une ligne à la
     #  fois ; la lire sur le modèle ne s'oublie pas.
     #  🔒 `test_ticket_read_rend_le_modele.py` : chaque colonne partagée revient.
-    return TicketRead.model_validate(ticket).model_copy(
-        update=dict(
-            auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
-            auteur_batiment_nom=libelle_batiment_ou(batiment, None),
-            apercu_pieces=apercu_pieces(ticket, session),
-            affaires_liees=[
-                AffaireLieeLue(**lue)
-                for lue in liees_lisibles(session, ticket.id, lecteur, index=index, tickets=tickets)
-            ],
-            saisi_pour_affichage=saisi_pour_affichage,
-            proprietaire_nom=proprietaire_nom,
-            #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
-            #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
-            #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
-            #  demanderait de passer le seuil à tous les appelants de `ticket_read`,
-            #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
-            #  mesurer avant d'optimiser.
-            archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
-            relance_count=compter_relances(session, ticket.id),
-            natures=natures(ticket),
-            perime_le=perime_le(ticket, "ticket"),
-            prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
-            contrat=contrat_de_l_affaire(session, ticket.contrat_id, lecteur),
-        )
+    #  `lire_objet` depuis #1563 : la même lecture, et les champs dérivés sont
+    #  VALIDÉS — `model_copy(update=…)` les posait tels quels, sans contrôle.
+    return lire_objet(
+        TicketRead,
+        ticket,
+        auteur_nom=nom_affiche(auteur.prenom, auteur.nom) if auteur else None,
+        auteur_batiment_nom=libelle_batiment_ou(batiment, None),
+        apercu_pieces=apercu_pieces(ticket, session),
+        affaires_liees=[
+            AffaireLieeLue(**lue)
+            for lue in liees_lisibles(session, ticket.id, lecteur, index=index, tickets=tickets)
+        ],
+        saisi_pour_affichage=saisi_pour_affichage,
+        proprietaire_nom=proprietaire_nom,
+        #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici
+        #  dans une fonction appelée PAR TICKET : c'est un appel par ticket, et
+        #  c'est assumé — la liste en compte quelques dizaines. Le factoriser
+        #  demanderait de passer le seuil à tous les appelants de `ticket_read`,
+        #  dont plusieurs n'en rendent qu'un. À revoir si la liste grossit, et à
+        #  mesurer avant d'optimiser.
+        archivee=est_archivable("ticket", ticket, seuil_jours=seuil_archivage_jours(session)),
+        relance_count=compter_relances(session, ticket.id),
+        natures=natures(ticket),
+        perime_le=perime_le(ticket, "ticket"),
+        prestataire_nom=nom_prestataire(session, ticket.prestataire_id),
+        contrat=contrat_de_l_affaire(session, ticket.contrat_id, lecteur),
     )
 
 

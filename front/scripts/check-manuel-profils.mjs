@@ -12,16 +12,19 @@
  *    porte `data-onglet="<id>" data-reserve="<valeur>"`. Une réserve que le
  *    manuel annonce sans que `pages.ts` la porte doit être DÉCLARÉE ci-dessous,
  *    avec la ligne du code qui l'applique — et échoue si cette ligne disparaît.
- * 2. **Les treize sections d'une affaire, vues du résident** : la table du
- *    chapitre « Ouvrir une affaire » suit `SECTIONS_ORDRE`, dit « conseil » là
- *    où la déclaration `TICKET` éteint la section pour un résident, et ne dit
- *    « obligatoire » que d'une section `requis`.
+ * 2. **Les sections d'une affaire, vues du résident** : la table du chapitre
+ *    « Ouvrir une affaire » suit `SECTIONS_ORDRE`, dit « conseil » là où la
+ *    déclaration `TICKET` éteint la section pour un résident, ne dit
+ *    « obligatoire » que d'une section `requis` — et son titre, s'il compte les
+ *    sections, dit le compte de `SECTIONS_ORDRE` (#1541).
  * 3. **Les catégories qu'un résident choisit** : celles de `CATEGORIES_TICKET`
- *    sans `reserveCS`, ni plus ni moins.
+ *    sans `reserveCS`, ni plus ni moins — et le README, de même rang, ne les
+ *    énumère ni ne les compte : il renvoie au manuel (#1540).
  *
  * Il lit des ATTRIBUTS, jamais la prose (même raison que `check-manuel-menus`).
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { motifNombre, valeurNombre } from './lib-nombres-fr.mjs';
 
 const RACINE = new URL('../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const lire = (chemin) => readFileSync(`${RACINE}${chemin}`, 'utf8');
@@ -101,7 +104,7 @@ for (const [href, carte] of cartes) {
 	}
 }
 
-// ── 2. Les treize sections, vues du résident ────────────────────────────────
+// ── 2. Les sections, vues du résident ───────────────────────────────────────
 const ordre = [
 	...types.match(/SECTIONS_ORDRE[^=]*=\s*\[([\s\S]*?)\];/)[1].matchAll(/'(\w+)'/g),
 ].map((m) => m[1]);
@@ -126,6 +129,27 @@ if (ordre.length < 10 || declarations.size < 10) {
 if (lignes.map(([id]) => id).join(',') !== ordre.join(',')) {
 	erreurs.push(`la table des sections du manuel ne suit pas SECTIONS_ORDRE (${ordre.join(', ')})`);
 }
+//  Le TITRE de la table compte les sections (« Les quatorze sections du
+//  formulaire ») : le manuel s'adresse au résident et ne peut pas renvoyer à
+//  `SECTIONS_ORDRE`, son nombre est donc légitime — mais rien ne le relisait.
+//  La table, elle, était tenue : une quinzième section l'aurait fait rougir ici,
+//  et le titre serait resté à « quatorze » sans un mot (#1541). Il est lu au
+//  `<h3>` qui précède la première ligne marquée, jamais dans la prose.
+const debutTable = manuel.indexOf('data-section-affaire=');
+const titreTable = [...manuel.slice(0, debutTable).matchAll(/<h3>([^<]*)<\/h3>/g)].at(-1)?.[1];
+if (!titreTable) {
+	console.error(
+		'✗ Cas zéro : aucun <h3> avant la table des sections du manuel — le motif a dérivé.',
+	);
+	process.exit(1);
+}
+for (const m of titreTable.matchAll(new RegExp(motifNombre(), 'giu'))) {
+	if (valeurNombre(m[1]) !== ordre.length) {
+		erreurs.push(
+			`le titre de la table des sections, « ${titreTable} », annonce ${m[1]} : SECTIONS_ORDRE en compte ${ordre.length}`,
+		);
+	}
+}
 for (const [id, pourLeResident] of lignes) {
 	const d = declarations.get(id);
 	if (!d) continue;
@@ -141,13 +165,15 @@ for (const [id, pourLeResident] of lignes) {
 
 // ── 3. Les catégories d'un résident ─────────────────────────────────────────
 const tableCat = categories.slice(categories.indexOf('export const CATEGORIES_TICKET'));
-const ouvertes = tableCat
+const blocsCat = tableCat
 	.slice(0, tableCat.indexOf('\n];'))
 	.split(/\n\t\{/)
-	.slice(1)
+	.slice(1);
+const ouvertes = blocsCat
 	.filter((b) => !/reserveCS: true/.test(b))
 	.map((b) => b.match(/value: '(\w+)'/)?.[1])
 	.filter(Boolean);
+const libellesCat = blocsCat.map((b) => b.match(/label: '([^']+)'/)?.[1]).filter(Boolean);
 const annoncees = [...manuel.matchAll(/data-categorie="(\w+)"/g)].map((m) => m[1]);
 if (ouvertes.length < 5) {
 	console.error(
@@ -160,6 +186,45 @@ if ([...annoncees].sort().join(',') !== [...ouvertes].sort().join(',')) {
 		`catégories d'un résident : le manuel en annonce [${annoncees}], le code [${ouvertes}]`,
 	);
 }
+
+//  3 bis. Le README ne les ÉNUMÈRE pas (#1540, 02/10/2026).
+//
+//  🔴 Le README annonçait « Huit catégories », Étude & travaux ouverte aux
+//  résidents — fausse depuis #1098 (23/09/2026), quand le manuel, lui, était
+//  tenu ici. Deux documents de même rang (`user-manual`) se contredisaient sur
+//  un DROIT, et seul le manuel avait un contrôle. Plutôt que d'exiger du README
+//  une seconde copie exacte, on lui refuse la copie : il renvoie au chapitre
+//  « Ouvrir une affaire », que ce point-ci tient déjà.
+//
+//  Une ligne du README (une ligne = un module) qui nomme TROIS libellés de
+//  `CATEGORIES_TICKET` ou plus est une énumération ; en citer un ou deux pour
+//  dire autre chose — « une affaire neuve (Étude & travaux) », le filtre
+//  « Actualité » — reste permis. Et aucun nombre de catégories, juste ou faux.
+const readme = lire('../README.md');
+if (libellesCat.length < 5 || !readme.includes('##')) {
+	console.error(
+		`✗ Cas zéro : ${libellesCat.length} libellé(s) de catégorie lu(s), README illisible — le motif a dérivé.`,
+	);
+	process.exit(1);
+}
+const echapper = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const motifsLibelles = libellesCat.map(
+	(l) => new RegExp(`(?<![\\p{L}])${echapper(l)}(?![\\p{L}])`, 'u'),
+);
+readme.split(/\r?\n/).forEach((ligne, i) => {
+	const nommes = libellesCat.filter((_, k) => motifsLibelles[k].test(ligne));
+	if (nommes.length >= 3) {
+		erreurs.push(
+			`README.md:${i + 1} énumère des catégories (${nommes.join(', ')}) — renvoyer au chapitre ` +
+				'« Ouvrir une affaire » du manuel, qui est tenu par ce contrôle (#1540)',
+		);
+	}
+	for (const m of ligne.matchAll(new RegExp(`${motifNombre()}[*_]*\\s+catégories\\b`, 'giu'))) {
+		erreurs.push(
+			`README.md:${i + 1} compte des catégories (« ${m[0]} ») — juste ou faux, ce nombre se périme (#1540)`,
+		);
+	}
+});
 
 // ── 4. Les icônes d'une carte (24/09/2026) ─────────────────────────────────
 //  Chaque bouton des rangées d'actions porte un `aria-label` littéral ; le

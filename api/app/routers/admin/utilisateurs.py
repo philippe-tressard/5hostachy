@@ -6,10 +6,10 @@ Voir `__init__.py` pour la règle de découpage.
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, field_validator
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.utils.journal_securite import journaliser_securite
@@ -50,6 +50,7 @@ from app.utils.recuperer import ou_404
 from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
 from app.schemas_communs import NomMajuscules
 from app.utils.cloche import sonner_systeme
+from app.utils.verification_adresse import demander_changement_adresse
 
 router = APIRouter()
 
@@ -206,31 +207,45 @@ class AdminUserUpdate(BaseModel):
     #  de son lot. Mêmes règles qu'à l'inscription : bornes, capitales.
     etage: Optional[int] = None
     nom_proprietaire: NomMajuscules = None
+    #  Le mot de passe de l'ADMINISTRATEUR — exigé seulement si l'adresse change
+    #  (#1549). Sans lui, une session d'administration volée détournait n'importe
+    #  quel compte : son adresse, puis « mot de passe oublié » sur celle-ci.
+    mot_de_passe_actuel: Optional[str] = None
 
-    @field_validator("email", mode="before")
-    @classmethod
-    def lowercase_email(cls, v: str | None) -> str | None:
-        return v.strip().lower() if v else v
+
+#: Ce que le formulaire porte sans que ce soit un champ de la fiche à recopier :
+#: l'adresse passe par sa demande de changement, le mot de passe ne s'écrit pas.
+_HORS_FICHE = {"email", "mot_de_passe_actuel"}
 
 
 @router.patch("/utilisateurs/{user_id}", response_model=UserRead)
 def modifier_utilisateur(
     user_id: int,
     body: AdminUserUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     admin: Utilisateur = Depends(require_admin),
 ):
-    """Modifier les informations d'un utilisateur (admin)."""
+    """Modifier les informations d'un utilisateur (admin).
+
+    🔴 L'adresse ne s'écrit pas ici (#1549) : comme sur le profil, c'est une
+    DEMANDE — mot de passe de l'administrateur, lien de confirmation envoyé à la
+    nouvelle adresse, avis à l'ancienne, qui reste celle du compte jusqu'au clic.
+    """
     user = ou_404(session, Utilisateur, user_id, "Utilisateur")
-    if body.email and body.email != user.email.lower():
-        existing = session.exec(
-            select(Utilisateur).where(func.lower(Utilisateur.email) == body.email)
-        ).first()
-        if existing:
-            raise HTTPException(400, "Cet e-mail est déjà utilisé.")
     if body.etage is not None and etage_hors_bornes(body.etage):
         raise HTTPException(400, ETAGE_HORS_BORNES)
-    for field, val in body.model_dump(exclude_unset=True).items():
+    bascule_actif = body.actif is not None and body.actif != user.actif
+    if body.email is not None:
+        demander_changement_adresse(
+            session,
+            cible=user,
+            acteur=admin,
+            nouvelle_adresse=body.email,
+            mot_de_passe=body.mot_de_passe_actuel,
+            background_tasks=background_tasks,
+        )
+    for field, val in body.model_dump(exclude_unset=True, exclude=_HORS_FICHE).items():
         setattr(user, field, val)
     #  Basculer `actif` — dans un sens comme dans l'autre — EST une décision de
     #  l'administration sur ce compte. Sans cette ligne, désactiver un résident
@@ -240,6 +255,14 @@ def modifier_utilisateur(
         marquer_decide(user)
     session.add(user)
     session.commit()
+    #  Seulement si l'état CHANGE (#1548) : renvoyer le même état n'ouvre ni ne
+    #  ferme rien. Le changement d'adresse, lui, est journalisé par `demander_changement_adresse`.
+    if bascule_actif:
+        journaliser_securite(
+            "compte_reactive" if body.actif else "compte_desactive",
+            acteur_id=admin.id,
+            cible_id=user.id,
+        )
     session.refresh(user)
     return UserRead.from_orm_with_roles(user)
 
@@ -378,6 +401,9 @@ def supprimer_utilisateur(
     session.flush()
     purger(session, "utilisateur", user_id)
     session.commit()
+    #  Après l'effacement, plus rien en base ne dit qui l'a fait : cette ligne
+    #  est la seule trace qui reste (#1548).
+    journaliser_securite("compte_supprime", acteur_id=admin.id, cible_id=user_id)
 
 
 #  🔴 `POST /utilisateurs/{user_id}/changer-role` A ÉTÉ SUPPRIMÉ le 06/09/2026

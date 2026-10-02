@@ -33,7 +33,7 @@
  *
  * Uniquement les identifiants **importés depuis un fichier `.svelte`**. Les
  * autres `new X({...})` sont légitimes et nombreux : `new Editor({...})` de
- * TipTap vit dans deux composants d'édition riche, et il n'a rien à voir.
+ * TipTap vit dans `RichEditor` (un seul depuis #1539), et il n'a rien à voir.
  *
  * Un contrôle qui crierait sur eux serait désarmé dans la semaine.
  *

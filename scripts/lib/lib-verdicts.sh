@@ -197,9 +197,9 @@ verdict_verrou_orphelin() {  # $1 = epoch du dernier nettoyage · $2 = maintenan
 #  un monde disparu vérifie la fonction contre elle-même. Les fixtures couvrent
 #  désormais les DEUX formes, et c'est la nouvelle qui sert de cas zéro.
 crontab_scripts() {  # $1 = texte brut du crontab → "a.sh,b.sh" | ""
-  echo "$1" \
-    | grep -vE '^\s*(#|$)' \
-    | grep -oE '/opt/5hostachy/[A-Za-z0-9_./-]+\.sh' \
+  #  Le motif vit dans `scripts_cites` (lib-points-entree.sh), que C6 partage
+  #  depuis #1546 : une seule écriture pure, comparée au jumeau de la collecte.
+  echo "$1" | scripts_cites \
     | sed 's#.*/##' | sort -u | paste -sd, - | tr -d ' \n'
 }
 

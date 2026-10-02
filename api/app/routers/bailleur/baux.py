@@ -8,13 +8,13 @@ quatre modules partagent. Les redéclarer donnerait deux formes de la même
 réponse, libres de diverger au premier champ ajouté.
 """
 
-from datetime import date
 from app.utils import horloge
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app.auth.adresse_compte import compte_par_adresse
 from app.auth.deps import require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import (
@@ -191,7 +191,7 @@ def terminer_bail(
     #  Retour automatique de tous les accès confiés — la règle : `utils/acces_bail`.
     rendre_au_bailleur(session, bail)
     bail.statut = StatutBail.termine
-    bail.date_sortie_reelle = data.date_sortie_reelle or date.today()
+    bail.date_sortie_reelle = data.date_sortie_reelle or horloge.aujourd_hui()
     bail.mis_a_jour_le = horloge.maintenant()
     session.add(bail)
     session.commit()
@@ -234,9 +234,7 @@ def locataires_suggeres(
             continue
         np = u.nom_proprietaire.lower()
         if any(mot in np for mot in bailleur_mots):
-            result.append(
-                LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)
-            )
+            result.append(LocataireInfo.model_validate(u))
     return result
 
 
@@ -252,7 +250,8 @@ def search_locataire(
         return []
     if "@" in q:
         # Recherche exacte par email
-        results = session.exec(select(Utilisateur).where(Utilisateur.email == q.lower())).all()
+        trouve = compte_par_adresse(session, q)
+        results = [trouve] if trouve else []
     else:
         # Recherche partielle insensible à la casse par nom ou prénom
         pattern = f"%{q.lower()}%"
@@ -261,7 +260,4 @@ def search_locataire(
             .where((Utilisateur.nom.ilike(pattern)) | (Utilisateur.prenom.ilike(pattern)))
             .limit(10)
         ).all()
-    return [
-        LocataireInfo(id=u.id, nom=u.nom, prenom=u.prenom, email=u.email, actif=u.actif)
-        for u in results
-    ]
+    return [LocataireInfo.model_validate(u) for u in results]

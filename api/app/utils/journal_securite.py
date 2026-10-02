@@ -24,8 +24,9 @@ mais des identifiants : on ne peut pas journaliser par mégarde un champ qu'on n
 pas reçu.
 
 🔒 `api/tests/test_journal_securite.py` refuse un `email`, un `password` ou un
-`jeton` ici **et** chez les appelants, et exige un appel dans chacun des six
-gestes sensibles déclarés.
+`jeton` ici **et** chez les appelants, exige un appel dans chacun des gestes
+sensibles déclarés, et confronte cette liste à ce que les routeurs écrivent
+(#1548) ; `test_journal_gestes_comptes.py` vérifie la ligne émise par les routes.
 
 ## Le niveau dit la lecture, pas la gravité du geste
 
@@ -63,6 +64,22 @@ _NIVEAUX: dict[str, int] = {
     #  Un bail demandé sur un lot dont on n'est pas copropriétaire (#1535) :
     #  l'écran ne le propose pas, la requête a donc été forgée.
     "bail_hors_de_ses_lots": logging.WARNING,
+    #  Le cycle de vie d'un compte (#1548) : qui l'a ouvert, fermé, effacé.
+    #  Après une suppression, cette ligne est la SEULE trace de qui l'a faite.
+    "compte_valide": logging.WARNING,
+    "compte_refuse": logging.WARNING,
+    "compte_desactive": logging.WARNING,
+    "compte_reactive": logging.WARNING,
+    "compte_supprime": logging.WARNING,
+    #  Une délégation : un tiers qui lit au nom d'un résident. La cible est le
+    #  MANDANT — celui dont on lit —, l'aidant va dans le détail.
+    "delegation_creee": logging.WARNING,
+    "delegation_acceptee": logging.WARNING,
+    "delegation_revoquee": logging.WARNING,
+    #  L'adresse d'un compte qui va changer, puis qui a changé (#1549) : le
+    #  chemin d'un détournement — nouvelle adresse, puis « mot de passe oublié ».
+    "adresse_changement_demande": logging.WARNING,
+    "adresse_changee": logging.WARNING,
 }
 
 

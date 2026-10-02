@@ -25,7 +25,11 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
-from app.utils.perimetres.arbre import batiments_cibles, parse_json_perimetres
+from app.utils.perimetres.arbre import (
+    batiments_cibles,
+    parse_json_perimetres,
+    perimetre_cible_json,
+)
 from app.models.core import (
     ContratEntretien,
     NotationPrestataire,
@@ -36,6 +40,7 @@ from app.models.core import (
 
 from app.utils.echeance_contrat import poser_echeance
 from app.utils.noms import nom_affiche
+from app.utils.archivage import est_archivable
 from app.utils.assiste_ia import marquer
 from app.utils.recuperer import ou_404
 from app.routers.prestataires_schemas import (
@@ -53,6 +58,8 @@ router = APIRouter(prefix="/prestataires", tags=["prestataires"])
 def _prest_to_read(p: Prestataire) -> PrestataireRead:
     """Construit un PrestataireRead en parsant contacts_json."""
     data = PrestataireRead.model_validate(p)
+    #  Calculé par la règle déclarée, jamais relu de `actif` par l'écran (#1538).
+    data.archivee = est_archivable("prestataire", p)
     if p.contacts_json:
         try:
             data.contacts = json.loads(p.contacts_json)
@@ -61,17 +68,24 @@ def _prest_to_read(p: Prestataire) -> PrestataireRead:
     return data
 
 
+def lister_prestataires(session: Session, archivees: bool) -> list[PrestataireRead]:
+    """Les fiches courantes, ou celles des Archives (`GET /prestataires/archives`).
+
+    Par ordre ALPHABÉTIQUE (#1145) : on cherche une entreprise par son nom, et
+    l'ordre d'insertion n'aidait personne. Sans tenir compte de la casse.
+    📦 Le partage courants / Archives suit la règle déclarée (#1538), comme les
+    affiches de hall : la décision vit dans `REGLES`, pas dans un `WHERE`.
+    """
+    prests = session.exec(select(Prestataire).order_by(func.lower(Prestataire.nom))).all()
+    return [_prest_to_read(p) for p in prests if est_archivable("prestataire", p) == archivees]
+
+
 @router.get("", response_model=list[PrestataireRead])
 def list_prestataires(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    #  Par ordre ALPHABÉTIQUE (#1145) : on cherche une entreprise par son nom, et
-    #  l'ordre d'insertion n'aidait personne. Sans tenir compte de la casse.
-    prests = session.exec(
-        select(Prestataire).where(Prestataire.actif == True).order_by(func.lower(Prestataire.nom))  # noqa: E712
-    ).all()
-    return [_prest_to_read(p) for p in prests]
+    return lister_prestataires(session, archivees=False)
 
 
 @router.post("", response_model=PrestataireRead, status_code=201)
@@ -115,16 +129,8 @@ def update_prestataire(
     return _prest_to_read(p)
 
 
-@router.delete("/{p_id}", status_code=204)
-def archive_prestataire(
-    p_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    p = ou_404(session, Prestataire, p_id, "Prestataire")
-    p.actif = False
-    session.add(p)
-    session.commit()
+#  📦 Archiver et ressortir : `prestataires_archivage.py` (#1538). C'était un
+#  `DELETE` qui ne supprimait rien — trois mots pour un geste.
 
 
 # ── Contrats d'entretien ──────────────────────────────────────────────────────
@@ -132,7 +138,7 @@ def archive_prestataire(
 
 class ContratCreate(BaseModel):
     copropriete_id: int
-    #: Le PÉRIMÈTRE couvert — `["résidence"]`, `["bat:3"]`, `["parking"]`…
+    #: Le PÉRIMÈTRE couvert — des codes de l'arbre, `["bat:3"]`, `["parking"]`…
     #: C'est la seule chose que l'écran saisit depuis le 10/09/2026 ;
     #: `batiment_id` en est déduit par `_deriver_batiment` et n'est plus reçu.
     perimetre_cible: Optional[list[str]] = None
@@ -181,6 +187,8 @@ class ContratRead(BaseModel):
     frequence_valeur: Optional[int] = None
     prochaine_visite: Optional[date] = None
     actif: bool
+    #: Calculé par `REGLES["contrat"]` (#1538) — ce que lit l'écran.
+    archivee: bool = False
     notes: Optional[str] = None
     document_id: Optional[int] = None
 
@@ -211,7 +219,16 @@ def list_contrats(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    contrats = session.exec(select(ContratEntretien).where(ContratEntretien.actif == True)).all()  # noqa: E712
+    return lister_contrats(session, archivees=False)
+
+
+def lister_contrats(session: Session, archivees: bool) -> list[ContratRead]:
+    """Les contrats courants, ou ceux des Archives (`GET …/contrats/archives`)."""
+    contrats = [
+        c
+        for c in session.exec(select(ContratEntretien)).all()
+        if est_archivable("contrat", c) == archivees
+    ]
     #  ⚠️ La configuration de l'assistant se lit UNE fois, pas par contrat : elle
     #  est la même pour tous, et la relire à chaque ligne ferait autant d'allers
     #  en base que de contrats pour une réponse identique.
@@ -228,6 +245,7 @@ def list_contrats(
     lus = []
     for c in contrats:
         lu = poser_echeance(ContratRead.model_validate(c), c)
+        lu.archivee = archivees
         lu.synthese_disponible = assistant_pret and (
             not cfg.envoi_document or bool(documents_du_contrat(session, c))
         )
@@ -282,7 +300,7 @@ def _appliquer_perimetre(contrat: ContratEntretien, codes: Optional[list[str]]) 
     """
     if codes is None:
         return
-    contrat.perimetre_cible = json.dumps(codes or ["résidence"], ensure_ascii=False)
+    contrat.perimetre_cible = perimetre_cible_json(codes)
     vises = batiments_cibles(codes or [])
     contrat.batiment_id = next(iter(vises)) if len(vises) == 1 else None
 
@@ -296,7 +314,7 @@ def create_contrat(
     donnees = body.model_dump()
     codes = donnees.pop("perimetre_cible", None)
     c = ContratEntretien(**donnees)
-    _appliquer_perimetre(c, codes if codes is not None else ["résidence"])
+    _appliquer_perimetre(c, codes or [])
     session.add(c)
     session.commit()
     session.refresh(c)
@@ -320,18 +338,6 @@ def update_contrat(
     session.commit()
     session.refresh(c)
     return c
-
-
-@router.delete("/contrats/{c_id}", status_code=204)
-def archive_contrat(
-    c_id: int,
-    session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
-):
-    c = ou_404(session, ContratEntretien, c_id, "Contrat")
-    c.actif = False
-    session.add(c)
-    session.commit()
 
 
 # ── Notations prestataires ─────────────────────────────────────────────────

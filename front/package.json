@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.92.1",
+	"version": "2.93.0",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -84,6 +84,8 @@
 		"lint:accordeon": "node --experimental-strip-types scripts/check-accordeon.mjs --selftest",
 		"lint:annuaire-rapprochement": "node scripts/check-annuaire-rapprochement.mjs --selftest",
 		"lint:editeur": "node scripts/check-editeur-riche.mjs",
+		"lint:editeur-unique": "node scripts/check-editeur-unique.mjs --selftest && node scripts/check-editeur-unique.mjs",
+		"lint:annuaire-membres": "node scripts/check-annuaire-membres.mjs --selftest && node scripts/check-annuaire-membres.mjs",
 		"lint:tableaux": "node scripts/check-tableaux-scrollables.mjs",
 		"lint:csp": "node scripts/check-csp-servie.mjs",
 		"lint:evitement": "node scripts/check-lien-evitement.mjs",
@@ -129,6 +131,7 @@
 		"lint:section-nommee": "node scripts/check-section-nommee.mjs --selftest && node scripts/check-section-nommee.mjs",
 		"lint:bouton-icone": "node scripts/lib-balises.mjs --selftest && node scripts/check-bouton-icone.mjs --selftest && node scripts/check-bouton-icone.mjs",
 		"lint:tables-statuts": "node scripts/check-tables-statuts.mjs",
+		"lint:statuts-acces": "node scripts/check-statuts-acces.mjs --selftest && node scripts/check-statuts-acces.mjs",
 		"lint:lock": "node scripts/check-lock-coherent.mjs",
 		"lint:texte": "node --experimental-strip-types scripts/check-texte.mjs",
 		"lint:identite": "node scripts/check-identite-membre.mjs",
