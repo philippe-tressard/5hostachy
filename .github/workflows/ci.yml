@@ -565,6 +565,9 @@ jobs:
           # 🔒 La décision qui ÉCRIT dans /etc/sudoers.d (#1574) : son self-test
           # passait et n'était appelé par aucun job.
           bash scripts/installation/durcir-sudoers.sh --selftest
+          # La garde d'options du banc de volumes (#1605) : une option inconnue
+          # lançait le banc, qui crée et détruit des volumes. `docker` y est factice.
+          bash scripts/exploitation/banc-volumes.sh --selftest
           # Le garde-fou de cette étape elle-même : tout script versionné qui
           # expose --selftest doit être listé ci-dessus (étape suivante).
           bash scripts/poste/verifier-selftests-branches.sh --selftest

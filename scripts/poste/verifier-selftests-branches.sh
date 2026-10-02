@@ -46,12 +46,13 @@ EXCEPTIONS=()
 # ── Fonctions de décision PURES ──────────────────────────────────────────────
 
 #  Les fichiers (arguments) qui EXPOSENT `--selftest` : une ligne non commentée
-#  où l'on compare un argument à « --selftest ». Lit les fichiers, n'écrit rien.
+#  où l'on compare un argument à « --selftest » (`[ "$1" = "--selftest" ]`) ou
+#  qui en fait l'étiquette d'un `case` (`--selftest) …`). Lit les fichiers, n'écrit rien.
 exposeurs_selftest() {
   local f
   for f in "$@"; do
     [ -f "$f" ] || continue
-    grep -qE '^[^#]*= *"--selftest"' "$f" && printf '%s\n' "$f"
+    grep -qE '^[^#]*(= *"--selftest"|--selftest\))' "$f" && printf '%s\n' "$f"
   done
   return 0
 }
@@ -121,8 +122,11 @@ verifier_selftests_selftest() {
   printf '#!/bin/bash\n# bash x.sh --selftest : un commentaire n expose rien\n'  > "$tmp/commente.sh"
   printf '#!/bin/bash\necho rien\n'                                              > "$tmp/aucun.sh"
   printf '#!/bin/bash\n[ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ] && exit 0\n' > "$tmp/garde.sh"
+  printf '#!/bin/bash\ncase "${1:-}" in\n  --selftest) exit 0 ;;\nesac\n'            > "$tmp/etiquette.sh"
   _attend "un « = \"--selftest\" » non commenté est un exposeur" "2" \
     "$(exposeurs_selftest "$tmp/expose.sh" "$tmp/garde.sh" | wc -l | tr -d ' ')"
+  _attend "une étiquette « --selftest) » de case en est un aussi (banc-volumes.sh)" "1" \
+    "$(exposeurs_selftest "$tmp/etiquette.sh" | wc -l | tr -d ' ')"
   _attend "une mention en commentaire n'expose rien" "0" \
     "$(exposeurs_selftest "$tmp/commente.sh" "$tmp/aucun.sh" "$tmp/absent.sh" | wc -l | tr -d ' ')"
 
