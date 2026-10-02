@@ -3,7 +3,6 @@ from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
-from app.auth.adresse_compte import normaliser_adresse
 from app.models.core import StatutTicket, StatutUtilisateur, RoleUtilisateur
 from app.models.tickets import CategorieTicket
 from app.utils.perimetres import perimetre_defaut_liste
@@ -16,7 +15,6 @@ from app.schemas_communs import (  # noqa: F401
     AffaireLieeLue,
     ChampsIntervenant,
     ContratDeLAffaire,
-    nom_en_majuscules,
     ListeJson as ListeJson,
     liste_depuis_json as liste_depuis_json,
 )
@@ -27,38 +25,8 @@ from app.schemas_communs import (  # noqa: F401
 from app.utils.assiste_ia import AssisteIACorrection, AssisteIAEntree, AssisteIASortie
 from app.utils.saisi_pour import SaisiPourEntree, SaisiPourSortie
 
-
-class UserCreate(BaseModel):
-    nom: str
-    prenom: str
-    email: str
-    telephone: Optional[str] = None
-    societe: Optional[str] = None
-    fonction: Optional[str] = None
-    password: str
-    statut: StatutUtilisateur = StatutUtilisateur.copropriétaire_résident
-    consentement_rgpd: bool
-    batiment_id: Optional[int] = None
-    #  Facultatif : personne n'a à donner son étage pour créer un compte.
-    etage: Optional[int] = None
-    nom_proprietaire: Optional[str] = None
-    nom_aide: Optional[str] = None
-    prenom_aide: Optional[str] = None
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def lowercase_email(cls, v: str | None) -> str | None:
-        return normaliser_adresse(v) if v else v
-
-    @field_validator("nom", "nom_aide", "nom_proprietaire", mode="before")
-    @classmethod
-    def uppercase_nom(cls, v: str | None) -> str | None:
-        return nom_en_majuscules(v)
-
-    @field_validator("prenom", "prenom_aide", mode="before")
-    @classmethod
-    def titlecase_prenom(cls, v: str | None) -> str | None:
-        return v.strip().title() if v else v
+#  Ne vivent ici que les schémas PARTAGÉS par plusieurs routeurs. Un schéma propre
+#  à un seul routeur est déclaré à côté de lui (`<routeur>_schemas.py`) — #1566.
 
 
 class UserRead(BaseModel):
@@ -119,16 +87,6 @@ class UserRead(BaseModel):
         if delegations_aidant is not None:
             data.delegations_aidant = delegations_aidant
         return data
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def lowercase_email(cls, v: str) -> str:
-        return normaliser_adresse(v)
 
 
 class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
@@ -345,26 +303,6 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     photos_urls: Optional[List[str]] = None
 
 
-class MessageCreate(AssisteIAEntree):
-    contenu: str
-    interne: bool = False
-    fichiers_urls: List[str] = []
-    email_externe: Optional[str] = None  # adresse libre, CS/Admin uniquement
-
-
-class MessageRead(BaseModel):
-    id: int
-    ticket_id: int
-    auteur_id: int
-    contenu: str
-    interne: bool
-    cree_le: datetime
-    fichiers_urls: ListeJson = []
-
-    class Config:
-        from_attributes = True
-
-
 #  Les schémas du fil d’un ticket vivent dans `schemas_tickets.py` depuis le
 #  19/08/2026 (modularité, rang 1). Ré-exportés : les routeurs appelants ne
 #  changent pas d’import.
@@ -378,92 +316,3 @@ from app.schemas_tickets import (  # noqa: E402,F401
 #  Les schémas des PUBLICATIONS (`schemas_publications.py`) ont été retirés le
 #  23/09/2026 avec leur routeur : une actualité est une affaire de catégorie
 #  « Actualité » (#1091, lot 4), elle se lit et s'écrit par `schemas_tickets`.
-
-
-class DocumentRead(BaseModel):
-    id: int
-    titre: str
-    #  Section 6 du cadre, ajoutée le 08/09/2026 (#852). Défaut à vide plutôt
-    #  qu'`Optional` : une description absente et une description vide sont la
-    #  même chose pour le lecteur, et l'écran n'a alors rien à distinguer.
-    description: str = ""
-    fichier_nom: str
-    taille_octets: Optional[int] = None
-    mime_type: str
-    categorie_id: Optional[int] = None
-    contrat_id: Optional[int] = None
-    #  Rattachements des pièces jointes (#390) : le front en a besoin pour savoir
-    #  à quel porteur une ligne appartient sans refaire la requête.
-    ticket_id: Optional[int] = None
-    evenement_id: Optional[int] = None
-    perimetre: str
-    batiment_id: Optional[int] = None
-    publie_le: datetime
-    annee: Optional[int] = None
-    date_ag: Optional[date] = None
-    batiments_ids_json: Optional[str] = None
-    #  De quoi parle le document, en codes de périmètre (#470). Descriptif, pas
-    #  un droit — voir `models/documents.py`.
-    #
-    #  🔴 Sort en LISTE, jamais en JSON brut — même convention que
-    #  `PublicationRead` et `AnnonceRead`. C'est ce que `PerimetrePicker` et
-    #  `perimetreLabel` lisent côté front : leur faire parser une chaîne les
-    #  obligerait à connaître le format de stockage, et la troisième copie de
-    #  `JSON.parse` serait celle qui oublierait le `try`.
-    perimetre_cible: Optional[list[str]] = None
-
-    @field_validator("perimetre_cible", mode="before")
-    @classmethod
-    def _perimetre_en_liste(cls, v):
-        """La colonne est du texte ; l'API rend une liste.
-
-        ⚠️ Une valeur illisible rend `None`, pas une exception : un document
-        dont le ciblage est abîmé doit rester LISIBLE — il n'a alors simplement
-        plus de badge de périmètre. Lever ici rendrait toute la bibliothèque
-        inaccessible pour une ligne mal formée.
-        """
-        if v is None or isinstance(v, list):
-            return v
-        try:
-            valeur = json.loads(v)
-        except (ValueError, TypeError):
-            return None
-        return valeur if isinstance(valeur, list) else None
-
-    class Config:
-        from_attributes = True
-
-
-class NotificationRead(BaseModel):
-    id: int
-    type: str
-    titre: str
-    corps: str
-    lien: Optional[str] = None
-    lue: bool
-    urgente: bool
-    cree_le: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class CommandeAccesCreate(BaseModel):
-    lot_id: int
-    type: str  # vigik | telecommande
-    quantite: int = 1
-    motif: Optional[str] = None
-
-
-class CommandeAccesRead(BaseModel):
-    id: int
-    user_id: int
-    lot_id: int
-    type: str
-    quantite: int
-    motif: Optional[str] = None
-    statut: str
-    cree_le: datetime
-
-    class Config:
-        from_attributes = True

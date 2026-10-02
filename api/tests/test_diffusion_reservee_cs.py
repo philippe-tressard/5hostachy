@@ -26,7 +26,8 @@ import app.routers.tickets.evolutions as evolutions
 import app.routers.tickets.messages as messages
 import app.utils.diffusion as diffusion
 from app.models.core import RoleUtilisateur, Ticket
-from app.schemas import MessageCreate, TicketCreate
+from app.routers.tickets.messages_schemas import MessageCreate
+from app.schemas import TicketCreate
 from app.schemas_tickets import TicketEvolutionCreate
 from app.utils.horloge import maintenant
 from tests.aides_base import compte

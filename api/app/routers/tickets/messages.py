@@ -16,7 +16,7 @@ from app.models.core import (
     TicketEvolution,
     Utilisateur,
 )
-from app.schemas import MessageCreate, MessageRead
+from app.routers.tickets.messages_schemas import MessageCreate, MessageRead
 from app.utils.liens import lien_ticket
 from app.utils.photos import photos_json
 from app.utils.visibility import ticket_visible

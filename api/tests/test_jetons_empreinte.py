@@ -34,7 +34,7 @@ from app.database import engine
 from app.models.core import EmailVerificationToken, PasswordResetToken, RefreshToken
 from app.routers import auth, auth_mot_de_passe
 from app.utils import verification_adresse
-from app.schemas import LoginRequest
+from app.routers.auth_schemas import LoginRequest
 from tests.aides_sources import modules_app
 from tests.conftest import requete_de_test
 

@@ -20,7 +20,7 @@ from app.models.core import (
     ProfilAccesDocument,
     Utilisateur,
 )
-from app.schemas import DocumentRead
+from app.routers.documents_schemas import DocumentRead
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 
 # Toute règle de visibilité — documents compris — vient du module central.
