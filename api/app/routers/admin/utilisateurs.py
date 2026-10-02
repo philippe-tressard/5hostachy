@@ -28,7 +28,6 @@ from app.models.core import (
     StatutImport,
     StatutLotImport,
     StatutUtilisateur,
-    TelemetryEvent,
     UserLot,
     Utilisateur,
     VoteIdee,
@@ -256,9 +255,7 @@ def supprimer_utilisateur(
         raise HTTPException(400, "Vous ne pouvez pas supprimer votre propre compte.")
     ou_404(session, Utilisateur, user_id, "Utilisateur")
 
-    # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
-    for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
-        session.delete(ev)
+    #  0. Télémétrie : rien à effacer — elle ne porte plus d'identifiant (#1545).
 
     # 1. Tokens d'authentification
     for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():
