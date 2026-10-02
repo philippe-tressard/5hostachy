@@ -1,250 +1,119 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  Modularité (rang 1) — un fichier de plus de 500 lignes ne doit pas GROSSIR.
+#  Modularité (rang 1) — AUCUN fichier au-dessus de son plafond.
 #
-#  POURQUOI ce contrôle et pas un simple plafond : le dépôt compte 26 fichiers
-#  déjà au-dessus de 500 lignes. Un plafond absolu échouerait en permanence,
-#  donc serait désactivé dans la semaine. La règle du socle est « l'existant se
-#  découpe AU FIL DE L'EAU » : ce qui est interdit, ce n'est pas d'être gros,
-#  c'est de **grossir** sans découper.
+#  🔴 PLAFOND ABSOLU depuis le 02/10/2026 (#779). Jusque-là, ce contrôle ne
+#  refusait qu'un fichier NEUF trop long ou un fichier déjà trop long qui
+#  GROSSISSAIT : le dépôt en comptait 26 au départ (07/08/2026), un plafond
+#  absolu aurait échoué en permanence et aurait été désarmé dans la semaine. La
+#  règle était donc « l'existant se découpe au fil de l'eau », et le ticket #779
+#  en tenait la carte.
 #
-#  Trois verdicts :
-#    - fichier NEUF > 500 lignes            → échec (règle « nouvelle fonctionnalité »)
-#    - fichier déjà > 500 qui GROSSIT       → échec (dérogation au fil de l'eau)
-#    - fichier déjà > 500 qui MAIGRIT       → OK, c'est le progrès attendu
+#  La carte est VIDE depuis la v2.91.1 : plus un seul fichier au-dessus de son
+#  plafond. La tolérance n'a plus rien à tolérer — et la garder laisserait la
+#  carte se remplir de nouveau sans un mot : un fichier à 480 lignes qui passait
+#  à 520 par un simple reformatage était accepté (« volume inchangé »), et ne
+#  repassait plus jamais sous la barre puisque seule sa CROISSANCE était jugée.
 #
-#  Constaté le 07/08/2026 : flux.py 996 → 1044 et check-reliability.sh 486 → 565,
-#  sur trois lots successifs, sans qu'aucun contrôle ne le signale.
+#  Ce que la version précédente savait, et qui ne sert plus :
+#    - la mesure en VOLUME (caractères hors blancs, #419) distinguait un
+#      reformatage d'un ajout, le jour où Prettier a été posé sur un front dont
+#      treize fichiers dépassaient. Prettier et Ruff sont désormais imposés en CI
+#      (`prettier --check`, `ruff format --check`) : un formatage ne peut plus
+#      ajouter de lignes en douce. Une montée de version qui ferait déborder un
+#      fichier est un vrai débordement, et il se découpe ;
+#    - la comparaison à une base git, et la détection des renommages qui allait
+#      avec : un plafond absolu juge l'arbre tel qu'il est, d'où qu'il vienne.
 #
-#  Usage : bash scripts-ci-modularite.sh [base]     (défaut : origin/main)
+#  Deux plafonds, selon la NATURE du fichier (`plafond_de`) :
+#    - le code (.py .ts .js .mjs .svelte .sh) : 500 lignes, la règle du socle ;
+#    - les feuilles de style (.css) : 1 500 (#499, 19/08/2026). Les feuilles
+#      partagées sont le SEUL endroit où un style se met en commun : chaque
+#      extraction de composant y pousse du contenu. Les mesurer à 500 ferait de
+#      chaque factorisation réussie une violation.
+#
+#  Usage : bash scripts-ci-modularite.sh
 #          bash scripts-ci-modularite.sh --selftest
 # =============================================================================
 set -uo pipefail
 PLAFOND=500
-#  Les feuilles de style ont leur PROPRE plafond, et il est plus haut.
-#
-#  POURQUOI (19/08/2026, #499). Le filtre d'extensions ne connaissait que le
-#  CODE : `app.css` est passé de 1 017 à 1 160 lignes pendant le lot #453 et ce
-#  contrôle a affiché « aucun fichier n'a grossi ». Il disait vrai POUR CE QU'IL
-#  REGARDE — et c'est justement le problème : personne ne lit ce vert comme
-#  « sauf les feuilles de style ».
-#
-#  ⚠️ Un plafond identique à celui du code aurait été un faux remède. `app.css`
-#  est le SEUL endroit du front où un style se partage : la règle « le style part
-#  avec le balisage » y pousse mécaniquement du contenu à chaque extraction de
-#  composant. Le mesurer à 500 aurait transformé chaque factorisation réussie en
-#  violation — et ce contrôle aurait été désarmé dans la semaine, exactement pour
-#  la raison que l'en-tête de ce fichier donne à propos du plafond absolu.
 PLAFOND_STYLE=1500
 
-#  🔴 « GROSSIR » SE MESURE EN VOLUME, PAS EN LIGNES (29/08/2026, #419).
-#
-#  Le décompte de lignes mesure la DENSITÉ D'ÉCRITURE autant que la taille : il
-#  pénalise le formatage standard et récompense l'écriture dense — l'inverse de
-#  ce qu'il cherche. Mesuré en exécutant réellement `prettier --write` :
-#
-#      mon-lot        1608 → 2263 lignes (+41 %)   52454 → 52615 car. (+0,3 %)
-#      prestataires   1243 → 2053 lignes (+65 %)   50567 → 50737 car. (+0,3 %)
-#      admin          1382 → 1957 lignes (+42 %)   51301 → 51371 car. (+0,1 %)
-#
-#  Le reformatage aurait fait échouer TREIZE fichiers d'un coup, dont sept
-#  conformes avant — pour zéro ligne de code ajoutée. Deux exigences de rang 1
-#  s'opposaient alors (modularité contre format uniforme), et la seule issue
-#  aurait été d'en sacrifier une.
-#
-#  Le VOLUME — caractères hors espaces — est insensible aux retours à la ligne et
-#  à l'indentation. Le plafond, lui, reste en LIGNES : c'est ce que dit la règle
-#  du socle, et c'est lisible. Seule la question « a-t-il grossi ? » change de
-#  mesure.
-verdict() {  # $1 = lignes avant (0 = neuf), $2 = lignes après, $3 = plafond,
-             # $4 = volume avant, $5 = volume après — facultatifs : sans eux, on
-             #      retombe exactement sur l'ancien comportement.
-  local av=$1 ap=$2 PLAFOND=${3:-$PLAFOND} vav=${4:-} vap=${5:-} marge
-  if [ "$av" -eq 0 ]; then
-    [ "$ap" -gt "$PLAFOND" ] && echo neuf-trop-gros || echo ok
-  elif [ "$ap" -le "$PLAFOND" ]; then
-    echo ok
-  elif [ "$ap" -gt "$av" ]; then
-    #  Il gagne des lignes. Est-ce du CODE, ou de la mise en forme ?
-    if [ -n "$vav" ] && [ -n "$vap" ]; then
-      #  ⚠️ « Volume inchangé » n'est pas « à l'octet près » : le formatage AJOUTE
-      #  quelques caractères — points-virgules, guillemets, parenthèses de
-      #  sûreté. Mesuré ci-dessus : +0,1 % à +0,3 %. D'où 0,5 %, qui couvre le
-      #  mesuré avec marge.
-      #
-      #  🔴 L'ANGLE MORT EST ASSUMÉ ET CHIFFRÉ : sur 50 000 caractères, 0,5 % =
-      #  250 caractères, soit environ huit lignes denses qui passeraient. C'est
-      #  le prix pour que le formatage ne soit pas pénalisé, et il est petit
-      #  devant les 655 lignes qu'un reformatage ajoute. Un contrôle qui tait son
-      #  angle mort ment ; celui-ci le dit, ici et dans sa sortie.
-      marge=$(( vav / 200 ))
-      if [ "$vap" -gt "$(( vav + marge ))" ]; then echo grossit; else echo reformate; fi
-    else
-      echo grossit
-    fi
-  else
-    echo ok
-  fi
+#  Plafond d'un chemin selon sa nature ; RIEN pour une extension hors règle —
+#  et la sortie le dit (« NON MESURÉ ») plutôt que de laisser croire à
+#  l'exhaustivité (`standards/04`).
+plafond_de() {
+  case "$1" in
+    *.py|*.ts|*.js|*.mjs|*.svelte|*.sh) echo "$PLAFOND" ;;
+    *.css)                              echo "$PLAFOND_STYLE" ;;
+  esac
+}
+
+#  Lit des lignes « <lignes> <chemin> » (la sortie de `wc -l`) et rend celles
+#  qui dépassent le plafond de leur nature. Fonction PURE : c'est elle que
+#  l'auto-test exerce, sans dépôt ni fichier.
+hors_plafond() {
+  local n f p
+  while read -r n f; do
+    [ "$f" = "total" ] && continue        # ligne de cumul de `wc`
+    p=$(plafond_de "$f")
+    [ -n "$p" ] || continue
+    [ "$n" -gt "$p" ] && echo "  $f : $n lignes (plafond $p)"
+  done
+  return 0
 }
 
 if [ "${1:-}" = "--selftest" ]; then
   st=0
-  t() { r=$(verdict "$2" "$3"); [ "$r" = "$4" ] && echo "PASS  $1 → $r" \
-        || { echo "FAIL  $1  attendu=$4 obtenu=$r"; st=1; }; }
-  t "fichier neuf court"                    0   120 ok
-  t "fichier neuf trop gros"                0   501 neuf-trop-gros
-  t "fichier neuf pile au plafond"          0   500 ok
-  t "petit fichier qui grossit sous plafond" 100 480 ok
-  t "petit fichier qui franchit le plafond" 486 565 grossit
-  t "gros fichier qui grossit"              996 1044 grossit
-  t "gros fichier qui maigrit"              737 684 ok
-  t "gros fichier inchangé"                 880 880 ok
-  t "gros fichier qui repasse sous le plafond" 520 400 ok
-
-  #  ── #419 : le VOLUME distingue le reformatage du vrai ajout ─────────────
-  #  Sans ces cas, `prettier --write` ferait échouer TREIZE fichiers d'un coup
-  #  pour zéro ligne de code ajoutée — deux exigences de rang 1 s'opposeraient,
-  #  et il faudrait en sacrifier une.
-  tv() { r=$(verdict "$2" "$3" "$PLAFOND" "$4" "$5"); [ "$r" = "$6" ] && echo "PASS  $1 → $r"          || { echo "FAIL  $1  attendu=$6 obtenu=$r"; st=1; }; }
-  #  Le cas RÉEL, mesuré : mon-lot reformaté par prettier.
-  tv "reformatage pur : +41 % de lignes, +0 % de volume" 1608 2263 52454 52615 reformate
-  #  Un vrai ajout augmente les DEUX.
-  tv "vrai ajout : lignes ET volume montent"             996 1044 30000 31500 grossit
-  #  🔴 Le piège inverse, et c'est lui qui compte : ajouter du code en le
-  #  RESSERRANT. Les lignes montent peu, le volume monte : c'est un ajout.
-  tv "ajout dense : +2 lignes mais +3000 caractères"     996  998 30000 33000 grossit
-  #  Reformatage qui REDUIT le volume (commentaires retirés) : ce n'est pas un ajout.
-  tv "lignes montent, volume baisse"                    1000 1400 40000 39500 reformate
-  #  La tolérance est BORNÉE, et ces deux cas la tiennent : sans eux, on pourrait
-  #  l'élargir sans que rien ne rougisse.
-  tv "pile à la marge de 0,5 %"                         1000 1400 40000 40200 reformate
-  tv "juste au-dessus de la marge"                      1000 1400 40000 40300 grossit
-  #  Sans volume fourni, l'ancien comportement est intact : un appelant qui ne
-  #  mesure pas le volume ne doit pas devenir soudain permissif.
-  t  "sans volume : comportement d'origine"              996 1044 grossit
-  #  ── Feuilles de style : même règle, autre plafond (#499) ────────────────
-  ts() { r=$(verdict "$2" "$3" "$PLAFOND_STYLE"); [ "$r" = "$4" ] && echo "PASS  $1 → $r" \
-         || { echo "FAIL  $1  attendu=$4 obtenu=$r"; st=1; }; }
-  ts "style sous son plafond, qui grossit"   1017 1160 ok
-  ts "style au-dessus, qui grossit"          1600 1700 grossit
-  ts "style au-dessus, qui maigrit"          1600 1520 ok
-  ts "style NEUF trop gros"                     0 1501 neuf-trop-gros
-  ts "style neuf pile au plafond"               0 1500 ok
-  #  🔴 CAS ZÉRO — le fait exact du 19/08/2026 : `app.css` 1 017 → 1 160 pendant
-  #  le lot #453. Il doit passer (c'est une centralisation voulue) MAIS il doit
-  #  désormais être MESURÉ : avec le plafond du code, il aurait été refusé, et
-  #  chaque factorisation réussie serait devenue une violation.
-  if [ "$(verdict 1017 1160 "$PLAFOND")" != "grossit" ]; then
-    echo "FAIL  CAS ZERO : app.css 1017→1160 devrait echouer au plafond du CODE"; st=1
-  elif [ "$(verdict 1017 1160 "$PLAFOND_STYLE")" != "ok" ]; then
-    echo "FAIL  CAS ZERO : app.css 1017→1160 devrait passer au plafond des STYLES"; st=1
-  else
-    echo "PASS  CAS ZERO : app.css 1017→1160 mesure, et juge au bon plafond"
-  fi
+  t() { r=$(printf '%s\n' "$2" | hors_plafond); [ "$r" = "$3" ] && echo "PASS  $1" \
+        || { echo "FAIL  $1  attendu=[$3] obtenu=[$r]"; st=1; }; }
+  t "code pile au plafond"            "500 api/app/a.py"         ""
+  t "code un cran au-dessus"          "501 api/app/a.py"         "  api/app/a.py : 501 lignes (plafond 500)"
+  t "composant Svelte au-dessus"      "730 front/x/+page.svelte" "  front/x/+page.svelte : 730 lignes (plafond 500)"
+  t "script shell au-dessus"          "565 scripts/c.sh"         "  scripts/c.sh : 565 lignes (plafond 500)"
+  #  #499 — les styles ont LEUR plafond : 1 160 lignes passent, pas 1 501.
+  t "feuille de style sous le sien"   "1160 front/src/app.css"   ""
+  t "feuille de style au-dessus"      "1501 front/src/app.css"   "  front/src/app.css : 1501 lignes (plafond 1500)"
+  t "extension hors règle ignorée"    "9000 docs/manuel.html"    ""
+  t "ligne de cumul de wc ignorée"    "99999 total"              ""
+  #  Un chemin à espace reste entier : `read` lui laisse tout le reste de la ligne.
+  t "chemin avec une espace"          "600 front/a b.ts"         "  front/a b.ts : 600 lignes (plafond 500)"
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st
 fi
 
-BASE="${1:-origin/main}"
-
-#  ⚠️ La liste des fichiers est le CONTRÔLE lui-même : si elle est vide parce que
-#  la commande a échoué, on rendrait un vert sans rien avoir examiné. C'est
-#  arrivé à la première exécution en CI — `origin/main...HEAD: no merge base`,
-#  faute d'un historique assez profond, diff vide, contrôle « réussi ».
-#  Une sortie vide n'est PAS un vert (socle 04 §1) : ici, elle est INCONNUE.
-#  Comparaison à deux points, qui n'exige aucune base de fusion.
-#  ⚠️ Comparaison à l'ARBRE DE TRAVAIL, pas à HEAD. `git diff "$BASE" HEAD` ne
-#  liste que les fichiers du dernier COMMIT, alors que la taille est lue sur le
-#  disque juste après (`wc -l < "$f"`). Mélanger les deux crée un angle mort :
-#  un fichier modifié mais pas encore committé n'apparaît pas dans la liste,
-#  donc n'est jamais mesuré — et le contrôle annonce « aucun fichier n'a grossi »
-#  en n'ayant pas regardé celui qui venait de grossir.
-#
-#  Vécu le 08/08/2026 : lancé avant `git commit`, ce contrôle a rendu vert trois
-#  fois de suite pendant que la CI, elle, échouait sur `email.py` (656 → 663).
-#  J'ai annoncé une CI verte sur la foi de ce vert-là. En intégration continue
-#  l'arbre est propre, donc les deux formes sont équivalentes ; en local, seule
-#  celle-ci mesure ce qu'on s'apprête à pousser.
-if ! CHANGES=$(git diff --name-only "$BASE" 2>&1); then
-  echo "::error::Modularité INCONNUE — impossible de comparer à $BASE : $CHANGES"
-  echo "Le contrôle n'a rien pu examiner ; ne pas lire ceci comme un succès."
+#  ⚠️ L'ARBRE DE TRAVAIL, fichiers non suivis compris (hors .gitignore) : en
+#  local, ce contrôle doit mesurer ce qu'on s'apprête à committer — un fichier
+#  neuf pas encore ajouté resterait sinon invisible. Vécu le 08/08/2026 : un
+#  contrôle qui ne lisait que les commits a rendu vert trois fois pendant que la
+#  CI échouait.
+#  Un seul `wc` pour tous les fichiers : un sous-processus par fichier prenait
+#  plus de deux minutes sous Windows. Les extensions filtrées ici sont celles de
+#  `plafond_de` ; une extension qu'il ignore serait de toute façon écartée par
+#  `hors_plafond`, donc les deux listes ne peuvent pas se contredire.
+if ! LISTE=$(git ls-files -z --cached --others --exclude-standard 2>&1 | tr '\0' '\n'); then
+  echo "::error::Modularité INCONNUE — git ls-files a échoué : $LISTE"
   exit 2
 fi
-if ! git rev-parse --verify -q "$BASE" >/dev/null; then
-  echo "::error::Modularité INCONNUE — la référence $BASE est introuvable."
+MESURES=$(printf '%s\n' "$LISTE" | grep -E '\.(py|ts|js|mjs|svelte|sh|css)$' \
+  | while IFS= read -r f; do [ -f "$f" ] && printf '%s\0' "$f"; done \
+  | xargs -0 wc -l | grep -v ' total$')
+
+#  🔴 CAS ZÉRO : une liste vide n'est pas un vert, c'est un contrôle qui n'a
+#  rien regardé (`standards/04` §2). Le dépôt compte des centaines de fichiers
+#  de code : en mesurer moins de cent, c'est que la lecture a échoué.
+nb=$(printf '%s\n' "$MESURES" | grep -c .)
+if [ "$nb" -lt 100 ]; then
+  echo "::error::Modularité INCONNUE — seulement $nb fichier(s) mesuré(s) : la liste est tronquée."
   exit 2
 fi
 
-#  Un fichier DÉPLACÉ n'est pas un fichier neuf.
-#
-#  Sans détection de renommage, `git show "$BASE:$f"` ne trouve rien au nouveau
-#  chemin et le fichier compte pour 0 ligne « avant » : ranger un script de 693
-#  lignes le fait alors apparaître comme une création au-dessus du plafond. Le
-#  rangement, qui ne change pas une seule ligne de code, devient une violation de
-#  la règle de modularité — et la seule issue serait de désarmer le contrôle.
-#  Vécu le 15/08/2026 en rangeant l'outillage du poste (#337).
-RENOMMAGES=$(git diff -M --name-status "$BASE" 2>/dev/null | awk '$1 ~ /^R/ {print $3"	"$2}') || RENOMMAGES=""
-
-#  Chemin qu'occupait $1 dans $BASE, ou rien si le fichier est réellement neuf.
-chemin_origine() {
-  printf '%s
-' "$RENOMMAGES" | awk -F'	' -v n="$1" '$1 == n { print $2; exit }'
-}
-
-fautifs=""
-reformates=""
-while IFS= read -r f; do
-  #  Le plafond dépend de la NATURE du fichier. Une extension inconnue n'est pas
-  #  « sans risque » : elle est simplement hors de ce que ce contrôle sait juger,
-  #  et il le DIT en fin d'exécution plutôt que de laisser croire à l'exhaustivité
-  #  (`standards/04` : un contrôle muet sur son périmètre se lit comme complet).
-  case "$f" in
-    *.py|*.ts|*.js|*.mjs|*.svelte|*.sh) plafond=$PLAFOND ;;
-    *.css)                              plafond=$PLAFOND_STYLE ;;
-    *) continue ;;
-  esac
-  [ -f "$f" ] || continue                       # supprimé
-  ap=$(wc -l < "$f")
-  #  Le VOLUME : caractères hors espaces. `tr -d '[:space:]'` retire retours à la
-  #  ligne, tabulations et espaces d'un coup — c'est exactement ce que le
-  #  formatage déplace, et rien d'autre.
-  vap=$(tr -d '[:space:]' < "$f" | wc -c)
-  av=$(git show "$BASE:$f" 2>/dev/null | wc -l) || av=0
-  vav=$(git show "$BASE:$f" 2>/dev/null | tr -d '[:space:]' | wc -c) || vav=0
-  if [ "${av:-0}" -eq 0 ]; then                 # absent au nouveau chemin : déplacé ?
-    origine=$(chemin_origine "$f")
-    if [ -n "$origine" ]; then
-      av=$(git show "$BASE:$origine" 2>/dev/null | wc -l)
-      vav=$(git show "$BASE:$origine" 2>/dev/null | tr -d '[:space:]' | wc -c)
-    fi
-  fi
-  case "$(verdict "${av:-0}" "$ap" "$plafond" "${vav:-}" "${vap:-}")" in
-    grossit)        fautifs="$fautifs  $f : $av → $ap lignes, $vav → $vap caracteres (deja au-dessus de $plafond, et il grossit)
-" ;;
-    neuf-trop-gros) fautifs="$fautifs  $f : $ap lignes pour un fichier NEUF (plafond $plafond)
-" ;;
-    reformate)      reformates="$reformates  $f : $av → $ap lignes, volume inchange ($vav → $vap car.)
-" ;;
-  esac
-done <<< "$CHANGES"
-
+fautifs=$(printf '%s\n' "$MESURES" | hors_plafond)
 if [ -n "$fautifs" ]; then
-  printf "::error::Modularité (rang 1) — découper avant d'ajouter :\n"
-  printf "%b" "$fautifs"
-  printf "\nLa règle est « au fil de l'eau » : on découpe le fichier QUAND on y touche.\n"
+  printf "::error::Modularité (rang 1) — fichier(s) au-dessus de leur plafond :\n%s\n" "$fautifs"
+  printf "\nDécouper — et factoriser d'abord s'il y a de la copie : scinder un fichier\n"
+  printf "plein de doublons ne fait que les répartir (standards/02 §6).\n"
   exit 1
 fi
-#  🔴 DIRE CE QU'ON NE REGARDE PAS. « Aucun fichier n'a grossi », sans son
-#  périmètre, se lit comme exhaustif — c'est ainsi que 143 lignes de CSS sont
-#  passées inaperçues (#499). Deux mots de plus suppriment la lecture fausse
-#  (`standards/04` : un contrôle muet sur ses limites les fait oublier).
-#  🔴 Un contrôle qui TAIT ce qu'il a laissé passer ment par omission. Une
-#  croissance en lignes tolérée parce que le volume n'a pas bougé doit se voir.
-if [ -n "$reformates" ]; then
-  printf "
-  Croissance en LIGNES toleree (volume de code inchange -- reformatage) :
-"
-  printf "%b" "$reformates"
-fi
-echo "✓ Modularité : aucun fichier n'a grossi EN VOLUME (code > $PLAFOND l. · styles > $PLAFOND_STYLE l.)."
+echo "✓ Modularité : $nb fichiers mesurés, aucun au-dessus de son plafond (code $PLAFOND l. · styles $PLAFOND_STYLE l.)."
 echo "  NON MESURÉ, faute de règle : .html .md .json .yml .sql, et toute autre extension."

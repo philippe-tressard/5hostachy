@@ -31,11 +31,11 @@ import pytest
 #  19/09/2026 (#1026) — voir `test_televersement_source_unique.py`. Ce test ne
 #  change pas de nature : il confronte ce que le front PROPOSE à ce que le
 #  serveur ACCEPTE, en lisant la source à son nouvel endroit.
-from app.utils.fichiers import FAMILLES
+from app.utils import fichiers
+from app.utils.fichiers import FAMILLES, extension_assainie, nom_stocke, radical_assaini
+from app.utils.photos import photos_internes, photos_json
 from tests.aides_ast import corps_de
 from tests.aides_sources import modules_app
-from app.utils.fichiers import extension_assainie, nom_stocke, radical_assaini
-from app.utils.photos import photos_internes, photos_json
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 FICHIERS_TS = RACINE / "front" / "src" / "lib" / "fichiers.ts"
@@ -95,10 +95,18 @@ def test_radical_borne_la_longueur():
 # ── 2. Listes blanches front ⇆ serveur ───────────────────────────────────────
 
 
-def _constante_ts(nom: str) -> str:
-    """Valeur d'une constante `export const NOM = '...'` de fichiers.ts."""
+#: Forme d'une constante-motif de fichiers.ts (`const NOM = /…/i;`) : son corps.
+MOTIF_TS = r"/(.+?)/i;"
+
+
+def _constante_ts(nom: str, forme: str = r"'([^']*)'") -> str:
+    """Valeur d'une constante de fichiers.ts — une chaîne `'…'`, ou un motif (`MOTIF_TS`).
+
+    Une seule lecture pour les quatre constantes que ces tests confrontent au
+    serveur : trois étaient relues chacune par sa propre expression.
+    """
     source = FICHIERS_TS.read_text(encoding="utf-8")
-    trouve = re.search(rf"export const {nom} = '([^']*)'", source)
+    trouve = re.search(rf"(?:export )?const {nom}\s*=\s*{forme}", source)
     # Un contrôle qui ne trouve pas sa cible renvoie INCONNU, pas OK : sans
     # cette assertion, renommer la constante rendrait le test vert à vide.
     assert trouve, f"{nom} introuvable dans {FICHIERS_TS.name}"
@@ -124,10 +132,7 @@ def test_liste_blanche_photos_alignee():
 
 def test_toute_image_acceptee_est_reconnue_comme_image_par_le_front():
     """Sinon un `.gif` téléversé s'affiche en pastille de document, sans vignette."""
-    source = FICHIERS_TS.read_text(encoding="utf-8")
-    trouve = re.search(r"EXTENSIONS_IMAGE = /(.+?)/i", source)
-    assert trouve, "EXTENSIONS_IMAGE introuvable dans fichiers.ts"
-    motif = re.compile(trouve.group(1).replace("\\.", r"\."), re.IGNORECASE)
+    motif = re.compile(_constante_ts("EXTENSIONS_IMAGE", MOTIF_TS), re.IGNORECASE)
     for mime in FAMILLES["image"].types:
         extension = mime.split("/")[1]
         assert motif.search(f"photo.{extension}"), mime
@@ -225,13 +230,12 @@ def test_nom_lisible_retire_le_prefixe_technique():
     par le milieu, donc c'est précisément la partie porteuse de sens qui
     disparaît.
     """
-    from app.utils.fichiers import nom_lisible
-
     uuid = "0d41107a6c9b4e2f8a1d3c5e7b9f0a2c"
-    assert nom_lisible(f"/app/uploads/fichiers/{uuid}_ramonage.pdf") == "ramonage.pdf"
+    lisible = fichiers.nom_lisible
+    assert lisible(f"/app/uploads/fichiers/{uuid}_ramonage.pdf") == "ramonage.pdf"
     # Fichiers antérieurs au nommage : aucun nom d'origine à restituer.
-    assert nom_lisible(f"/app/uploads/tickets/{uuid}.jpg") == f"{uuid}.jpg"
-    assert nom_lisible("") == ""
+    assert lisible(f"/app/uploads/tickets/{uuid}.jpg") == f"{uuid}.jpg"
+    assert lisible("") == ""
 
 
 def test_la_regle_du_nom_est_la_meme_cote_front():
@@ -241,17 +245,8 @@ def test_la_regle_du_nom_est_la_meme_cote_front():
     affiché dans l'application et celui de la pièce jointe de l'e-mail cessent de
     correspondre, sans que rien ne le signale.
     """
-    source_ts = FICHIERS_TS.read_text(encoding="utf-8")
-    trouve = re.search(r"PREFIXE_UUID = /(.+?)/i", source_ts)
-    assert trouve, "PREFIXE_UUID introuvable dans fichiers.ts"
-
-    py = (RACINE / "api" / "app" / "utils" / "fichiers.py").read_text(encoding="utf-8")
-    motif_py = re.search(r'_PREFIXE_UUID = re\.compile\(r"(.+?)"', py)
-    assert motif_py, "_PREFIXE_UUID introuvable dans fichiers.py"
-
-    assert trouve.group(1) == motif_py.group(1), (
-        f"Motifs divergents — TS: {trouve.group(1)} / Python: {motif_py.group(1)}"
-    )
+    ts, py = _constante_ts("PREFIXE_UUID", MOTIF_TS), fichiers._PREFIXE_UUID.pattern
+    assert ts == py, f"Motifs divergents — TS: {ts} / Python: {py}"
 
 
 def test_la_piece_jointe_part_avec_son_nom_dorigine(tmp_path):
@@ -389,8 +384,6 @@ def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
     Un commentaire ne suffisait pas ; ce test échoue si la seconde implémentation
     revient.
     """
-    import re
-
     #  Un nom de fichier bâti à partir d'un UUID et d'une extension, hors du module
     #  qui a le droit de le faire.
     motif = re.compile(r"""uuid4\(\)\.hex\}?["']?\s*\+?\s*["']?\.[a-z0-9]{2,5}""", re.IGNORECASE)
@@ -426,8 +419,7 @@ def test_aucun_nom_de_fichier_fabrique_hors_de_nom_stocke():
 
 def test_libelle_annonce_la_nature_des_pieces_jointes():
     """Le sommaire dit « 1 photo », pas « 1 pièce jointe », quand il peut le dire."""
-    from app.utils.fichiers import est_image, libelle_pieces_jointes
-
+    est_image, libelle_pieces_jointes = fichiers.est_image, fichiers.libelle_pieces_jointes
     assert est_image("abc_vue.JPG") and est_image("x.png") and est_image("y.webp")
     assert not est_image("devis.pdf") and not est_image("") and not est_image("sans-extension")
 
@@ -446,20 +438,8 @@ def test_est_image_et_estImage_sont_la_meme_regle():
     Deux listes d'extensions qui divergent, et une photo est annoncée « document »
     dans l'e-mail tout en s'affichant en vignette dans l'application.
     """
-    import pathlib
-    import re
-
-    ts = pathlib.Path(__file__).resolve().parents[2] / "front" / "src" / "lib" / "fichiers.ts"
-    m = re.search(r"EXTENSIONS_IMAGE\s*=\s*/\\.\(([^)]+)\)\$/i", ts.read_text(encoding="utf-8"))
-    assert m, "EXTENSIONS_IMAGE introuvable dans fichiers.ts — parité invérifiable"
-
-    from app.utils import fichiers
-
-    py = re.search(r"\\.\(([^)]+)\)\$", fichiers._EXTENSIONS_IMAGE.pattern)
-    assert py, "motif Python illisible — parité invérifiable"
-    assert m.group(1) == py.group(1), (
-        f"Les extensions image divergent : TS='{m.group(1)}' vs Python='{py.group(1)}'"
-    )
+    ts, py = _constante_ts("EXTENSIONS_IMAGE", MOTIF_TS), fichiers._EXTENSIONS_IMAGE.pattern
+    assert ts == py, f"Les extensions image divergent : TS='{ts}' vs Python='{py}'"
 
 
 # ── 5. Résolution des chemins d'upload ───────────────────────────────────────
