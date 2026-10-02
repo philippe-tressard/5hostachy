@@ -1,0 +1,179 @@
+"""Licences tierces — la politique, en un seul endroit (#1542, #1543).
+
+Lue par `licences_tierces.py` (dépendances de `front/`, `whatsapp-bridge/` et
+`api/`) et par `contenus_tiers.py` (fichiers repris d'un projet tiers et
+recopiés dans le dépôt). C'est aussi d'ici que `docs/licences-tierces.md` tire
+ses motifs : rien de ce qui suit ne se recopie ailleurs.
+
+🔴 CE FICHIER NE TRANCHE RIEN DE JURIDIQUE. La liste blanche nomme les licences
+dites permissives, qui n'imposent que de conserver les mentions ; tout le reste
+est une EXCEPTION, déclarée nommément avec ce qu'on en sait. Une exception
+n'est pas une autorisation : c'est une question posée par écrit, et le champ
+`statut` dit à qui elle est posée.
+
+Règles que les deux contrôles appliquent :
+  - une dépendance dont la licence n'est pas admise et qu'aucune exception ne
+    couvre fait ÉCHOUER la CI ;
+  - une exception qui ne couvre plus rien (paquet retiré, licence changée) fait
+    ÉCHOUER aussi : elle se retire, sinon elle couvrirait demain autre chose ;
+  - une exception porte sur une licence PRÉCISE : si `libsignal` changeait de
+    licence, l'exception ne le couvrirait plus et la CI le dirait.
+"""
+
+from __future__ import annotations
+
+# ── Liste blanche ───────────────────────────────────────────────────────────
+#  Identifiants SPDX, plus `BSD` : le classifieur Python « BSD License » ne dit
+#  pas quelle variante, et toutes sont permissives — il est admis tel quel
+#  plutôt que réécrit en une variante qu'on aurait devinée.
+ADMISES = frozenset(
+    {
+        "0BSD",
+        "Apache-2.0",
+        "BlueOak-1.0.0",
+        "BSD",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "CC0-1.0",
+        "CNRI-Python",
+        "ISC",
+        "MIT",
+        "MIT-0",
+        "MIT-CMU",
+        "PSF-2.0",
+        "Python-2.0",
+        "Unlicense",
+        "Zlib",
+    }
+)
+
+A_VALIDER = "compatibilité avec la licence du projet À VALIDER par l'auteur"
+
+# ── Exceptions nominatives ──────────────────────────────────────────────────
+#  `source` : front | whatsapp-bridge | api. `paquets` : noms, motifs `*`
+#  admis. `licences` : expressions EXACTES telles que l'inventaire les lit —
+#  chacune doit encore servir, sinon la CI échoue.
+EXCEPTIONS = (
+    {
+        "source": "whatsapp-bridge",
+        "paquets": ("libsignal",),
+        "licences": ("GPL-3.0",),
+        "motif": (
+            "Protocole de chiffrement Signal, tiré par `baileys` (seule bibliothèque "
+            "WhatsApp Web maintenue de l'écosystème Node), non substituable. Copyleft "
+            "fort. Il s'exécute dans le bridge, conteneur distinct de l'API et du "
+            "front, avec lesquels il ne communique que par HTTP."
+        ),
+        "statut": A_VALIDER,
+    },
+    {
+        "source": "whatsapp-bridge",
+        "paquets": ("@img/sharp-libvips-*", "@img/sharp-win32-*", "@img/sharp-wasm32"),
+        "licences": (
+            "LGPL-3.0-or-later",
+            "Apache-2.0 AND LGPL-3.0-or-later",
+            "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+        ),
+        "motif": (
+            "Binaires de libvips embarqués par `sharp`, dépendance pair de `baileys` "
+            "(traitement d'images). Copyleft faible ; une seule variante de plateforme "
+            "est installée dans l'image (Linux musl). Même conteneur que libsignal."
+        ),
+        "statut": A_VALIDER,
+    },
+    {
+        "source": "front",
+        "paquets": ("caniuse-lite",),
+        "licences": ("CC-BY-4.0",),
+        "motif": (
+            "Table de compatibilité des navigateurs lue par `browserslist` au moment "
+            "de la construction (devDependencies). Licence de données, qui demande "
+            "l'attribution."
+        ),
+        "statut": "attribution portée par cet inventaire — à confirmer par l'auteur",
+    },
+    {
+        "source": "api",
+        "paquets": ("certifi",),
+        "licences": ("MPL-2.0",),
+        "motif": (
+            "Magasin de certificats racine (tiré par httpx). Copyleft faible au niveau "
+            "du fichier ; utilisé sans modification."
+        ),
+        "statut": A_VALIDER,
+    },
+    {
+        "source": "api",
+        "paquets": ("pyphen",),
+        "licences": ("GPL-2.0-or-later | LGPL-2.0-or-later | MPL-1.1 (classifieurs multiples)",),
+        "motif": (
+            "Césure des mots, tirée par WeasyPrint (documents PDF). Le paquet se dit "
+            "« GPL 2.0+/LGPL 2.1+/MPL 1.1 tri-license » (fichier LICENSE installé) ; "
+            "ses dictionnaires viennent de LibreOffice sous GPL, LGPL et/ou MPL."
+        ),
+        "statut": A_VALIDER,
+    },
+    {
+        "source": "api",
+        "paquets": ("dkimpy",),
+        "licences": ("BSD-like",),
+        "motif": (
+            "Vérification DKIM des réponses par courriel. Les métadonnées disent "
+            "« BSD-like » ; le fichier LICENSE installé porte le texte de la licence "
+            "zlib, qui est permissive."
+        ),
+        "statut": "métadonnées imprécises — le texte installé est celui de la licence zlib",
+    },
+)
+
+# ── Contenus tiers recopiés dans le dépôt (#1543) ───────────────────────────
+#  Ce que `reuse lint` ne peut pas voir : un fichier qui porte des tracés
+#  repris ailleurs reçoit la licence du motif `**` de REUSE.toml, et le
+#  contrôle reste vert. `contenus_tiers.py` exige que REUSE.toml attribue à
+#  chacun de ces fichiers les licences et titulaires déclarés ici, et cherche
+#  par leurs EMPREINTES les fichiers qui les recopieraient sans déclaration.
+CATALOGUE_ICONES = "front/src/lib/icones-svg.json"
+
+#  Icônes du catalogue qui ne viennent PAS de Lucide. Comparé le 02/10/2026 aux
+#  versions 0.200, 0.300, 0.400 et 1.50 de `lucide-static` : 59 icônes sur 61
+#  sont des tracés Lucide (ou Feather, dont Lucide dérive), les deux autres sont
+#  celles-ci. Une entrée qui disparaît du catalogue fait échouer le contrôle.
+ICONES_HORS_LUCIDE = {
+    "whatsapp": "Simple Icons",
+    "stairs": "absente de Lucide — présumée dessinée pour le projet, à confirmer par l'auteur",
+}
+
+CONTENUS_TIERS = (
+    {
+        "nom": "Lucide",
+        "origine": "https://lucide.dev — tracés recopiés à la main, aucune dépendance npm",
+        "licences": ("ISC", "MIT"),
+        "titulaires": ("Lucide Icons and Contributors", "Cole Bemis"),
+        "icones": None,  # tout le catalogue, hors ICONES_HORS_LUCIDE
+        "fichiers": (
+            "front/src/lib/icones-svg.json",
+            "api/app/utils/icones-svg.json",
+            "docs/manuel-utilisateur.html",
+            "front/static/manuel-utilisateur.html",
+            "infra/cloudflare-worker.js",
+        ),
+        "detail": (
+            "ISC pour Lucide ; MIT pour les icônes dérivées de Feather (Cole Bemis), "
+            "dont la licence de Lucide donne la liste — `calendar`, `clock`, `lock`, "
+            "`search`, `trash-2`… en font partie."
+        ),
+    },
+    {
+        "nom": "Simple Icons — logo WhatsApp",
+        "origine": "https://simpleicons.org — tracé de l'icône `whatsapp`",
+        "licences": ("CC0-1.0",),
+        "titulaires": (),
+        "icones": ("whatsapp",),
+        "fichiers": ("front/src/lib/icones-svg.json", "api/app/utils/icones-svg.json"),
+        "detail": (
+            "Le TRACÉ est versé au domaine public (CC0-1.0), mais CC0 ne cède aucun "
+            "droit de marque : le logo reste une marque de son titulaire. Son usage "
+            "pour désigner le canal WhatsApp de la résidence est À VALIDER par l'auteur."
+        ),
+    },
+)

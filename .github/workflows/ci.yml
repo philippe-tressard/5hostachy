@@ -274,6 +274,15 @@ jobs:
         # tests changeaient de moteur d'un run à l'autre sans que le dépôt bouge.
         run: pip install -r requirements-dev.txt
 
+      # Licences des dépendances tierces (#1542, 02/10/2026) — front, bridge et
+      # API. Ici parce que c'est le seul job où les distributions de l'API sont
+      # installées. Le détail (liste blanche, exceptions, document comparé) :
+      # l'en-tête de `scripts/ci/licences_tierces.py`.
+      - name: Licences tierces (liste blanche, exceptions nominatives)
+        run: |
+          python scripts/ci/licences_tierces.py --selftest
+          python scripts/ci/licences_tierces.py
+
       - name: Run pytest
         working-directory: api
         run: pytest tests/ -q
