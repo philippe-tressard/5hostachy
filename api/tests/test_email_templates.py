@@ -72,21 +72,11 @@ MODELES_VERS_LE_SYNDIC = frozenset(
 
 _env = SandboxedEnvironment(loader=BaseLoader())
 
-
-def _required_vars(sujet: str | None, corps_html: str | None) -> set[str]:
-    """Variables de premier niveau référencées par le template (hors base_ctx).
-
-    Simple alias de `utils.email.variables.variables_de` : c'est la MÊME question
-    que se posent l'écran d'administration et le contrôle quotidien, et les trois
-    y répondaient chacun avec son code (#852). Celui-ci concaténait `sujet` et
-    `corps_html` avec une espace, les deux autres sans — trois copies, deux
-    comportements. `variables_de` analyse chaque champ séparément, comme
-    `email._render` les rend.
-
-    Lève `ModeleIllisible` si un modèle du dépôt ne se parse pas : c'est ce test
-    qui doit rougir, et non l'installation qui doit le découvrir à l'envoi.
-    """
-    return variables_de(sujet, corps_html)
+#: Lus une fois : les codes, puis chaque champ par code — trois tests les
+#: recomposaient chacun (une ligne de `EMAIL_TEMPLATES` : code, libellé, objet,
+#: corps, désactivable).
+CODES = {row[0] for row in EMAIL_TEMPLATES}
+LIBELLES, SUJETS, CORPS = ({row[0]: row[i] for row in EMAIL_TEMPLATES} for i in (1, 2, 3))
 
 
 def test_chaque_modele_declare_son_intention():
@@ -101,8 +91,7 @@ def test_chaque_modele_declare_son_intention():
     from app.seed import INTENTIONS_PAR_MODELE
     from app.utils.email import INTENTIONS
 
-    codes = {row[0] for row in EMAIL_TEMPLATES}
-    sans_intention = codes - set(INTENTIONS_PAR_MODELE)
+    sans_intention = CODES - set(INTENTIONS_PAR_MODELE)
     assert not sans_intention, (
         f"Modèles sans intention déclarée : {sorted(sans_intention)}. Ajoute-les "
         "à `seed.INTENTIONS_PAR_MODELE` — information, action_requise, "
@@ -117,7 +106,7 @@ def test_chaque_modele_declare_son_intention():
         "rendraient aucun bandeau, en silence."
     )
 
-    orphelines = set(INTENTIONS_PAR_MODELE) - codes
+    orphelines = set(INTENTIONS_PAR_MODELE) - CODES
     assert not orphelines, (
         f"Intentions déclarées pour des modèles inexistants : {sorted(orphelines)}."
     )
@@ -164,14 +153,13 @@ def test_tous_les_templates_ont_un_contrat():
     codes maintenue **indépendamment** de l'assemblage : c'est elle qui sert
     d'ancre, et c'est ce qui rend ce test non circulaire (`standards/04` §16).
     """
-    codes = {row[0] for row in EMAIL_TEMPLATES}
-    sans_contrat = codes - set(EXPECTED_VARS)
+    sans_contrat = CODES - set(EXPECTED_VARS)
     assert not sans_contrat, (
         f"Templates sans contrat déclaré dans EXPECTED_VARS : {sorted(sans_contrat)}. "
         "Ajoute leur jeu de variables et vérifie le point d'appel send_email."
     )
 
-    disparus = set(EXPECTED_VARS) - codes
+    disparus = set(EXPECTED_VARS) - CODES
     assert not disparus, (
         f"Modèles déclarés dans EXPECTED_VARS mais absents de EMAIL_TEMPLATES : "
         f"{sorted(disparus)}. Soit une famille manque à l'assemblage de "
@@ -187,7 +175,10 @@ def test_template_respecte_son_contrat(row):
     code, _libelle, sujet, corps_html, _desactivable = row
     if code not in EXPECTED_VARS:
         pytest.skip("contrat absent — couvert par test_tous_les_templates_ont_un_contrat")
-    needs = _required_vars(sujet, corps_html)
+    #  `variables_de` est la lecture de l'écran d'administration et du contrôle
+    #  quotidien : trois copies divergeaient (#852). Elle lève `ModeleIllisible`
+    #  sur un modèle du dépôt qui ne se parse pas — c'est ce test qui doit rougir.
+    needs = variables_de(sujet, corps_html)
     assert needs == EXPECTED_VARS[code], (
         f"{code}: variables utilisées {sorted(needs)} ≠ contrat {sorted(EXPECTED_VARS[code])}.\n"
         f"Si la modification est voulue : mets à jour EXPECTED_VARS ET assure-toi que "
@@ -203,10 +194,9 @@ def test_lobjet_nomme_ce_dont_il_parle(code, expression):
     base : c'est la migration 0135 qui les y met à jour, et le test suivant
     vérifie qu'elle dit exactement la même chose que cette source-ci.
     """
-    sujets = {row[0]: row[2] for row in EMAIL_TEMPLATES}
-    assert code in sujets, f"{code} a disparu de EMAIL_TEMPLATES."
-    assert expression in sujets[code], (
-        f"L'objet de {code} ne nomme plus l'élément : {sujets[code]!r} ne contient "
+    assert code in SUJETS, f"{code} a disparu de EMAIL_TEMPLATES."
+    assert expression in SUJETS[code], (
+        f"L'objet de {code} ne nomme plus l'élément : {SUJETS[code]!r} ne contient "
         f"pas {expression}. Le destinataire retrouve un objet interchangeable avec "
         "celui du ticket ou de la publication d'à côté."
     )
@@ -278,8 +268,7 @@ def test_lobjet_au_syndic_porte_toujours_la_reference(code):
     """
     from app.utils.email import _prefixe_copro
 
-    sujets = {row[0]: row[2] for row in EMAIL_TEMPLATES}
-    assert code in sujets, f"{code} a disparu de EMAIL_TEMPLATES."
+    assert code in SUJETS, f"{code} a disparu de EMAIL_TEMPLATES."
     prefixe = _prefixe_copro("00213")
 
     for is_commentaire in (False, True):
@@ -294,7 +283,7 @@ def test_lobjet_au_syndic_porte_toujours_la_reference(code):
                 "annee": 2026,
             }
         )
-        rendu = _env.from_string(sujets[code]).render(**ctx)
+        rendu = _env.from_string(SUJETS[code]).render(**ctx)
         assert prefixe in rendu, (
             f"L'objet de {code} n'affiche pas la référence de copropriété quand "
             f"is_commentaire={is_commentaire} : {rendu!r}.\n"
@@ -343,13 +332,13 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
     #  l'objet, `REMPLACEMENTS_CORPS` pour le corps. Les quatre propriétés sont
     #  les mêmes — les vérifier deux fois les ferait diverger (0184).
     CHAMPS = {
-        "REMPLACEMENTS": ("l'objet", {row[0]: row[2] for row in EMAIL_TEMPLATES}),
-        "REMPLACEMENTS_CORPS": ("le corps", {row[0]: row[3] for row in EMAIL_TEMPLATES}),
+        "REMPLACEMENTS": ("l'objet", SUJETS),
+        "REMPLACEMENTS_CORPS": ("le corps", CORPS),
         #  🔴 Le LIBELLÉ aussi (#1101, 22/09/2026) : c'est le nom du modèle dans
         #  Admin → Emails. Il portait « Ticket transmis au syndic » quand l'écran
         #  disait « affaire » — moins visible qu'un objet de courriel, lu par le
         #  conseil syndical à chaque réglage.
-        "REMPLACEMENTS_LIBELLE": ("le libellé", {row[0]: row[1] for row in EMAIL_TEMPLATES}),
+        "REMPLACEMENTS_LIBELLE": ("le libellé", LIBELLES),
     }
     vues = 0
     supplantees_vues: set[str] = set()
@@ -420,7 +409,6 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
                     f"({code}) : rejouer la migration l'appliquerait une fois de plus."
                 )
 
-    #  Cas zéro : si le balayage ne trouve plus rien, il ne vérifie plus rien —
     #  ⚠️ Une cascade déclarée qui ne se produit plus doit PARTIR : sinon elle
     #  dispense silencieusement une migration bien réelle.
     manquantes = set(SUPPLANTEES) - supplantees_vues
@@ -429,6 +417,7 @@ def test_les_migrations_disent_la_meme_chose_que_le_seed():
         "Retirer l'entrée — elle couvrirait la suivante qui porterait ce nom."
     )
 
+    #  Cas zéro : si le balayage ne trouve plus rien, il ne vérifie plus rien —
     #  et resterait vert (`standards/04` §2).
     assert vues >= 3, (
         f"Seulement {vues} jeu(x) de remplacements trouvé(s) : le balayage "

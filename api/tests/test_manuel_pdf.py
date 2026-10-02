@@ -33,6 +33,7 @@ from pathlib import Path
 
 import pytest
 
+from app.utils import manuel_pdf as m
 from app.utils.manuel_pdf import (
     ManuelIndisponible,
     composer_html,
@@ -42,8 +43,10 @@ from app.utils.manuel_pdf import (
     titres_ancres,
     version_du_manuel,
 )
+from app.utils.manuel_pdf_css import css_du_pdf
 
-_MANUEL = Path(__file__).resolve().parents[2] / "docs" / "manuel-utilisateur.html"
+_RACINE = Path(__file__).resolve().parents[2]
+_MANUEL = _RACINE / "docs" / "manuel-utilisateur.html"
 
 
 @pytest.fixture(scope="module")
@@ -317,7 +320,7 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
     lecteur verra les liens, seulement qu'ils n'ont pas disparu d'un des trois
     endroits. C'est ce qu'un test peut tenir ; le reste se constate à l'écran.
     """
-    front = _MANUEL.resolve().parents[1] / "front" / "src"
+    front = _RACINE / "front" / "src"
 
     #  ⚠️ On découpe sur le BALISAGE, pas sur un nom de classe : la première
     #  occurrence de « quick-start » est dans la feuille de style, bien avant le
@@ -344,66 +347,55 @@ def test_le_PDF_est_atteignable_depuis_TROIS_endroits(manuel):
 # ── Le cache : servir vite, sans jamais servir périmé ────────────────────────
 
 
-def test_le_cache_sert_le_MEME_pdf_et_ne_recompose_pas(manuel, monkeypatch):
+@pytest.fixture
+def composer(monkeypatch):
+    """Cache vidé, moteur simulé : `(generer, rendus)`, rendus = documents recomposés."""
+    m._CACHE.clear()
+    rendus: list[str] = []
+    monkeypatch.setattr(m, "html_to_pdf", lambda doc: rendus.append(doc) or b"%PDF-x")
+
+    def _composer(html: str, jour: int = 4) -> bytes:
+        return m.generer_manuel_pdf(
+            "5Hostachy", "https://x.fr", html_manuel=html, edite_le=date(2026, 9, jour)
+        )
+
+    return _composer, rendus
+
+
+def test_le_cache_sert_le_MEME_pdf_et_ne_recompose_pas(manuel, composer):
     """🔴 Signalé à l'écran : *« plus de 10 secondes avec une page vide »*.
 
     WeasyPrint recomposait tout le document à chaque clic. Le résultat ne dépend
     pourtant que du manuel, du site et de la date — aucun ne change entre deux
     clics.
     """
-    from app.utils import manuel_pdf as m
-
-    m._CACHE.clear()
-    appels = []
-    monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
-
-    a = m.generer_manuel_pdf(
-        "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4)
-    )
-    b = m.generer_manuel_pdf(
-        "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4)
-    )
-    assert a == b
-    assert len(appels) == 1, "le document a été recomposé alors qu'il n'a pas changé"
+    generer, rendus = composer
+    assert generer(manuel) == generer(manuel)
+    assert len(rendus) == 1, "le document a été recomposé alors qu'il n'a pas changé"
 
 
-def test_un_manuel_MODIFIE_produit_un_pdf_neuf(manuel, monkeypatch):
+def test_un_manuel_MODIFIE_produit_un_pdf_neuf(manuel, composer):
     """⚠️ La clé est l'EMPREINTE du manuel, jamais sa version.
 
     Une retouche livrée sans bump de version doit produire un PDF neuf. Se fier
     au numéro aurait servi un document périmé sans que rien ne le signale — le
     défaut qu'on corrige partout ailleurs dans ce dépôt.
     """
-    from app.utils import manuel_pdf as m
-
-    m._CACHE.clear()
-    appels = []
-    monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
-
-    m.generer_manuel_pdf("5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, 4))
-    m.generer_manuel_pdf(
-        "5Hostachy",
-        "https://x.fr",
-        html_manuel=manuel + "<!-- retouche -->",
-        edite_le=date(2026, 9, 4),
-    )
-    assert len(appels) == 2, "un manuel modifié a servi le PDF de l'ancien"
+    generer, rendus = composer
+    generer(manuel)
+    generer(manuel + "<!-- retouche -->")
+    assert len(rendus) == 2, "un manuel modifié a servi le PDF de l'ancien"
 
 
-def test_le_cache_est_BORNE(manuel, monkeypatch):
+def test_le_cache_est_BORNE(manuel, composer):
     """Une boucle anormale ne doit pas gonfler la mémoire d'un conteneur.
 
     La date change à minuit : deux entrées suffisent en régime normal. La borne
     existe pour l'anormal, pas pour le nominal.
     """
-    from app.utils import manuel_pdf as m
-
-    m._CACHE.clear()
-    monkeypatch.setattr(m, "html_to_pdf", lambda doc: b"%PDF-x")
+    generer, _ = composer
     for jour in range(1, 12):
-        m.generer_manuel_pdf(
-            "5Hostachy", "https://x.fr", html_manuel=manuel, edite_le=date(2026, 9, jour)
-        )
+        generer(manuel, jour)
     assert len(m._CACHE) <= m._CACHE_MAX
 
 
@@ -425,7 +417,7 @@ def test_le_manuel_impose_la_revalidation_au_navigateur():
     `no-cache` n'interdit pas de stocker : il impose de revalider. Le fichier
     reste donc en cache local, et un `304` suffit quand il n'a pas changé.
     """
-    caddy = (_MANUEL.resolve().parents[1] / "Caddyfile").read_text(encoding="utf-8")
+    caddy = (_RACINE / "Caddyfile").read_text(encoding="utf-8")
     bloc = re.search(r"handle\s+/manuel-utilisateur\.html\s*\{(.*?)\n    \}", caddy, re.S)
     assert bloc, (
         "aucun bloc `handle /manuel-utilisateur.html` : le manuel est servi sans "
@@ -467,8 +459,6 @@ def test_les_deux_maquettes_sont_COTE_A_COTE_dans_le_PDF():
     Il vaut mieux vérifier la cause connue que rien du tout — mais il ne prouve
     pas la mise en page, et cette limite est nommée exprès.
     """
-    from app.utils.manuel_pdf_css import css_du_pdf
-
     CSS = css_du_pdf("")
     bloc = re.search(r"\.maq-duo \{(.*?)\}", CSS, re.S)
     assert bloc, "la règle `.maq-duo` a disparu : les maquettes ne sont plus cadrées"
@@ -494,8 +484,6 @@ def test_le_bouton_du_menu_telephone_est_DESSINE_et_EXPLIQUE(manuel):
     Le pendant côté manuel HTML est `npm run lint:manuel-menus`. Ce test-ci
     couvre la **mise en forme PDF**, que le contrôle front ne voit pas.
     """
-    from app.utils.manuel_pdf_css import css_du_pdf
-
     CSS = css_du_pdf("")
     assert 'class="maq-burger"' in manuel and "<svg" in manuel
     assert 'class="maq-explication"' in manuel, (
