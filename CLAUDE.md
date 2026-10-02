@@ -463,9 +463,11 @@ importe les gestes du transport.
       30/09/2026, #1177) ; l'écran dit « Affaire » et « Actualité ». Il y en avait **20** avant #1107 (`npm run lint:vocabulaire-ecran`)
 - [ ] Périmètre : masqué s'il est celui par défaut — le badge passe par
       `BadgePerimetre`, qui le tait (`npm run lint:pictogrammes`)
-- [ ] Archiver (pas supprimer) sur la vue principale — la corbeille ne s'offre
-      qu'aux Archives (`api/tests/test_suppression_aux_archives.py`, affaires et
-      actualités) ; le titre des archives vient d'une constante (`lint:archives`)
+- [ ] Archiver (pas supprimer) sur la vue principale — 📦, jamais un 🗑️ intitulé
+      « Archiver » ; la corbeille ne s'offre qu'aux Archives, et ce qu'on range a
+      son écran (`api/tests/test_suppression_aux_archives.py` : affaires,
+      actualités, prestataires, contrats — une carte qui archive s'y ajoute) ;
+      le titre des archives vient d'une constante (`lint:archives`)
 - [ ] Champs requis : `<EtoileRequis vide={!champ} />` — jamais une astérisque
       tapée. Elle est **collée** au libellé et **rouge tant que le champ est
       vide** : c'est son état, pas une décoration (#1121, 22/09/2026). Une

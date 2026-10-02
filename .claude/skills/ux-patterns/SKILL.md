@@ -53,7 +53,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 6 | **Le mode se lit sur l'icône** qui a ouvert le formulaire (`aria-pressed`), jamais sur un titre au-dessus | §13 bis |
 | 7 | **Section 1 = le titre SEUL** ; ce qui qualifie l'objet est en section 2 | §0 |
 | 8 | **Un workflow se déclare, le tracer est une AUTRE décision** — cinq états sur une annonce, aucun fil | §16 |
-| 9 | **L'archivage se calcule** : 30 j après un état terminal, sur `statut_change_le` — ⚠️ révisé le 24/09/2026 : sur une affaire ou une actualité, le conseil **peut aussi archiver d'un geste 📦**, à la place du 🗑️ de la liste | §8, §16 |
+| 9 | **L'archivage se calcule** : 30 j après un état terminal, sur `statut_change_le` — ⚠️ révisé le 24/09/2026 : sur une affaire ou une actualité, le conseil **peut aussi archiver d'un geste 📦**, à la place du 🗑️ de la liste ; prestataires et contrats n'ont **que** ce geste, et ↩️ pour ressortir (02/10/2026, #1538) | §8, §16 |
 | 10 | **Deux droits** : éditer = auteur · saisi_pour · admin ; commenter = les mêmes **+ CS** | §15 |
 | 11 | **L'écran dit ce que le serveur fait**, ni plus ni moins | §15 |
 | 12 | **L'objet DOCUMENTS a UNE forme** — pastilles « TYPE: nom », bouton puis champ de libellé, sans exception | §0 bis |
@@ -1152,6 +1152,16 @@ une quatrième aurait suivi à la prochaine liste.
 Vue archives unifiée dans `tickets/+page.svelte` (onglet Archives) depuis que le calendrier y a été fondu (#1092).
 
 🔴 Les affaires et actualités ne le respectaient pas jusqu'au 24/09/2026 : le 🗑️ de l'admin était dans la liste, et une actualité s'y effaçait entière. Pour une affaire, l'archivage est `archive_manuel` (`utils/archivage.REGLES`). 🔒 `api/tests/test_suppression_aux_archives.py`.
+
+🔴 **Prestataires et contrats, jusqu'au 02/10/2026 (#1538)** : un 🗑️ intitulé « Archiver », sur la vue principale, pour tout le conseil — l'icône disait « supprimer », la boîte « archiver », la route `DELETE` — et l'objet rangé n'avait **plus d'écran**. Ils suivent désormais l'affaire :
+
+| | Vue principale | Archives |
+|---|---|---|
+| Geste | 📦 Archiver (CS + admin), confirmé par `ARCHIVAGE` | ↩️ Restaurer, sans confirmation — ✏️ et ✨ se taisent : on ressort avant de corriger |
+| Écran | la liste de l'onglet | section `TITRE_ARCHIVES` repliée sous elle, par `ListeEtArchives` — le même rendu, atténué (`.attenue`) |
+| API | `PATCH …/archivage {archivee}` — UN mot pour ranger et ressortir (`archiverPuis`) | `GET …/archives`, à part : les autres lecteurs de la liste (formulaire d'affaire, reporting) ne voient pas surgir ce qu'on a rangé |
+
+Aucune suppression définitive : il n'y a rien à garder derrière `archive`. La règle est déclarée dans `REGLES` (`champ_actif` : la colonne héritée `actif`, inversée) — aucun archivage par le temps. 🔒 Le même test refuse un 🗑️ hors d'un bloc `archive` dans **toute carte qui archive** (`_QUI_ARCHIVENT`), et un bouton « Archiver » qui ne montre pas 📦 ; `e2e/archives-prestataires` éprouve l'écran rendu.
 
 ## 9. Champs de formulaire
 
