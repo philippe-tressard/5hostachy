@@ -45,7 +45,8 @@ désigné par les données — voir `code_par_defaut`.
 `a_portee_globale`, `batiments_cibles` et `perimetre_du_batiment` sont les
 seules fonctions qui parcourent l'arbre. Leurs
 consommateurs — `utils/visibility.py` (qui voit), `utils/destinataires.py` (qui
-est notifié), `routers/flux/evenements.py` (le badge « concerne mon bâtiment ») et
+est notifié), `routers/flux/evenements.py` (le badge « concerne mon bâtiment », supprimé
+avec #1092) et
 `utils/fiche_arrivant.py` (le document imprimé) — portaient auparavant chacun sa
 propre copie de la liste des périmètres transverses, ou sa propre convention de
 nommage.

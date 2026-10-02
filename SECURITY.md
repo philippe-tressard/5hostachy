@@ -1,13 +1,11 @@
 # Politique de sécurité
 
-## Versions suivies
-
-| Version | Suivie |
-|---------|--------|
-| 1.x     | oui    |
+## Version suivie
 
 Une seule instance de production existe, et elle sert toujours la dernière
-version publiée : il n'y a pas de rétroportage sur une version antérieure.
+version publiée — celle qu'affiche le pied de page du site. Il n'y a pas de
+rétroportage sur une version antérieure, donc pas de tableau de versions à
+tenir : il annonçait la majeure 1 pour un produit en version 2 (#1582).
 
 ## Signaler une faille
 

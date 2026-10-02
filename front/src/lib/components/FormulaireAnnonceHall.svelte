@@ -6,7 +6,7 @@
   Extrait d'`espace-cs/+page.svelte` — 3 341 lignes, le pire cas du dépôt (#453).
   Le garde-fou de modularité a refusé que le fichier grossisse pour recevoir deux
   commentaires d'exception, et il avait raison : **tous les autres formulaires du
-  site sont des composants** (`FormulaireTicket`, `FormulaireEvenement`,
+  site sont des composants** (`FormulaireTicket`,
   `FormulaireSondage`, `FormulaireIdee`, `FormulaireAnnonce`). Celui-ci était le
   dernier écrit à même une page.
 
@@ -17,8 +17,8 @@
   ## Ce qu'il décide, et ce qu'il ne décide pas
 
   Il rend la saisie et rien d'autre. La page garde l'état (`ahTitre`, `ahMessage`…),
-  les appels d'API et la décision d'envoyer — c'est le **pattern A**, celui de
-  `FormulaireEvenement` : l'état vit dans la page, le composant rend.
+  les appels d'API et la décision d'envoyer — c'est le **pattern A**, celui du
+  formulaire d'événement (supprimé avec #1092) : l'état vit dans la page, le composant rend.
 
   ## L'ordre des sections, et sa seule exception
 

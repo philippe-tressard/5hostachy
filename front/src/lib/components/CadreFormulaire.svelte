@@ -27,7 +27,7 @@
   Le choix du cadre s'écrivait **cinq fois** :
 
       FormulaireActualite · FormulaireBail · FormulaireDocument
-      FormulaireEvenement · FormulaireFaq
+      FormulaireEvenement (supprimé avec #1092) · FormulaireFaq
 
   Chacune portait son `<svelte:component this={…}>`, ses deux imports et un
   commentaire expliquant la même chose dans des mots différents.

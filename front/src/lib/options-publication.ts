@@ -9,7 +9,7 @@
  * carte pose pour l'urgence — et elles avaient **déjà divergé** :
  *
  *   • **Épinglage** : 📌 sur la carte (`pin-badge`) et dans
- *     `FormulaireEvenement`, mais **aucun glyphe** sur la case d'actualité, qui
+ *     le formulaire d'événement (supprimé avec #1092), mais **aucun glyphe** sur la case d'actualité, qui
  *     disait « Épingler » tout court. Trois écrans, deux vocabulaires ;
  *   • **Brouillon** : ✏️ — le crayon, qui est **déjà** l'icône « Modifier » de
  *     toutes les barres d'actions du site. Deux notions, un glyphe : c'est

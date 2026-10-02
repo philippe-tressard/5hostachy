@@ -1545,7 +1545,7 @@ simplement faux. Trois questions à se poser, dans cet ordre :
 
 🔴 **Et le FIL doit apprendre la nouvelle table.** Le fil est une douzaine de
 rubriques indépendantes ; rien n'oblige une table neuve à s'y déclarer.
-`flux/evenements.py` ne lisait que `Evenement` et datait donc ses cartes de
+Le fil des événements (`flux/evenements.py`, supprimé avec #1092) ne lisait que `Evenement` et datait donc ses cartes de
 l'annonce — une affaire qui avançait aujourd'hui restait noyée dans les
 vieilles lignes. **Le fil date du dernier fait, jamais du premier.**
 
@@ -2178,7 +2178,8 @@ elle est donc tranchée ici plutôt qu'à chaque conversion.
 
 `FormulaireContrat` écrit l'inverse dans son en-tête — *« mettre le cadre ici
 obligerait le composant à connaître le geste »* — et **c'est juste pour lui** :
-il ne le reçoit pas. `FormulaireEvenement`, si, depuis #432. La règle générale
+il ne le reçoit pas. `FormulaireTicket`, si — comme le faisait le formulaire
+d'événement de #432, supprimé avec #1092. La règle générale
 recouvre donc les deux cas sans en contredire aucun.
 
 ⚠️ **Ce qu'il en coûte de choisir l'autre.** Poser le cadre dans la page oblige à

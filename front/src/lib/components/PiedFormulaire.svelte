@@ -5,7 +5,7 @@
 
   Il était écrit **dix-neuf fois** — `FormulaireActualite`,
   `FormulaireAnnonce`, `FormulaireBail`, `FormulaireDocument`,
-  `FormulaireEvenement`, `FormulaireFaq`, `FormulaireIdee`,
+  `FormulaireEvenement` (supprimé avec #1092), `FormulaireFaq`, `FormulaireIdee`,
   `FormulaireSondage`, `FormulaireTicket`. Mêmes classes, même ordre, mêmes
   libellés au caractère près (« Enregistrement… » / « Enregistrer »).
 

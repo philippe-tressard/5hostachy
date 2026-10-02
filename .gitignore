@@ -39,6 +39,10 @@ front/.env.local
 front/e2e-rapport/
 front/test-results/
 front/e2e-sortie.log
+#  Toute sortie d'outil à la racine du front (#1601 : svelte_errors.txt
+#  y était versionné depuis le premier commit public).
+front/*.txt
+front/*.log
 front/.e2e-en-cours
 front/playwright/.cache/
 
