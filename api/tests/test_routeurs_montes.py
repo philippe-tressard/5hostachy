@@ -30,45 +30,15 @@ annoncer « tout est monté » sans avoir rien vérifié.
 
 from __future__ import annotations
 
-import importlib
-import pkgutil
-
 import pytest
-from fastapi import APIRouter
 
-import app.routers as paquet_routeurs
 from app.main import app
+from tests.aides_sources import routeurs_declares
 
 #: Les routeurs volontairement NON montés, avec leur raison. Une exception non
 #: écrite n'est pas une exception, c'est un oubli qui ressemble à une décision ;
 #: et une exception qui cesse de servir fait échouer le test (voir plus bas).
 EXCEPTIONS: dict[str, str] = {}
-
-
-def _routeurs_declares() -> dict[str, APIRouter]:
-    """Chaque `APIRouter` défini au niveau d'un module de `app/routers/`."""
-    trouves: dict[str, APIRouter] = {}
-    for info in pkgutil.walk_packages(paquet_routeurs.__path__, paquet_routeurs.__name__ + "."):
-        module = importlib.import_module(info.name)
-        for nom, valeur in vars(module).items():
-            #  Seuls les routeurs DÉFINIS ici : un routeur importé d'ailleurs
-            #  (`from .parc import router as …`) serait compté deux fois.
-            if isinstance(valeur, APIRouter) and _defini_dans(valeur, module):
-                trouves[f"{info.name}.{nom}"] = valeur
-    return trouves
-
-
-def _defini_dans(routeur: APIRouter, module) -> bool:
-    """Un routeur « appartient » au module où ses routes sont déclarées.
-
-    Un routeur vide (paquet agrégateur) appartient au module qui l'expose sous
-    le nom `router` — c'est la convention de tous les `__init__.py` du dépôt.
-    """
-    for route in routeur.routes:
-        point = getattr(route, "endpoint", None)
-        if point is not None:
-            return getattr(point, "__module__", None) == module.__name__
-    return True
 
 
 def _routeurs_atteints() -> set[int]:
@@ -98,7 +68,7 @@ def _routeurs_atteints() -> set[int]:
 def test_le_controle_mesure_quelque_chose():
     """Cas zéro : sans routeurs déclarés ni atteints, le test suivant serait vert
     sans avoir rien comparé."""
-    declares = _routeurs_declares()
+    declares = routeurs_declares()
     atteints = _routeurs_atteints()
     assert len(declares) > 30, f"seulement {len(declares)} routeur(s) déclaré(s) relevé(s)"
     assert len(atteints) > 30, (
@@ -110,7 +80,7 @@ def test_tout_routeur_declare_est_monte():
     atteints = _routeurs_atteints()
     orphelins = sorted(
         nom
-        for nom, r in _routeurs_declares().items()
+        for nom, r in routeurs_declares().items()
         if id(r) not in atteints and nom not in EXCEPTIONS
     )
     assert not orphelins, (
@@ -126,7 +96,7 @@ def test_tout_routeur_declare_est_monte():
 def test_les_exceptions_servent_encore():
     """Une exception qui ne correspond plus à rien est une règle qui a changé
     sans que personne ne relise la liste."""
-    declares = _routeurs_declares()
+    declares = routeurs_declares()
     atteints = _routeurs_atteints()
     mortes = [nom for nom in EXCEPTIONS if nom not in declares or id(declares[nom]) in atteints]
     assert not mortes, f"exceptions à retirer : {mortes}"
