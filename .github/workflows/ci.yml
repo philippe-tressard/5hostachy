@@ -645,6 +645,23 @@ jobs:
           # moteur qu'il centralise (cas zéro, `standards/04` §2).
           grep -qE '^[^#]*smtplib' scripts/lib/lib-alert.sh \
             || { echo "::error file=scripts/lib/lib-alert.sh::le moteur SMTP a disparu du module qui doit le porter — le contrôle ci-dessus ne mesure plus rien"; st=1; }
+          # 🔴 L'adresse d'alerte ne s'écrit QU'UNE fois : le défaut de lib-alert.sh
+          # (#1581). Elle l'était trois fois — `bascule.sh`, `health-watch.sh` et le
+          # module qu'ils sourcent tous les deux —, et la triple écriture était
+          # consciente, jamais déclarée : changer d'adresse en oubliait deux. Cas
+          # zéro : 0 écriture veut dire que le défaut a disparu, ou que le motif ne
+          # lit plus rien.
+          n=0
+          for f in $(git ls-files -- '*.sh'); do
+            c=$(grep -cE '^[^#]*\bALERT_EMAIL=' "$f" || true)
+            [ "$c" -gt 0 ] || continue
+            n=$((n + c))
+            case "$f" in
+              scripts/lib/lib-alert.sh) ;;
+              *) echo "::error file=$f::ALERT_EMAIL assigné hors de lib-alert.sh — l'adresse d'alerte n'a qu'un défaut, celui du module"; st=1 ;;
+            esac
+          done
+          [ "$n" -eq 1 ] || { echo "::error::$n écriture(s) de ALERT_EMAIL= dans les scripts, exactement 1 attendue (lib-alert.sh)"; st=1; }
           exit $st
 
       - name: SSH entre les nœuds — clé d'hôte épinglée, commande écrite une fois

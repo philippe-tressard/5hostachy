@@ -124,3 +124,57 @@ def test_une_copie_du_env_ne_se_versionne_pas_mais_le_gabarit_si():
         "`.env.example` est ignoré : le gabarit d'installation ne serait plus versionné"
     )
     assert ".env.example" in _index(".env.example")[0][1], "`.env.example` n'est plus suivi"
+
+
+#: Fournisseurs de messagerie publics : une adresse de test sur l'un d'eux peut
+#: désigner une boîte réelle (#1581). `exemple.test` / `example.org` existent pour ça.
+FOURNISSEURS_REELS = (
+    "gmail",
+    "icloud",
+    "yahoo",
+    "hotmail",
+    "outlook",
+    "live",
+    "orange",
+    "wanadoo",
+    "free",
+    "sfr",
+    "laposte",
+    "protonmail",
+    "aol",
+    "msn",
+)
+_BOITE_REELLE = re.compile(
+    r"@(?:" + "|".join(FOURNISSEURS_REELS) + r")\.(?:com|fr|net|org)\b", re.I
+)
+CE_FICHIER = "api/tests/test_hygiene_depot.py"
+
+
+def _boites_reelles(texte: str) -> list[str]:
+    return [m.group(0) for m in _BOITE_REELLE.finditer(texte)]
+
+
+def test_la_sonde_de_boites_reelles_distingue_le_reel_du_fictif():
+    assert _boites_reelles("jean@gmail.com et p@iCloud.com") == ["@gmail.com", "@iCloud.com"]
+    assert _boites_reelles("jean@exemple.test, a@example.org, b@copro-orange.fr") == []
+    assert _boites_reelles("") == []  # cas zéro
+
+
+def test_aucune_adresse_de_test_sur_un_fournisseur_reel():
+    fichiers = [
+        chemin
+        for _, chemin in _index("api/tests", "front/e2e")
+        if chemin.endswith((".py", ".ts", ".mjs", ".json", ".html", ".txt", ".eml"))
+        and chemin != CE_FICHIER
+    ]
+    #  Cas zéro : un balayage qui ne lit aucun fichier ne prouve rien.
+    assert len(fichiers) > 100, f"{len(fichiers)} fichier(s) lu(s) — la liste ne correspond plus"
+    trouvees = {}
+    for chemin in fichiers:
+        contenu = (RACINE / chemin).read_text(encoding="utf-8", errors="replace")
+        if hits := _boites_reelles(contenu):
+            trouvees[chemin] = sorted(set(hits))
+    assert not trouvees, (
+        f"adresse(s) sur un fournisseur réel dans les tests : {trouvees}. "
+        "Une boîte peut exister derrière : écrire `…@exemple.test`."
+    )
