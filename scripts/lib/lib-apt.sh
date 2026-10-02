@@ -23,6 +23,12 @@
 #: listes neuves, c'est une semaine où le nœud n'a rien pu apprendre.
 APT_LISTES_MAX_J=${APT_LISTES_MAX_J:-7}
 
+#: Un passage « en cours » depuis plus longtemps que cela n'en est plus un : il
+#: est bloqué, et le laisser masquer un correctif non posé reviendrait à
+#: éteindre C30. Un passage d'`unattended-upgrades` dure de 20 s à quelques
+#: minutes ; deux heures laissent la place à une montée de paquets lourde.
+APT_EN_COURS_MAX_S=${APT_EN_COURS_MAX_S:-7200}
+
 # ── La collecte, exécutée sur CHAQUE nœud (reprise par COLLECT_MAJ) ──────────
 #  Même contrainte que `lib-collecte.sh` : chaîne entre guillemets SIMPLES, donc
 #  AUCUNE apostrophe en dessous, même en commentaire. Tout ce qui s'explique
@@ -33,6 +39,7 @@ APT_LISTES_MAX_J=${APT_LISTES_MAX_J:-7}
 #     chose (les listes), pas son enregistrement (un tampon de tentative, que
 #     `apt-daily` pose même quand il échoue) — `standards/04` §14.
 COLLECT_APT='
+_t0=$(date +%s)
 echo "apt_erreurs=$(command -v apt-config >/dev/null 2>&1 && apt-config dump 2>&1 >/dev/null | grep -c "^E:")"
 _t=$(find /var/lib/apt/lists -maxdepth 1 -name "*InRelease" -printf "%T@\n" 2>/dev/null | sort -n | tail -1)
 echo "apt_listes_j=$([ -n "$_t" ] && echo $(( ( $(date +%s) - ${_t%.*} ) / 86400 )))"
@@ -89,14 +96,43 @@ echo "apt_passage_s=$_a"
 echo "apt_prochain=$(systemctl show -p NextElapseUSecRealtime --value apt-daily-upgrade.timer 2>/dev/null | awk "{ print substr(\$3, 1, 5) }")"
 '
 }
-COLLECT_APT="$COLLECT_APT$(collecte_secu "$APT_SECU_VU")"
+#  #1610 — un passage d'installation est-il EN COURS ? À la FIN de la collecte :
+#  c'est le dernier relevé qui compte, et un passage démarré pendant les
+#  précédents (le 01/10/2026 à 06:21, `unattended-upgrades` a démarré UNE seconde
+#  après le début de C30) rend les correctifs lus plus haut caducs.
+#   - apt_en_cours : « oui » si `apt-daily` ou `apt-daily-upgrade` est en cours
+#     d'exécution (un service oneshot est `activating` tant qu'il tourne), OU si
+#     le dernier passage a démarré APRÈS le début de cette collecte (`_t0`, posé
+#     en tête de COLLECT_APT) ; « non » sinon ; VIDE si systemctl manque — la
+#     mesure est alors impossible, et le verdict s'en tient à ce qu'il savait.
+#  On ne cherche PAS le processus (`pgrep`) : `unattended-upgrade-shutdown`
+#  tourne en permanence sous le même nom court, et le shell qui exécute cette
+#  collecte porte le motif dans sa propre ligne de commande — faux positif sûr.
+#  Même contrainte que COLLECT_APT : aucune apostrophe dans la chaîne.
+collecte_apt_en_cours() {
+    printf '%s' '
+if command -v systemctl >/dev/null 2>&1; then
+_ae=non
+for _u in apt-daily.service apt-daily-upgrade.service; do
+case "$(systemctl show -p ActiveState --value $_u 2>/dev/null)" in activating|reloading) _ae=oui ;; esac
+done
+_d=$(systemctl show --timestamp=unix -p ExecMainStartTimestamp --value apt-daily-upgrade.service 2>/dev/null)
+case "$_d" in @[0-9]*) [ "${_d#@}" -ge "${_t0:-9999999999}" ] 2>/dev/null && _ae=oui ;; esac
+echo "apt_en_cours=$_ae"
+else
+echo "apt_en_cours="
+fi
+'
+}
+COLLECT_APT="$COLLECT_APT$(collecte_secu "$APT_SECU_VU")$(collecte_apt_en_cours)"
 
 # ── Décision PURE (aucun effet de bord) ──────────────────────────────────────
 
 #  $1 erreurs de configuration · $2 âge des listes (j) · $3 paquets de sécurité
 #  $4 depuis combien de secondes le plus ancien attend · $5 depuis combien de
-#  secondes le dernier passage d'installation a démarré
-#  → OK | ILLISIBLE | PERIMEES | ATTENTE | SECURITE | SANS_PASSAGE | INCONNU
+#  secondes le dernier passage d'installation a démarré · $6 « oui » si un
+#  passage est en cours (vide : non mesuré)
+#  → OK | ILLISIBLE | PERIMEES | ATTENTE | SECURITE | SANS_PASSAGE | EN_COURS | INCONNU
 #  L'ordre compte : une configuration illisible rend les listes périmées, et des
 #  listes périmées rendent le compte de sécurité faux (il vaut 0 sur rpi2).
 #  Annoncer le symptôme le plus profond, c'est dire quoi réparer.
@@ -104,16 +140,26 @@ COLLECT_APT="$COLLECT_APT$(collecte_secu "$APT_SECU_VU")"
 #  l'a vu sans le poser (SECURITE), ou quand il attend au-delà du régime d'un
 #  passage (SANS_PASSAGE). Avant, ATTENTE (#1441 : le 28/09/2026, C30 disait
 #  « ne les a pas posés » d'un correctif publié quatre heures après le passage).
+#  EN_COURS (#1610) : un passage d'installation tourne — le relevé va changer
+#  dans la minute, et SECURITE/SANS_PASSAGE jugeraient un fait déjà périmé. C'est
+#  la famille INCONNU (ni vert ni rouge, revérifié au passage suivant), jamais un
+#  OK : il ne remplace que les deux verdicts qui alertent. Borné par
+#  APT_EN_COURS_MAX_S, pour qu'un passage bloqué ne masque rien.
 verdict_apt() {
-    local err=$1 age=$2 secu=$3 vu=${4:-} passage=${5:-}
+    local err=$1 age=$2 secu=$3 vu=${4:-} passage=${5:-} encours=${6:-}
     case "$err" in ''|*[!0-9]*) echo INCONNU; return ;; esac
     [ "$err" -gt 0 ] && { echo ILLISIBLE; return; }
     case "$age" in ''|*[!0-9]*) echo INCONNU; return ;; esac
     [ "$age" -gt "$APT_LISTES_MAX_J" ] && { echo PERIMEES; return; }
     case "$secu" in ''|*[!0-9]*) echo INCONNU; return ;; esac
     [ "$secu" -gt 0 ] || { echo OK; return; }
-    case "$vu" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+    #  Un début négatif (le passage a démarré après la collecte) ou illisible n'est
+    #  pas une durée : il ne borne rien, et ne sert qu'à SECURITE/SANS_PASSAGE.
     case "$passage" in *[!0-9]*) passage='' ;; esac
+    if [ "$encours" = oui ] && { [ -z "$passage" ] || [ "$passage" -le "$APT_EN_COURS_MAX_S" ]; }; then
+        echo EN_COURS; return
+    fi
+    case "$vu" in ''|*[!0-9]*) echo INCONNU; return ;; esac
     if [ -n "$passage" ] && [ "$vu" -gt "$passage" ]; then echo SECURITE
     elif [ "$vu" -gt "$APT_SECU_DELAI_S" ]; then echo SANS_PASSAGE
     elif [ -n "$passage" ]; then echo ATTENTE
@@ -142,6 +188,24 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "passage illisible, attente > délai"             SANS_PASSAGE verdict_apt 0 0 1 111600 ""
     t "passage illisible, attente courte → INCONNU"    INCONNU    verdict_apt 0 0 1 7200 ""
     t "ancienneté illisible → INCONNU, jamais ATTENTE" INCONNU    verdict_apt 0 0 3 "" 7200
+
+    #  #1610 — rpi1 le 01/10 à 06:21 : un digest est parti pour « 3 correctifs vus
+    #  par le passage d'hier, pas posés », vingt secondes avant que le passage de
+    #  CE matin ne les pose. Un passage EN COURS rend la mesure caduque : EN_COURS
+    #  (la famille INCONNU — ni vert ni rouge), revérifié au passage suivant.
+    t "#1610 : passage en cours depuis 6 s → EN_COURS, pas SECURITE"  EN_COURS verdict_apt 0 0 3 86400 6 oui
+    t "#1610 : sans l'indication, le même relevé reste SECURITE"       SECURITE verdict_apt 0 0 3 86400 6 non
+    t "#1610 : en cours, attente > délai → EN_COURS, pas SANS_PASSAGE" EN_COURS verdict_apt 0 0 3 111600 6 oui
+    t "#1610 : démarré APRÈS la collecte (passage négatif) → EN_COURS" EN_COURS verdict_apt 0 0 3 86400 -2 oui
+    t "#1610 : en cours, début illisible → EN_COURS (INCONNU)"         EN_COURS verdict_apt 0 0 3 86400 "" oui
+    t "#1610 : aucun correctif en attente → OK malgré le passage"      OK       verdict_apt 0 0 0 "" 6 oui
+    t "#1610 : configuration illisible l'emporte sur le passage"       ILLISIBLE verdict_apt 1 0 3 86400 6 oui
+    t "#1610 : listes périmées l'emportent sur le passage"             PERIMEES verdict_apt 0 9 3 86400 6 oui
+    #  Un « passage » qui dure plus que sa borne n'est plus un passage : il ne
+    #  doit pas masquer indéfiniment un correctif non posé.
+    t "#1610 : « en cours » depuis 3 h (bloqué) → verdict habituel"    SECURITE verdict_apt 0 0 3 86400 10800 oui
+    t "#1610 : « en cours » à la borne (2 h) → encore EN_COURS"        EN_COURS verdict_apt 0 0 3 86400 7200 oui
+    t "#1610 : mesure absente (systemctl manquant) → verdict habituel" SECURITE verdict_apt 0 0 3 86400 6 ""
 
 
     #  #1441 — la collecte des correctifs, sur un apt et un systemd simulés aux
@@ -174,6 +238,32 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "collecte : hors root, rien d'écrit ni d'inventé" "" champ apt_secu_vu_s
     t "collecte : hors root, aucun fichier créé" non eval '[ -e "$vuf" ] && echo oui || echo non'
     unset -f apt systemctl id champ; rm -rf "$tmps"
+
+    #  #1610 — la collecte du passage en cours, exécutée sur un systemd simulé aux
+    #  formes RÉELLES (`ActiveState` d'un service oneshot, horodatage `@epoch`).
+    now=$(date +%s); etat="inactive"; debut="@$(( now - 36000 ))"
+    systemctl() { case "$*" in
+        *ActiveState*) echo "$etat" ;;
+        *ExecMainStartTimestamp*) echo "$debut" ;; esac; }
+    enc() { _t0=$now eval "$(collecte_apt_en_cours)" | sed -n 's/^apt_en_cours=//p'; }
+    t "en cours : service inactif, dernier passage d'il y a 10 h" non enc
+    etat=activating
+    t "en cours : le service tourne (activating)" oui enc
+    etat=inactive; debut="@$(( now + 2 ))"
+    t "en cours : passage démarré APRÈS le début de la collecte" oui enc
+    debut="@$now"
+    t "en cours : démarré dans la même seconde → prudence (oui)" oui enc
+    debut=""
+    t "en cours : service jamais lancé (horodatage vide) → non" non enc
+    debut="@$(( now - 5 ))"
+    t "en cours : fini il y a 5 s, rien ne tourne → non (fait déjà posé)" non enc
+    unset -f systemctl
+    #  Sans systemctl, rien n'est mesurable : valeur VIDE, jamais « non ». PATH vidé
+    #  pour que la fonction ci-dessus et le binaire de l'hôte n'existent pas.
+    t "en cours : systemctl absent → vide, jamais « non »" "apt_en_cours="       eval 'PATH=/nonexistent "$BASH" -c "$(collecte_apt_en_cours)"'
+    t "en cours : la collecte assemblée porte les deux issues (mesurée, vide)" 2 eval 'echo "$COLLECT_APT" | grep -c "^echo \"apt_en_cours="'
+    t "en cours : _t0 posé AVANT tout relevé" _t0 eval 'echo "$COLLECT_APT" | grep -m1 -o "^_t0"'
+    unset -f enc
 
     #  La chaîne assemblée est du shell valide : c'est elle que les nœuds exécutent.
     t "COLLECT_APT assemblé est du shell valide" oui eval 'bash -n <<<"$COLLECT_APT" && echo oui'
