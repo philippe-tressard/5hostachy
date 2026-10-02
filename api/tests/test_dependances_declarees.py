@@ -106,3 +106,61 @@ def test_tout_module_tiers_importe_vient_d_une_dependance_declaree():
         + "\nLes déclarer et les épingler — une dépendance transitive peut changer "
         "de version, ou disparaître, au gré d'une autre."
     )
+
+
+# ── Les dépendances LATENTES : chargées à l'exécution, sans `import` (#1570) ──
+#
+#  `from pydantic import EmailStr` ne mentionne pas `email_validator`, et le
+#  contrôle ci-dessus, qui lit les `import`, ne le voit donc pas : pydantic
+#  l'importe à l'EXÉCUTION, quand un modèle qui porte `EmailStr` se construit.
+#  Il arrivait par `fastapi-mail` — le cas exact que #1048 avait corrigé pour
+#  `pydantic`. Chaque symbole qui exige un paquet sans l'importer se déclare ici.
+
+#: symbole importé → distribution que son emploi exige à l'exécution.
+DEPENDANCES_LATENTES = {"EmailStr": "email-validator", "NameEmail": "email-validator"}
+
+
+def _symboles_importes() -> dict[str, set[str]]:
+    """Nom importé (`from x import NOM`) ou attribut (`pydantic.NOM`) → fichiers."""
+    trouves: dict[str, set[str]] = {}
+    for rel, arbre in _arbres():
+        for noeud in ast.walk(arbre):
+            if isinstance(noeud, ast.ImportFrom):
+                noms = [a.name for a in noeud.names]
+            elif isinstance(noeud, ast.Attribute):
+                noms = [noeud.attr]
+            else:
+                continue
+            for nom in noms:
+                trouves.setdefault(nom, set()).add(rel)
+    return trouves
+
+
+def _manquantes(symboles: dict[str, set[str]], declarees: set[str]) -> dict[str, str]:
+    return {
+        f"{symbole} → {_normaliser(paquet)}": f"importé par {sorted(symboles[symbole])[:3]}"
+        for symbole, paquet in DEPENDANCES_LATENTES.items()
+        if symbole in symboles and _normaliser(paquet) not in declarees
+    }
+
+
+def test_cas_zero_le_parcours_voit_un_symbole_latent():
+    """`EmailStr` est employé : sinon ce contrôle serait vert sur un parcours aveugle."""
+    assert "EmailStr" in _symboles_importes(), "plus aucun `EmailStr` : retirer la ligne ou le test"
+
+
+def test_un_symbole_latent_exige_sa_dependance_declaree():
+    manquantes = _manquantes(_symboles_importes(), _declarees())
+    assert not manquantes, (
+        "Un symbole qui charge un paquet à l'exécution, sans `import`, exige ce paquet "
+        "dans requirements.txt (épinglé) :\n  "
+        + "\n  ".join(f"{m} : {r}" for m, r in manquantes.items())
+    )
+
+
+def test_le_controle_des_dependances_latentes_sait_REFUSER():
+    """Le cas fautif — `EmailStr` employé, `email-validator` absent — est refusé."""
+    employes = {"EmailStr": {"app/routers/config.py"}}
+    assert _manquantes(employes, {"pydantic", "fastapi"}) != {}
+    assert _manquantes(employes, {"pydantic", "email-validator"}) == {}
+    assert _manquantes({"BaseModel": {"app/x.py"}}, {"pydantic"}) == {}

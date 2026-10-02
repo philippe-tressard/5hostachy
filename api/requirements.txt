@@ -9,6 +9,11 @@ sqlmodel==0.0.47
 #  Épinglés à la version que ce fichier résolvait ce jour-là : aucun changement.
 pydantic==2.13.5
 pydantic-settings==2.15.0
+#  `EmailStr` (routers/config, routers/partage) charge `email_validator` à
+#  l'exécution, sans `import` qu'un contrôle verrait : il n'arrivait que par
+#  `fastapi-mail`. Épinglé à la version que l'image installait déjà (2.3.0,
+#  dernière publiée) : aucun changement (#1570, même cas que #1048).
+email-validator==2.3.0
 sqlalchemy==2.0.54
 alembic==1.20.0
 PyJWT==2.15.0
