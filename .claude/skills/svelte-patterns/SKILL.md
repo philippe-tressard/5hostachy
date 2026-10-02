@@ -88,8 +88,7 @@ n'ai pas pu regarder ».
 
 C'est le **cas zéro** de `standards/04` appliqué à un écran : une absence
 d'information ne se rend pas comme une information d'absence. `EtatListe`
-(24 écrans) porte les trois états, et `messageErreur` (`$lib/erreurs.ts`, 45
-fichiers) porte le texte.
+porte les trois états, et `messageErreur` (`$lib/erreurs.ts`) porte le texte.
 
 #### Ce qui dépend du rôle : `quandAuthResolue`, jamais `onMount`
 
@@ -118,7 +117,7 @@ recopiée, et `e2e/nombre-saisi` tient le comportement.
 ### Gestion d'erreurs API
 
 Un message d'erreur ne se rédige pas dans un écran : il vient de
-**`$lib/erreurs.ts`** (`messageErreur`), employé par 45 fichiers. Deux écrans qui
+**`$lib/erreurs.ts`** (`messageErreur`), que tous les écrans emploient. Deux écrans qui
 formulent le même échec autrement apprennent deux choses différentes à
 l'utilisateur pour un seul fait.
 
@@ -135,13 +134,14 @@ ne compile pas — et, pire, fait douter du composant plutôt que de la consigne
 
 ### Chargement et listes vides
 
-**`EtatListe`** (24 écrans) porte les trois états d'une liste : en cours, vide,
+**`EtatListe`** porte les trois états d'une liste : en cours, vide,
 en erreur. Une page ne compose plus ces états elle-même.
 
 🔒 `npm run lint:etat-liste` refuse le motif à deux branches
 (`{#if chargement}…{:else if !items.length}…`) qui laissait toujours un état de
-côté — le plus souvent l'erreur, affichée comme une liste vide. Et
-`npm run lint:apercu` tient l'aperçu d'une carte.
+côté — le plus souvent l'erreur, affichée comme une liste vide. La troncature de
+l'aperçu d'une carte (3 lignes) est tenue par `npm run lint:clamp` ; `lint:apercu`,
+lui, ne regarde que l'aperçu de **diffusion** (`ApercuDiffusion`, #498).
 
 🔴 **L'attente s'écrit `<EtatListe chargement />`** — ou `messageChargement="…"`
 pour un message propre à l'écran —, jamais un paragraphe. Cette section affirmait
@@ -201,11 +201,11 @@ reste aucune occurrence**, et trois linters refusent de le voir revenir.
 
 | Ce qu'il faut | Composant / module | Contrôle |
 |---|---|---|
-| l'en-tête d'une carte (titre, icônes, chevron) | `EnteteCarte` (16 écrans) | `lint:entete-carte` — **exceptions vides** |
-| l'aperçu du contenu, coupé à 3 lignes | `ApercuCarte` | `lint:apercu` |
+| l'en-tête d'une carte (titre, icônes, chevron) | `EnteteCarte` | `lint:entete-carte` — **exceptions vides** |
+| l'aperçu du contenu, coupé à 3 lignes | `ApercuCarte` | `lint:clamp` |
 | l'ouverture / fermeture d'un élément de liste | `$lib/listeDepliable.ts` | `lint:liste-depliable` |
-| les pastilles d'état | `Pastille` (39 écrans) | `lint:statuts`, `lint:etats` |
-| le périmètre affiché | `BadgePerimetre` (13 écrans) | `lint:libelle-perimetre`, `lint:teinte` |
+| les pastilles d'état | `Pastille` | `lint:statuts`, `lint:etats` |
+| le périmètre affiché | `BadgePerimetre` | `lint:libelle-perimetre`, `lint:teinte` |
 
 ⚠️ **`role="presentation"`, pas `role="button"`** sur le conteneur : le geste
 d'ouverture appartient au chevron d'`EnteteCarte`, qui porte déjà son nom
@@ -228,16 +228,41 @@ quatre positions essayées) :
 | Geste | Où |
 |---|---|
 | **créer** | en place, dans la page — **jamais** une modale |
-| **modifier** | dans une fenêtre `Modale` (19 écrans) |
+| **modifier** | dans une fenêtre `Modale` |
 | **faire évoluer** | `EvolForm`, qui reçoit son `entite: EntiteDeclaree` |
 
 🔒 `npm run lint:cadre-geste` et `npm run lint:geste-edition` tiennent cette
-règle ; `lint:pied-formulaire` impose `PiedFormulaire` (28 écrans) pour les
+règle ; `lint:pied-formulaire` impose `PiedFormulaire` pour les
 boutons, `lint:ordre-sections` l'ordre des sections, `lint:champs` le libellé
 d'un champ, et `lint:section-formulaire` leur découpe.
 
 Un formulaire ne compose donc plus ni son enveloppe, ni son pied, ni l'ordre de
 ses sections : il déclare son contenu.
+
+## Avant d'écrire un composant : la famille existe peut-être déjà (#1561)
+
+« Grep le pattern existant » est la seule consigne qui couvrait ces familles, et
+elles sont les plus réutilisées de `$lib/components/`. **Une ligne de routage par
+famille** — l'usage se compte en cherchant l'import du composant sous `front/src`, il ne
+s'écrit pas ici :
+
+| Ce qu'on écrit | Ce qui existe | Où lire pourquoi |
+|---|---|---|
+| une **section** de formulaire | l'enveloppe est `SectionFormulaire` (intitulé, filet, pliage) ; le contenu partagé entre écrans est un `Section<Nom>` : `SectionQuand`, `SectionPerimetre`, `SectionEquipement`, `SectionDiffusion`, `SectionDestinataires`, `SectionAffairesLiees`, `SectionOptionsPublication`, `SectionDescription`…, et `SectionsSuiteConseil` pour ce que le conseil pose dans une Suite. Elle se **déclare** dans `$lib/entites/<entité>` (`CLAUDE.md`, checklist front) | l'en-tête du composant |
+| un **onglet d'administration** | un composant `Onglet<Nom>` (`OngletSmtp`, `OngletWhatsApp`, `OngletConsommations`, `OngletPerimetres`, `OngletAcces`…) : l'état et les appels réseau vivent **dedans**, la page ne garde que le choix de l'onglet — c'est ce qui la garde sous le plafond de modularité. `Onglet.svelte` est, lui, le **bouton** d'une rangée | `OngletSmtp.svelte` (même forme que `OngletWhatsApp`) |
+| un **formulaire d'entité** | un `Formulaire<Entité>` qui sert la création **et** la correction (`FormulaireBail`, `FormulaireAnnonce`, `FormulaireSondage`, `FormulaireAnnonceHall`…) ; ses seules différences se passent par props (`avecLots`, `avecDateEntree`). Ne pas le réécrire dans un écran | `FormulaireBail.svelte` |
+| « **qui est prévenu ?** » | `CanauxNotification` (WhatsApp, syndic, conseil), puis `ApercuDiffusion` pour voir ce qui partira avant de confirmer | `CanauxNotification.svelte` |
+| le **fil d'une affaire**, liste et fiche | `HistoriqueTicket` — un seul câblage pour les deux rendus | `HistoriqueTicket.svelte` |
+| un bandeau « 📁 Historique (n) ▼ » | `SectionRepliee` | `SectionRepliee.svelte` |
+| une case 🔒 « visible du seul périmètre sélectionné » | `CaseReservePerimetre` | `CaseReservePerimetre.svelte` |
+| un mot de passe | `ChampMotDePasse` (bascule, jauge, « Verr. Maj. ») | idem |
+| les actions d'une carte d'actualité | `ActionsActualite` | idem |
+| le tableau des tâches planifiées | `TachesPlanifiees` (prévu **et** arrivé, ensemble) | idem |
+| un **état** (libellé, classe de pastille, aide) qui se décline par clé | `$lib/table-statuts.ts` — une table, ses colonnes s'en déduisent | l'en-tête du module |
+| le **type d'un accès** (Vigik, télécommande) | `$lib/types-acces.ts` | idem |
+
+⚠️ Côté serveur, les familles équivalentes (`utils/cloche`, `utils/nature_affaire`…)
+sont routées dans `api-scaffold`.
 
 ## Helpers de formatage — **à importer, jamais à réécrire**
 
@@ -249,7 +274,7 @@ Les formats de date et de montant sont **centralisés**. Une page qui redéfinit
 	// $lib/date.ts — TOUTES les dates affichées (locale fr-FR + TZ Europe/Paris figés)
 	import { fmtDate, fmtDateLong, fmtDateShort, fmtDatetime, fmtTime, fmtMonthYear } from '$lib/date';
 	// $lib/utils.ts — montants, périmètre, extraits HTML
-	import { fmtMontant, perimetreLabel, stripHtml, htmlPreview } from '$lib/utils';
+	import { fmtMontant, perimetreLabel, stripHtml } from '$lib/utils';
 </script>
 ```
 
@@ -310,7 +335,7 @@ encore comme « le fichier des règles globales », à onze endroits.
 
 **La liste des variables n'est pas recopiée ici** : elle se lit dans
 `socle.css`, où chacune porte son usage en commentaire. Cette section en listait
-douze alors que le fichier en déclare **dix-huit** — une liste recopiée est
+douze alors que le fichier en déclarait bien davantage — une liste recopiée est
 fausse dès qu'on en ajoute une, et personne ne relit une consigne qu'on n'a pas
 touchée.
 
@@ -349,20 +374,23 @@ conformes comme autant d'écarts (#429) :
 `CLAUDE.md`, règle front n° 1 — la seule copie. Celle-ci en recopiait la date et
 la liste, et la date divergeait déjà (claude-config#122).
 
-## Emojis non-BMP (U+10000 et au-delà)
+## Emojis (y compris hors du plan de base, U+10000 et au-delà)
 
-Écrits littéralement, ils survivent mal aux allers-retours d'encodage sous Windows.
-Les encoder :
+**Un caractère qu'on peut lire s'écrit en clair** — emoji et symboles compris :
+`const icon = '🔧';`, `🔹` dans un gabarit. C'est la règle du dépôt, et son
+garde-fou est `api/tests/test_echappements_source.py` (périmètre `api`,
+`front/src`, `front/scripts`, `scripts`), qui refuse `\uXXXX` et `\UXXXXXXXX`
+pour tout caractère imprimable. Seuls restent échappés les caractères qu'on ne
+voit pas (espace insécable, sélecteur de variante, contrôles).
 
-```typescript
-// JS / TS : échappement \u{HEX}
-const icon = '\u{1F6E0}'; // 🔧
-```
-
-```svelte
-<!-- Template HTML / Svelte : entité &#xHEX; -->
-&#x1F539; <!-- 🔹 -->
-```
+Le risque Windows — un emoji qui « survit mal » à un aller-retour — se tient par
+l'**encodage du fichier** (UTF-8 sans BOM, `standards/10`), pas par l'échappement :
+écrire la forme à accolades ou l'entité numérique rend le source illisible à la
+relecture, qui est le seul contrôle d'un libellé. ⚠️ Ces deux formes-là ne sont pas
+attrapées par le test (il ne reconnaît ni l'une ni l'autre) et le code en porte
+encore ; ne pas en ajouter, et les écrire en clair quand un lot touche la ligne.
+Cette section enseignait jusqu'au 02/10/2026 l'inverse (« les encoder »), contre le
+test du dépôt (#1557).
 
 ## Accessibilité
 
