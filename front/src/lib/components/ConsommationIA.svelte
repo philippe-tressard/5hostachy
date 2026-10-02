@@ -19,13 +19,12 @@
 	import { config as configApi, type ConsommationIA, type LigneConsommationIA } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { fmtMonthYear } from '$lib/date';
-	import { fmtMontant } from '$lib/utils';
+	import { fmtMontant, fmtNombre } from '$lib/utils';
 
 	let donnees: ConsommationIA | null = null;
 	let chargement = true;
 	let erreur = '';
 
-	const nombre = (n: number) => n.toLocaleString('fr-FR');
 	const jetons = (l: LigneConsommationIA) => l.jetons_entree + l.jetons_sortie;
 	//  Le coût d'un mois n'existe que si CHAQUE ligne en a un : additionner les
 	//  lignes chiffrées en taisant les autres afficherait un total faux.
@@ -74,7 +73,7 @@
 						<li>
 							<span>{p.libelle}</span>
 							<span class="muted"
-								>{nombre(p.consommes)} / {nombre(p.plafond)} jetons ({part(
+								>{fmtNombre(p.consommes)} / {fmtNombre(p.plafond)} jetons ({part(
 									p.consommes,
 									p.plafond,
 								)}&nbsp;%)</span
@@ -113,11 +112,11 @@
 								<strong>{l.libelle}</strong>
 								<span class="muted">{l.modele}</span>
 								<span>
-									{nombre(l.appels)} appel{l.appels > 1 ? 's' : ''} · {nombre(jetons(l))} jetons
+									{fmtNombre(l.appels)} appel{l.appels > 1 ? 's' : ''} · {fmtNombre(jetons(l))} jetons
 									<span class="muted"
-										>({nombre(l.jetons_entree)} envoyés{l.jetons_cache
-											? ` dont ${nombre(l.jetons_cache)} en cache`
-											: ''}, {nombre(l.jetons_sortie)} produits)</span
+										>({fmtNombre(l.jetons_entree)} envoyés{l.jetons_cache
+											? ` dont ${fmtNombre(l.jetons_cache)} en cache`
+											: ''}, {fmtNombre(l.jetons_sortie)} produits)</span
 									>
 									{#if l.cout_usd !== null}· {dollars(Number(l.cout_usd))}{/if}
 								</span>

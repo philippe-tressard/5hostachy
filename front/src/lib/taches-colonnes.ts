@@ -14,6 +14,7 @@
  *  case, et le lecteur voit une durée sous « Taille ».
  */
 import { fmtDatetime } from '$lib/date';
+import { fmtOctets } from '$lib/utils';
 
 //  Taille DB et Détail ne sont renseignés que par la maintenance applicative.
 //  Ils ne sont PAS structurellement vides : ils l'étaient parce qu'aucun
@@ -27,12 +28,6 @@ import { fmtDatetime } from '$lib/date';
 //  vide raconte. Une colonne qu'aucune ligne ne renseigne ne s'affiche pas.
 export const aValeur = (lignes: any[], champ: string) =>
 	lignes.some((l) => l?.[champ] !== null && l?.[champ] !== undefined && l?.[champ] !== '');
-
-export function fmtOctets(n: number | null | undefined): string {
-	if (n === null || n === undefined) return '—';
-	const mo = n / (1024 * 1024);
-	return mo >= 1024 ? `${(mo / 1024).toFixed(2)} Go` : `${mo.toFixed(1)} Mo`;
-}
 
 //  Colonnes propres à la sauvegarde et à l'agrégation. Elles vivaient dans les
 //  deux cartes supprimées avec #299, et la ligne dépliée ne savait pas les

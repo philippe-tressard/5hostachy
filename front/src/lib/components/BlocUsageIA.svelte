@@ -43,6 +43,7 @@
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { assistant as assistantApi, config as configApi, type UsageIA } from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
+	import { fmtNombre } from '$lib/utils';
 
 	export let usage: UsageIA;
 	/** Toutes les valeurs de configuration, liées : le bloc écrit les siennes. */
@@ -288,7 +289,7 @@
 					En jetons, et c’est un plafond de <strong>coût</strong> autant que de longueur : seuls les
 					jetons réellement produits sont facturés. Un modèle récent raisonne avant d’écrire, et ce
 					raisonnement compte dans le plafond — une réponse coupée vient de ce champ, pas du modèle.
-					Valeur d’origine : {usage.max_jetons_defaut.toLocaleString('fr-FR')}.
+					Valeur d’origine : {fmtNombre(usage.max_jetons_defaut)}.
 				</span>
 			</label>
 		</div>

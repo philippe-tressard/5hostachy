@@ -32,6 +32,7 @@
 	import { safeHtml } from '$lib/sanitize';
 	import { isAdmin } from '$lib/stores/auth';
 	import { confirmer } from '$lib/confirmation';
+	import { fmtOctets } from '$lib/utils';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	let ahList: AnnonceHall[] = [];
@@ -139,12 +140,8 @@
 		);
 	}
 
-	function ahPoids(octets: number | null): string {
-		if (!octets) return '';
-		return octets < 1024 * 1024
-			? `${Math.round(octets / 1024)} Ko`
-			: `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
-	}
+	//  Un poids absent ou nul ne s'écrit pas : l'échelle, elle, est `fmtOctets`.
+	const ahPoids = (octets: number | null): string => (octets ? fmtOctets(octets) : '');
 </script>
 
 {#if ahLoading || erreur || ahList.length === 0}
