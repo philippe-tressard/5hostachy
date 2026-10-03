@@ -48,6 +48,9 @@
 	import PanneauOptionsPublication from './PanneauOptionsPublication.svelte';
 	import FicheLecture from './FicheLecture.svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
+	import SyntheseAffaire from './SyntheseAffaire.svelte';
+	import SyntheseFil from './SyntheseFil.svelte';
+	import type { EtatSynthese } from '$lib/api';
 	import TransfertsVerses from './TransfertsVerses.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
@@ -136,10 +139,15 @@
 		supprimer: void;
 		annuler: void;
 		evoluer: unknown;
-		transfert_defait: void;
+		/** L'affaire et son fil ont changé : un transfert défait, une synthèse produite. */
+		fil_change: void;
 	}>();
 
 	$: dateAffichee = ticket.mis_a_jour_le ?? ticket.cree_le;
+
+	//  🧾 La synthèse d'une affaire close (#1643) : lue par `SyntheseFil`.
+	let etatSynthese: EtatSynthese | null = null;
+	let filSynthese: SyntheseFil;
 </script>
 
 <div
@@ -289,9 +297,17 @@
 				<TransfertsVerses
 					ticketId={ticket.id}
 					encadre={false}
-					on:change={() => dispatch('transfert_defait')}
+					on:change={() => dispatch('fil_change')}
 				/>
 				<EtatListe compact erreur={erreurSuivi} />
+				<!--  🧾 La synthèse d'une affaire close (#1643), comme sur la fiche. -->
+				<SyntheseFil
+					bind:this={filSynthese}
+					bind:etat={etatSynthese}
+					{ticket}
+					{evolutions}
+					on:change={() => dispatch('fil_change')}
+				/>
 				{#if evolutions.length > 0}
 					<div class="tk-fil">
 						<!--  Le crayon par entrée : il existait dans la rubrique depuis #431,
@@ -312,6 +328,15 @@
 							on:modifier={(e) => dispatch('evol_modifier', e.detail)}
 							on:supprimer={(e) => dispatch('evol_supprimer', { ticket, evolId: e.detail })}
 						>
+							<svelte:fragment slot="synthese" let:evol>
+								{#if etatSynthese?.synthese?.evolution_id === evol.id}
+									<SyntheseAffaire
+										synthese={etatSynthese.synthese}
+										gestes={$isCS}
+										on:change={() => filSynthese.recharger()}
+									/>
+								{/if}
+							</svelte:fragment>
 							<svelte:fragment slot="edition" let:evol>
 								{#key evolEnEdition}
 									<SuiteAffaire

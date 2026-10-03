@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import pathlib
 from datetime import timedelta
 from types import SimpleNamespace
 
@@ -256,3 +257,35 @@ def test_produire_une_affaire_d_avant_la_mise_en_service(session, envois):
     session.add(SyntheseAffaire(ticket_id=ticket.id, statut=BROUILLON, synthese="<p>x</p>"))
     session.commit()
     assert not routes.lire_synthese(ticket.id, session=session, user=cs).produisible
+
+
+# ── Les rendus du fil ──────────────────────────────────────────────────────
+
+_FRONT = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
+#: Les fils d'affaire qui n'ont pas à porter la synthèse — avec leur raison.
+#: Une exception qui ne sert plus fait échouer.
+_FILS_SANS_SYNTHESE = {
+    "ActualiteEnListe.svelte": "une actualité n'a pas de cycle de vie : jamais close, "
+    "jamais de synthèse (`StatutTicket.publie`)",
+}
+
+
+def test_chaque_fil_d_affaire_monte_la_synthese():
+    """🔴 v2.99.0 : la synthèse et « Produire » n'étaient câblés que dans la fiche.
+
+    La carte dépliée de la liste monte son propre fil (`RubriqueHistorique` +
+    `SuiteAffaire`) : le bouton y manquait, et la Suite y paraissait VIDE —
+    trouvé à l'écran par l'utilisateur. Tout fil d'affaire monte `SyntheseFil`.
+    """
+    fils = {
+        p.name: p.read_text(encoding="utf-8")
+        for p in _FRONT.rglob("*.svelte")
+        if "<RubriqueHistorique" in p.read_text(encoding="utf-8")
+        and "<SuiteAffaire" in p.read_text(encoding="utf-8")
+    }
+    assert len(fils) >= 2, f"cas zéro : {sorted(fils)} — la lecture ne voit plus les fils"
+    oublis = [n for n, src in fils.items() if "<SyntheseFil" not in src]
+    assert sorted(oublis) == sorted(_FILS_SANS_SYNTHESE), (
+        f"fils d'affaire sans `SyntheseFil` : {sorted(set(oublis) - set(_FILS_SANS_SYNTHESE))} ; "
+        f"exceptions qui ne servent plus : {sorted(set(_FILS_SANS_SYNTHESE) - set(oublis))}"
+    )

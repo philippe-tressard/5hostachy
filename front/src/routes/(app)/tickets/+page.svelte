@@ -269,7 +269,7 @@
 		evolAnnuler: () => (evolEnEdition = null),
 		modifie: ticketModifie,
 		annuler: fermerFormulaires,
-		transfertDefait: (t) =>
+		filChange: (t) =>
 			ticketsApi.get(t.id).then(ticketModifie, (e) => toast('error', messageErreur(e))),
 	};
 
