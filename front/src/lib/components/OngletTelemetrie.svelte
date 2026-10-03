@@ -31,7 +31,6 @@
 	import { messageErreur } from '$lib/erreurs';
 	import { fmtDate } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
-	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
 	import FrequentationTelemetrie from '$lib/components/FrequentationTelemetrie.svelte';
 	import ErreursNavigateur from '$lib/components/ErreursNavigateur.svelte';
 	import DureesAffichage from '$lib/components/DureesAffichage.svelte';
