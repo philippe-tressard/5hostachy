@@ -71,7 +71,6 @@ def appliquer_sections_suite(
     #  📅🛠️ Le conseil les pose dans une Suite (#1207) : mêmes règles que la
     #  correction de l'affaire, et ce qui a changé s'écrit dans la Suite.
     if est_cs and not est_actualite(ticket):
-        equipement_avant = ticket.equipement
         planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(
             body, ticket
         )
@@ -79,10 +78,6 @@ def appliquer_sections_suite(
             _tracer(evol, planifie)
             ticket.mis_a_jour_le = horloge.maintenant()
             session.add(ticket)
-        #  L'équipement posé sur une affaire déjà close la fait entrer en file (#1643).
-        inscrire_si_eligible(
-            session, ticket, statut_avant=ticket.statut, equipement_avant=equipement_avant
-        )
     #  À qui l'on parle — une actualité (#1091) comme une affaire suivie (#1343) :
     #  `ticket_visible` honore ce choix, et l'Accès. Le conseil seul.
     if est_cs and (body.public_cible is not None or body.reserve_perimetre is not None):
@@ -128,9 +123,7 @@ def appliquer_statut(
     ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
     apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
-    inscrire_si_eligible(
-        session, ticket, statut_avant=statut_avant, equipement_avant=ticket.equipement
-    )
+    inscrire_si_eligible(session, ticket, statut_avant=statut_avant)
 
 
 def corriger_suivi(session: Session, ticket: Ticket, evol: TicketEvolution, body: Any) -> None:

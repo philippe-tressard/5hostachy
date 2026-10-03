@@ -150,7 +150,6 @@ def update_ticket(
         poser_liens(session, ticket, body.affaires_liees, user)
 
     ancien_statut = ticket.statut
-    equipement_avant = ticket.equipement  # la synthèse d'une affaire close (#1643)
     #  L'etat des CANAUX avant modification. La Diffusion est rouverte a
     #  l'edition depuis le 18/08/2026 (arbitrage utilisateur) : le conseil
     #  syndical doit pouvoir decider d'envoyer au syndic un ticket deja saisi.
@@ -270,10 +269,8 @@ def update_ticket(
     #  Elle était appelée avec le statut, donc sur le contrat d'avant.
     if body.statut is not None:
         apres_cloture(ticket, session)
-    #  Close, ou équipée une fois close : la synthèse entre en file (#1643).
-    inscrire_si_eligible(
-        session, ticket, statut_avant=ancien_statut, equipement_avant=equipement_avant
-    )
+    #  Close : la synthèse d'une affaire du carnet entre en file (#1643).
+    inscrire_si_eligible(session, ticket, statut_avant=ancien_statut)
     #  « Quand » : planifié par le conseil seul — ignoré pour un autre, comme
     #  l'intervenant (l'écran ne lui ouvre pas la section).
     if is_cs_admin:
