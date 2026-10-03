@@ -115,6 +115,41 @@ TELEMETRIE_PERFORMANCE = (
     "<strong>sans rattachement à votre compte</strong> et conservés 30\xa0jours. Elles servent "
     "à savoir quels écrans sont lents. Votre refus de la mesure d'audience les coupe aussi.</li>"
 )
+#: Le journal de sécurité (#1580) : `utils/journal_securite` écrit, pour chaque geste
+#: sensible, une ligne qui porte l'IDENTIFIANT du compte — jamais l'adresse ni un
+#: secret. La politique ne le nommait pas. Sa durée n'est pas une durée choisie :
+#: les lignes vivent dans les journaux du conteneur, renouvelés par taille et à
+#: chaque déploiement (#1588) — le texte le dit au lieu d'annoncer un délai que
+#: rien n'applique. Écrite une fois : le gabarit et la migration 0253 la lisent ici.
+JOURNAL_SECURITE = (
+    "<li><strong>Journal de sécurité\xa0:</strong> les connexions refusées, les changements "
+    "de mot de passe, d'adresse ou de rôle, les bannissements et les décisions sur un compte, "
+    "avec l'<strong>identifiant</strong> du compte concerné — jamais son adresse ni un mot de "
+    "passe. Il sert à retrouver l'origine d'un accès suspect. Il est écrit dans les journaux "
+    "techniques du serveur, qui se renouvellent par taille et à chaque mise à jour de "
+    "l'application.</li>"
+)
+#: Les services tiers de la section 4 (#1585). La politique en comptait TROIS qui
+#: transmettent ; le code en a une quatrième, de RÉCEPTION (`utils/courriel_boite`
+#: relève une boîte hébergée chez un tiers). Le nombre s'écrit une fois — le test de
+#: la politique compare le mot au nombre d'éléments de la liste.
+FONCTIONS_TIERS_ANCIEN = (
+    "Trois fonctions transmettent des informations hors de l'application lorsqu'elles sont activées"
+)
+FONCTIONS_TIERS = (
+    "Quatre fonctions font passer des informations par un service tiers lorsqu'elles sont activées"
+)
+ACHEMINEMENT_COURRIELS = (
+    "<li><strong>Acheminement des courriels</strong> — les notifications partent par un "
+    "service d'envoi de courriels, qui traite donc l'adresse du destinataire et le contenu du "
+    "message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li>"
+)
+RECEPTION_COURRIELS = (
+    "<li><strong>Réception des courriels</strong> — les réponses aux notifications et les "
+    "courriels transférés au site arrivent dans une boîte hébergée chez un service de "
+    "messagerie, que l'application relève régulièrement\xa0; ce service conserve les messages "
+    "reçus selon ses propres règles. <strong>À RENSEIGNER</strong>\xa0: lequel.</li>"
+)
 TELEMETRIE_BASE_LEGALE = (
     "<li><strong>Mesure d'audience interne</strong> — base : intérêt légitime "
     "(art. 6-1-f) à savoir quels écrans servent et à qui ; vous pouvez vous y "
@@ -178,6 +213,7 @@ DEFAULT_LEGAL = {
         + TELEMETRIE_COLLECTE
         + TELEMETRIE_ERREURS
         + TELEMETRIE_PERFORMANCE
+        + JOURNAL_SECURITE
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "
         "base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Communication résidents/CS</strong> — "
@@ -195,9 +231,9 @@ DEFAULT_LEGAL = {
         "qui. <strong>À RENSEIGNER</strong> si un intermédiaire technique (CDN, proxy, résolveur DNS)"
         " relaie les connexions : nommez-le et dites d'où il opère. Un relais hors UE traite au "
         "minimum les adresses IP des visiteurs, et le taire rendrait ce paragraphe "
-        "inexact.</p><p><strong>Services tiers qui reçoivent des données.</strong> Trois fonctions "
-        "transmettent des informations hors de l'application lorsqu'elles sont activées — elles le "
-        "sont au cas par cas, par l'administrateur\xa0:</p><ul><li><strong>Diffusion sur une messagerie "
+        "inexact.</p><p><strong>Services tiers qui reçoivent des données.</strong> "
+        + FONCTIONS_TIERS
+        + " — elles le sont au cas par cas, par l'administrateur\xa0:</p><ul><li><strong>Diffusion sur une messagerie "
         "instantanée</strong> — lorsqu'une publication est diffusée au groupe de la résidence, son "
         "titre, son texte et, le cas échéant, <strong>une photo</strong> sont transmis au service qui"
         " héberge ce groupe (WhatsApp, service de Meta). Les conditions de ce service s'appliquent "
@@ -209,9 +245,10 @@ DEFAULT_LEGAL = {
         "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. "
         + ASSISTANT_SANS_GESTE
         + COURRIELS_TRANSFERES
-        + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
-        "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire et le"
-        " contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul><h2>5. Durée de "
+        + "</li>"
+        + ACHEMINEMENT_COURRIELS
+        + RECEPTION_COURRIELS
+        + "</ul><h2>5. Durée de "
         "conservation</h2><ul><li>Données de compte actif\xa0: durée de la relation + 2 "
         "ans.</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
         "configuration.</li></ul><ul>"
@@ -266,9 +303,9 @@ AJOUTS_1034 = [
     ),
     (
         "<h2>5. Durée de conservation</h2>",
-        "<p><strong>Services tiers qui reçoivent des données.</strong> Trois fonctions "
-        "transmettent des informations hors de l'application lorsqu'elles sont activées — elles "
-        "le sont au cas par cas, par l'administrateur\xa0:</p><ul><li><strong>Diffusion sur une "
+        "<p><strong>Services tiers qui reçoivent des données.</strong> "
+        + FONCTIONS_TIERS
+        + " — elles le sont au cas par cas, par l'administrateur\xa0:</p><ul><li><strong>Diffusion sur une "
         "messagerie instantanée</strong> — lorsqu'une publication est diffusée au groupe de la "
         "résidence, son titre, son texte et, le cas échéant, <strong>une photo</strong> sont "
         "transmis au service qui héberge ce groupe (WhatsApp, service de Meta). Les conditions de"
@@ -281,9 +318,10 @@ AJOUTS_1034 = [
         "opère. "
         + ASSISTANT_SANS_GESTE
         + COURRIELS_TRANSFERES
-        + "</li><li><strong>Acheminement des courriels</strong> — les notifications "
-        "partent par un service d'envoi de courriels, qui traite donc l'adresse du destinataire "
-        "et le contenu du message. <strong>À RENSEIGNER</strong>\xa0: lequel.</li></ul>",
+        + "</li>"
+        + ACHEMINEMENT_COURRIELS
+        + RECEPTION_COURRIELS
+        + "</ul>",
     ),
     (
         "<h2>6. Vos droits</h2>",
