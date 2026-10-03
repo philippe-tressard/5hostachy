@@ -36,3 +36,19 @@ class SyntheseRelance(BaseModel):
     """« Relancer » : un complément ajouté au prompt de l'usage."""
 
     prompt_complement: str = Field(min_length=1, max_length=1_000)
+
+
+class PropositionSynthese(BaseModel):
+    """Ce que « Relancer » et « Recommencer » rendent : une rédaction PROPOSÉE.
+
+    Rien n'est remplacé tant que le conseil ne l'applique pas
+    (`POST …/propositions/{tentative_id}/appliquer`). `actuelle` porte la
+    synthèse relue — ses métriques, recalculées, valent déjà.
+    """
+
+    tentative_id: int
+    synthese: str
+    difficultes: str = ""
+    amelioration: str = ""
+    prompt_complement: Optional[str] = None
+    actuelle: SyntheseLue

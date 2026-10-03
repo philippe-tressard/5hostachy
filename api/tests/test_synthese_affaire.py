@@ -163,18 +163,64 @@ def test_l_assistant_redige_et_la_relance_ne_renvoie_pas_de_courriel(session, en
     assert demande.synthese == "<p>Récit</p>" and demande.assiste_ia
     assert json.loads(demande.metriques_json)["issue"] == "résolu"
     resultat = asyncio.run(produire(session, demande, auteur_id=cs.id, complement="Plus court"))
-    assert resultat.redigee and not resultat.a_aviser
+    assert resultat.redigee and not resultat.a_aviser and resultat.tentative_id
     assert "Plus court" in assistant.consignes[-1]
-    session.refresh(demande)
-    assert demande.prompt_complement == "Plus court"
-    asyncio.run(produire(session, demande, auteur_id=cs.id, complement=None))
-    session.refresh(demande)
-    assert demande.prompt_complement is None  # « Recommencer » l'efface…
     tentatives = session.exec(
         select(TentativeSynthese).where(TentativeSynthese.synthese_id == demande.id)
     ).all()
-    assert len(tentatives) == 3  # … l'historique reste
+    assert len(tentatives) == 2  # l'historique garde chaque production
     assert len(envois) == 1
+
+
+def test_une_relance_propose_et_rien_ne_change_sans_appliquer(session, envois, assistant):
+    """03/10/2026, demandé à l'écran : « il manque une option Annuler si on veut
+    sortir sans sauvegarder ». Relancer PROPOSE ; « Annuler » est de ne pas appliquer."""
+    resident, cs = _personnes(session)
+    ticket = _close(session, resident)
+    demande = _produite(session, ticket)
+    routes.modifier_synthese(
+        ticket.id, SyntheseModification(synthese="<p>Relu</p>"), session=session, user=cs
+    )
+    resultat = asyncio.run(produire(session, demande, auteur_id=cs.id, complement="Plus court"))
+    session.refresh(demande)
+    assert demande.synthese == "<p>Relu</p>" and demande.prompt_complement is None
+    lue = routes.appliquer_proposition(ticket.id, resultat.tentative_id, session=session, user=cs)
+    assert lue.synthese == "<p>Récit</p>" and lue.prompt_complement == "Plus court"
+    #  « Recommencer » propose sans complément ; l'appliquer l'efface.
+    recommence = asyncio.run(produire(session, demande, auteur_id=cs.id, complement=None))
+    lue = routes.appliquer_proposition(ticket.id, recommence.tentative_id, session=session, user=cs)
+    assert lue.prompt_complement is None
+    with pytest.raises(HTTPException) as refus:
+        routes.appliquer_proposition(ticket.id, 999_999, session=session, user=cs)
+    assert refus.value.status_code == 404
+
+
+def test_une_correction_d_etat_est_une_etape_de_la_frise(session, envois):
+    """L'état changé par la fiche n'écrit pas d'étape, mais sa correction le dit :
+    la frise ne prête plus toute l'attente à l'état d'après (03/10/2026)."""
+    resident, cs = _personnes(session)
+    ticket = _close(session, resident)
+    debut = ticket.cree_le
+    for jours, evol in (
+        (
+            2,
+            TicketEvolution(
+                type="commentaire", contenu="Correction : État : Ouvert → Chez le syndic"
+            ),
+        ),
+        (5, TicketEvolution(type="etat", ancien_statut="en_cours", nouveau_statut="résolu")),
+    ):
+        evol.ticket_id, evol.auteur_id, evol.cree_le = (
+            ticket.id,
+            cs.id,
+            debut + timedelta(days=jours),
+        )
+        session.add(evol)
+    session.commit()
+    demande = _produite(session, ticket)
+    met = json.loads(demande.metriques_json)
+    assert [e["statut"] for e in met["etapes"]] == ["ouvert", "en_cours"]
+    assert [j["statut"] for j in met["chronologie"][:2]] == ["ouvert", "en_cours"]
 
 
 def test_un_brouillon_est_invisible_d_un_lecteur_ordinaire(session, envois, assistant):

@@ -73,10 +73,27 @@ def _jours(debut: datetime, fin: datetime) -> float:
     return jours_ouvres(_mur(debut), _mur(fin))
 
 
+def _etats(faits: list[Fait], cloture_le: datetime) -> list[Fait]:
+    return [f for f in faits if f.type == "etat" and f.nouveau_statut and f.quand <= cloture_le]
+
+
+def etat_initial(faits: list[Fait], cloture_le: datetime) -> str:
+    """L'état de l'affaire à son ouverture — celui que quitte sa première étape tracée.
+
+    🔴 UNE source pour la frise ET la chronologie (03/10/2026, relevé à l'écran :
+    la frise disait « Chez le syndic 6 j » quand la chronologie partait de
+    « Ouvert »). Une étape qui n'a laissé aucune trace — un état corrigé à la
+    main avant `rassemblement` qui sait les lire — ne doit pas faire raconter
+    deux histoires aux deux graphiques.
+    """
+    etats = _etats(faits, cloture_le)
+    return (etats[0].ancien_statut if etats else None) or StatutTicket.ouvert.value
+
+
 def _segments(cree_le: datetime, cloture_le: datetime, faits: list[Fait]) -> list[tuple]:
     """(état, début, fin) de l'ouverture à la clôture, dans l'ordre."""
-    etats = [f for f in faits if f.type == "etat" and f.nouveau_statut and f.quand <= cloture_le]
-    courant = (etats[0].ancien_statut if etats else None) or StatutTicket.ouvert.value
+    etats = _etats(faits, cloture_le)
+    courant = etat_initial(faits, cloture_le)
     depuis = cree_le
     segments = []
     for e in etats:
@@ -108,7 +125,7 @@ def _etapes(segments: list[tuple]) -> tuple[list[dict], Optional[str]]:
 
 def _chronologie(cree_le: datetime, cloture_le: datetime, issue: str, faits: list[Fait]):
     """Les jalons datés : ouverture, états, relances, réouvertures, clôture."""
-    jalons = [{"quand": cree_le, "type": "creation", "statut": StatutTicket.ouvert.value}]
+    jalons = [{"quand": cree_le, "type": "creation", "statut": etat_initial(faits, cloture_le)}]
     for f in faits:
         if f.quand > cloture_le:
             continue
@@ -242,6 +259,7 @@ __all__ = [
     "MINIMUM_COMPARABLES",
     "bornes_exercice",
     "calculer",
+    "etat_initial",
     "debut_utc",
     "mesures_de_base",
     "moyenne",
