@@ -244,6 +244,9 @@ def create_ticket(
             auteur=user,
             background_tasks=background_tasks,
             deja_servies=adresses_deja_servies(session, ticket, categorie=body.categorie),
+            #  Le conseil diffuse par SA Diffusion : sans la case « Conseil syndical »,
+            #  aucun courriel ne part vers lui. Un résident n'a pas cette case.
+            par_courriel=not est_cs,
         )
 
     if bug:

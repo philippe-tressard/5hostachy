@@ -338,3 +338,63 @@ def test_sans_tache_de_fond_aucun_courriel_n_est_PRETENDU(conseil):
     """
     session, _, code, _, _, auteur = conseil
     _notifier_cs_creation(session, _Ticket([code]), urgence=False)
+
+
+# ── La Diffusion du conseil est RESPECTÉE (03/10/2026) ───────────────────────
+#
+#  Signalé à l'écran sur TK-264069, une affaire créée par un membre du conseil sans
+#  cocher « Conseil syndical » : quatre conseillers ont reçu « Nouvelle affaire ».
+#  *« Si CS n'est pas sélectionné, il ne doit pas envoyer au CS. »* Un résident, lui,
+#  n'a aucune case : le conseil est toujours prévenu.
+
+
+def _creer_affaire(session, auteur, code, **champs):
+    from fastapi import BackgroundTasks
+
+    from app.models.core import Ticket
+    from app.routers.tickets import crud
+    from app.schemas import TicketCreate
+
+    taches = BackgroundTasks()
+    corps = TicketCreate(
+        titre="Bruit",
+        description="Musique tard.",
+        categorie="panne",
+        perimetre_cible=[code],
+        **champs,
+    )
+    lu = crud.create_ticket(corps, taches, session=session, user=auteur)
+    codes = [t.kwargs.get("code") for t in taches.tasks]
+    session.delete(session.get(Ticket, lu.id))
+    session.commit()
+    return codes
+
+
+def test_un_membre_du_conseil_sans_la_case_CS_ne_previent_pas_le_conseil_par_courriel(conseil):
+    session, _, code, _, _, cs = conseil
+    codes = _creer_affaire(session, cs, code, destinataire_cs=False)
+    assert "ticket_nouveau_cs" not in codes, (
+        "le conseil a été prévenu par courriel alors que « Conseil syndical » n'était pas coché "
+        f"dans la Diffusion : {codes}"
+    )
+    assert "ticket_syndic" not in codes
+
+
+def test_avec_la_case_CS_le_conseil_recoit_UN_courriel_pas_deux(conseil):
+    session, _, code, _, _, cs = conseil
+    codes = _creer_affaire(session, cs, code, destinataire_cs=True)
+    assert codes.count("ticket_syndic") == 1
+    assert "ticket_nouveau_cs" not in codes, (
+        "deux courriels pour un même fait (« jamais deux fois »)"
+    )
+
+
+def test_un_resident_n_a_pas_de_case_le_conseil_est_toujours_prevenu(conseil):
+    session, _, code, _, _, _ = conseil
+    resident = compte(session, prefixe="res-cs", roles_json="résident")
+    try:
+        codes = _creer_affaire(session, resident, code)
+        assert "ticket_nouveau_cs" in codes
+    finally:
+        session.delete(resident)
+        session.commit()
