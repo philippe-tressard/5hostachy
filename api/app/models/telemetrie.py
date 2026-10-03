@@ -88,6 +88,22 @@ class ErreurNavigateur(SQLModel, table=True):
     derniere_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
 
 
+class MesureAffichage(SQLModel, table=True):
+    """Une durée d'affichage d'écran, telle que le navigateur l'a mesurée (#1632).
+
+    Une ligne par mesure — les centiles ne se calculent pas sur des compteurs —,
+    datée au JOUR et SANS `user_id`. Écrite et lue par `utils/mesures_affichage`,
+    purgée après `CONSERVATION_JOURS` par l'agrégation quotidienne.
+    """
+
+    __tablename__ = "mesure_affichage"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+    page: str  # identifiants masqués : /tickets/#
+    indicateur: str  # chargement | navigation
+    duree_ms: int
+
+
 class HistoriqueTelemetrie(SQLModel, table=True):
     """Historique des exécutions d'agrégation de la télémétrie."""
 

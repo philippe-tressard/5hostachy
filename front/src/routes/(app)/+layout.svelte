@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser, marquerAuthResolue } from '$lib/stores/auth';
 	import { urlDeConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { chargerPerimetres } from '$lib/stores/perimetres';
-	import { initTelemetry, trackPageView, setTelemetryOptOut } from '$lib/telemetry';
+	import {
+		commencerNavigation,
+		initTelemetry,
+		mesurerNavigation,
+		trackPageView,
+		setTelemetryOptOut,
+	} from '$lib/telemetry';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
@@ -45,7 +51,12 @@
 		trackPageView(window.location.pathname);
 	});
 
-	afterNavigate(() => {
+	//  La durée d'affichage de chaque écran (#1632) : la première page à
+	//  l'hydratation (`enter`), les suivantes de `beforeNavigate` à ici.
+	beforeNavigate(commencerNavigation);
+
+	afterNavigate((navigation) => {
+		mesurerNavigation(navigation.type);
 		trackPageView(window.location.pathname);
 	});
 

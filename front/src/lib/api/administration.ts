@@ -10,6 +10,7 @@
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, BASE, buildQuery } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
+import type { TableauTelemetrie } from './telemetrie';
 
 export const annuaireAdmin = {
 	getCS: () => api.get<any>('/admin/annuaire/cs'),
@@ -155,7 +156,7 @@ export const admin = {
 	//  savait pas le porter. Une méthode trop pauvre ne fait pas contourner un peu,
 	//  elle fait recopier la route en entier — et la route recopiée ne suit plus.
 	telemetryDashboard: (scope?: 'jour' | 'mois' | 'annee') =>
-		api.get<any>(`/telemetry/dashboard${buildQuery({ scope })}`),
+		api.get<TableauTelemetrie>(`/telemetry/dashboard${buildQuery({ scope })}`),
 	//  🔴 `telemetryUsersActive` A ÉTÉ RETIRÉE (#801) : le tableau de bord de
 	//  télémétrie porte déjà `kpi.utilisateurs` et `kpi.moy_utilisateurs_jour`,
 	//  servis par `telemetryDashboard()` en une requête. L'endpoint

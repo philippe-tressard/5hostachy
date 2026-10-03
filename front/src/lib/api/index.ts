@@ -37,6 +37,7 @@ export * from './patrimoine';
 export * from './acces';
 export * from './prestataires';
 export * from './administration';
+export * from './telemetrie';
 export * from './assistant';
 
 export const auth = {

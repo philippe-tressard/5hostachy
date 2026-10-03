@@ -7,28 +7,17 @@
  *  mesure d'audience, il ne porte jamais le message brut, et l'administrateur
  *  le lit dans l'onglet Télémétrie, téléphone compris.
  */
-import type { Page } from '@playwright/test';
-import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
-
-type Evenement = { page: string; action: string; detail?: string };
-
-/** Les événements que le navigateur poste — route enregistrée APRÈS `simulerApi`. */
-async function lotsEnvoyes(page: Page): Promise<Evenement[]> {
-	const recus: Evenement[] = [];
-	await page.route(
-		(url) => url.pathname === '/api/telemetry/collect',
-		(route) => {
-			recus.push(...(JSON.parse(route.request().postData() ?? '{}').events ?? []));
-			return route.fulfill({ status: 204 });
-		},
-	);
-	return recus;
-}
-
-/** La file part au déchargement de la page — sans attendre ses 30 secondes. */
-async function viderLaFile(page: Page) {
-	await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
-}
+import {
+	attendreHydratation,
+	type Evenement,
+	expect,
+	lotsEnvoyes,
+	MEMBRE_CS,
+	simulerApi,
+	TABLEAU_TELEMETRIE_VIDE,
+	test,
+	viderLaFile,
+} from './aides';
 
 const erreurs = (recus: Evenement[]) => recus.filter((e) => e.action === 'erreur');
 
@@ -81,12 +70,7 @@ test('l’administrateur lit les erreurs dans l’onglet Télémétrie, sans dé
 		if (chemin === '/api/auth/me') return { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
 		if (chemin === '/api/telemetry/dashboard')
 			return {
-				scope: 'jour',
-				kpi: { vues: 0, pages: 0 },
-				chart: [],
-				chart_label: 'Vues par heure',
-				top_pages: [],
-				top_users: [],
+				...TABLEAU_TELEMETRIE_VIDE,
 				erreurs: [
 					{
 						page: '/tickets/12',

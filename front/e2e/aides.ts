@@ -93,7 +93,33 @@ export const MEMBRE_CS = {
  * leur donnait une forme que le serveur ne rend jamais, et l'écran levait une
  * exception que rien n'écoutait (#1475). Chacune reprend le type de son client.
  */
+/**
+ * Le tableau de bord de télémétrie VIDE (`TableauTelemetrie`) — exporté : un spec
+ * qui teste un panneau en remplit un champ et garde les autres, sinon l'onglet
+ * lirait `undefined.par_profil` et lèverait une exception.
+ */
+export const TABLEAU_TELEMETRIE_VIDE = {
+	scope: 'jour',
+	kpi: { vues: 0, pages: 0 },
+	chart: [],
+	chart_label: 'Vues par heure',
+	top_pages: [],
+	top_users: [],
+	erreurs: [],
+	performance: { indicateurs: [], pages: [] },
+	adoption: {
+		jours: 30,
+		global: { libelle: 'Tous les comptes', actifs: 0, comptes: 0, taux: null },
+		refus: 0,
+		par_profil: [],
+		par_type: [],
+		par_batiment: [],
+	},
+};
+
 const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
+	//  `TableauTelemetrie` : l'onglet Télémétrie lit `adoption.par_profil`…
+	'/api/telemetry/dashboard': TABLEAU_TELEMETRIE_VIDE,
 	//  `FluxResponse` : `RaccourcisRapides` lit `sante.tickets_ouverts`.
 	'/api/flux': { items: [], sante: {} },
 	//  `santeMaintenance` : `TachesPlanifiees` lit `taches` et `anomalies_recentes`.
@@ -184,4 +210,28 @@ export async function boiteStable(cible: Locator) {
 		)
 		.toBe(true);
 	return boite!;
+}
+
+export type Evenement = { page: string; action: string; detail?: string };
+
+/**
+ * **Les événements que le navigateur poste à la mesure d'audience** — route
+ * enregistrée APRÈS `simulerApi`, donc essayée d'abord. Écrite ici : deux specs
+ * la lisent (erreurs, durées d'affichage).
+ */
+export async function lotsEnvoyes(page: Page): Promise<Evenement[]> {
+	const recus: Evenement[] = [];
+	await page.route(
+		(url) => url.pathname === '/api/telemetry/collect',
+		(route) => {
+			recus.push(...(JSON.parse(route.request().postData() ?? '{}').events ?? []));
+			return route.fulfill({ status: 204 });
+		},
+	);
+	return recus;
+}
+
+/** La file part au déchargement de la page — sans attendre ses 30 secondes. */
+export async function viderLaFile(page: Page) {
+	await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')));
 }
