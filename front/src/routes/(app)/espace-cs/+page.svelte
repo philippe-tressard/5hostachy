@@ -10,6 +10,7 @@
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
+	import OngletReglement from '$lib/components/OngletReglement.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { isCS, authResolue, quandAuthResolue } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -334,6 +335,8 @@
 {:else if onglet === 'annonces-hall'}
 	<!-- Aucune prop de plafond : l'affiche a la sienne (`$lib/annonces`, #651). -->
 	<OngletAnnoncesHall />
+{:else if onglet === 'reglement'}
+	<OngletReglement />
 {:else if onglet === 'annuaire'}
 	<LienConsignes />
 

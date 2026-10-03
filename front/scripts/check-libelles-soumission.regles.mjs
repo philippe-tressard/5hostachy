@@ -29,6 +29,12 @@ export const EXCEPTIONS = {
 	//  🔴 Transmettre une affaire par courriel (#1357) : rien n'est ENREGISTRÉ,
 	//  un courriel PART. « Enregistrer » y mentirait sur le geste — même raison
 	//  que les confirmations ci-dessous, qui nomment ce qu'elles font.
+	//  🔴 Questions au règlement (03/10/2026) : rien n'est saisi pour être
+	//  ENREGISTRÉ. « Poser la question » envoie une demande facturée à
+	//  l'assistant, « Charger ce texte » remplace le texte interrogé — deux
+	//  gestes que le verbe générique ne dirait pas, même raison que le courriel.
+	'lib/components/OngletReglement.svelte':
+		'« Poser la question » interroge l’assistant (facturé) et « Charger ce texte » change le texte interrogé : aucun n’enregistre une saisie',
 	'lib/components/PartageCourriel.svelte':
 		'le bouton envoie un courriel et n’enregistre rien : « Envoyer » nomme le geste',
 	//  🔴 `PiedFormulaire` rend `{enCours ? libelleEnCours : libelle}` — des

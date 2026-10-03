@@ -88,6 +88,17 @@ SYNTHESE_AFFAIRE_CLOSE = (
     "les autres lecteurs de l'affaire le voient."
 )
 
+#: Les questions au règlement de copropriété (03/10/2026) : le texte ENTIER du
+#: règlement part à chaque question — il nomme des personnes (notaires, vendeurs).
+#: Écrite une fois : le gabarit et la migration 0256, qui l'insère dans le texte
+#: servi juste avant `ASSISTANT_DEUX_AUTOMATIQUES`, la lisent ici.
+QUESTION_REGLEMENT = (
+    "Lorsqu'un membre du conseil syndical pose une <strong>question au règlement de "
+    "copropriété</strong>, la question et le texte entier du règlement chargé par le "
+    "conseil — qui peut nommer les parties aux actes notariés — sont transmis, jamais le "
+    "nom de qui la pose ni de la personne qu'elle concerne. "
+)
+
 #: Les courriels TRANSFÉRÉS par un membre du conseil à l'adresse des affaires
 #: (29/09/2026) : ils deviennent une affaire réservée au conseil, avec le nom,
 #: l'adresse et le texte de personnes qui n'ont rien envoyé au site elles-mêmes,
@@ -276,6 +287,7 @@ DEFAULT_LEGAL = {
         "synthèse d'un contrat, le texte concerné — et, pour un contrat, le <strong>contenu des "
         "documents joints</strong> — est transmis au service de modèle de langage configuré. "
         "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. "
+        + QUESTION_REGLEMENT
         + ASSISTANT_DEUX_AUTOMATIQUES
         + COURRIELS_TRANSFERES
         + SYNTHESE_AFFAIRE_CLOSE
@@ -350,6 +362,7 @@ AJOUTS_1034 = [
         " le <strong>contenu des documents joints</strong> — est transmis au service de modèle de"
         " langage configuré. <strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il "
         "opère. "
+        + QUESTION_REGLEMENT
         + ASSISTANT_DEUX_AUTOMATIQUES
         + COURRIELS_TRANSFERES
         + SYNTHESE_AFFAIRE_CLOSE

@@ -68,6 +68,13 @@ export const PAGES_ROLES: PageDef[] = [
 				label: '\u{1F4D2} Annuaire CS & Syndic',
 				descriptif: 'Coordonnées des membres du CS et du syndic.',
 			},
+			{
+				id: 'reglement',
+				route: '/espace-cs/reglement',
+				label: '⚖️ Règlement',
+				descriptif:
+					"Posez la question d'un résident sur le règlement de copropriété (« ai-je le droit de… ? ») : l'assistant répond en juriste, d'après le texte chargé ici, avec les extraits et les pages qui justifient sa réponse. Une réponse relue peut rejoindre la FAQ.",
+			},
 		],
 	},
 	{

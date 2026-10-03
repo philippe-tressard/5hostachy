@@ -128,7 +128,7 @@ from app.routers import (
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
 from app.routers import partage
-from app.routers import assistant, config_llm
+from app.routers import assistant, config_llm, reglement
 from app.config import get_settings
 from app.seed import seed
 from app.utils.backup import setup_scheduler
@@ -446,6 +446,7 @@ app.include_router(signalements.router)
 app.include_router(patrimoine.router)
 #  L'assistant IA des formulaires (#985) : retravailler une description.
 app.include_router(assistant.router)
+app.include_router(reglement.router)
 
 # Fichiers statiques (photos uploadées)
 #  `UPLOADS_DIR` plutôt qu'un chemin figé : le motif existe déjà dans

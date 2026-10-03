@@ -39,6 +39,7 @@ export * from './prestataires';
 export * from './administration';
 export * from './telemetrie';
 export * from './synthese';
+export * from './reglement';
 export * from './assistant';
 
 export const auth = {

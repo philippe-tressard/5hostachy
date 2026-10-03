@@ -490,3 +490,7 @@ from app.models.affaires_liees import AffaireLiee as AffaireLiee  # noqa: E402,F
 #  La synthèse d'une affaire close (#1643) — importée ici pour qu'Alembic la voie.
 from app.models.synthese import SyntheseAffaire as SyntheseAffaire  # noqa: E402,F401
 from app.models.synthese import TentativeSynthese as TentativeSynthese  # noqa: E402,F401
+
+#  Le règlement de copropriété et les questions qu'on lui pose — vu par Alembic ici.
+from app.models.reglement import QuestionReglement as QuestionReglement  # noqa: E402,F401
+from app.models.reglement import TexteReglement as TexteReglement  # noqa: E402,F401
