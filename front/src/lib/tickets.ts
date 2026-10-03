@@ -284,8 +284,9 @@ export interface GestesTicket {
 	evolAnnuler: () => void;
 	modifie: (maj: Ticket) => void;
 	annuler: () => void;
-	/** Un transfert de courriel défait dans la carte : l'affaire et son fil ont changé. */
-	transfertDefait: (t: Ticket) => void;
+	/** L'affaire et son fil ont changé dans la carte — un transfert de courriel
+	 *  défait, une synthèse produite (#1643) : la page les relit. */
+	filChange: (t: Ticket) => void;
 }
 
 /**

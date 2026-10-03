@@ -17,6 +17,11 @@
   fil de ticket, avec son formulaire de commentaire, sa correction d'entrée et sa
   suppression, est une notion : elle s'écrit une fois.
 
+  🔴 La carte dépliée de la LISTE (`CarteTicket`) ne passe PAS par ce composant :
+  elle monte son propre fil. Tout ce qui s'ajoute au fil d'une affaire s'ajoute
+  aux deux — la synthèse ne l'a été d'abord qu'ici (v2.99.0), d'où `SyntheseFil`,
+  monté par les deux, et `test_chaque_fil_d_affaire_monte_la_synthese`.
+
   ⚠️ Ce composant ne remplace pas `RubriqueHistorique`, il l'**habille** : la
   rubrique reste le fil générique — actualités, événements, espace CS l'utilisent
   aussi — et celui-ci y ajoute ce qui est propre au TICKET.
@@ -35,12 +40,13 @@
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import SuiteAffaire from './SuiteAffaire.svelte';
 	import SyntheseAffaire from './SyntheseAffaire.svelte';
+	import SyntheseFil from './SyntheseFil.svelte';
 	import type { EtatSynthese, Ticket } from '$lib/api';
-	import { syntheses, tickets as ticketsApi, type TicketEvolution } from '$lib/api';
+	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
-	import { estTicketClos, STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { chargeCorrection, evolutionIcone, type ChargeUtileEvolution } from '$lib/evolutions';
 
 	export let ticketId: number;
@@ -61,38 +67,10 @@
 	let enregistre = false;
 	let corrige = false;
 
-	//  🧾 La synthèse d'une affaire close (#1643) — demandée au serveur, qui
-	//  décide qui lit un brouillon et si l'on peut en produire une. Relue après
-	//  chaque écriture du fil (la clé change avec lui).
+	//  🧾 La synthèse d'une affaire close (#1643) : `SyntheseFil` la lit et offre
+	//  « Produire » ; la Suite se rend ici, dans le créneau `synthese`.
 	let etatSynthese: EtatSynthese | null = null;
-	let erreurSynthese = '';
-	let produit = false;
-	$: cleSynthese =
-		ticket && estTicketClos(ticket.statut) ? `${ticketId}:${evolutions.length}` : null;
-	$: if (cleSynthese) chargerSynthese();
-
-	async function chargerSynthese() {
-		erreurSynthese = '';
-		try {
-			etatSynthese = await syntheses.lire(ticketId);
-		} catch (err) {
-			etatSynthese = null;
-			erreurSynthese = messageErreur(err);
-		}
-	}
-
-	async function produireSynthese() {
-		produit = true;
-		try {
-			await syntheses.produire(ticketId);
-			dispatch('change');
-			toast('success', 'Synthèse produite — à relire, puis valider');
-		} catch (err) {
-			toast('error', messageErreur(err));
-		} finally {
-			produit = false;
-		}
-	}
+	let filSynthese: SyntheseFil;
 
 	async function ajouter(e: CustomEvent<ChargeUtileEvolution>) {
 		enregistre = true;
@@ -145,6 +123,13 @@
 
 <div class="bloc-historique colonne-lecture">
 	<EtatListe compact erreur={erreurSuivi} />
+	<SyntheseFil
+		bind:this={filSynthese}
+		bind:etat={etatSynthese}
+		{ticket}
+		{evolutions}
+		on:change={() => dispatch('change')}
+	/>
 	<RubriqueHistorique
 		avecFiltre
 		{evolutions}
@@ -160,11 +145,6 @@
 		on:supprimer={supprimer}
 	>
 		<svelte:fragment slot="action">
-			{#if $isCS && etatSynthese?.produisible}
-				<button class="btn btn-outline btn-sm" disabled={produit} on:click={produireSynthese}
-					>{produit ? 'Rédaction…' : '🧾 Produire la synthèse'}</button
-				>
-			{/if}
 			{#if $isCS}
 				<button class="btn btn-outline btn-sm" on:click={() => (ouvert = !ouvert)}>
 					<!--  Le bouton et l'entrée qu'il produit lisent la MÊME table : c'est ce
@@ -176,12 +156,11 @@
 		</svelte:fragment>
 
 		<svelte:fragment slot="synthese" let:evol>
-			<EtatListe compact erreur={erreurSynthese} />
 			{#if etatSynthese?.synthese && etatSynthese.synthese.evolution_id === evol.id}
 				<SyntheseAffaire
 					synthese={etatSynthese.synthese}
 					gestes={$isCS}
-					on:change={chargerSynthese}
+					on:change={() => filSynthese.recharger()}
 				/>
 			{/if}
 		</svelte:fragment>
@@ -202,12 +181,6 @@
 			{/if}
 		</svelte:fragment>
 	</RubriqueHistorique>
-
-	{#if $isCS && etatSynthese?.en_attente}
-		<p class="aide">
-			🧾 La synthèse de l’affaire sera rédigée dans la demi-heure qui suit sa clôture.
-		</p>
-	{/if}
 
 	{#if ouvert && ticket}
 		<div class="evol-form card">

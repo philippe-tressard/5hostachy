@@ -135,7 +135,7 @@
 			on:evol_annuler={() => gestes.evolAnnuler()}
 			on:modifie={(e) => gestes.modifie(e.detail)}
 			on:annuler={() => gestes.annuler()}
-			on:transfert_defait={() => gestes.transfertDefait(t)}
+			on:fil_change={() => gestes.filChange(t)}
 		/>
 	{/if}
 {/each}
