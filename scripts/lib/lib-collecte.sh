@@ -255,3 +255,10 @@ COLLECT="$COLLECT$COLLECT_PORTS"
 # l APPELANT : $REPO.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-fichiers-parasites.sh"
 COLLECT="$COLLECT$(collecte_env_copies "$REPO")$(collecte_db_volume)"
+
+# C35 (#1648) : la pile de bureau est-elle revenue ? Paquets de la liste proscrite
+# (ecrite UNE fois, dans `lib-paquets-proscrits.sh`, que `alleger-noeud.sh`
+# relit), cible systemd par defaut, APT::Install-Recommends. Mesure et decision
+# vivent ensemble dans ce module.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-paquets-proscrits.sh"
+COLLECT="$COLLECT$(collecte_paquets_proscrits)"

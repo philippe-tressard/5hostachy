@@ -341,6 +341,31 @@ sudo systemctl enable --now unattended-upgrades
 
 ---
 
+## Étape 15 — Retirer la pile de bureau (#1648)
+
+Une image Raspberry Pi OS **Desktop** réinstallée ramène navigateurs, VNC,
+impression, `rpcbind`/NFS… (~850 paquets) que rien dans le projet n'emploie, et
+une surface d'attaque ouverte sur le LAN. Le contrôle **C35** de
+`check-reliability` le signale tant que cela dure ; la liste des paquets proscrits
+s'écrit **une fois**, dans `scripts/lib/lib-paquets-proscrits.sh`.
+
+```bash
+# Interdire d'abord le retour des paquets recommandés et la cible graphique :
+echo 'APT::Install-Recommends "0";' | sudo tee /etc/apt/apt.conf.d/99-hostachy-sans-recommends
+sudo systemctl set-default multi-user.target
+
+# Puis retirer la pile — sur le STANDBY seulement (le script refuse un nœud qui
+# porte des conteneurs hostachy). Simuler d'abord : rien n'est retiré.
+SIM=1 bash /opt/5hostachy/scripts/exploitation/alleger-noeud.sh
+sudo bash /opt/5hostachy/scripts/exploitation/alleger-noeud.sh
+```
+
+Le script conserve les noyaux, plymouth et l'initramfs : le démarrage reste
+inchangé. Redémarrer ensuite, puis attendre un passage de `check-reliability` :
+C35 doit dire « Pas de pile de bureau ».
+
+---
+
 ## Vérification finale
 
 | Test | Commande |
