@@ -139,6 +139,15 @@ proscrits_decrire_paquets() {
     printf '%s' "$out"
 }
 
+#  $1 relevé paquets · $2 cible → 0 si la pile est RÉELLEMENT revenue (un paquet
+#  proscrit installé, ou une cible autre que multi-user), 1 si seul le réglage
+#  d'apt la MENACE (Install-Recommends) : le message ne dit « revenue » que du premier.
+proscrits_est_revenue() {
+    local l
+    if l=$(proscrits_liste "${1:-}") && [ -n "$l" ]; then return 0; fi
+    case "${2:-}" in ''|multi-user.target) return 1 ;; *) return 0 ;; esac
+}
+
 #  Le message d'écart, une cause après l'autre, chacune avec SA correction.
 #  $1 relevé paquets · $2 cible · $3 recommends
 proscrits_decrire_ecarts() {
@@ -163,7 +172,12 @@ paquets_proscrits_verdicts() {
         eval "rp=\${${p}_proscrits:-} rc=\${${p}_cible_systemd:-} rr=\${${p}_install_recommends:-}"
         case "$(verdict_proscrits "$rp" "$rc" "$rr")" in
             OK)     ok   "Pas de pile de bureau sur $n : aucun paquet proscrit installé, cible multi-user, Install-Recommends à 0" ;;
-            ECART)  warn "Pile de bureau REVENUE sur $n : $(proscrits_decrire_ecarts "$rp" "$rc" "$rr") — rien ne l'a décidé : mise à jour (les méta-paquets rpd-* changent de dépendances), paquets recommandés, ou réinstallation depuis l'image ; chaque retour rouvre navigateurs, VNC ou rpcbind sur le LAN (#1648)" ;;
+            ECART)
+                if proscrits_est_revenue "$rp" "$rc"; then
+                    warn "Pile de bureau REVENUE sur $n : $(proscrits_decrire_ecarts "$rp" "$rc" "$rr") — rien ne l'a décidé : mise à jour (les méta-paquets rpd-* changent de dépendances), paquets recommandés, ou réinstallation depuis l'image ; chaque retour rouvre navigateurs, VNC ou rpcbind sur le LAN (#1648)"
+                else
+                    warn "Pile de bureau MENACÉE sur $n : $(proscrits_decrire_ecarts "$rp" "$rc" "$rr") — aucun paquet de bureau n'est revenu, mais le prochain apt install peut le ramener (#1648)"
+                fi ;;
             *)      warn "Pile de bureau de $n INCONNUE (dpkg, systemctl ou apt-config muet : paquets='${rp:-vide}' cible='${rc:-vide}' recommends='${rr:-vide}') — ni vert ni rouge" ;;
         esac
     done
@@ -191,6 +205,10 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "description : « a (tiré par x, y), b »" "a (tiré par x, y), b" proscrits_decrire_paquets "a~x+y,b"
     t "description bornée : au-delà de huit paquets, les suivants sont comptés"       "a1, a2, a3, a4, a5, a6, a7, a8 … et 4 autre(s)" proscrits_decrire_paquets "a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12"
     t "le compte des paquets du constat" 3 proscrits_compter "a~x+y,b,c"
+    t "« revenue » : un paquet proscrit installé" oui eval 'proscrits_est_revenue "ok:cups" multi-user.target && echo oui || echo non'
+    t "« revenue » : la cible redevenue graphique" oui eval 'proscrits_est_revenue "ok:" graphical.target && echo oui || echo non'
+    t "« menacée » : ni paquet ni cible, seul le réglage d'apt" non eval 'proscrits_est_revenue "ok:" multi-user.target && echo oui || echo non'
+    t "« menacée » : une mesure muette ne fait pas dire « revenue »" non eval 'proscrits_est_revenue "" "" && echo oui || echo non'
     t "le message d'écart nomme chaque cause et sa correction" 3 \
       eval 'proscrits_decrire_ecarts "ok:cups~hplip" graphical.target 1 | grep -o "alleger-noeud.sh\|set-default multi-user.target\|99-hostachy-sans-recommends" | wc -l | tr -d " "'
 
@@ -276,8 +294,8 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     S_install_recommends=1
     P_proscrits="ok:chromium-browser~rpd-wayland-extras,rpcbind" P_cible_systemd=graphical.target
     sortie=$(paquets_proscrits_verdicts)
-    t "rpi1 : un WARN qui ne nomme que le Install-Recommends" 1 \
-      eval 'grep -c "^WARN Pile de bureau REVENUE sur rpi1 : APT::Install-Recommends vaut 1" <<< "$sortie"'
+    t "rpi1 : un WARN « MENACÉE » (rien n'est revenu) qui ne nomme que le Install-Recommends" 1 \
+      eval 'grep -c "^WARN Pile de bureau MENACÉE sur rpi1 : APT::Install-Recommends vaut 1" <<< "$sortie"'
     t "rpi2 : un WARN distinct qui nomme paquets, tireur et cible" 1 \
       eval 'grep -c "^WARN Pile de bureau REVENUE sur rpi2 : 2 paquet(s) proscrit(s) installé(s) : chromium-browser (tiré par rpd-wayland-extras), rpcbind .* graphical.target" <<< "$sortie"'
     S_proscrits="" S_cible_systemd="" S_install_recommends=""
