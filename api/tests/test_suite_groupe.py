@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import pytest
 from fastapi import BackgroundTasks
-from sqlmodel import Session
 
 import app.routers.tickets.apercu as apercu
 import app.routers.tickets.evolutions as evolutions
@@ -24,18 +23,17 @@ from app.models.core import RoleUtilisateur, Ticket
 from app.schemas_tickets import TicketEvolutionCreate
 from app.utils import horloge
 from app.utils.whatsapp_message import construire_message
-from tests.aides_base import compte, moteur_memoire
+from tests.aides_base import compte
 
 SITE = "https://5hostachy.fr"
 INITIAL = "Elle ne ferme plus."
 
 
 @pytest.fixture()
-def session(monkeypatch):
+def session(session, monkeypatch):
     #  Le canal de la résidence, allumé : la couture est le registre (#1060).
     monkeypatch.setattr(diffusion, "config_diffusion", lambda s, *a: {"site_url": SITE})
-    with Session(moteur_memoire()) as s:
-        yield s
+    return session
 
 
 @pytest.fixture()
