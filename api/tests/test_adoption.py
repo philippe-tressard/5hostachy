@@ -2,7 +2,9 @@
 
 Jeu fictif : quatre comptes ouverts au bâtiment A (dont un membre du conseil et
 un qui a refusé la mesure), un locataire sans bâtiment, un compte fermé qui est
-venu quand même. Trois sont venus dans les 30 jours, un seul avant.
+venu quand même. Trois sont venus dans les 30 jours, un seul avant — et celui-là
+a laissé une PRÉSENCE MENSUELLE il y a six mois, que seule la fenêtre Année lit
+(03/10/2026).
 """
 
 from __future__ import annotations
@@ -12,10 +14,24 @@ from datetime import timedelta
 from sqlmodel import Session
 
 from app.models.copropriete import Batiment
-from app.models.core import RoleUtilisateur, StatutUtilisateur, TelemetryEvent
+from app.models.core import PresenceMensuelle, RoleUtilisateur, StatutUtilisateur, TelemetryEvent
 from app.utils import horloge
-from app.utils.adoption import JOURS, SANS_BATIMENT, adoption
+from app.utils.adoption import SANS_BATIMENT, Fenetre, adoption
 from tests.aides_base import compte, moteur_memoire
+
+JOURS = 30
+
+
+def _fenetre_mois() -> Fenetre:
+    return Fenetre("30 derniers jours", horloge.maintenant() - timedelta(days=JOURS))
+
+
+def _mois_il_y_a(n: int) -> str:
+    j = horloge.aujourd_hui()
+    y, m = j.year, j.month - n
+    while m <= 0:
+        y, m = y - 1, m + 12
+    return f"{y}-{m:02d}"
 
 
 def _jeu(s: Session) -> None:
@@ -38,21 +54,45 @@ def _jeu(s: Session) -> None:
     #  Le refus n'a pas d'événement (la collecte l'ignore) ; on en pose un quand
     #  même : il ne doit compter nulle part, ni en haut ni en bas.
     s.add(TelemetryEvent(user_id=refus.id, page="/", cree_le=maintenant))
+    #  L'absent est venu il y a six mois : la présence mensuelle le sait, les
+    #  événements (30 jours) ne le savent plus.
+    s.add(PresenceMensuelle(mois=_mois_il_y_a(6), user_id=absent.id))
     s.commit()
+    return {"venu": venu.id, "absent": absent.id}
 
 
-def _resultat() -> dict:
+def _resultat(fenetre: Fenetre | None = None, exclure: str | None = None) -> dict:
     moteur = moteur_memoire()
     with Session(moteur) as s:
-        _jeu(s)
-        return adoption(s)
+        ids = _jeu(s)
+        exclus = {ids[exclure]} if exclure else set()
+        return adoption(s, fenetre or _fenetre_mois(), exclus)
 
 
 def test_le_denominateur_exclut_les_refus_et_les_comptes_fermes():
     r = _resultat()
     assert r["global"] == {"libelle": "Tous les comptes", "actifs": 3, "comptes": 4, "taux": 75}
     assert r["refus"] == 1
-    assert r["jours"] == JOURS
+    assert r["periode"] == "30 derniers jours"
+
+
+def test_la_fenetre_annee_lit_la_presence_mensuelle():
+    """L'absent des 30 jours est venu il y a six mois : la vue Année le compte."""
+    annee = Fenetre("12 derniers mois", horloge.maintenant() - timedelta(days=30), _mois_il_y_a(11))
+    r = _resultat(annee)
+    assert (r["global"]["actifs"], r["global"]["comptes"]) == (4, 4)
+    assert r["periode"] == "12 derniers mois"
+    #  Une présence plus vieille que la fenêtre ne compte pas.
+    courte = Fenetre("x", horloge.maintenant() - timedelta(days=30), _mois_il_y_a(5))
+    assert _resultat(courte)["global"]["actifs"] == 3
+
+
+def test_un_compte_exclu_sort_des_deux_termes():
+    """Le gestionnaire du site, en lecture « sans » : ni venu, ni à venir."""
+    r = _resultat(exclure="venu")
+    assert (r["global"]["actifs"], r["global"]["comptes"]) == (2, 3)
+    r = _resultat(exclure="absent")
+    assert (r["global"]["actifs"], r["global"]["comptes"]) == (3, 3)
 
 
 def test_ventilation_par_type_de_resident():
@@ -84,7 +124,7 @@ def test_ventilation_par_batiment_et_sans_batiment():
 def test_aucun_compte_ne_divise_pas_par_zero():
     moteur = moteur_memoire()
     with Session(moteur) as s:
-        r = adoption(s)
+        r = adoption(s, _fenetre_mois())
     assert (
         r["global"]["taux"] is None
         and r["par_profil"] == []

@@ -19,6 +19,7 @@ disparaître de la création de schéma.
 from app.utils import horloge
 from typing import Optional
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 from pydantic import NaiveDatetime
 
@@ -46,8 +47,23 @@ class TelemetryEvent(SQLModel, table=True):
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant, index=True)
 
 
+#: Le drapeau « gestionnaire » des agrégats (0254, 03/10/2026). Les lignes
+#: agrégées se séparent en deux séries : celles du GESTIONNAIRE DU SITE
+#: (`destinataires.site_manager_user_id` au moment de l'agrégation) et celles de
+#: tout le monde d'autre — l'écran les additionne (« avec ») ou n'en lit qu'une
+#: (« sans »). Les deux ensembles de comptes sont DISJOINTS, donc les uniques
+#: s'additionnent, ce qu'une somme de distincts n'autorise jamais autrement.
+#:
+#: `None` = ligne agrégée AVANT le drapeau : on ne sait pas la séparer, elle
+#: compte dans les deux lectures, et l'écran dit jusqu'à quand c'est le cas
+#: (`telemetrie_tableau.non_distingue_jusqu_au`). Les trente derniers jours
+#: sont réagrégés depuis les évènements à la première exécution, le reste est
+#: de l'historique.
+GESTIONNAIRE_DOC = "True : le gestionnaire du site ; False : les autres ; None : non distingué"
+
+
 class TelemetryDaily(SQLModel, table=True):
-    """Agrégation journalière — conservée 12 mois."""
+    """Agrégation journalière — conservée 12 mois, en deux séries (`gestionnaire`)."""
 
     __tablename__ = "telemetry_daily"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -56,10 +72,11 @@ class TelemetryDaily(SQLModel, table=True):
     action: str = "view"
     utilisateurs_uniques: int = 0
     total: int = 0
+    gestionnaire: Optional[bool] = Field(default=None, description=GESTIONNAIRE_DOC)
 
 
 class TelemetryMonthly(SQLModel, table=True):
-    """Agrégation mensuelle — conservée 10 ans."""
+    """Agrégation mensuelle — conservée 10 ans, en deux séries (`gestionnaire`)."""
 
     __tablename__ = "telemetry_monthly"
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -68,6 +85,27 @@ class TelemetryMonthly(SQLModel, table=True):
     action: str = "view"
     utilisateurs_uniques: int = 0
     total: int = 0
+    gestionnaire: Optional[bool] = Field(default=None, description=GESTIONNAIRE_DOC)
+
+
+class PresenceMensuelle(SQLModel, table=True):
+    """Un compte est VENU ce mois-là — et rien d'autre (0254, 03/10/2026).
+
+    Les évènements bruts, seuls à porter `user_id`, vivent 30 jours : au-delà,
+    « Qui vient » ne savait plus qui était venu, et la vue Année ne pouvait pas
+    le dire. Cette table garde, par mois et par compte, le seul fait « venu »
+    — ni page, ni heure, ni nombre —, pendant 12 mois comme l'agrégat
+    journalier. Écrite par l'agrégation (une ligne par couple, jamais deux :
+    réagréger un jour ne compte personne deux fois), purgée avec elle,
+    exportée et effacée avec le reste depuis le profil (`auth_telemetrie`).
+    La politique de confidentialité le dit (`TELEMETRIE_CONSERVATION`).
+    """
+
+    __tablename__ = "presence_mensuelle"
+    __table_args__ = (UniqueConstraint("mois", "user_id", name="uq_presence_mensuelle"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    mois: str = Field(index=True)  # YYYY-MM, mois de Paris
+    user_id: int = Field(index=True)
 
 
 class ErreurNavigateur(SQLModel, table=True):

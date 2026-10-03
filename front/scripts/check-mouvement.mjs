@@ -39,7 +39,7 @@ const EXCEPTIONS = {
 
 /** Fichier → propriété(s) de mise en page animée(s), séparées par un espace, et pourquoi. */
 const MISES_EN_PAGE = {
-	'lib/components/OngletTelemetrie.svelte': ['height', 'barre de données, remplie une fois'],
+	'lib/components/FrequentationTelemetrie.svelte': ['height', 'barre de données, remplie une fois'],
 	'lib/components/ResultatsSondage.svelte': ['width', 'barre de résultat, remplie une fois'],
 	'lib/components/UrgencesAccueil.svelte': ['width', 'barre de progression, remplie une fois'],
 	'lib/components/PasswordStrength.svelte': [

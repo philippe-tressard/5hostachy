@@ -5,32 +5,39 @@
   vivaient sur leur propre route sont devenus des onglets — pour qu'on n'en sorte
   plus, donc sans bouton « ← Retour ». Leur aiguillage ajoutait 53 lignes à
   `admin/+page.svelte`, déjà à 1 786, et le garde-fou de modularité (rang 1) l'a
-  refusé.
+  refusé. Troisième extraction du même patron, après `OngletWhatsApp` et `OngletSmtp`.
 
-  🔴 **La réponse est de découper, pas de tasser** — c'est tout l'objet de #453.
-  La télémétrie est le plus gros panneau restant de la page et le plus autonome :
-  un appel réseau, trois variables, aucun état partagé avec le reste de l'écran.
+  ## Quatre vues, cinq sections, un filtre (03/10/2026)
 
-  Troisième extraction du même patron, après `OngletWhatsApp` et `OngletSmtp`.
+  - **Vues** : Jour · Mois (30 j) · Année (12 derniers mois) · Total (par année,
+    10 ans). « Année (10 ans) » est devenue Total ; Année lit douze mois.
+  - **Sections pliables**, un seul dépliée à la fois — l'accordéon natif des
+    `<details>` (`$lib/accordeon`, posé par le layout) replie les autres et
+    ramène le haut de la section ouverte à l'écran. L'état vit ICI
+    (`sectionOuverte`), comme dans `OngletIA` : il survit au changement de vue,
+    qui recharge tout. À l'arrivée : **Fréquentation** (graphe, top pages,
+    utilisateurs actifs). Une section VIDE ne se déplie pas (`PanneauTelemetrie`).
+  - **« Qui vient » suit la vue** : aujourd'hui, 30 jours, 12 mois ; en Total,
+    personne ne sait plus qui est venu, la section est vide.
+  - **Filtre « avec / sans gestionnaire du site »** : proposé par le serveur
+    seulement s'il changerait quelque chose (`filtre_gestionnaire.propose`) ;
+    « avec » à l'ouverture. Les erreurs et les durées, sans compte, ne bougent pas.
 -->
 <script lang="ts">
-	//  🔴 Les deux `class:` du gabarit remplacent des ternaires INTERPOLÉS
-	//  (#810) : devant `class="tl-bar {cond ? 'x' : ''}"`, Svelte cesse de
-	//  déclarer les sélecteurs inutilisés pour tout le fichier — et celui-ci
-	//  porte deux cents lignes de style de graphe.
 	import { admin as adminApi } from '$lib/api';
+	import type { FiltreGestionnaire, PorteeTelemetrie, TableauTelemetrie } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
+	import { fmtDate } from '$lib/date';
 	import Icon from '$lib/components/Icon.svelte';
-	import TopPages from '$lib/components/TopPages.svelte';
 	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
+	import FrequentationTelemetrie from '$lib/components/FrequentationTelemetrie.svelte';
 	import ErreursNavigateur from '$lib/components/ErreursNavigateur.svelte';
 	import DureesAffichage from '$lib/components/DureesAffichage.svelte';
 	import QuiVient from '$lib/components/QuiVient.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
-	import { fmtDatetimeShort as fmt } from '$lib/date';
 
-	let telemetryData: any = null;
+	let telemetryData: TableauTelemetrie | null = null;
 	let telemetryLoading = true;
 	/**  🔴 Non vide = on n'a PAS pu regarder (#816).
 	 *
@@ -40,16 +47,44 @@
 	 *   après les premières visites ». C'est le `.catch(() => [])` de #519 mot
 	 *   pour mot, sur le seul écran qui sert à savoir si le site est lu. */
 	let telemetryErreur = '';
-	let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
+	let tlScope: PorteeTelemetrie = 'jour';
+	let filtre: FiltreGestionnaire = 'avec';
+
+	const VUES: { code: PorteeTelemetrie; libelle: string }[] = [
+		{ code: 'jour', libelle: 'Jour' },
+		{ code: 'mois', libelle: 'Mois (30 j)' },
+		{ code: 'annee', libelle: 'Année (12 mois)' },
+		{ code: 'total', libelle: 'Total (10 ans)' },
+	];
 	/** Ce que couvrent les panneaux tirés du détail (erreurs, durées) : le jour
 	 *  même, sinon leurs 30 jours de conservation — l'année n'en a pas plus. */
 	$: periodeDetail = tlScope === 'jour' ? 'aujourd’hui' : '30 derniers jours';
+	$: libelleVues =
+		tlScope === 'jour'
+			? "Pages vues aujourd'hui"
+			: tlScope === 'mois'
+				? 'Pages vues (30 j)'
+				: tlScope === 'annee'
+					? 'Pages vues (12 mois)'
+					: 'Pages vues (total)';
+
+	//  L'ACCORDÉON : une section dépliée à la fois, l'état tenu ici (cf. OngletIA).
+	//  « frequentation » à l'arrivée : c'est ce qu'on vient lire le plus souvent.
+	type Section = 'indicateurs' | 'frequentation' | 'erreurs' | 'qui-vient' | 'durees';
+	let sectionOuverte: Section | null = 'frequentation';
+	function basculerSection(code: Section, ouvert: boolean) {
+		if (ouvert) sectionOuverte = code;
+		else if (sectionOuverte === code) sectionOuverte = null;
+	}
 
 	export async function loadTelemetry() {
 		telemetryLoading = true;
 		telemetryErreur = '';
 		try {
-			telemetryData = await adminApi.telemetryDashboard(tlScope);
+			telemetryData = await adminApi.telemetryDashboard(tlScope, filtre);
+			//  Le serveur peut avoir appliqué « avec » à un « sans » qui ne
+			//  changerait rien : les pastilles disent ce qui est APPLIQUÉ.
+			filtre = telemetryData.filtre_gestionnaire.applique;
 		} catch (e: any) {
 			//  La donnée précédente est écartée : l'afficher sous un onglet dont
 			//  la portée vient de changer la ferait passer pour la nouvelle.
@@ -60,10 +95,19 @@
 		}
 	}
 
-	function switchTlScope(s: 'jour' | 'mois' | 'annee') {
+	function switchTlScope(s: PorteeTelemetrie) {
 		tlScope = s;
 		loadTelemetry();
 	}
+
+	function switchFiltre(f: FiltreGestionnaire) {
+		filtre = f;
+		loadTelemetry();
+	}
+
+	//  Les indicateurs chiffrés rendus : la section est vide quand il n'y a rien à
+	//  compter — zéro vue, c'est « personne n'est venu », pas un indicateur.
+	$: indicateursVides = !telemetryData || (telemetryData.kpi.vues ?? 0) === 0;
 
 	//  L'onglet ne se rend que lorsqu'il est choisi : charger au montage suffit, et
 	//  évite à la page d'avoir à déclencher l'appel depuis son bouton.
@@ -74,20 +118,41 @@
 	<h2 class="config-section-title">
 		<Icon name="bar-chart-3" size={17} />Télémétrie — Utilisation de l'application
 	</h2>
-	<p class="muted" style="font-size:var(--fs-md)">
-		Statistiques d'utilisation : qui utilise quoi et quand.
-	</p>
+	<p class="aide">Statistiques d'utilisation : qui utilise quoi et quand.</p>
 
-	<!-- Sélecteur Jour / Mois / Année -->
-	<div class="tl-scope-switch" style="margin:.75rem 0 1rem">
-		<Pastille active={tlScope === 'jour'} on:click={() => switchTlScope('jour')}>Jour</Pastille>
-		<Pastille active={tlScope === 'mois'} on:click={() => switchTlScope('mois')}
-			>Mois (30 j)</Pastille
-		>
-		<Pastille active={tlScope === 'annee'} on:click={() => switchTlScope('annee')}
-			>Année (10 ans)</Pastille
-		>
+	<!-- Sélecteur de vue : Jour / Mois / Année / Total -->
+	<div class="tl-scope-switch">
+		{#each VUES as v (v.code)}
+			<Pastille active={tlScope === v.code} on:click={() => switchTlScope(v.code)}
+				>{v.libelle}</Pastille
+			>
+		{/each}
 	</div>
+
+	<!--  Le filtre, seulement si le serveur dit qu'il changerait quelque chose :
+	      un gestionnaire désigné, qui a des vues sur la vue consultée, et d'autres
+	      que lui aussi. -->
+	{#if telemetryData?.filtre_gestionnaire.propose}
+		<div class="tl-scope-switch tl-filtre">
+			<Pastille petite active={filtre === 'avec'} on:click={() => switchFiltre('avec')}
+				>Avec le gestionnaire du site</Pastille
+			>
+			<Pastille petite active={filtre === 'sans'} on:click={() => switchFiltre('sans')}
+				>Sans le gestionnaire du site</Pastille
+			>
+		</div>
+		{#if filtre === 'sans'}
+			<p class="aide">
+				Les vues du gestionnaire du site sont écartées des indicateurs, du graphe, des pages, des
+				utilisateurs et de « Qui vient ». Les erreurs et les durées d’affichage, sans compte, ne
+				changent pas.
+				{#if telemetryData.filtre_gestionnaire.non_distingue_jusqu_au}
+					Jusqu’au {fmtDate(telemetryData.filtre_gestionnaire.non_distingue_jusqu_au)}, les agrégats
+					ne distinguaient pas le gestionnaire : ses vues y restent comptées.
+				{/if}
+			</p>
+		{/if}
+	{/if}
 
 	<EtatListe
 		chargement={telemetryLoading}
@@ -98,237 +163,168 @@
 		titreVide="Aucune donnée de télémétrie"
 		messageVide="Les données apparaîtront après les premières visites."
 	>
-		<!-- KPI universels -->
-		<div class="tl-kpi-row">
-			<div class="tl-kpi">
-				<div class="tl-kpi-value">{telemetryData.kpi.vues ?? 0}</div>
-				<div class="tl-kpi-label">
-					{tlScope === 'jour'
-						? "Pages vues aujourd'hui"
-						: tlScope === 'mois'
-							? 'Pages vues (30j)'
-							: 'Pages vues (total)'}
-				</div>
-			</div>
-			{#if telemetryData.kpi.utilisateurs != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.utilisateurs}</div>
-					<div class="tl-kpi-label">
-						{tlScope === 'jour' ? "Utilisateurs actifs aujourd'hui" : 'Utilisateurs uniques (pic)'}
-					</div>
-				</div>
-			{/if}
-			<div class="tl-kpi">
-				<div class="tl-kpi-value">{telemetryData.kpi.pages ?? 0}</div>
-				<div class="tl-kpi-label">Pages distinctes visitées</div>
-			</div>
-			{#if telemetryData.kpi.heure_pointe}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.heure_pointe}</div>
-					<div class="tl-kpi-label">🔺 Heure de pointe</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.moy_vues_utilisateur != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_vues_utilisateur}</div>
-					<div class="tl-kpi-label">Moy. vues / utilisateur</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.moy_vues_jour != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_vues_jour}</div>
-					<div class="tl-kpi-label">Moy. vues / jour</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.moy_utilisateurs_jour != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_utilisateurs_jour}</div>
-					<div class="tl-kpi-label">Moy. utilisateurs / jour</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.mois_actifs != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.mois_actifs}</div>
-					<div class="tl-kpi-label">Mois avec activité</div>
-				</div>
-			{/if}
-			{#if telemetryData.kpi.moy_vues_mois != null}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">{telemetryData.kpi.moy_vues_mois}</div>
-					<div class="tl-kpi-label">Moy. vues / mois</div>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Jour le plus actif (scope mois) -->
-		{#if tlScope === 'mois' && telemetryData.kpi.jour_pointe}
-			<div class="tl-kpi-row" style="margin-top:.75rem">
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">
-						{telemetryData.kpi.jour_pointe.uniques}
-						<span style="font-size:.6em;font-weight:400">utilisateurs</span>
-					</div>
-					<div class="tl-kpi-label">
-						🏆 Jour le plus actif — {telemetryData.kpi.jour_pointe.jour}
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Records (scope annee) -->
-		{#if tlScope === 'annee' && (telemetryData.kpi.record_jour || telemetryData.kpi.record_mois)}
-			<div class="tl-kpi-row" style="margin-top:.75rem">
-				{#if telemetryData.kpi.record_jour}
+		{#if telemetryData}
+			{@const kpi = telemetryData.kpi}
+			<PanneauTelemetrie
+				titre="📊 Indicateurs"
+				ouvert={sectionOuverte === 'indicateurs'}
+				vide={indicateursVides}
+				videLibelle="aucune vue sur la période"
+				on:basculer={(e) => basculerSection('indicateurs', e.detail)}
+			>
+				<div class="tl-kpi-row">
 					<div class="tl-kpi">
-						<div class="tl-kpi-value">
-							{telemetryData.kpi.record_jour.uniques}
-							<span style="font-size:.6em;font-weight:400">utilisateurs</span>
-						</div>
-						<div class="tl-kpi-label">🏆 Record jour — {telemetryData.kpi.record_jour.jour}</div>
+						<div class="tl-kpi-value">{kpi.vues ?? 0}</div>
+						<div class="tl-kpi-label">{libelleVues}</div>
 					</div>
-				{/if}
-				{#if telemetryData.kpi.record_mois}
+					{#if kpi.utilisateurs != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.utilisateurs}</div>
+							<div class="tl-kpi-label">
+								{tlScope === 'jour'
+									? "Utilisateurs actifs aujourd'hui"
+									: 'Utilisateurs uniques (pic)'}
+							</div>
+						</div>
+					{/if}
 					<div class="tl-kpi">
-						<div class="tl-kpi-value">
-							{telemetryData.kpi.record_mois.uniques}
-							<span style="font-size:.6em;font-weight:400">utilisateurs</span>
+						<div class="tl-kpi-value">{kpi.pages ?? 0}</div>
+						<div class="tl-kpi-label">Pages distinctes visitées</div>
+					</div>
+					{#if kpi.heure_pointe}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.heure_pointe}</div>
+							<div class="tl-kpi-label">🔺 Heure de pointe</div>
 						</div>
-						<div class="tl-kpi-label">🏆 Record mois — {telemetryData.kpi.record_mois.mois}</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
+					{/if}
+					{#if kpi.moy_vues_utilisateur != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.moy_vues_utilisateur}</div>
+							<div class="tl-kpi-label">Moy. vues / utilisateur</div>
+						</div>
+					{/if}
+					{#if kpi.moy_vues_jour != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.moy_vues_jour}</div>
+							<div class="tl-kpi-label">Moy. vues / jour</div>
+						</div>
+					{/if}
+					{#if kpi.moy_utilisateurs_jour != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.moy_utilisateurs_jour}</div>
+							<div class="tl-kpi-label">Moy. utilisateurs / jour</div>
+						</div>
+					{/if}
+					{#if kpi.mois_actifs != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.mois_actifs}</div>
+							<div class="tl-kpi-label">Mois avec activité</div>
+						</div>
+					{/if}
+					{#if kpi.moy_vues_mois != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.moy_vues_mois}</div>
+							<div class="tl-kpi-label">Moy. vues / mois</div>
+						</div>
+					{/if}
+					{#if kpi.annees_actives != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.annees_actives}</div>
+							<div class="tl-kpi-label">Années avec activité</div>
+						</div>
+					{/if}
+					{#if kpi.moy_vues_an != null}
+						<div class="tl-kpi">
+							<div class="tl-kpi-value">{kpi.moy_vues_an}</div>
+							<div class="tl-kpi-label">Moy. vues / an</div>
+						</div>
+					{/if}
+				</div>
 
-		<!--  Erreurs (#1631), puis qui vient (#1628) et ce qu'il attend (#1632) —
-		      avant le graphe : un écran qui casse ou qui traîne compte plus qu'une
-		      courbe de fréquentation. -->
-		<ErreursNavigateur erreurs={telemetryData.erreurs} periode={periodeDetail} />
-		<QuiVient adoption={telemetryData.adoption} />
-		<DureesAffichage durees={telemetryData.performance} periode={periodeDetail} />
-
-		<!-- Graphe (barres CSS) — adaptatif au scope -->
-		{#if telemetryData.chart.length > 0}
-			{@const maxVal = Math.max(...telemetryData.chart.map((x: { total: number }) => x.total), 1)}
-			{@const yTicks = (() => {
-				const step =
-					Math.ceil(
-						maxVal /
-							4 /
-							(maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100),
-					) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100);
-				return [4, 3, 2, 1, 0].map((i) => i * step);
-			})()}
-			<PanneauTelemetrie titre="📈 {telemetryData.chart_label}">
-				<div class="tl-chart-wrap">
-					<div class="tl-y-axis">
-						<!--  🔴 `tick` est une clé SÛRE, et ça se démontre plutôt que ça ne se
-						      suppose — une clé dupliquée fait planter Svelte à l'exécution.
-						      `yTicks = [4,3,2,1,0].map((i) => i * step)`, et `step` vaut
-						      `Math.ceil(maxVal / 4 / u) * u` avec `maxVal >= 1` et `u >= 1` :
-						      le quotient est > 0, donc `Math.ceil` rend au moins 1, donc
-						      `step >= 1`. Les cinq multiples sont alors distincts. -->
-						{#each yTicks as tick (tick)}
-							<div class="tl-y-tick" style="bottom:{(tick / (yTicks[0] || 1)) * 100}%">{tick}</div>
-						{/each}
-					</div>
-					<div class="tl-chart-inner">
-						{#each yTicks as tick (tick)}
-							<div
-								class="tl-y-gridline"
-								style="bottom:{(tick / (yTicks[0] || 1)) * 120 + 18}px"
-							></div>
-						{/each}
-						<div class="tl-chart">
-							{#each telemetryData.chart as d (d)}
-								<div
-									class="tl-bar-col"
-									class:tl-bar-col-month={tlScope === 'annee'}
-									title="{d.label} — {d.total} vues{d.uniques != null
-										? `, ${d.uniques} uniques`
-										: ''}"
-								>
-									<div
-										class="tl-bar"
-										class:tl-bar-month={tlScope === 'annee'}
-										style="height:{Math.max(4, (d.total / maxVal) * 100)}%"
-									></div>
-									<div class="tl-bar-label">{d.label}</div>
+				<!-- Jour le plus actif (vue Mois) · Records (vues Année et Total) -->
+				{#if kpi.jour_pointe || kpi.record_jour || kpi.record_mois}
+					<div class="tl-kpi-row tl-kpi-row-suite">
+						{#if kpi.jour_pointe}
+							<div class="tl-kpi">
+								<div class="tl-kpi-value">
+									{kpi.jour_pointe.uniques}
+									<span class="tl-kpi-unite">utilisateurs</span>
 								</div>
-							{/each}
-						</div>
+								<div class="tl-kpi-label">
+									🏆 Jour le plus actif — {fmtDate(kpi.jour_pointe.jour)}
+								</div>
+							</div>
+						{/if}
+						{#if kpi.record_jour}
+							<div class="tl-kpi">
+								<div class="tl-kpi-value">
+									{kpi.record_jour.uniques}
+									<span class="tl-kpi-unite">utilisateurs</span>
+								</div>
+								<div class="tl-kpi-label">🏆 Record jour — {fmtDate(kpi.record_jour.jour)}</div>
+							</div>
+						{/if}
+						{#if kpi.record_mois}
+							<div class="tl-kpi">
+								<div class="tl-kpi-value">
+									{kpi.record_mois.uniques}
+									<span class="tl-kpi-unite">utilisateurs</span>
+								</div>
+								<div class="tl-kpi-label">🏆 Record mois — {kpi.record_mois.mois}</div>
+							</div>
+						{/if}
 					</div>
-				</div>
+				{/if}
 			</PanneauTelemetrie>
-		{/if}
 
-		<!-- Top pages — tableau et total extraits en composant (#total des vues) -->
-		<TopPages
-			pages={telemetryData.top_pages}
-			vuesNonAttribuees={telemetryData.kpi?.vues_non_attribuees ?? 0}
-		/>
-
-		<!-- Utilisateurs les plus actifs (scope jour et mois) -->
-		{#if telemetryData.top_users && telemetryData.top_users.length > 0}
-			<PanneauTelemetrie titre="🏅 Utilisateurs les plus actifs">
-				<div class="table-wrap">
-					<table class="table">
-						<thead
-							><tr
-								><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right"
-									>Vues</th
-								><th style="text-align:right">Pages diff.</th><th style="text-align:right"
-									>Dernière connexion</th
-								></tr
-							></thead
-						>
-						<tbody>
-							{#each telemetryData.top_users as u (u.nom)}
-								<tr>
-									<td style="font-size:var(--fs-md)">{u.nom}</td>
-									<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-										>{u.statut ?? '—'}</td
-									>
-									<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-										>{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td
-									>
-									<td style="text-align:right;font-weight:600">{u.total}</td>
-									<td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
-									<td style="text-align:right;font-size:var(--fs-md);color:var(--color-text-muted)"
-										>{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td
-									>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			</PanneauTelemetrie>
+			<FrequentationTelemetrie
+				donnees={telemetryData}
+				ouvert={sectionOuverte === 'frequentation'}
+				on:basculer={(e) => basculerSection('frequentation', e.detail)}
+			/>
+			<ErreursNavigateur
+				erreurs={telemetryData.erreurs}
+				periode={periodeDetail}
+				ouvert={sectionOuverte === 'erreurs'}
+				on:basculer={(e) => basculerSection('erreurs', e.detail)}
+			/>
+			<QuiVient
+				adoption={telemetryData.adoption}
+				ouvert={sectionOuverte === 'qui-vient'}
+				on:basculer={(e) => basculerSection('qui-vient', e.detail)}
+			/>
+			<DureesAffichage
+				durees={telemetryData.performance}
+				periode={periodeDetail}
+				ouvert={sectionOuverte === 'durees'}
+				on:basculer={(e) => basculerSection('durees', e.detail)}
+			/>
 		{/if}
 	</EtatListe>
 </section>
 
 <style>
-	/*  🔴 CES RÈGLES SONT RESTÉES DANS `admin/+page.svelte` À L'EXTRACTION, et le
-	    panneau est parti NU en production (v2.95.0) : les KPI empilés en texte
-	    brut, le graphe en colonne de chiffres. Signalé à l'écran, capture à
-	    l'appui, le 19/08/2026.
-
-	    Svelte scope ses styles au FICHIER. Déplacer du balisage sans ses règles
-	    est la régression que ce dépôt cite dans une dizaine de commentaires
-	    depuis la v2.67.11 — et `svelte-check` n'a signalé qu'UN sélecteur orphelin
-	    sur dix-sept : il ne protège pas de ce défaut.
-
-	    D'où `npm run lint:classes-nues`, écrit le même jour. La règle était
-	    partout ; il manquait le contrôle qui échoue. */
+	/*  Les règles des indicateurs voyagent avec leur balisage (v2.95.0 : le
+	    panneau est parti NU en production quand elles étaient restées dans la
+	    page — `npm run lint:classes-nues` est né de là). Le graphe et les siennes
+	    sont dans `FrequentationTelemetrie`. */
 	.tl-scope-switch {
 		display: flex;
 		gap: 0.5rem;
 		flex-wrap: wrap;
+		margin: 0.75rem 0 0;
+	}
+	.tl-filtre {
+		margin-top: 0.5rem;
 	}
 	.tl-kpi-row {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
 		gap: 1rem;
-		margin-top: 1.25rem;
+		margin: 0 1rem 1rem;
+	}
+	.tl-kpi-row-suite {
+		margin-top: 0;
 	}
 	.tl-kpi {
 		background: var(--color-surface);
@@ -343,87 +339,13 @@
 		color: var(--color-primary);
 		line-height: 1.1;
 	}
+	.tl-kpi-unite {
+		font-size: var(--fs-sm);
+		font-weight: 400;
+	}
 	.tl-kpi-label {
 		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-top: 0.3rem;
-	}
-	.tl-chart-wrap {
-		display: flex;
-		gap: 0;
-		position: relative;
-		margin-top: 0.5rem;
-	}
-	.tl-y-axis {
-		position: relative;
-		width: 32px;
-		flex-shrink: 0;
-		height: 130px;
-		margin-bottom: 18px;
-	}
-	.tl-y-tick {
-		position: absolute;
-		right: 4px;
-		font-size: 0.6rem;
-		color: var(--color-text-muted);
-		transform: translateY(50%);
-		line-height: 1;
-		text-align: right;
-	}
-	.tl-chart-inner {
-		position: relative;
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-	}
-	.tl-chart-inner .tl-y-gridline {
-		position: absolute;
-		left: 0;
-		right: 0;
-		height: 1px;
-		background: var(--color-border);
-		opacity: 0.5;
-		pointer-events: none;
-		z-index: 0;
-	}
-	.tl-chart {
-		display: flex;
-		align-items: flex-end;
-		gap: 2px;
-		height: 120px;
-		padding: 0 0.25rem 0.5rem 0;
-		overflow-x: auto;
-		position: relative;
-		z-index: 1;
-		flex: 1;
-	}
-	.tl-bar-col {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		flex: 1;
-		min-width: 16px;
-		height: 100%;
-		justify-content: flex-end;
-	}
-	.tl-bar {
-		background: var(--color-primary);
-		border-radius: 3px 3px 0 0;
-		width: 100%;
-		min-height: 4px;
-		transition: height var(--duree-apparition) var(--ease-out);
-	}
-	.tl-bar-month {
-		background: var(--color-primary-light, #93c5fd);
-	}
-	.tl-bar-label {
-		font-size: 0.6rem;
-		color: var(--color-text-muted);
-		margin-top: 2px;
-		white-space: nowrap;
-	}
-	.tl-bar-col-month {
-		min-width: 32px;
 	}
 </style>

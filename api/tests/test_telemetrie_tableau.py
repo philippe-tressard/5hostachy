@@ -5,6 +5,10 @@ leur requête « top utilisateurs » et « uniques par jour ». Ce test fige ce 
 l'administrateur voit **avant** de factoriser, sur une base minuscule dont chaque
 chiffre se compte à la main : une factorisation qui changerait une réponse le dit.
 
+Depuis le 03/10/2026 : la portée `annee` lit les 12 derniers mois, `total` cumule
+par année sur 10 ans, et le filtre « sans gestionnaire du site » écarte les vues
+du compte désigné — proposé seulement s'il changerait quelque chose.
+
 L'horloge est figée : les libellés de jour et d'heure en dépendent.
 """
 
@@ -12,13 +16,49 @@ from datetime import datetime
 
 import pytest
 
-from app.models.core import RoleUtilisateur, TelemetryDaily, TelemetryEvent, TelemetryMonthly
+from app.models.core import (
+    ConfigSite,
+    RoleUtilisateur,
+    TelemetryDaily,
+    TelemetryEvent,
+    TelemetryMonthly,
+)
 from app.utils import horloge
 from sqlmodel import Session
 from tests.aides_http import base_http, client_http
 
 #: Un jeudi d'automne, 12 h UTC (14 h à Paris, heure d'été).
 MAINTENANT = datetime(2026, 10, 1, 12, 0, 0)
+
+
+def _jeu(s: Session) -> None:
+    #  Aujourd'hui : l'utilisateur 7 voit deux pages, le 8 une seule.
+    for user_id, page, heure in [
+        (7, "/actualites", 9),
+        (7, "/tickets", 10),
+        (7, "/tickets", 11),
+        (8, "/actualites", 9),
+        (None, "/connexion", 8),
+    ]:
+        s.add(TelemetryEvent(user_id=user_id, page=page, cree_le=MAINTENANT.replace(hour=heure)))
+    #  Il y a dix jours : l'utilisateur 8 seul, et 9 (qui n'a rien fait aujourd'hui).
+    for user_id in (8, 9):
+        s.add(
+            TelemetryEvent(
+                user_id=user_id,
+                page="/documents",
+                cree_le=datetime(2026, 9, 21, 10, 0, 0),
+            )
+        )
+    #  Agrégats : un jour qui n'a PLUS d'évènements bruts, et son total — agrégés
+    #  avant le drapeau `gestionnaire` (None : non distingués).
+    s.add(TelemetryDaily(jour="2026-09-15", page="/tickets", utilisateurs_uniques=3, total=9))
+    s.add(TelemetryDaily(jour="2026-09-15", page="__total__", utilisateurs_uniques=3, total=9))
+    s.add(TelemetryMonthly(mois="2026-08", page="/tickets", utilisateurs_uniques=5, total=20))
+    s.add(TelemetryMonthly(mois="2026-08", page="__total__", utilisateurs_uniques=5, total=20))
+    #  Et un mois hors des 12 derniers, que seul Total voit.
+    s.add(TelemetryMonthly(mois="2025-03", page="/faq", utilisateurs_uniques=2, total=4))
+    s.add(TelemetryMonthly(mois="2025-03", page="__total__", utilisateurs_uniques=2, total=4))
 
 
 @pytest.fixture()
@@ -28,41 +68,38 @@ def admin_http(monkeypatch):
         http, _ = client_http(moteur, RoleUtilisateur.admin)
         monkeypatch.setattr(horloge, "maintenant", lambda: MAINTENANT)
         with Session(moteur) as s:
-            #  Aujourd'hui : l'utilisateur 7 voit deux pages, le 8 une seule.
-            for user_id, page, heure in [
-                (7, "/actualites", 9),
-                (7, "/tickets", 10),
-                (7, "/tickets", 11),
-                (8, "/actualites", 9),
-                (None, "/connexion", 8),
-            ]:
+            _jeu(s)
+            s.commit()
+        yield http
+
+
+@pytest.fixture()
+def gestionnaire_http(monkeypatch):
+    """Le même jeu, l'administrateur connecté désigné gestionnaire du site, qui a
+    vu deux pages aujourd'hui — et deux lignes agrégées à son nom le 20/09."""
+    with base_http() as moteur:
+        http, admin_id = client_http(moteur, RoleUtilisateur.admin)
+        monkeypatch.setattr(horloge, "maintenant", lambda: MAINTENANT)
+        with Session(moteur) as s:
+            _jeu(s)
+            s.add(ConfigSite(cle="site_manager_user_id", valeur=str(admin_id)))
+            for heure in (13, 14):
                 s.add(
                     TelemetryEvent(
-                        user_id=user_id, page=page, cree_le=MAINTENANT.replace(hour=heure)
+                        user_id=admin_id, page="/admin", cree_le=MAINTENANT.replace(hour=heure)
                     )
                 )
-            #  Il y a dix jours : l'utilisateur 8 seul, et 9 (qui n'a rien fait aujourd'hui).
-            for user_id in (8, 9):
-                s.add(
-                    TelemetryEvent(
-                        user_id=user_id,
-                        page="/documents",
-                        cree_le=datetime(2026, 9, 21, 10, 0, 0),
+            for gestionnaire, page, total in [(True, "/admin", 6), (False, "/tickets", 2)]:
+                for p in (page, "__total__"):
+                    s.add(
+                        TelemetryDaily(
+                            jour="2026-09-20",
+                            page=p,
+                            utilisateurs_uniques=1,
+                            total=total,
+                            gestionnaire=gestionnaire,
+                        )
                     )
-                )
-            #  Agrégats : un jour qui n'a PLUS d'évènements bruts, et son total.
-            s.add(
-                TelemetryDaily(jour="2026-09-15", page="/tickets", utilisateurs_uniques=3, total=9)
-            )
-            s.add(
-                TelemetryDaily(jour="2026-09-15", page="__total__", utilisateurs_uniques=3, total=9)
-            )
-            s.add(
-                TelemetryMonthly(mois="2026-08", page="/tickets", utilisateurs_uniques=5, total=20)
-            )
-            s.add(
-                TelemetryMonthly(mois="2026-08", page="__total__", utilisateurs_uniques=5, total=20)
-            )
             s.commit()
         yield http
 
@@ -93,14 +130,78 @@ def test_mois_remonte_trente_jours_et_les_uniques_de_chaque_jour(admin_http):
     assert d["kpi"]["jour_pointe"] == {"jour": "2026-09-15", "uniques": 3}
 
 
-def test_annee_garde_le_meilleur_jour_toutes_periodes(admin_http):
+def test_annee_lit_les_douze_derniers_mois(admin_http):
     r = admin_http.get("/telemetry/dashboard?scope=annee")
     assert r.status_code == 200, r.text
     d = r.json()
     assert d["scope"] == "annee"
+    #  Un bâton par mois agrégé ; mars 2025 est hors des 12 derniers mois.
+    assert [(c["label"], c["total"]) for c in d["chart"]] == [("2026-08", 20)]
+    assert d["kpi"]["vues"] == 20 and d["kpi"]["mois_actifs"] == 1
     #  Le 15/09 (3 uniques, repli sur l'agrégat) bat le 21/09 (2) et aujourd'hui (2).
     assert d["kpi"]["record_jour"] == {"jour": "2026-09-15", "uniques": 3}
     assert d["kpi"]["record_mois"] == {"mois": "2026-08", "uniques": 5}
+    #  « Qui vient » couvre l'année ; pas de palmarès au-delà des évènements.
+    assert d["adoption"]["periode"] == "12 derniers mois"
+    assert d["top_users"] == []
+
+
+def test_total_cumule_par_annee_sur_dix_ans(admin_http):
+    d = admin_http.get("/telemetry/dashboard?scope=total").json()
+    assert d["scope"] == "total"
+    assert [(c["label"], c["total"]) for c in d["chart"]] == [("2025", 4), ("2026", 20)]
+    assert d["kpi"]["vues"] == 24 and d["kpi"]["annees_actives"] == 2
+    assert d["kpi"]["moy_vues_an"] == 12.0
+    assert [p["page"] for p in d["top_pages"]] == ["/tickets", "/faq"]
+    #  Au-delà de 12 mois, personne ne sait plus qui est venu : la section est vide.
+    assert d["adoption"] is None
+
+
+def test_le_filtre_n_est_pas_propose_sans_gestionnaire(admin_http):
+    d = admin_http.get("/telemetry/dashboard?scope=jour&gestionnaire=sans").json()
+    #  Demandé « sans », appliqué « avec » : rien à écarter, l'écran ne le propose pas.
+    assert d["filtre_gestionnaire"] == {
+        "propose": False,
+        "applique": "avec",
+        "non_distingue_jusqu_au": None,
+    }
+    assert d["kpi"]["vues"] == 5
+
+
+def test_sans_gestionnaire_ecarte_ses_vues_du_jour(gestionnaire_http):
+    avec = gestionnaire_http.get("/telemetry/dashboard?scope=jour").json()
+    assert avec["kpi"]["vues"] == 7 and avec["kpi"]["utilisateurs"] == 3
+    assert avec["filtre_gestionnaire"]["propose"] is True
+    sans = gestionnaire_http.get("/telemetry/dashboard?scope=jour&gestionnaire=sans").json()
+    assert sans["filtre_gestionnaire"]["applique"] == "sans"
+    #  Les cinq vues des résidents, l'anonyme comprise ; le gestionnaire sort du palmarès.
+    assert sans["kpi"]["vues"] == 5 and sans["kpi"]["utilisateurs"] == 2
+    assert _palmares(sans) == [(3, 2), (1, 1)]
+    assert "/admin" not in {p["page"] for p in sans["top_pages"]}
+    #  « Qui vient » ne compte plus le gestionnaire, ni en haut ni en bas.
+    assert sans["adoption"]["global"]["comptes"] == avec["adoption"]["global"]["comptes"] - 1
+
+
+def test_sans_gestionnaire_lit_la_serie_des_agregats(gestionnaire_http):
+    sans = gestionnaire_http.get("/telemetry/dashboard?scope=mois&gestionnaire=sans").json()
+    assert sans["filtre_gestionnaire"]["applique"] == "sans"
+    #  Le 20/09 : la série du gestionnaire (6) sort, celle des autres (2) reste ;
+    #  le 15/09, non distingué, compte en entier (9).
+    totaux = {c["label"]: c["total"] for c in sans["chart"]}
+    assert totaux["09-20"] == 2 and totaux["09-15"] == 9
+    assert sans["filtre_gestionnaire"]["non_distingue_jusqu_au"] == "2026-09-15"
+    avec = gestionnaire_http.get("/telemetry/dashboard?scope=mois").json()
+    assert {c["label"]: c["total"] for c in avec["chart"]}["09-20"] == 8
+
+
+def test_un_filtre_qui_ne_changerait_rien_n_est_pas_applique(gestionnaire_http):
+    """En Année, l'agrégat mensuel ne porte aucune vue du gestionnaire : « sans »
+    retombe sur « avec » plutôt que de montrer une série qui ne change pas."""
+    d = gestionnaire_http.get("/telemetry/dashboard?scope=annee&gestionnaire=sans").json()
+    #  Le mois en cours (octobre) n'a pas de journalier ; le 20/09 n'entre pas dans
+    #  l'agrégat mensuel : la portée ne voit aucune vue du gestionnaire.
+    assert d["filtre_gestionnaire"]["propose"] is False
+    assert d["filtre_gestionnaire"]["applique"] == "avec"
 
 
 def test_users_active_rend_le_meme_palmares_que_le_mois(admin_http):

@@ -13,6 +13,8 @@
 
 	export let durees: SyntheseDurees;
 	export let periode: string;
+	/** Section dépliée ? L'onglet décide, et reçoit `basculer` (`PanneauTelemetrie`). */
+	export let ouvert = false;
 
 	const LIBELLES = {
 		chargement: 'Ouverture du site',
@@ -20,7 +22,14 @@
 	} as const;
 </script>
 
-<PanneauTelemetrie titre="⏱️ Durées d’affichage" {periode}>
+<PanneauTelemetrie
+	titre="⏱️ Durées d’affichage"
+	{periode}
+	{ouvert}
+	vide={!durees.indicateurs.length}
+	videLibelle="aucune mesure"
+	on:basculer
+>
 	{#if durees.indicateurs.length}
 		<div class="table-wrap">
 			<table class="table">
@@ -67,7 +76,6 @@
 		</div>
 	{/if}
 	<svelte:fragment slot="pied">
-		{#if !durees.indicateurs.length}<p>Aucune mesure sur la période.</p>{/if}
 		<p>
 			Mesuré dans le navigateur de chacun, jusqu’à l’écran prêt — sans le temps qu’il passe ensuite
 			à lire ses données. Les comptes qui ont refusé la mesure d’audience n’envoient rien.

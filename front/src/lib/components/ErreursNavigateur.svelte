@@ -12,9 +12,18 @@
 
 	export let erreurs: ErreurNavigateur[] = [];
 	export let periode: string;
+	/** Section dépliée ? L'onglet décide, et reçoit `basculer` (`PanneauTelemetrie`). */
+	export let ouvert = false;
 </script>
 
-<PanneauTelemetrie titre="⚠️ Erreurs vues par les résidents" {periode}>
+<PanneauTelemetrie
+	titre="⚠️ Erreurs vues par les résidents"
+	{periode}
+	{ouvert}
+	vide={!erreurs.length}
+	videLibelle="✅ aucune erreur signalée"
+	on:basculer
+>
 	{#if erreurs.length}
 		<div class="table-wrap">
 			<table class="table">
@@ -37,7 +46,6 @@
 		</div>
 	{/if}
 	<svelte:fragment slot="pied">
-		{#if !erreurs.length}<p>✅ Aucune erreur signalée sur la période.</p>{/if}
 		<p>
 			Chaque onglet ouvert signale une même erreur une seule fois. Les comptes qui ont refusé la
 			mesure d’audience n’envoient rien. Conservation : 30 jours.

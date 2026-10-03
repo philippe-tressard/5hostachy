@@ -108,14 +108,32 @@ export const TABLEAU_TELEMETRIE_VIDE = {
 	erreurs: [],
 	performance: { indicateurs: [], pages: [] },
 	adoption: {
-		jours: 30,
+		periode: 'aujourd’hui',
 		global: { libelle: 'Tous les comptes', actifs: 0, comptes: 0, taux: null },
 		refus: 0,
 		par_profil: [],
 		par_type: [],
 		par_batiment: [],
 	},
+	filtre_gestionnaire: { propose: false, applique: 'avec', non_distingue_jusqu_au: null },
 };
+
+/**
+ * Déplie une SECTION de l'onglet Télémétrie et la rend (03/10/2026) : les panneaux
+ * sont des `<details>` repliés à l'arrivée, sauf « Fréquentation » — lire un
+ * tableau demande d'abord d'ouvrir sa section, comme le fait l'administrateur.
+ */
+export async function deplierSectionTelemetrie(
+	page: Page,
+	titre: string | RegExp,
+): Promise<Locator> {
+	const section = page.locator('details.card', {
+		has: page.locator('summary', { hasText: titre }),
+	});
+	await section.locator('summary').click();
+	await expect(section).toHaveAttribute('open', '');
+	return section;
+}
 
 const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
 	//  `TableauTelemetrie` : l'onglet Télémétrie lit `adoption.par_profil`…
