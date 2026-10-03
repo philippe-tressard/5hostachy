@@ -33,6 +33,8 @@
 	import { categorieTicketLabel } from '$lib/tickets';
 	import { essayer } from '$lib/chargement';
 	import EtatListe from './EtatListe.svelte';
+	import SyntheseAffaire from './SyntheseAffaire.svelte';
+	import { basculer } from '$lib/accordeon';
 
 	let donnees: Carnet | null = null;
 	let erreur = '';
@@ -96,6 +98,10 @@
 	})();
 
 	$: enRetard = (donnees?.entrees ?? []).filter((e) => e.alerte).length;
+
+	/**  🧾 La ligne d'une affaire qui a une synthèse VALIDÉE se déplie (#1643) :
+	 *   la synthèse, puis le lien vers l'affaire. Une seule ouverte à la fois. */
+	let ouverte: string | null = null;
 
 	const ORIGINES: Record<string, string> = {
 		contrat: 'Contrat',
@@ -170,6 +176,22 @@
 										? categorieTicketLabel(entree.categorie)
 										: ORIGINES[entree.origine]}</span
 								>
+								{#if entree.synthese}
+									<button
+										type="button"
+										class="btn-icon deplier"
+										aria-expanded={ouverte === entree.lien}
+										aria-label="Synthèse de l'affaire"
+										title="Synthèse de l'affaire"
+										on:click={() => (ouverte = basculer(ouverte, entree.lien))}>🧾</button
+									>
+									{#if ouverte === entree.lien}
+										<div class="pli">
+											<SyntheseAffaire synthese={entree.synthese} />
+											<a class="vers-affaire" href={entree.lien}>Voir l'affaire →</a>
+										</div>
+									{/if}
+								{/if}
 							</li>
 						{/each}
 					</ol>
@@ -205,11 +227,11 @@
 		flex-direction: column;
 		gap: 0.15rem;
 	}
-	/*  Trois colonnes : la date est FIXE et tabulaire pour que les jours
+	/*  Trois colonnes, et le pli de la synthèse en quatrième : la date est FIXE et tabulaire pour que les jours
 	    s'alignent, le libellé est élastique, la provenance se cale à droite. */
 	.entree {
 		display: grid;
-		grid-template-columns: 6rem minmax(0, 1fr) auto;
+		grid-template-columns: 6rem minmax(0, 1fr) auto auto;
 		gap: 0.3rem 0.75rem;
 		align-items: baseline;
 		padding: 0.35rem 0.4rem;
@@ -257,13 +279,30 @@
 	.origine {
 		white-space: nowrap;
 	}
+	/*  Le bouton du pli se cale après la provenance ; le pli prend la ligne. */
+	.deplier {
+		grid-column: 4;
+	}
+	.pli {
+		grid-column: 1 / -1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.5rem 0.25rem 0.75rem;
+	}
+	.vers-affaire {
+		align-self: flex-end;
+		font-size: var(--fs-sm);
+		color: var(--color-primary);
+	}
 	/*  Sous 560 px, la colonne de droite passe sous le libellé : trois colonnes
 	    écrasent le titre, qui est ce qu'on vient lire. */
 	@media (max-width: 480px) {
 		.entree {
 			grid-template-columns: 5rem minmax(0, 1fr);
 		}
-		.origine {
+		.origine,
+		.deplier {
 			grid-column: 2;
 			justify-self: start;
 		}

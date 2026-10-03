@@ -263,6 +263,13 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(_relever_reponses, "interval", minutes=10, id="courriel_reponses")
 
+    #  La synthèse d'une affaire close (#1643) : la file se vide toutes les 10
+    #  minutes, chaque demande attendant 30 min après la clôture. `traiter_file`
+    #  ne lève jamais, et laisse une trace à chaque passage.
+    from app.utils.synthese_affaire.file import traiter_file as _syntheses
+
+    scheduler.add_job(_syntheses, "interval", minutes=10, id="synthese_affaires")
+
     #  🔴 Ce qui tourne VRAIMENT est comparé à ce qui est déclaré (#1047). Un
     #  `add_job` supprimé par mégarde — refactor, fusion, condition mal placée —
     #  laissait jusqu'ici l'application démarrer normalement : la sauvegarde ne se

@@ -37,3 +37,5 @@ from app.models.diagnostics import DiagnosticType as DiagnosticType
 from app.models.lot_import import LotImport as LotImport
 from app.models.bailleur import LocationBail as LocationBail
 from app.models.delegations import Delegation as Delegation
+from app.models.synthese import SyntheseAffaire as SyntheseAffaire
+from app.models.synthese import TentativeSynthese as TentativeSynthese

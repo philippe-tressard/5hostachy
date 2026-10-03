@@ -69,6 +69,7 @@ from . import (
     mise_a_jour,
     recherche,
     relance,
+    synthese,
     transferts,
 )
 
@@ -88,6 +89,7 @@ for _sous_router in (
     messages.router,
     evolutions.router,
     transferts.router,  # défaire un transfert de courriel (#1482)
+    synthese.router,  # la synthèse d'une affaire close (#1643)
     lot.router,
 ):
     _a_prefixer.include_router(_sous_router)

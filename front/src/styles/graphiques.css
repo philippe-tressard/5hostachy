@@ -1,0 +1,28 @@
+/*  Les GRAPHIQUES de la synthèse d'une affaire close (#1643) — ce qu'ils ont
+    en commun : la légende, sa clé et sa pastille de couleur.
+
+    La frise (M1) et la comparaison à la moyenne (M4) les écrivaient chacune
+    chez elle : `lint:css-duplique` les a refusées, et il avait raison — une
+    légende est une notion, pas un détail d'écran. La COULEUR d'une pastille
+    reste à son graphique : c'est elle qui dit ce que la clé désigne. */
+
+.graphique-legende {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.9rem;
+	font-size: var(--fs-xs);
+	color: var(--color-text-muted);
+}
+
+.graphique-cle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+}
+
+.graphique-pastille {
+	width: 0.6rem;
+	height: 0.6rem;
+	border-radius: 2px;
+	background: var(--color-border);
+}

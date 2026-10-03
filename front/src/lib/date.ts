@@ -121,6 +121,30 @@ export function fmtMonthYear(d: string | Date | null | undefined): string {
 	return dt.toLocaleDateString(LOCALE, { month: 'long', year: 'numeric', timeZone: TZ });
 }
 
+/** Les douze mois, au nom français — l'ordre est celui du calendrier (index + 1). */
+export const NOMS_MOIS = [
+	'janvier',
+	'février',
+	'mars',
+	'avril',
+	'mai',
+	'juin',
+	'juillet',
+	'août',
+	'septembre',
+	'octobre',
+	'novembre',
+	'décembre',
+] as const;
+
+/**  L'exercice comptable d'une copropriété, d'après son mois de début (#1643) :
+ *   « année civile », « de juillet à juin ». `null` vaut janvier, comme au serveur. */
+export function libelleExercice(moisDebut: number | null | undefined): string {
+	const m = moisDebut && moisDebut >= 1 && moisDebut <= 12 ? moisDebut : 1;
+	if (m === 1) return 'année civile';
+	return `de ${NOMS_MOIS[m - 1]} à ${NOMS_MOIS[(m + 10) % 12]}`;
+}
+
 /** "2 avril" (jour + mois long, sans année) */
 export function fmtDayMonth(d: string | null | undefined): string {
 	if (!d) return '—';

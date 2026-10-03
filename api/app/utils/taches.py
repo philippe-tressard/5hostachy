@@ -61,6 +61,9 @@ TACHES_PERMANENTES: dict[str, str] = {
     "la date : sans lui, le premier lecteur du jour repaie l'attente",
     "courriel_reponses": "la relève IMAP toutes les 10 minutes — les réponses du "
     "syndic par courriel n'entrent plus dans les tickets",
+    "synthese_affaires": "la file des synthèses d'affaires closes, toutes les 10 minutes "
+    "(#1643) — les affaires du carnet se closent sans synthèse, et le conseil n'est pas "
+    "avisé qu'il y en a une à relire",
 }
 
 

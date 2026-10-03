@@ -34,12 +34,13 @@
 	import EtatListe from './EtatListe.svelte';
 	import { TITRE_HISTORIQUE } from '$lib/archives';
 	import SuiteAffaire from './SuiteAffaire.svelte';
-	import type { Ticket } from '$lib/api';
-	import { tickets as ticketsApi, type TicketEvolution } from '$lib/api';
+	import SyntheseAffaire from './SyntheseAffaire.svelte';
+	import type { EtatSynthese, Ticket } from '$lib/api';
+	import { syntheses, tickets as ticketsApi, type TicketEvolution } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from './Toast.svelte';
 	import { currentUser, isAdmin, isCS } from '$lib/stores/auth';
-	import { STATUT_TICKET_LABELS } from '$lib/tickets';
+	import { estTicketClos, STATUT_TICKET_LABELS } from '$lib/tickets';
 	import { chargeCorrection, evolutionIcone, type ChargeUtileEvolution } from '$lib/evolutions';
 
 	export let ticketId: number;
@@ -59,6 +60,39 @@
 	let enEdition: number | null = null;
 	let enregistre = false;
 	let corrige = false;
+
+	//  🧾 La synthèse d'une affaire close (#1643) — demandée au serveur, qui
+	//  décide qui lit un brouillon et si l'on peut en produire une. Relue après
+	//  chaque écriture du fil (la clé change avec lui).
+	let etatSynthese: EtatSynthese | null = null;
+	let erreurSynthese = '';
+	let produit = false;
+	$: cleSynthese =
+		ticket && estTicketClos(ticket.statut) ? `${ticketId}:${evolutions.length}` : null;
+	$: if (cleSynthese) chargerSynthese();
+
+	async function chargerSynthese() {
+		erreurSynthese = '';
+		try {
+			etatSynthese = await syntheses.lire(ticketId);
+		} catch (err) {
+			etatSynthese = null;
+			erreurSynthese = messageErreur(err);
+		}
+	}
+
+	async function produireSynthese() {
+		produit = true;
+		try {
+			await syntheses.produire(ticketId);
+			dispatch('change');
+			toast('success', 'Synthèse produite — à relire, puis valider');
+		} catch (err) {
+			toast('error', messageErreur(err));
+		} finally {
+			produit = false;
+		}
+	}
 
 	async function ajouter(e: CustomEvent<ChargeUtileEvolution>) {
 		enregistre = true;
@@ -126,6 +160,11 @@
 		on:supprimer={supprimer}
 	>
 		<svelte:fragment slot="action">
+			{#if $isCS && etatSynthese?.produisible}
+				<button class="btn btn-outline btn-sm" disabled={produit} on:click={produireSynthese}
+					>{produit ? 'Rédaction…' : '🧾 Produire la synthèse'}</button
+				>
+			{/if}
 			{#if $isCS}
 				<button class="btn btn-outline btn-sm" on:click={() => (ouvert = !ouvert)}>
 					<!--  Le bouton et l'entrée qu'il produit lisent la MÊME table : c'est ce
@@ -133,6 +172,17 @@
 					      l'écart est arrivé (19/08/2026). -->
 					{ouvert ? '✕ Annuler' : `${evolutionIcone('commentaire')} ${SUITE.libelle}`}
 				</button>
+			{/if}
+		</svelte:fragment>
+
+		<svelte:fragment slot="synthese" let:evol>
+			<EtatListe compact erreur={erreurSynthese} />
+			{#if etatSynthese?.synthese && etatSynthese.synthese.evolution_id === evol.id}
+				<SyntheseAffaire
+					synthese={etatSynthese.synthese}
+					gestes={$isCS}
+					on:change={chargerSynthese}
+				/>
 			{/if}
 		</svelte:fragment>
 
@@ -152,6 +202,12 @@
 			{/if}
 		</svelte:fragment>
 	</RubriqueHistorique>
+
+	{#if $isCS && etatSynthese?.en_attente}
+		<p class="aide">
+			🧾 La synthèse de l’affaire sera rédigée dans la demi-heure qui suit sa clôture.
+		</p>
+	{/if}
 
 	{#if ouvert && ticket}
 		<div class="evol-form card">

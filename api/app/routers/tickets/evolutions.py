@@ -33,6 +33,7 @@ from app.utils.fichiers import chemins_locaux
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.photos import photos_internes, photos_json
 from app.utils.recuperer import ou_404
+from app.utils.synthese_affaire.lecture import evolutions_lisibles
 from app.utils.visibility import reservee_au_conseil, ticket_visible
 
 from .commun import (
@@ -82,6 +83,8 @@ def get_evolutions(
         .where(TicketEvolution.ticket_id == ticket_id)
         .order_by(TicketEvolution.cree_le)
     ).all()
+    #  La Suite d'une synthèse en brouillon ne se lit que du conseil (#1643).
+    evols = evolutions_lisibles(session, ticket, evols, user)
     #  L'état d'avant chaque entrée : la pastille qui, en correction, ramène la
     #  Suite à un commentaire (`suivi_fil.py`) — calculé ici, une fois.
     avant = statuts_avant(evols, valeur(ticket.statut))

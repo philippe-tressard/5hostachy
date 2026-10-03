@@ -29,3 +29,4 @@
     `.legal-footer`, `.back-link` ou `.custom-content` — aucun n'existe
     ailleurs, donc l'ordre ne peut rien changer aux quatre autres fragments. */
 @import './styles/legal.css';
+@import './styles/graphiques.css';

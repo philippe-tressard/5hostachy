@@ -68,6 +68,26 @@ ASSISTANT_SANS_GESTE = (
 )
 
 
+#: 🔴 « Une seule transmission est automatique » est FAUX depuis la synthèse d'une
+#: affaire close (#1643). `ASSISTANT_SANS_GESTE` reste écrit tel quel : les
+#: migrations 0223 et 0237 le lisent, et la 0255 le cherche dans le texte servi
+#: pour le remplacer par la phrase ci-dessous, suivie de `SYNTHESE_AFFAIRE_CLOSE`.
+ASSISTANT_DEUX_AUTOMATIQUES = (
+    "Rien n'est transmis si l'assistant est désactivé. Deux transmissions sont "
+    "automatiques, chacune seulement si l'administration en active l'usage. La "
+    "première : la <strong>réponse reçue par courriel</strong> sur une affaire — sans "
+    "le message qu'elle cite — est transmise pour en retirer la signature, les mentions "
+    "légales et les lignes vides ; le texte reçu reste conservé tel quel dans l'affaire."
+)
+SYNTHESE_AFFAIRE_CLOSE = (
+    " La seconde : la <strong>synthèse d'une affaire close</strong> du carnet "
+    "d'entretien — une fois l'affaire résolue ou annulée, son titre, sa description, ses "
+    "suites et relances datées et ses messages non réservés au conseil syndical, sans les "
+    "pièces jointes ni les notes internes, les personnes désignées par leur rôle, sont "
+    "transmis pour en rédiger un bilan, que le conseil syndical relit et valide avant que "
+    "les autres lecteurs de l'affaire le voient."
+)
+
 #: Les courriels TRANSFÉRÉS par un membre du conseil à l'adresse des affaires
 #: (29/09/2026) : ils deviennent une affaire réservée au conseil, avec le nom,
 #: l'adresse et le texte de personnes qui n'ont rien envoyé au site elles-mêmes,
@@ -256,8 +276,9 @@ DEFAULT_LEGAL = {
         "synthèse d'un contrat, le texte concerné — et, pour un contrat, le <strong>contenu des "
         "documents joints</strong> — est transmis au service de modèle de langage configuré. "
         "<strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il opère. "
-        + ASSISTANT_SANS_GESTE
+        + ASSISTANT_DEUX_AUTOMATIQUES
         + COURRIELS_TRANSFERES
+        + SYNTHESE_AFFAIRE_CLOSE
         + "</li>"
         + ACHEMINEMENT_COURRIELS
         + RECEPTION_COURRIELS
@@ -329,8 +350,9 @@ AJOUTS_1034 = [
         " le <strong>contenu des documents joints</strong> — est transmis au service de modèle de"
         " langage configuré. <strong>À RENSEIGNER</strong>\xa0: lequel, et depuis quel pays il "
         "opère. "
-        + ASSISTANT_SANS_GESTE
+        + ASSISTANT_DEUX_AUTOMATIQUES
         + COURRIELS_TRANSFERES
+        + SYNTHESE_AFFAIRE_CLOSE
         + "</li>"
         + ACHEMINEMENT_COURRIELS
         + RECEPTION_COURRIELS

@@ -48,11 +48,13 @@ from app.utils.llm_usages import USAGES
 #: | `synthese_contrat` | 0194 (17/09/2026) — ⚠️ voir l'écart connu ci-dessous |
 #: | `reponse_courriel` | 0224 (25/09/2026) — le troisième usage, semé à sa création (#1322) |
 #: | `tarif_modele` | 0240 (30/09/2026) — le quatrième usage, semé à sa création |
+#: | `synthese_affaire` | 0255 (03/10/2026) — le cinquième usage, semé à sa création (#1643) |
 EMPREINTES_SEMEES = {
     "description": "a6bca9c941ff52c7b5f90108eccf8c0d0a1dbe2ced37f9ca41d621953b84528e",
     "synthese_contrat": "35d2cc4c13b269dbfa80bb197fec7ade1b27278dc7152b4c3acbf21b2036f097",
     "reponse_courriel": "43458295fafa66bddf159851d93c5854a26053b7a764aad682efd19dee6c51e2",
     "tarif_modele": "28c905d1d9d27fd7120e92f663a30be9c3c4ebb70cbb2f743775d57f407c3e8d",
+    "synthese_affaire": "4c3731e49d70c7ecc87be0cf738963557edc6671694c661b4c7eaf10f323407c",
 }
 
 #: 🔴 Écart connu, tracé et non corrigé ici.

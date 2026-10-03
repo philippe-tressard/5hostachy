@@ -223,21 +223,17 @@
 	<div class="evol-list">
 		{#each visibles as evol, i (evol.id)}
 			{#if i > 0}<hr class="evol-sep" />{/if}
-			<!--  🔴 Trois `class:` plutôt que `evol-{evol.type}` (#810) : devant une
+			<!--  🔴 Un `class:` par type plutôt que `evol-{evol.type}` (#810) : devant une
 			      classe interpolée, Svelte cesse de déclarer les sélecteurs inutilisés
-			      pour TOUT le fichier, et `lint:css-orphelin` devient aveugle sur ce
-			      composant — qui porte une centaine de lignes de style.
-
-			      Les trois valeurs sont les clés de `EVOLUTION_ICONE` ($lib/evolutions) :
-			      un quatrième type ajouté là-bas ne recevrait pas son fond ici, et
-			      c'est le seul risque que la conversion introduit. Il est moindre que
-			      l'aveuglement qu'elle supprime, et `svelte-check` signalera alors le
-			      sélecteur devenu orphelin — ce qu'il ne faisait pas. -->
+			      pour TOUT le fichier, et `lint:css-orphelin` devient aveugle ici.
+			      Les valeurs sont les clés de `EVOLUTION_ICONE` ($lib/evolutions) : un
+			      type ajouté là-bas reçoit son fond ici, à la main (synthèse, #1643). -->
 			<div
 				class="evol-item"
 				class:evol-commentaire={evol.type === 'commentaire'}
 				class:evol-etat={evol.type === 'etat'}
 				class:evol-reponse={evol.type === 'reponse'}
+				class:evol-synthese={evol.type === 'synthese'}
 			>
 				<!--  🔴 L'icône vient de `$lib/evolutions`, plus d'une chaîne écrite ici.
 				      Elle valait 📝 pour un commentaire alors que le bouton qui le crée
@@ -312,9 +308,12 @@
 						</span>
 					{/if}
 
-					{#if enEdition === evol.id}
-						<!--  Le formulaire de correction vient de l'écran hôte : la rubrique
-						      ne connaît ni l'API ni l'entité qu'elle affiche. -->
+					{#if evol.type === 'synthese'}
+						<!--  La synthèse d'une affaire close (#1643) : sans texte dans la Suite,
+						      l'hôte la rend — la rubrique ne connaît pas l'entité. -->
+						<slot name="synthese" {evol} />
+					{:else if enEdition === evol.id}
+						<!--  Le formulaire de correction vient de l'écran hôte. -->
 						<div class="evol-edition"><slot name="edition" {evol} /></div>
 					{:else}
 						{#if evol.contenu}
@@ -465,7 +464,7 @@
 		border-radius: 5px;
 		line-height: 1.4;
 	}
-	/*  Les trois teintes de fond disent le TYPE d'entrée sans lire un badge. */
+	/*  Les teintes de fond disent le TYPE d'entrée sans lire un badge. */
 	.evol-etat {
 		background: #f0f9ff;
 	}
@@ -474,6 +473,9 @@
 	}
 	.evol-commentaire {
 		background: #fafafa;
+	}
+	.evol-synthese {
+		background: var(--color-surface);
 	}
 
 	.evol-more {

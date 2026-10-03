@@ -35,6 +35,7 @@ from app.utils.evolutions import TYPES_SAISIS
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import est_actualite
 from app.utils.prochaine_visite import apres_cloture
+from app.utils.synthese_affaire.file import inscrire_si_eligible
 from app.utils.valeurs import valeur
 from app.utils.suivi_fil import doit_propager_statut, resultat, statuts_avant, suivi_corrige
 from app.utils.visibility import destinataires_par_defaut, trace_droits, trace_lecture_par_defaut
@@ -70,6 +71,7 @@ def appliquer_sections_suite(
     #  📅🛠️ Le conseil les pose dans une Suite (#1207) : mêmes règles que la
     #  correction de l'affaire, et ce qui a changé s'écrit dans la Suite.
     if est_cs and not est_actualite(ticket):
+        equipement_avant = ticket.equipement
         planifie = appliquer_intervenant(ticket, body, session, est_cs=True) + _appliquer_quand(
             body, ticket
         )
@@ -77,6 +79,10 @@ def appliquer_sections_suite(
             _tracer(evol, planifie)
             ticket.mis_a_jour_le = horloge.maintenant()
             session.add(ticket)
+        #  L'équipement posé sur une affaire déjà close la fait entrer en file (#1643).
+        inscrire_si_eligible(
+            session, ticket, statut_avant=ticket.statut, equipement_avant=equipement_avant
+        )
     #  À qui l'on parle — une actualité (#1091) comme une affaire suivie (#1343) :
     #  `ticket_visible` honore ce choix, et l'Accès. Le conseil seul.
     if est_cs and (body.public_cible is not None or body.reserve_perimetre is not None):
@@ -111,6 +117,7 @@ def appliquer_statut(
 ) -> None:
     """L'affaire prend `statut`, avec tout ce qu'un changement d'état emporte."""
     lue_avant = destinataires_par_defaut(ticket)
+    statut_avant = ticket.statut
     ticket.statut = statut
     #  🔒 Une Étude & travaux qui passe en AG s'ouvre aux copropriétaires
     #  (standard du 30/09/2026) : tout le fil avec elle, et la Suite le dit.
@@ -121,6 +128,9 @@ def appliquer_statut(
     ticket.mis_a_jour_le = horloge.maintenant()
     session.add(ticket)
     apres_cloture(ticket, session)  # la prochaine visite d'un contrat (#1092)
+    inscrire_si_eligible(
+        session, ticket, statut_avant=statut_avant, equipement_avant=ticket.equipement
+    )
 
 
 def corriger_suivi(session: Session, ticket: Ticket, evol: TicketEvolution, body: Any) -> None:

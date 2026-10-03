@@ -271,6 +271,27 @@ def membres_cs_ou_admin(session: Session) -> list[Utilisateur]:
     )
 
 
+def gestionnaire_puis_cs(session: Session) -> list[tuple[int | None, str]]:
+    """(user_id, e-mail) du gestionnaire du site puis des membres du CS, dédoublonnés.
+
+    La synthèse d'une affaire close à valider (#1643) — arbitré « le temps que la
+    fonction soit stabilisée » : le gestionnaire la suit, le conseil la valide.
+    Le CS par le **rôle** (`membres_cs_avec_email`), jamais par le périmètre ; le
+    gestionnaire passe en premier et gagne le doublon, comme le syndic dans
+    `syndic_puis` — un administrateur qui siège au conseil ne reçoit qu'un message.
+    """
+    destinataires: list[tuple[int | None, str]] = []
+    vus: set[str] = set()
+    gestionnaire_id = site_manager_user_id(session)
+    gestionnaire = session.get(Utilisateur, gestionnaire_id) if gestionnaire_id else None
+    candidats = [(gestionnaire.id, gestionnaire.email)] if gestionnaire else []
+    for uid, email in [*candidats, *membres_cs_avec_email(session)]:
+        if email and normaliser_adresse(email) not in vus:
+            destinataires.append((uid, email))
+            vus.add(normaliser_adresse(email))
+    return destinataires
+
+
 def destinataires_syndic_cs(
     session: Session,
     *,

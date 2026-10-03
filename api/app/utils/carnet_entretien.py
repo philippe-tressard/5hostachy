@@ -83,6 +83,29 @@ CATEGORIES_BATI = frozenset(
 )
 
 
+def est_du_bati(categorie) -> bool:
+    """La catégorie parle-t-elle du bâti ? — énumération ou valeur, indifféremment.
+
+    🔒 La seule lecture de `CATEGORIES_BATI` hors de ce module passe par ici
+    (`test_synthese_eligibilite.py`) : l'intervenant, la synthèse d'une affaire
+    close et le carnet posent la même question, et une copie de l'ensemble
+    divergerait à la première catégorie ajoutée.
+    """
+    return valeur(categorie) in {valeur(c) for c in CATEGORIES_BATI}
+
+
+def contribue_au_carnet(ticket) -> bool:
+    """L'affaire contribue-t-elle au carnet d'entretien ? — catégorie du bâti ET
+    équipement désigné par le conseil (#1097).
+
+    C'est la règle d'éligibilité de la synthèse d'une affaire close (#1643,
+    arbitré : « uniquement les affaires du carnet ») : une affaire sans
+    équipement y figure sous « Sans équipement rattaché » tant que le conseil
+    ne l'a pas rangée — la poser plus tard la fait entrer en file à ce moment.
+    """
+    return est_du_bati(ticket.categorie) and bool(ticket.equipement)
+
+
 @dataclass
 class EntreeCarnet:
     """Un fait daté qui concerne le bâti.
@@ -108,6 +131,10 @@ class EntreeCarnet:
     perimetre: list[str] = field(default_factory=list)
     lien: str = ""
     alerte: Optional[str] = None
+    #: L'affaire d'où vient la ligne — pour y joindre sa synthèse validée (#1643).
+    ticket_id: Optional[int] = None
+    #: La synthèse VALIDÉE de l'affaire, dans la partie pliée de la ligne.
+    synthese: Optional[dict] = None
 
     def en_dict(self) -> dict:
         return {
@@ -122,6 +149,7 @@ class EntreeCarnet:
             "perimetre": self.perimetre,
             "lien": self.lien,
             "alerte": self.alerte,
+            "synthese": self.synthese,
         }
 
 
@@ -295,6 +323,7 @@ def _entrees_interventions(
                 equipement=ticket.equipement or (prestataire.specialite if prestataire else None),
                 perimetre=codes,
                 lien=lien_ticket(ticket.id),
+                ticket_id=ticket.id,
             )
         )
     return entrees
@@ -321,7 +350,7 @@ def _entrees_affaires(
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
         #  L'Entretien est une INTERVENTION (ci-dessus), pas un incident.
-        if ticket.categorie not in CATEGORIES_BATI or ticket.categorie == CategorieTicket.entretien:
+        if not est_du_bati(ticket.categorie) or ticket.categorie == CategorieTicket.entretien:
             continue
         if not couvre(_codes_de(ticket.perimetre_cible), perimetre):
             continue
@@ -342,6 +371,7 @@ def _entrees_affaires(
                 equipement=ticket.equipement,
                 perimetre=_codes_de(ticket.perimetre_cible),
                 lien=lien_ticket(ticket.id),
+                ticket_id=ticket.id,
             )
         )
     return entrees
@@ -367,4 +397,18 @@ def construire_carnet(
         + _entrees_affaires(session, perimetre, lecteur)
     )
     entrees.sort(key=lambda e: e.date_fait, reverse=True)
+    _joindre_syntheses(session, entrees)
     return [entree.en_dict() for entree in entrees]
+
+
+def _joindre_syntheses(session: Session, entrees: list[EntreeCarnet]) -> None:
+    """La synthèse VALIDÉE de chaque affaire (#1643) — un brouillon n'entre jamais
+    au carnet. Le lecteur a déjà passé `ticket_visible` pour la ligne : c'est la
+    règle d'une synthèse validée, il n'y en a pas d'autre à rejouer ici."""
+    from app.utils.synthese_affaire.lecture import synthese_lue, syntheses_validees
+
+    validees = syntheses_validees(session, [e.ticket_id for e in entrees if e.ticket_id])
+    for entree in entrees:
+        synthese = validees.get(entree.ticket_id)
+        if synthese is not None:
+            entree.synthese = synthese_lue(session, synthese).model_dump(mode="json")

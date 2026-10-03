@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from app.utils.description_format import CONSIGNE_DEFAUT as CONSIGNE_DESCRIPTION
 from app.utils.reponse_courriel import CONSIGNE as CONSIGNE_REPONSE_COURRIEL
 from app.utils.reponse_courriel import USAGE_REPONSE_COURRIEL
+from app.utils.synthese_affaire.format import CONSIGNE as CONSIGNE_SYNTHESE_AFFAIRE
+from app.utils.synthese_affaire.format import USAGE_SYNTHESE_AFFAIRE
 from app.utils.synthese_format import CONSIGNE as CONSIGNE_SYNTHESE
 from app.utils.tarif_modele import CONSIGNE as CONSIGNE_TARIF
 from app.utils.tarif_modele import USAGE_TARIF_MODELE
@@ -161,6 +163,23 @@ USAGES: dict[str, Usage] = {
         #  La grille, elle, est en ENTRÉE : ce plafond ne la borne pas.
         max_jetons_defaut=2_000,
     ),
+    #  Le second usage AUTOMATIQUE (#1643, 03/10/2026) : la tâche permanente
+    #  le déclenche trente minutes après la clôture d'une affaire du carnet.
+    #  Coupé, la Suite naît vide, en brouillon, et le conseil la rédige.
+    #  L'effort d'origine (« moyen ») est posé par la migration 0255.
+    USAGE_SYNTHESE_AFFAIRE: Usage(
+        code=USAGE_SYNTHESE_AFFAIRE,
+        libelle="Synthèse d'une affaire close",
+        description=(
+            "Automatique : trente minutes après la clôture d'une affaire du carnet "
+            "d'entretien, l'assistant en rédige la synthèse — récit, difficultés, "
+            "amélioration suggérée — à partir du fil et des métriques calculées. Le "
+            "conseil syndical la relit, la relance ou la valide ; ni les messages "
+            "internes ni les pièces jointes ne sont transmis."
+        ),
+        prompt_defaut=CONSIGNE_SYNTHESE_AFFAIRE,
+        max_jetons_defaut=6_000,
+    ),
 }
 
 
@@ -192,6 +211,7 @@ __all__ = [
     "EFFORTS",
     "USAGES",
     "USAGE_DESCRIPTION",
+    "USAGE_SYNTHESE_AFFAIRE",
     "USAGE_SYNTHESE_CONTRAT",
     "USAGE_TARIF_MODELE",
     "Usage",
