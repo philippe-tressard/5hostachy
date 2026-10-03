@@ -19,7 +19,6 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import pytest
-from sqlmodel import Session
 
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
@@ -34,15 +33,13 @@ from app.utils.synthese_contrat import (
     exemples,
     synthese_disponible,
 )
-from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture()
-def session():
-    with Session(moteur_memoire()) as s:
-        s.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
-        s.commit()
-        yield s
+def session(session):
+    session.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
+    session.commit()
+    return session
 
 
 def _config(session, **kw):

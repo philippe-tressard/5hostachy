@@ -48,6 +48,16 @@ MOTIFS = (
         "la fixture `session` (conftest), ou `aides_base.moteur_memoire(partage=…)`",
     ),
     Motif(
+        "fixture session qui refait la base en mémoire",
+        #  Une fixture `session` locale qui ne dépend pas de celle du conftest et
+        #  rouvre `Session(moteur_memoire(…))` : la même base, écrite à côté (#1604).
+        re.compile(
+            r"def session\((?![^)]*\bsession\b)[^)]*\):(?:(?!\n\S)[\s\S])*?Session\(moteur_memoire\("
+        ),
+        "conftest.py",
+        "`def session(session): …` — la locale AJOUTE ses données à celle du conftest",
+    ),
+    Motif(
         "champ inexistant d'Utilisateur",
         re.compile(r"\bmot_de_passe_hash\b"),
         None,
@@ -137,6 +147,9 @@ def test_le_controle_sait_REFUSER():
     forges = {
         "balayage de app/": 'for p in APP.rglob("*.py"):',
         "base SQLite en mémoire": 'moteur = create_engine("sqlite://")',
+        "fixture session qui refait la base en mémoire": (
+            "def session():\n    with Session(moteur_memoire()) as s:\n        yield s\n"
+        ),
         "champ inexistant d'Utilisateur": 'Utilisateur(mot_de_passe_hash="x")',
         "aide importée depuis un fichier de tests": "from tests.test_autre import _aide",
         "migration chargée à la main": "spec = importlib.util.spec_from_file_location(n, c)",

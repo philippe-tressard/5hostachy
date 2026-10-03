@@ -22,30 +22,27 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from sqlmodel import Session
 
 from app.models.core import ConfigSite
 from app.models.documents import Document
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.utils.document_contrat import document_designe, id_document_designe
 from app.utils.synthese_contrat import construire_matiere, documents_du_contrat
-from tests.aides_base import moteur_memoire
 
 
 @pytest.fixture()
-def session():
-    with Session(moteur_memoire()) as s:
-        s.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
-        for cle, valeur in {
-            "llm_actif": "1",
-            "llm_api_key": "sk-x",
-            "llm_envoi_document": "1",
-            "llm_synthese_contrat_actif": "1",
-            "llm_synthese_contrat_modele": "gpt-4o-mini",
-        }.items():
-            s.add(ConfigSite(cle=cle, valeur=valeur))
-        s.commit()
-        yield s
+def session(session):
+    session.add(Prestataire(id=1, nom="5M Services", specialite="ascenseur"))
+    for cle, valeur in {
+        "llm_actif": "1",
+        "llm_api_key": "sk-x",
+        "llm_envoi_document": "1",
+        "llm_synthese_contrat_actif": "1",
+        "llm_synthese_contrat_modele": "gpt-4o-mini",
+    }.items():
+        session.add(ConfigSite(cle=cle, valeur=valeur))
+    session.commit()
+    return session
 
 
 def _contrat(session, libelle="Ascenseur Bât. 4"):

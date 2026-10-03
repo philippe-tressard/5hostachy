@@ -14,23 +14,20 @@ from datetime import datetime
 
 import pytest
 from fastapi import HTTPException
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.models.core import HistoriqueMaintenance
 from app.routers.admin import rapports_scripts
 from app.routers.admin.rapports_scripts import BattementTache, maintenance_battement
-from tests.aides_base import moteur_memoire
 
 DEPUIS = datetime(2026, 9, 27, 15, 6, 0)
 
 
 @pytest.fixture
-def session(monkeypatch):
+def session(session, monkeypatch):
     #  La porte par clé est éprouvée par `test_autorisation.py` ; ici, le geste.
     monkeypatch.setattr(rapports_scripts, "exiger_cle_maintenance", lambda cle: None)
-    moteur = moteur_memoire()
-    with Session(moteur) as s:
-        yield s
+    return session
 
 
 def _ligne(noeud: str, cree_le: datetime) -> HistoriqueMaintenance:
