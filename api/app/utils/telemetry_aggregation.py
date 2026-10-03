@@ -393,6 +393,34 @@ def derniere_agregation_reussie(session) -> Optional[datetime]:
     return ligne.cree_le if ligne else None
 
 
+def reagregation_en_attente(session: Session) -> bool:
+    """Reste-t-il un jour récent dont l'agrégat ne distingue pas le gestionnaire ?
+
+    Après la mise en production du filtre « sans le gestionnaire du site », les
+    lignes déjà agrégées portent `None` jusqu'au PROCHAIN passage de 02:00 : la
+    vue Mois lisait zéro vue du gestionnaire, donc ne proposait pas le filtre —
+    toute la journée de la mise en production (03/10/2026, signalé à l'écran).
+    Les évènements de ces jours existent encore : on les réagrège sans attendre.
+    """
+    plancher = (_paris_now() - timedelta(days=REAGREGATION_JOURS)).strftime("%Y-%m-%d")
+    return (
+        session.exec(
+            select(TelemetryDaily.id)
+            .where(TelemetryDaily.gestionnaire.is_(None), TelemetryDaily.jour >= plancher)
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
+def derniere_agregation_ou_rejeu(session: Session) -> Optional[datetime]:
+    """Le fait qu'interroge le rattrapage : `derniere_agregation_reussie`, ou `None`
+    (« rien n'a abouti », donc on rejoue) tant qu'une réagrégation est en attente."""
+    if reagregation_en_attente(session):
+        return None
+    return derniere_agregation_reussie(session)
+
+
 def run_telemetry_aggregation_cron() -> dict:
     """Wrapper appelé par le scheduler cron — crée automatiquement une entrée historique."""
     with Session(engine) as session:

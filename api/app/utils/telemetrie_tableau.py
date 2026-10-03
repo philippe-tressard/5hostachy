@@ -362,6 +362,9 @@ def tableau(session: Session, scope: str, filtre: str) -> dict:
         **communs(session, lecture),
         "filtre_gestionnaire": {
             "propose": propose,
+            #  Faux : aucun administrateur n'est désigné gestionnaire (Paramétrage site) —
+            #  c'est la cause de filtre absent que l'administrateur peut corriger.
+            "gestionnaire_designe": gestionnaire_id is not None,
             "applique": applique,
             "non_distingue_jusqu_au": (
                 non_distingue_jusqu_au(session, scope) if applique == "sans" else None
