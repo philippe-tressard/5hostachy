@@ -59,6 +59,16 @@ class FaqItemRead(BaseModel):
         from_attributes = True
 
 
+def creer_entree(session: Session, body: FaqItemCreate) -> FaqItem:
+    """Crée une entrée — la seule écriture d'une entrée neuve : la route ci-dessous
+    et la publication d'une réponse au règlement (`routers/reglement`) l'appellent."""
+    item = FaqItem(**body.model_dump())
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 
@@ -126,11 +136,7 @@ def create_faq(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(require_cs_or_admin),
 ):
-    item = FaqItem(**body.model_dump())
-    session.add(item)
-    session.commit()
-    session.refresh(item)
-    return item
+    return creer_entree(session, body)
 
 
 @router.patch("/reorder", status_code=204)

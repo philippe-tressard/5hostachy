@@ -39,3 +39,5 @@ from app.models.bailleur import LocationBail as LocationBail
 from app.models.delegations import Delegation as Delegation
 from app.models.synthese import SyntheseAffaire as SyntheseAffaire
 from app.models.synthese import TentativeSynthese as TentativeSynthese
+from app.models.reglement import QuestionReglement as QuestionReglement
+from app.models.reglement import TexteReglement as TexteReglement

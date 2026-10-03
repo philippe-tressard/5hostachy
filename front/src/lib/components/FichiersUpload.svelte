@@ -78,6 +78,8 @@
 	export let mode: 'photos' | 'documents' | 'mixte' = 'documents';
 	export let label: string | null = null;
 	export let accept: string | null = null;
+	/** Ce que le compteur annonce pour un `accept` hors des trois familles (sinon « mixte »). */
+	export let types: string | null = null;
 	$: accepte =
 		accept ?? { photos: ACCEPT_PHOTOS, documents: ACCEPT_DOCUMENTS, mixte: ACCEPT_FICHIERS }[mode];
 	$: libelle =
@@ -169,7 +171,7 @@
 	//
 	//  En aide grise sous le bouton, et non dans l'intitulé, qui est devenu le
 	//  titre de section (`SectionFormulaire`).
-	$: _types = LIBELLE_TYPES[_nature as keyof typeof LIBELLE_TYPES] ?? '';
+	$: _types = types ?? LIBELLE_TYPES[_nature as keyof typeof LIBELLE_TYPES] ?? '';
 
 	const dispatch = createEventDispatcher<{ change: string[] }>();
 

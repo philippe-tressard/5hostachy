@@ -35,6 +35,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.utils.description_format import CONSIGNE_DEFAUT as CONSIGNE_DESCRIPTION
+from app.utils.question_reglement.format import CONSIGNE as CONSIGNE_QUESTION_REGLEMENT
+from app.utils.question_reglement.format import USAGE_QUESTION_REGLEMENT
 from app.utils.reponse_courriel import CONSIGNE as CONSIGNE_REPONSE_COURRIEL
 from app.utils.reponse_courriel import USAGE_REPONSE_COURRIEL
 from app.utils.synthese_affaire.format import CONSIGNE as CONSIGNE_SYNTHESE_AFFAIRE
@@ -57,6 +59,11 @@ class Usage:
     prompt_defaut: str
     #: Le plafond d'origine, pour la même raison.
     max_jetons_defaut: int
+    #: Le délai d'attente PLANCHER de cet usage, en secondes — 0 : le délai
+    #: commun suffit. Un usage qui envoie un long document à un modèle qui
+    #: raisonne dépasse les 45 s communes ; relever le délai de tous pour lui
+    #: ferait attendre une minute de plus un geste qui en demande dix.
+    delai_min_s: int = 0
 
     def cle(self, champ: str) -> str:
         """La clé `ConfigSite` d'un réglage de cet usage."""
@@ -180,6 +187,26 @@ USAGES: dict[str, Usage] = {
         prompt_defaut=CONSIGNE_SYNTHESE_AFFAIRE,
         max_jetons_defaut=6_000,
     ),
+    #  03/10/2026 : l'avis d'un juriste sur le règlement de copropriété. Tout le
+    #  texte part à chaque question (≈ 60 000 jetons pour un recueil de trois
+    #  actes), en tête de message pour être lu en cache. L'effort d'origine
+    #  (« élevé ») est posé par la migration 0256 : c'est la précision qui est
+    #  demandée, pas la vitesse.
+    USAGE_QUESTION_REGLEMENT: Usage(
+        code=USAGE_QUESTION_REGLEMENT,
+        libelle="Question au règlement de copropriété",
+        description=(
+            "Espace CS › Règlement : le conseil syndical pose la question d'un résident "
+            "(« ai-je le droit de… ? ») ; l'assistant, en juriste, répond d'après le texte "
+            "du règlement chargé sur cette page — verdict, réponse argumentée, extraits "
+            "cités mot pour mot avec leur page, réserves. Le texte entier et la question "
+            "sont transmis, jamais le nom de qui la pose. Délai d'attente d'au moins "
+            "deux minutes."
+        ),
+        prompt_defaut=CONSIGNE_QUESTION_REGLEMENT,
+        max_jetons_defaut=8_000,
+        delai_min_s=120,
+    ),
 }
 
 
@@ -211,6 +238,7 @@ __all__ = [
     "EFFORTS",
     "USAGES",
     "USAGE_DESCRIPTION",
+    "USAGE_QUESTION_REGLEMENT",
     "USAGE_SYNTHESE_AFFAIRE",
     "USAGE_SYNTHESE_CONTRAT",
     "USAGE_TARIF_MODELE",

@@ -277,6 +277,7 @@ def config_llm(session: Session, usage: Optional[str] = None) -> ConfigLLM:
     commun.prompt = (cfg.get(u.cle("prompt")) or "").strip() or u.prompt_defaut
     commun.max_jetons = _entier(cfg, u.cle("max_jetons"), u.max_jetons_defaut)
     commun.effort = valeur_effort(cfg.get(u.cle("effort")))
+    commun.delai_s = max(commun.delai_s, u.delai_min_s)
     return commun
 
 
