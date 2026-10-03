@@ -9,6 +9,7 @@
 
 import { urlDeConnexion } from '$lib/redirection';
 import { detailLisible } from '$lib/detail-erreur';
+import { codeHttp, signalerErreur } from '$lib/telemetry';
 
 export const BASE = '/api';
 
@@ -163,6 +164,8 @@ async function echecApi(
 	if (res.status >= 500) {
 		// Erreur serveur : ne pas exposer le détail technique à l'utilisateur
 		console.error(`[API ${res.status}] ${method} ${path} — ${rawDetail}`);
+		//  …et elle se COMPTE (#1631) : une console, seul le résident la voit.
+		signalerErreur(codeHttp(res.status, cheminNu(path)));
 		const userMsg =
 			res.status === 503
 				? 'Service momentanément indisponible. Veuillez réessayer dans quelques instants.'

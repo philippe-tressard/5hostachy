@@ -97,6 +97,15 @@ TELEMETRIE_COLLECTE = (
     "Vous pouvez la <strong>refuser</strong> et <strong>effacer</strong> votre historique "
     "depuis <em>Mon profil</em>, rubrique <em>Vos droits (RGPD)</em>.</li>"
 )
+#: Les erreurs vues dans le navigateur (#1631) : comptées par page, SANS
+#: rattachement au compte (`utils/erreurs_navigateur`). Écrite une fois : le
+#: gabarit et la migration 0251, qui l'insère dans le texte servi, la lisent ici.
+TELEMETRIE_ERREURS = (
+    "<li><strong>Erreurs techniques rencontrées à l'écran\xa0:</strong> le type d'erreur et la "
+    "page où elle survient, comptés par jour <strong>sans rattachement à votre compte</strong> "
+    "et conservés 30\xa0jours. Ils servent à corriger les pannes que personne ne signale. "
+    "Votre refus de la mesure d'audience les coupe aussi.</li>"
+)
 TELEMETRIE_BASE_LEGALE = (
     "<li><strong>Mesure d'audience interne</strong> — base : intérêt légitime "
     "(art. 6-1-f) à savoir quels écrans servent et à qui ; vous pouvez vous y "
@@ -158,6 +167,7 @@ DEFAULT_LEGAL = {
         "badges Vigik et télécommandes de parking, avec leur porteur et le lot auquel ils sont "
         "rattachés.</li>"
         + TELEMETRIE_COLLECTE
+        + TELEMETRIE_ERREURS
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "
         "base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Communication résidents/CS</strong> — "
