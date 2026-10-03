@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  lib-conformite.sh — les contrôles de CONFORMITÉ de `check-reliability.sh`
-#                      (C20 à C25, C30, C32 à C34)
+#                      (C20 à C25, C30, C32 à C35)
 #
 #  Extrait le 20/08/2026, au fil de l'eau : `check-reliability.sh` a dépassé son
 #  plafond en recevant C23 (les en-têtes de sécurité réellement servis), et le
@@ -20,6 +20,8 @@
 #    C33  des copies de `.env` traînent-elles à côté de l'original ?
 #    C34  le volume de données porte-t-il d'autres bases que celle de l'API ?
 #         (C33 et C34 : `lib-fichiers-parasites.sh`)
+#    C35  la pile de bureau retirée des nœuds est-elle revenue ?
+#         (`lib-paquets-proscrits.sh`)
 #
 #  Les contrôles restés dans `check-reliability.sh` posent l'autre question :
 #  *le service fonctionne-t-il ?* — la base, le rôle actif, le tunnel, la
@@ -210,4 +212,10 @@ conformite_verdicts() {
   #  Des `.env*` à la racine du dépôt déployé, des bases autres que celle de l'API
   #  dans le volume de données. Mesure et constats : `lib-fichiers-parasites.sh`.
   fichiers_parasites_verdicts
+
+  # ── C35. La pile de bureau est-elle REVENUE ? (#1648) ────────────────────────
+  #  Retirée du standby le 03/10/2026 ; une mise à jour, un paquet recommandé ou une
+  #  réinstallation depuis l'image la ramène sans que personne le décide. Liste,
+  #  mesure et constats : `lib-paquets-proscrits.sh`.
+  paquets_proscrits_verdicts
 }

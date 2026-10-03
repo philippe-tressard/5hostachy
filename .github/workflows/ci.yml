@@ -580,6 +580,11 @@ jobs:
           # vrai répertoire, un docker simulé), et la règle d'or : un listage, jamais
           # la base ouverte.
           bash scripts/lib/lib-fichiers-parasites.sh --selftest
+          # C35 (#1648) : la pile de bureau retirée des nœuds est-elle revenue ? La
+          # collecte exécutée sur dpkg, apt-cache, systemctl et apt-config simulés,
+          # le cas zéro de chaque mesure, et la liste proscrite écrite UNE fois
+          # (alleger-noeud.sh la source, il n'en recopie aucun motif).
+          bash scripts/lib/lib-paquets-proscrits.sh --selftest
           bash scripts/lib/lib-mises-a-jour.sh      --selftest
           bash scripts/lib/lib-notification.sh      --selftest
           bash scripts/poste/precheck-mep.sh      --selftest
