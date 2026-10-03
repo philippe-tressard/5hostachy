@@ -341,6 +341,7 @@ distinctes** — les confondre envoie le bon message aux mauvaises personnes :
 | le **syndic principal** | `syndic_principal(session)` | ci-dessous, fiche copropriété, arrivants |
 | le **gestionnaire du site** — un administrateur, ou personne (#1505) | `site_manager_user_id(session)` | ce qui renvoie à `/admin` : comptes, alertes, bogues |
 | **syndic puis CS, dédoublonnés** — qui reçoit un e-mail interne | `destinataires_syndic_cs(session, syndic=…, cs=…)` | les quatre entités qui cochent « envoyer au syndic / au CS » |
+| **gestionnaire du site puis CS, dédoublonnés** | `gestionnaire_puis_cs(session)` | la synthèse d'une affaire close à valider (#1643) |
 
 🔴 La dernière ligne a existé en **quatre exemplaires identiques** (tickets,
 calendrier, publications, sondages) jusqu'au 31/08/2026 — et celui des tickets

@@ -4,14 +4,23 @@
 
 Un ticket, une actualité et un événement portent chacun un **Historique** : une
 suite d'entrées datées, signées, qui racontent ce qui s'est passé. Deux natures
-seulement, partout :
+SAISIES, partout :
 
 | `type` | ce que l'entrée dit |
 |---|---|
 | `commentaire` | quelqu'un a écrit quelque chose |
 | `etat` | l'objet a changé d'étape (`ancien_statut` → `nouveau_statut`) |
 
-⚠️ Une **correction** n'est pas un troisième type : c'est un `commentaire`
+Et trois que le PRODUIT écrit, jamais un formulaire (`utils/evolutions.TYPES_SAISIS`
+les refuse à la saisie, à la correction et à l'effacement) : `reponse` (un
+message posté), `relance` (au syndic) et — depuis #1643 — **`synthese`**, la
+Suite porteuse de la synthèse d'une affaire close. Celle-ci ne porte AUCUN
+texte (`contenu` vide, il vit dans `synthese_affaire`) et c'est la seule entrée
+du fil qui ait une visibilité propre : brouillon, le conseil seul la lit
+(`utils/synthese_affaire/lecture`). Cet en-tête disait « jamais un troisième
+type » : vrai des types saisis, faux du fil.
+
+⚠️ Une **correction** n'est pas un type de plus : c'est un `commentaire`
 préfixé (`utils/corrections`). Le noter ici parce que la tentation revient à
 chaque écran.
 
@@ -66,7 +75,8 @@ class EvolutionMixin(AssisteIAMixin):
     la marque `assiste_ia`, que le commentaire porte comme l'objet (#985)."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    #: `commentaire` ou `etat` — jamais un troisième (voir l'en-tête).
+    #: `commentaire` ou `etat` à la saisie ; `reponse`, `relance`, `synthese` écrits
+    #: par le produit (voir l'en-tête).
     type: str
     contenu: Optional[str] = None
     #: Remplis pour une transition, vides pour un commentaire. Les deux

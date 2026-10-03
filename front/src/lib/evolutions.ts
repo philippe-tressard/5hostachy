@@ -61,6 +61,7 @@ export const EVOLUTION_ICONE: Record<string, string> = {
 	commentaire: '\u{1F4AC}',
 	reponse: '↩️',
 	etat: '\u{1F504}',
+	synthese: '🧾', // la synthèse d'une affaire close (#1643)
 };
 
 /**

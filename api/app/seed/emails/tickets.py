@@ -320,6 +320,27 @@ MODELES = [
         + bouton("{{ app.url }}{{ objet.lien }}", "Ouvrir"),
         True,
     ),
+    #  La synthèse d'une affaire close à relire (#1643) — au gestionnaire du site
+    #  et au conseil, « le temps que la fonction soit stabilisée ». Un envoi par
+    #  production (`synthese_affaire.production.envoyer_avis`).
+    (
+        "synthese_a_valider",
+        "Synthèse d’une affaire close à valider",
+        "Synthèse à valider — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}",
+        titre("🧾 Synthèse à valider")
+        + '<p style="margin:0 0 16px">L’affaire ci-dessous est {{ issue }}. '
+        "{% if synthese.vide %}L’assistant n’a pas pu en rédiger la synthèse : elle est à "
+        "rédiger depuis la Suite « Synthèse de l’affaire ».{% else %}Sa synthèse a été "
+        "rédigée par l’assistant : relisez-la, modifiez-la ou relancez-la, puis validez-la "
+        "pour qu’elle soit lue des copropriétaires et versée au carnet d’entretien."
+        "{% endif %}</p>"
+        + encart(
+            f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Affaire #{{{{ ticket.numero }}}}</p>'
+            + _TITRE_TICKET
+        )
+        + _bouton_ticket("Relire la synthèse"),
+        True,
+    ),
 ]
 
 #  `GRIS_CLAIR` est importé pour `entree_historique`, qui s'en sert : le laisser

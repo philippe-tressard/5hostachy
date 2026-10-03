@@ -15,7 +15,7 @@ construit, et la récurrence la rejoint pour la seule catégorie Entretien.
 - Le prestataire désigné doit **exister** (`ou_404`) : un identifiant inventé
   afficherait un intervenant fantôme sur la fiche et dans le carnet.
 - L'intervenant n'a de sens que pour une catégorie du **bâti**
-  (`carnet_entretien.CATEGORIES_BATI`), la récurrence que pour un
+  (`carnet_entretien.est_du_bati`), la récurrence que pour un
   **Entretien** : hors de là, ils sont effacés — sinon une affaire
   recatégorisée garderait en base ce qu'aucun écran ne montre plus (« sans
   données », arbitré le 23/09/2026).
@@ -45,7 +45,7 @@ from sqlmodel import Session
 
 from app.models.prestataires import ContratEntretien, Prestataire, TypeEquipement
 from app.models.tickets import CategorieTicket
-from app.utils.carnet_entretien import CATEGORIES_BATI
+from app.utils.carnet_entretien import est_du_bati
 from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
 
@@ -101,7 +101,7 @@ def _envoye(body: Any, champ: str) -> bool:
 def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: bool) -> list[str]:
     """Pose l'intervenant et la récurrence ; rend les lignes du journal de correction."""
     changes: list[str] = []
-    if valeur(ticket.categorie) not in {valeur(c) for c in CATEGORIES_BATI}:
+    if not est_du_bati(ticket.categorie):
         if ticket.prestataire_id is not None:
             changes.append("Intervenant effacé")
         if ticket.equipement is not None:

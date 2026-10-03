@@ -146,6 +146,8 @@ def libelle_evolution(e: TicketEvolution, *, avec_extrait: bool = False) -> str:
         return f"Commentaire : {(e.contenu or '')[:100]}" if avec_extrait else "Commentaire CS"
     if e.type == "reponse":
         return "Réponse"
+    if e.type == "synthese":  # la Suite porteuse d'une synthèse (#1643) — sans texte
+        return "Synthèse de l'affaire"
     return e.type
 
 

@@ -163,6 +163,8 @@ CATALOGUE_ICONES = "front/src/lib/icones-svg.json"
 #  versions 0.200, 0.300, 0.400 et 1.50 de `lucide-static` : 59 icônes sur 61
 #  sont des tracés Lucide (ou Feather, dont Lucide dérive), les deux autres sont
 #  celles-ci. Une entrée qui disparaît du catalogue fait échouer le contrôle.
+#  Le 03/10/2026, quatre tracés Lucide sont entrés (`circle`, `circle-check`,
+#  `circle-x`, `refresh-cw` — la chronologie d'une synthèse, #1643).
 ICONES_HORS_LUCIDE = {
     "whatsapp": "Simple Icons",
     "stairs": "absente de Lucide — présumée dessinée pour le projet, à confirmer par l'auteur",

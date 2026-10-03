@@ -51,11 +51,13 @@ def _poser(session, **valeurs):
 def test_les_usages_sont_declares_et_chacun_a_un_prompt_d_origine():
     #  Trois depuis #1322 (25/09/2026) : la mise en forme des réponses par courriel.
     #  Quatre depuis le 30/09/2026 : le tarif d'un modèle.
+    #  Cinq depuis #1643 (03/10/2026) : la synthèse d'une affaire close.
     assert set(USAGES) == {
         USAGE_SYNTHESE_CONTRAT,
         USAGE_DESCRIPTION,
         "reponse_courriel",
         "tarif_modele",
+        "synthese_affaire",
     }
     for u in USAGES.values():
         assert u.prompt_defaut.strip()

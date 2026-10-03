@@ -316,3 +316,6 @@ from app.schemas_tickets import (  # noqa: E402,F401
 #  Les schémas des PUBLICATIONS (`schemas_publications.py`) ont été retirés le
 #  23/09/2026 avec leur routeur : une actualité est une affaire de catégorie
 #  « Actualité » (#1091, lot 4), elle se lit et s'écrit par `schemas_tickets`.
+
+#  La synthèse d'une affaire close (#1643) — fiche de l'affaire et carnet.
+from app.schemas_synthese import SyntheseLue as SyntheseLue  # noqa: E402,F401

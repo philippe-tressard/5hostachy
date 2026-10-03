@@ -1,0 +1,305 @@
+<!--
+  SyntheseAffaire.svelte — la Suite « Synthèse de l'affaire » (#1643).
+
+  Une affaire du carnet close reçoit, trente minutes plus tard, une synthèse
+  rédigée par l'assistant à partir de son fil et des métriques que le serveur
+  calcule. Ce composant la rend, dans cet ordre (arbitré) :
+
+    1. les cinq graphiques — M2 tuiles, M1 frise, M3 chronologie, M4 face à la
+       moyenne, M5 rythme ;
+    2. le texte : synthèse, difficultés, amélioration suggérée.
+
+  En BROUILLON, seuls le conseil et l'administration la voient — le serveur ne
+  l'envoie à personne d'autre — avec un bandeau, et quatre gestes : Modifier ·
+  Relancer · Recommencer · Valider. Les métriques ne s'éditent pas.
+
+  Il sert la fiche de l'affaire (dans le fil) ET le carnet d'entretien (partie
+  pliée de la ligne, en lecture) : une entité, un rendu.
+-->
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import { syntheses, type SyntheseAffaire } from '$lib/api';
+	import { confirmer } from '$lib/confirmation';
+	import { demander } from '$lib/saisie';
+	import { fmtDatetime } from '$lib/date';
+	import { messageErreur } from '$lib/erreurs';
+	import { safeDescription } from '$lib/sanitize';
+	import EncartAvertissement from './EncartAvertissement.svelte';
+	import FormulaireCreation from './FormulaireCreation.svelte';
+	import MarqueIA from './MarqueIA.svelte';
+	import PiedFormulaire from './PiedFormulaire.svelte';
+	import RichEditor from './RichEditor.svelte';
+	import SyntheseChronologie from './SyntheseChronologie.svelte';
+	import SyntheseFrise from './SyntheseFrise.svelte';
+	import SyntheseMoyenne from './SyntheseMoyenne.svelte';
+	import SyntheseRythme from './SyntheseRythme.svelte';
+	import SyntheseTuiles from './SyntheseTuiles.svelte';
+	import { toast } from './Toast.svelte';
+
+	export let synthese: SyntheseAffaire;
+	/** Le conseil : les gestes d'un brouillon. Le serveur refait le contrôle. */
+	export let gestes = false;
+
+	const dispatch = createEventDispatcher<{ change: SyntheseAffaire }>();
+
+	$: brouillon = synthese.statut === 'brouillon';
+	$: vide = !synthese.synthese;
+	$: m = synthese.metriques;
+
+	let edition = false;
+	let enCours = false;
+	let texte = { synthese: '', difficultes: '', amelioration: '' };
+
+	function ouvrirEdition() {
+		texte = {
+			synthese: synthese.synthese ?? '',
+			difficultes: synthese.difficultes ?? '',
+			amelioration: synthese.amelioration ?? '',
+		};
+		edition = !edition;
+	}
+
+	async function geste(appel: () => Promise<SyntheseAffaire>, succes: string) {
+		enCours = true;
+		try {
+			synthese = await appel();
+			edition = false;
+			dispatch('change', synthese);
+			toast('success', succes);
+		} catch (e) {
+			toast('error', messageErreur(e));
+		} finally {
+			enCours = false;
+		}
+	}
+
+	const enregistrer = () =>
+		geste(() => syntheses.modifier(synthese.ticket_id, texte), 'Synthèse enregistrée');
+
+	async function relancer() {
+		const complement = await demander({
+			titre: 'Relancer la synthèse',
+			message:
+				"L'assistant rédige à nouveau la synthèse. Votre consigne s'ajoute au prompt de l'usage ; elle est gardée pour la prochaine relance.",
+			libelle: 'Consigne complémentaire',
+			placeholder: 'Plus court, insister sur les relances restées sans réponse…',
+			libelleValider: 'Relancer',
+		});
+		if (complement === null) return;
+		await geste(() => syntheses.relancer(synthese.ticket_id, complement), 'Synthèse rédigée');
+	}
+
+	async function recommencer() {
+		const ok = await confirmer({
+			titre: 'Recommencer la synthèse',
+			message:
+				"L'assistant rédige à nouveau la synthèse, sans consigne complémentaire : celle-ci est effacée. Les rédactions précédentes restent dans l'historique.",
+			libelleConfirmer: 'Recommencer',
+		});
+		if (ok) await geste(() => syntheses.recommencer(synthese.ticket_id), 'Synthèse rédigée');
+	}
+
+	async function valider() {
+		const ok = await confirmer({
+			titre: 'Valider la synthèse',
+			message:
+				"Validée, la synthèse est lue par tous ceux qui lisent l'affaire, et versée au carnet d'entretien. Elle ne se modifie plus.",
+			libelleConfirmer: 'Valider',
+		});
+		if (ok) await geste(() => syntheses.valider(synthese.ticket_id), 'Synthèse validée');
+	}
+</script>
+
+<section class="synthese" aria-label="Synthèse de l'affaire">
+	<div class="tete">
+		<h3 class="titre">🧾 Synthèse de l'affaire</h3>
+		<MarqueIA assiste={synthese.assiste_ia} />
+	</div>
+
+	{#if brouillon}
+		<EncartAvertissement role="status" compact>
+			{#if vide}
+				<strong>Synthèse à rédiger</strong> — {synthese.motif_vide ??
+					"l'assistant n'a rien rédigé"}. Brouillon visible du conseil syndical seulement.
+			{:else}
+				<strong>Brouillon</strong>, visible du conseil syndical seulement : à relire, puis valider.
+			{/if}
+		</EncartAvertissement>
+	{/if}
+
+	{#if m}
+		<!--  Chaque bloc a son sous-titre, d'après la maquette arbitrée le
+		      03/10/2026 — sans son repère de travail (M1…M5). -->
+		<section class="bloc">
+			<h4 class="bloc-titre">Les chiffres — durée, étapes, suites et relances</h4>
+			<SyntheseTuiles metriques={m} />
+		</section>
+		<section class="bloc">
+			<h4 class="bloc-titre">La frise — jours ouvrés passés à chaque étape</h4>
+			<SyntheseFrise metriques={m} />
+		</section>
+		<section class="bloc">
+			<h4 class="bloc-titre">La chronologie — états datés, relances et réouverture</h4>
+			<SyntheseChronologie metriques={m} />
+		</section>
+		{#if m.comparaison}
+			<section class="bloc">
+				<h4 class="bloc-titre">
+					Face à la moyenne — les affaires de même catégorie sur l'exercice
+				</h4>
+				<SyntheseMoyenne metriques={m} />
+			</section>
+		{/if}
+		<section class="bloc">
+			<h4 class="bloc-titre">Le rythme — suites par semaine, semaines muettes</h4>
+			<SyntheseRythme metriques={m} />
+		</section>
+	{/if}
+
+	{#if edition}
+		<FormulaireCreation titre="Modifier la synthèse" encadre={false}>
+			<form class="edition" on:submit|preventDefault={enregistrer}>
+				<div class="field">
+					<span id="synthese-texte-{synthese.id}">Synthèse</span>
+					<RichEditor bind:value={texte.synthese} ariaLabelledby="synthese-texte-{synthese.id}" />
+				</div>
+				<div class="field">
+					<span id="synthese-difficultes-{synthese.id}">Difficultés</span>
+					<RichEditor
+						bind:value={texte.difficultes}
+						minHeight="80px"
+						ariaLabelledby="synthese-difficultes-{synthese.id}"
+					/>
+				</div>
+				<div class="field">
+					<span id="synthese-amelioration-{synthese.id}">Amélioration suggérée</span>
+					<RichEditor
+						bind:value={texte.amelioration}
+						minHeight="80px"
+						ariaLabelledby="synthese-amelioration-{synthese.id}"
+					/>
+				</div>
+				<PiedFormulaire {enCours} on:annule={() => (edition = false)} />
+			</form>
+		</FormulaireCreation>
+	{:else}
+		{#if synthese.synthese}
+			<section class="bloc">
+				<h4 class="bloc-titre">La synthèse — ce qui s'est passé</h4>
+				<div class="rich-content texte">{@html safeDescription(synthese.synthese)}</div>
+			</section>
+		{/if}
+		{#if synthese.difficultes}
+			<section class="bloc">
+				<h4 class="bloc-titre">Les difficultés — ce qui a ralenti l'affaire</h4>
+				<div class="rich-content texte">{@html safeDescription(synthese.difficultes)}</div>
+			</section>
+		{/if}
+		{#if synthese.amelioration}
+			<section class="bloc">
+				<h4 class="bloc-titre">L'amélioration suggérée — pour la prochaine affaire</h4>
+				<div class="rich-content texte">{@html safeDescription(synthese.amelioration)}</div>
+			</section>
+		{/if}
+	{/if}
+
+	{#if synthese.statut === 'validee' && synthese.validee_le}
+		<p class="aide">
+			Validée le {fmtDatetime(synthese.validee_le)}{synthese.validee_par_nom
+				? ` par ${synthese.validee_par_nom}`
+				: ''}.
+		</p>
+	{/if}
+
+	{#if gestes && brouillon}
+		<!--  Le mode se lit sur l'icône qui a ouvert le formulaire (`aria-pressed`,
+		      ux-patterns §13 bis) : la rangée reste, les autres gestes attendent. -->
+		<div class="gestes">
+			<button
+				type="button"
+				class="btn-icon btn-icon-edit"
+				aria-pressed={edition}
+				aria-label="Modifier la synthèse"
+				title="Modifier"
+				disabled={enCours}
+				on:click={ouvrirEdition}>✏️</button
+			>
+			<button
+				type="button"
+				class="btn btn-outline btn-sm"
+				disabled={enCours || edition}
+				on:click={relancer}>✨ Relancer</button
+			>
+			<button
+				type="button"
+				class="btn btn-outline btn-sm"
+				disabled={enCours || edition}
+				on:click={recommencer}>↺ Recommencer</button
+			>
+			<button
+				type="button"
+				class="btn btn-primary btn-sm"
+				disabled={enCours || edition || vide}
+				title={vide ? 'Rédigez la synthèse avant de la valider' : undefined}
+				on:click={valider}>✅ Valider</button
+			>
+		</div>
+	{/if}
+</section>
+
+<style>
+	.synthese {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-top: 0.2rem;
+	}
+	.tete {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.titre {
+		margin: 0;
+		font-size: var(--fs-base);
+		font-weight: 600;
+		color: var(--color-text);
+	}
+	/*  Un bloc par graphique et par texte : le cadre et le sous-titre de la
+	    maquette (03/10/2026). */
+	.bloc {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background: var(--color-surface);
+	}
+	.bloc-titre {
+		margin: 0;
+		font-size: var(--fs-base);
+		font-weight: 500;
+		color: var(--color-text);
+	}
+	.texte {
+		color: var(--color-text);
+		line-height: 1.6;
+		font-size: var(--fs-md);
+	}
+	.texte :global(p) {
+		margin: 0 0 0.4em;
+	}
+	.edition {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.gestes {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+		justify-content: flex-end;
+	}
+</style>

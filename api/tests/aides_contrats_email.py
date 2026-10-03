@@ -21,6 +21,8 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "compte_active": {"destinataire"},
     "compte_refuse": {"destinataire"},
     "ticket_bug_admin": {"auteur", "ticket"},
+    #  #1643 : `envoyer_avis` fournit les trois.
+    "synthese_a_valider": {"ticket", "issue", "synthese"},
     #  `commentaire_perimetre` ajouté le 31/08/2026 : le courriel du syndic ne
     #  disait PAS le périmètre — *« cette information est capitale pour le syndic
     #  ou le CS pour identifier le périmètre du problème »*. Le ticket porte le

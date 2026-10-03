@@ -93,6 +93,12 @@ EXIGENCES = [
         ("réponse reçue par courriel",),
     ),
     (
+        #  #1643 : la SECONDE transmission sans geste — le fil d'une affaire close.
+        "la synthèse automatique d'une affaire close",
+        ("utils/synthese_affaire/production.py", "async def produire"),
+        ("synthèse d'une affaire close",),
+    ),
+    (
         "l'acheminement des courriels par un tiers",
         ("utils/smtp.py", "def "),
         #  ⚠️ Pas « courriel » ni « e-mail » seuls : le texte les emploie déjà

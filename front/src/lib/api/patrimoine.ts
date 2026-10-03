@@ -11,6 +11,7 @@
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, buildQuery, postFormData, BASE } from './client';
 import { uploadExcel } from './documents';
+import type { SyntheseAffaire } from './synthese';
 import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
 
 /**  Un contrat proposable comme référence de la fiche de copropriété.
@@ -47,6 +48,8 @@ export interface EntreeCarnet {
 	perimetre: string[];
 	lien: string;
 	alerte: string | null;
+	/**  La synthèse VALIDÉE de l'affaire (#1643) — rendue dans la partie pliée. */
+	synthese?: SyntheseAffaire | null;
 }
 
 export interface Carnet {

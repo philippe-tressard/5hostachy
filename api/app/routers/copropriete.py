@@ -4,7 +4,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user, require_admin
@@ -34,6 +34,8 @@ class CoproprieteUpdate(BaseModel):
     nb_lots_principaux: Optional[int] = None
     nb_parkings_communs: Optional[int] = None
     numero_immatriculation: Optional[str] = None
+    #: Le mois de début de l'exercice comptable, 1 à 12 (#1643).
+    mois_debut_exercice: Optional[int] = Field(default=None, ge=1, le=12)
     #  🔴 `assurance_compagnie`, `assurance_numero_police` et `assurance_echeance`
     #  ont QUITTÉ ce schéma (#490).
     #
@@ -66,6 +68,7 @@ class CoproprieteRead(BaseModel):
     nb_lots_total: Optional[int] = None
     nb_lots_principaux: Optional[int] = None
     numero_immatriculation: Optional[str] = None
+    mois_debut_exercice: Optional[int] = None
     #  ⚠️ Ces trois champs restent EN LECTURE, et leur nom ne change pas : c'est
     #  ce que `FicheResidence` affiche, et leur donner un nouveau nom aurait
     #  imposé de toucher l'écran pour un renommage sans gain.

@@ -32,9 +32,16 @@
 		nb_lots_principaux: string | number | null;
 		annee_construction: string | number | null;
 		numero_immatriculation: string;
+		/** Le mois (1 à 12) où commence l'exercice comptable (#1643). */
+		mois_debut_exercice: string | number | null;
 	};
 
-	const NUMERIQUES = ['nb_lots_total', 'nb_lots_principaux', 'annee_construction'] as const;
+	const NUMERIQUES = [
+		'nb_lots_total',
+		'nb_lots_principaux',
+		'annee_construction',
+		'mois_debut_exercice',
+	] as const;
 
 	/** Le formulaire pré-rempli depuis la fiche lue (ou vide, sans fiche). */
 	export function identiteDepuis(
@@ -48,6 +55,9 @@
 			nb_lots_principaux: v('nb_lots_principaux'),
 			annee_construction: v('annee_construction'),
 			numero_immatriculation: v('numero_immatriculation'),
+			//  Janvier par défaut — l'année civile, comme au serveur : la liste n'a
+			//  pas de choix vide, qu'une saisie ne saurait d'ailleurs pas effacer.
+			mois_debut_exercice: v('mois_debut_exercice') || 1,
 		} satisfies IdentiteCopropriete;
 	}
 
@@ -68,6 +78,7 @@
 <script lang="ts">
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
+	import { NOMS_MOIS } from '$lib/date';
 
 	export let valeurs: IdentiteCopropriete;
 </script>
@@ -118,6 +129,21 @@
 			<input bind:value={valeurs.numero_immatriculation} placeholder="ex : D75010800001" />
 		</label>
 	</div>
+	<!--  L'exercice comptable voté en AG (#1643) : il borne la moyenne à laquelle
+	      la synthèse d'une affaire close se compare. Douze mois : une liste. -->
+	<div class="identite-exercice">
+		<label class="field">
+			<span>Début de l'exercice comptable</span>
+			<select bind:value={valeurs.mois_debut_exercice}>
+				{#each NOMS_MOIS as nom, i (nom)}
+					<option value={i + 1}>{nom}{i === 0 ? ' (année civile)' : ''}</option>
+				{/each}
+			</select>
+			<span class="aide"
+				>La synthèse d'une affaire close se compare aux affaires de cet exercice.</span
+			>
+		</label>
+	</div>
 </div>
 
 <style>
@@ -130,6 +156,11 @@
 	}
 	.identite :global(.field) {
 		margin-bottom: 0;
+	}
+	.identite-exercice {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
 	}
 	.identite-nom {
 		display: grid;
@@ -173,7 +204,8 @@
 	    dessous ; le nom et l'adresse s'empilent au seuil de `.form-grid` (767 px).
 	    Téléphone : une colonne partout. */
 	@media (max-width: 767px) {
-		.identite-nom {
+		.identite-nom,
+		.identite-exercice {
 			grid-template-columns: minmax(0, 1fr);
 		}
 	}

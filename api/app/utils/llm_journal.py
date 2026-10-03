@@ -233,6 +233,31 @@ def _cout_usd(
     return str((total / 1_000_000).quantize(Decimal("0.0001")))
 
 
+def _tarif(reglages: dict[str, str], usage: str) -> tuple[Optional[Decimal], ...]:
+    """Les trois prix saisis pour l'usage — envoyés, produits, lus en cache."""
+    u = USAGES[usage]
+    return tuple(
+        prix_par_million(reglages.get(u.cle(c)))
+        for c in ("prix_entree", "prix_sortie", "prix_cache")
+    )
+
+
+def cout_appel(
+    session: Session,
+    usage: str,
+    entree: Optional[int],
+    sortie: Optional[int],
+    cache: Optional[int],
+) -> Optional[str]:
+    """Le coût d'UN appel, au tarif saisi pour l'usage — `None` sans tarif.
+
+    Pour un historique qui garde le coût de chaque production (la synthèse
+    d'une affaire close, #1643) : le journal, lui, ne chiffre que des totaux.
+    """
+    reglages = {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
+    return _cout_usd(entree or 0, sortie or 0, cache or 0, *_tarif(reglages, usage))
+
+
 def consommation(session: Session, maintenant: Optional[datetime] = None) -> dict:
     """Ce que l'écran de maintenance montre : par mois, par usage et modèle."""
     maintenant = maintenant or horloge.maintenant()
@@ -253,13 +278,7 @@ def consommation(session: Session, maintenant: Optional[datetime] = None) -> dic
         .order_by(mois.desc(), AppelIA.usage)
     ).all()
     reglages = {r.cle: r.valeur for r in session.exec(select(ConfigSite)).all()}
-    tarifs = {
-        code: tuple(
-            prix_par_million(reglages.get(u.cle(c)))
-            for c in ("prix_entree", "prix_sortie", "prix_cache")
-        )
-        for code, u in USAGES.items()
-    }
+    tarifs = {code: _tarif(reglages, code) for code in USAGES}
     resultat: dict[str, list[dict]] = {}
     for m, usage, modele, appels, erreurs, refus, entree, sortie, cache in lignes:
         prix = tarifs.get(usage, (None, None, None))

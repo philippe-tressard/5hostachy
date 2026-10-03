@@ -50,8 +50,9 @@ from app.seed import EMAIL_TEMPLATES
 #: ⬇️ Mise à jour le 02/10/2026 (#1549) : un modèle AJOUTÉ, `adresse_changement_avis`,
 #: posé par le seed ; l'empreinte des 29 autres est inchangée (vérifié en
 #: l'écartant du calcul : b5f8b1b1…).
-EMPREINTE = "71c659c3ad514dd769b2d8b2efe2ee65f978188ace8d07382a52d2583d16ec68"
-NOMBRE_ATTENDU = 30  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549)
+EMPREINTE = "d1927163efb36ce0fdcf2a8ebefe4207be16d74a3bc380f7e0f28fe1d67b64af"
+NOMBRE_ATTENDU = 31  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549),
+#  synthese_a_valider (#1643) — AJOUTÉ, donc posé par le seed : aucune migration.
 
 
 def _empreinte() -> str:

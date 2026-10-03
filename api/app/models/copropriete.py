@@ -59,6 +59,10 @@ class Copropriete(SQLModel, table=True):
     nb_lots_total: Optional[int] = None
     nb_lots_principaux: Optional[int] = None
     numero_immatriculation: Optional[str] = None  # ANAH/ALUR
+    #: Le mois (1 à 12) où commence l'exercice comptable voté en AG — `None` :
+    #: l'année civile. Il borne la moyenne à laquelle la synthèse d'une affaire
+    #: close se compare (#1643) ; aucune autre notion d'exercice n'existe.
+    mois_debut_exercice: Optional[int] = None
     #: 🔴 LES DEUX CONTRATS DE RÉFÉRENCE DE LA FICHE.
     #:
     #: L'assurance était DÉDUITE (« le contrat actif le plus récent gagne »,
