@@ -161,7 +161,6 @@
 		}
 	}
 
-	.ref-vide,
 	/*  🔴 La respiration du complément vit ICI, pas chez l'appelant (11/09/2026,
 	    signalé à l'écran : « attention à bien respecter les espacements de
 	    ligne »). Le champ s'affichait collé à la dernière ligne de définition,
@@ -173,7 +172,12 @@
 	.ref-complement:not(:empty) {
 		margin-top: 0.9rem;
 	}
-	.ref-renvoi {
+	/*  « Aucun contrat… » se lit comme le renvoi : une phrase d'état, grise, au
+	    corps des aides. Elle n'avait que sa marge, et s'affichait donc en texte
+	    courant noir (16 px) entre des libellés et des aides de 13 px — relevé
+	    à l'écran le 02/10/2026 en reprenant l'identité de la fiche. */
+	.ref-renvoi,
+	.ref-vide {
 		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0.6rem 0 0;

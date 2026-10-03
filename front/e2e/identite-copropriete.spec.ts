@@ -7,6 +7,12 @@
  *  sans un mot. Les deux passent par `ChampsIdentiteCopropriete` ; ce test tient,
  *  sur la requête réellement envoyée, ce que la factorisation devait corriger
  *  — un nombre vidé part à `null`, des deux écrans.
+ *
+ *  Et sa DISPOSITION (02/10/2026, maquette B) : posés nus dans la grille de
+ *  l'écran, les champs prenaient chacun 220 px — adresse tronquée, et les deux
+ *  libellés ANAH sur deux lignes, saisies décalées. Le dernier test mesure ce
+ *  que l'œil avait vu : les quatre saisies de la rangée des lots alignées,
+ *  l'adresse deux fois plus large que le nom.
  */
 import type { Page, Request } from '@playwright/test';
 import { attendreHydratation, expect, MEMBRE_CS, simulerApi, test } from './aides';
@@ -38,7 +44,7 @@ async function ouvrir(page: Page, adresse: string, compte = MEMBRE_CS): Promise<
 
 async function viderLesLots(page: Page) {
 	await expect(page.getByLabel(/Nom de la résidence/)).toHaveValue(FICHE.nom);
-	await page.getByLabel(/Nombre de lots — total/).fill('');
+	await page.getByLabel(/^Total/).fill('');
 	await page.getByRole('button', { name: /Enregistrer/ }).click();
 }
 
@@ -60,4 +66,26 @@ test('Admin › Fiche : les mêmes champs, la même règle', async ({ page }) =>
 	const corps = envois[0].postDataJSON();
 	expect(corps.nb_lots_total).toBeNull();
 	expect(corps.annee_construction).toBe(1975);
+});
+
+test('Admin › Fiche : adresse large, saisies de la rangée des lots alignées', async ({
+	page,
+}, info) => {
+	await ouvrir(page, '/admin?onglet=copropriete', ADMIN);
+	const boite = async (libelle: RegExp) => (await page.getByLabel(libelle).boundingBox())!;
+	const nom = await boite(/Nom de la résidence/);
+	const adresse = await boite(/^Adresse/);
+	const saisies = [
+		await boite(/^Total/),
+		await boite(/^Dont lots principaux/),
+		await boite(/^Année de construction/),
+		await boite(/^N° immatriculation/),
+	];
+	if (info.project.name.includes('mobile')) {
+		//  Une colonne : chaque saisie sous la précédente, aucune côte à côte.
+		expect(adresse.y).toBeGreaterThan(nom.y);
+		return;
+	}
+	expect(adresse.width).toBeGreaterThan(nom.width * 1.8);
+	for (const s of saisies.slice(1)) expect(Math.abs(s.y - saisies[0].y)).toBeLessThan(1);
 });

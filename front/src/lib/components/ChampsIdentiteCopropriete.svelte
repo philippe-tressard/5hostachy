@@ -9,8 +9,16 @@
   `null` — fait foi (`standards/02` §4 bis : la plus juste, à égalité de
   déploiement). 🔒 `npm run lint:identite-copropriete` refuse une troisième copie.
 
-  Le composant rend les champs, pas la grille : l'écran les pose dans sa
-  `.form-grid`, à côté de ce qui lui est propre.
+  🔴 Le composant porte SA DISPOSITION (02/10/2026, maquette B arbitrée à
+  l'écran). Posés nus dans la `.form-grid` de l'écran, les six champs y
+  prenaient chacun une colonne de 220 px : l'adresse était tronquée, et les
+  deux libellés ANAH, plus longs, passaient sur deux lignes — leurs saisies
+  tombaient plus bas que leurs voisines. Désormais :
+    · nom (1/3) et adresse (2/3) ;
+    · les deux décomptes réunis sous « Nombre de lots (fiche ANAH) », libellés
+      courts et précision en `.aide`, puis année et numéro sur la même rangée.
+  Le bloc occupe la ligne entière (`champ-large`) : l'écran garde sa grille
+  pour ce qui lui est propre (la Résidence y ajoute l'aide sur l'assurance).
 -->
 <script context="module" lang="ts">
 	import { nombreOuNull } from '$lib/utils';
@@ -59,41 +67,141 @@
 
 <script lang="ts">
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
+	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 
 	export let valeurs: IdentiteCopropriete;
 </script>
 
-<label class="field">
-	<span>Nom de la résidence<EtoileRequis vide={!valeurs.nom} /></span>
-	<input bind:value={valeurs.nom} required />
-</label>
-<label class="field">
-	<span>Adresse</span>
-	<input bind:value={valeurs.adresse} />
-</label>
-<!--  Les DEUX décomptes de la fiche du registre national (ANAH). Un seul champ
-      obligeait à choisir lequel perdre, et le chiffre saisi ne disait pas lequel
-      il était : 195 ou 63 pour la même résidence. Les libellés reprennent mot
-      pour mot ceux de la fiche, pour qu'on recopie sans avoir à interpréter. -->
-<label
-	class="field"
-	title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris."
->
-	<span>Nombre de lots — total, caves et parkings compris</span>
-	<input type="number" min="1" bind:value={valeurs.nb_lots_total} />
-</label>
-<label
-	class="field"
-	title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici."
->
-	<span>Dont lots d'habitation, commerces et bureaux</span>
-	<input type="number" min="1" bind:value={valeurs.nb_lots_principaux} />
-</label>
-<label class="field">
-	<span>Année de construction</span>
-	<input type="number" min="1800" max="2100" bind:value={valeurs.annee_construction} />
-</label>
-<label class="field champ-large">
-	<span>N° immatriculation (ANAH)</span>
-	<input bind:value={valeurs.numero_immatriculation} placeholder="ex : D75010800001" />
-</label>
+<div class="identite champ-large">
+	<div class="identite-nom">
+		<label class="field">
+			<span>Nom de la résidence<EtoileRequis vide={!valeurs.nom} /></span>
+			<input bind:value={valeurs.nom} required />
+		</label>
+		<label class="field">
+			<span>Adresse</span>
+			<input bind:value={valeurs.adresse} />
+		</label>
+	</div>
+	<!--  Les DEUX décomptes de la fiche du registre national (ANAH). Un seul champ
+	      obligeait à choisir lequel perdre, et le chiffre saisi ne disait pas lequel
+	      il était : 195 ou 63 pour la même résidence. Le libellé de la fiche reste
+	      lisible en entier : le titre du groupe la nomme, l'aide et le survol
+	      donnent ce qu'elle compte. Le titre et le groupe que rend `LibelleGroupe`
+	      sont deux enfants DIRECTS de cette grille — c'est ce qui aligne les
+	      saisies des décomptes sur celles de l'année et du numéro. -->
+	<div class="identite-lots">
+		<LibelleGroupe titre="Nombre de lots (fiche ANAH)" id="identite-lots" classe="lots-champs">
+			<label
+				class="field"
+				title="Le « Nombre de lots » de la fiche d'immatriculation : tous les lots, caves et parkings compris."
+			>
+				<span>Total</span>
+				<input type="number" min="1" bind:value={valeurs.nb_lots_total} />
+				<span class="aide">Caves et parkings compris.</span>
+			</label>
+			<label
+				class="field"
+				title="Le décompte qui porte les seuils réglementaires, et qui dit combien de foyers vivent ici."
+			>
+				<span>Dont lots principaux</span>
+				<input type="number" min="1" bind:value={valeurs.nb_lots_principaux} />
+				<span class="aide">Habitation, commerces et bureaux.</span>
+			</label>
+		</LibelleGroupe>
+		<label class="field champ-annee">
+			<span>Année de construction</span>
+			<input type="number" min="1800" max="2100" bind:value={valeurs.annee_construction} />
+		</label>
+		<label class="field champ-numero">
+			<span>N° immatriculation (ANAH)</span>
+			<input bind:value={valeurs.numero_immatriculation} placeholder="ex : D75010800001" />
+		</label>
+	</div>
+</div>
+
+<style>
+	/*  Les écarts sont ceux de `.form-grid` (0,75 rem) : le bloc se lit comme la
+	    grille qui l'accueille. Le `margin-bottom` de `.field` y est neutralisé
+	    pour la même raison que dans `.form-grid` — le `gap` porte l'interligne. */
+	.identite {
+		display: grid;
+		gap: 0.75rem;
+	}
+	.identite :global(.field) {
+		margin-bottom: 0;
+	}
+	.identite-nom {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+		gap: 0.75rem;
+	}
+	/*  Quatre colonnes : le groupe des lots en prend deux (titre au-dessus), l'année
+	    et le numéro les deux autres, sur la rangée des saisies. */
+	.identite-lots {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.75rem;
+		align-items: start;
+	}
+	/*  `:global()` borné par l'enveloppe : le titre et le groupe appartiennent au
+	    balisage de `LibelleGroupe` (cf. sa prop `classe`). Le filet sous le titre
+	    dit ce que le groupe couvre — les deux décomptes, et eux seuls. */
+	.identite-lots :global(.libelle-groupe) {
+		grid-column: 1 / 3;
+		grid-row: 1;
+		padding-bottom: 0.25rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+	.identite-lots :global(.lots-champs) {
+		grid-column: 1 / 3;
+		grid-row: 2;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+	}
+	.champ-annee {
+		grid-column: 3;
+		grid-row: 2;
+	}
+	.champ-numero {
+		grid-column: 4;
+		grid-row: 2;
+	}
+
+	/*  Tablette : le groupe des lots prend la ligne, l'année et le numéro passent
+	    dessous ; le nom et l'adresse s'empilent au seuil de `.form-grid` (767 px).
+	    Téléphone : une colonne partout. */
+	@media (max-width: 767px) {
+		.identite-nom {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	@media (max-width: 900px) {
+		.identite-lots {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.identite-lots :global(.libelle-groupe),
+		.identite-lots :global(.lots-champs) {
+			grid-column: 1 / -1;
+		}
+		.champ-annee {
+			grid-column: 1;
+			grid-row: 3;
+		}
+		.champ-numero {
+			grid-column: 2;
+			grid-row: 3;
+		}
+	}
+	@media (max-width: 480px) {
+		.identite-lots,
+		.identite-lots :global(.lots-champs) {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.champ-numero {
+			grid-column: 1;
+			grid-row: 4;
+		}
+	}
+</style>
