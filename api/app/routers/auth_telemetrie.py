@@ -20,7 +20,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import get_current_user
 from app.database import get_session
-from app.models.core import TelemetryEvent, Utilisateur
+from app.models.core import PresenceMensuelle, TelemetryEvent, Utilisateur
 from app.utils.limiter import LIMITE_DONNEES_PERSONNELLES, LIMITE_PREFERENCE, limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -39,15 +39,25 @@ def export_telemetrie(
         .where(TelemetryEvent.user_id == user.id)
         .order_by(TelemetryEvent.cree_le.desc())  # type: ignore
     ).all()
-    return [
-        {
-            "page": ev.page,
-            "action": ev.action,
-            "detail": ev.detail,
-            "date": ev.cree_le.isoformat() if ev.cree_le else None,
-        }
-        for ev in events
-    ]
+    #  Et les mois où le compte est venu (0254) : le seul fait gardé au-delà des
+    #  30 jours d'évènements, exporté avec eux — on rend TOUT ce qu'on tient.
+    presences = session.exec(
+        select(PresenceMensuelle.mois)
+        .where(PresenceMensuelle.user_id == user.id)
+        .order_by(PresenceMensuelle.mois.desc())  # type: ignore
+    ).all()
+    return {
+        "evenements": [
+            {
+                "page": ev.page,
+                "action": ev.action,
+                "detail": ev.detail,
+                "date": ev.cree_le.isoformat() if ev.cree_le else None,
+            }
+            for ev in events
+        ],
+        "mois_de_presence": list(presences),
+    }
 
 
 @router.delete("/me/telemetrie", status_code=204)
@@ -61,6 +71,11 @@ def effacer_telemetrie(
     events = session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)).all()
     for ev in events:
         session.delete(ev)
+    #  La présence mensuelle aussi (0254) : « l'effacement porte sur le tout ».
+    for presence in session.exec(
+        select(PresenceMensuelle).where(PresenceMensuelle.user_id == user.id)
+    ).all():
+        session.delete(presence)
     session.commit()
 
 

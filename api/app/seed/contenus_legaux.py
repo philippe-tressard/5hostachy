@@ -155,10 +155,23 @@ TELEMETRIE_BASE_LEGALE = (
     "(art. 6-1-f) à savoir quels écrans servent et à qui ; vous pouvez vous y "
     "opposer et effacer votre historique depuis votre profil (art. 17 et 21).</li>"
 )
-TELEMETRIE_CONSERVATION = (
+#: La conservation, telle que le code la pratique. Jusqu'au 03/10/2026, après
+#: les 30 jours d'évènements détaillés il ne restait que des agrégats sans
+#: compte ; depuis la 0254, le seul fait « ce compte est venu ce mois-là »
+#: (`PresenceMensuelle`) est gardé 12 mois, pour que la vue Année de
+#: « Qui vient » existe. Le texte doit le dire ; l'ancien reste pour que la 0254
+#: le remplace exactement (`utils/textes_livres`).
+TELEMETRIE_CONSERVATION_ANCIEN = (
     "<li>Mesure d'audience : événements détaillés <strong>30 jours</strong>, puis "
     "agrégats sans détail — par jour pendant 12 mois, par mois pendant 10 ans. "
     "L'effacement demandé depuis votre profil est immédiat.</li>"
+)
+TELEMETRIE_CONSERVATION = (
+    "<li>Mesure d'audience : événements détaillés <strong>30 jours</strong> ; ensuite, "
+    "pendant <strong>12 mois</strong>, seulement les mois où votre compte est venu — ni "
+    "page, ni heure —, et des agrégats sans compte, par jour pendant 12 mois et par mois "
+    "pendant 10 ans. L'effacement demandé depuis votre profil est immédiat et porte sur "
+    "le tout.</li>"
 )
 #: La phrase du point 6 sur ce qu'un compte fait depuis son profil : il y
 #: exporte et efface sa télémétrie.

@@ -45,7 +45,7 @@ from app.models.core import (
     StatutLotImport,
     Utilisateur,
 )
-from app.models.telemetrie import TelemetryEvent
+from app.models.telemetrie import PresenceMensuelle, TelemetryEvent
 from app.utils.limiter import limiter
 from tests.aides_base import compte, moteur_memoire
 
@@ -158,16 +158,22 @@ def test_telemetrie_chacun_n_exporte_et_n_efface_que_la_sienne(moteur):
         ).id
         s.add(TelemetryEvent(user_id=moi, page="/actualites"))
         s.add(TelemetryEvent(user_id=autre_id, page="/tickets"))
+        #  Et la présence mensuelle (0254) : exportée et effacée avec les évènements.
+        s.add(PresenceMensuelle(mois="2026-05", user_id=moi))
+        s.add(PresenceMensuelle(mois="2026-05", user_id=autre_id))
         s.commit()
 
     export = http.get("/auth/me/telemetrie")
     assert export.status_code == 200
-    assert [e["page"] for e in export.json()] == ["/actualites"]
+    assert [e["page"] for e in export.json()["evenements"]] == ["/actualites"]
+    assert export.json()["mois_de_presence"] == ["2026-05"]
 
     assert http.delete("/auth/me/telemetrie").status_code == 204
     with Session(moteur) as s:
         restants = s.exec(select(TelemetryEvent)).all()
+        presences = s.exec(select(PresenceMensuelle)).all()
     assert [(e.user_id, e.page) for e in restants] == [(autre_id, "/tickets")]
+    assert [p.user_id for p in presences] == [autre_id]
 
 
 def test_telemetrie_l_opposition_est_enregistree(moteur):

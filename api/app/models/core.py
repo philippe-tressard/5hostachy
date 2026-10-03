@@ -469,6 +469,7 @@ from app.models.telemetrie import (  # noqa: E402,F401
     TelemetryEvent,
     TelemetryDaily,
     TelemetryMonthly,
+    PresenceMensuelle,
     HistoriqueTelemetrie,
 )
 

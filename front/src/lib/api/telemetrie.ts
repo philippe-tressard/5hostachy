@@ -34,9 +34,10 @@ export interface LigneAdoption {
 	taux: number | null;
 }
 
-/** Le taux d'adoption (#1628) — `utils/adoption.adoption`. */
+/** Le taux d'adoption (#1628) — `utils/adoption.adoption`, sur la fenêtre de la vue. */
 export interface Adoption {
-	jours: number;
+	/** Ce que couvre la fenêtre : « aujourd’hui », « 30 derniers jours », « 12 derniers mois ». */
+	periode: string;
 	global: LigneAdoption;
 	/** Comptes qui ont refusé la mesure d'audience, exclus du calcul. */
 	refus: number;
@@ -45,14 +46,59 @@ export interface Adoption {
 	par_batiment: LigneAdoption[];
 }
 
+/** Les quatre vues de l'onglet (03/10/2026) : le jour, 30 jours, 12 mois, 10 ans par année. */
+export type PorteeTelemetrie = 'jour' | 'mois' | 'annee' | 'total';
+/** Le filtre « avec / sans gestionnaire du site » (03/10/2026). */
+export type FiltreGestionnaire = 'avec' | 'sans';
+
+/** Ce que le serveur dit du filtre — `utils/telemetrie_tableau`. */
+export interface EtatFiltreGestionnaire {
+	/** Proposé seulement s'il changerait quelque chose : un gestionnaire qui a des vues, et d'autres aussi. */
+	propose: boolean;
+	/** Ce qui a été appliqué — « avec » quoi qu'on demande si le filtre n'est pas proposé. */
+	applique: FiltreGestionnaire;
+	/** Dernier jour dont l'agrégat ne sépare pas le gestionnaire (compté dans les deux lectures). */
+	non_distingue_jusqu_au: string | null;
+}
+
+/** Un bâton du graphe : une heure, un jour, un mois ou une année selon la vue. */
+export interface BatonTelemetrie {
+	label: string;
+	total: number;
+	uniques: number | null;
+}
+
+/** Une page du palmarès. */
+export interface PageTelemetrie {
+	page: string;
+	total: number;
+	uniques: number;
+}
+
+/** Un utilisateur du palmarès (`telemetrie_calculs._palmares`). */
+export interface UtilisateurActif {
+	nom: string;
+	statut: string | null;
+	batiment_id: number | null;
+	total: number;
+	pages: number;
+	derniere_connexion: string | null;
+}
+
 /**
- * Le tableau de bord de télémétrie. Seuls les panneaux ajoutés depuis #1631 sont
- * typés ; le reste (`kpi`, `chart`, `top_pages`, `top_users`) l'est par l'écran
- * qui les lit, en attendant qu'un lot qui y touche le déclare ici.
+ * Le tableau de bord de télémétrie. `kpi` reste libre : ses clés changent avec
+ * la vue, et l'écran les lit une à une.
  */
 export interface TableauTelemetrie {
+	scope: PorteeTelemetrie;
+	kpi: Record<string, any>;
+	chart: BatonTelemetrie[];
+	chart_label: string;
+	top_pages: PageTelemetrie[];
+	top_users: UtilisateurActif[];
 	erreurs: ErreurNavigateur[];
 	performance: SyntheseDurees;
-	adoption: Adoption;
-	[cle: string]: any;
+	/** `null` : la vue ne sait pas qui est venu (Total). */
+	adoption: Adoption | null;
+	filtre_gestionnaire: EtatFiltreGestionnaire;
 }

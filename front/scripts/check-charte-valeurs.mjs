@@ -67,7 +67,7 @@ import { fileURLToPath } from 'node:url';
  *  feuilles globales que plus rien n'employait sont retirées (`.alert-info`,
  *  `.imp-header`, `.kb-item-*`, `.month-label`, `.muted-sm`…).
  */
-const PLAFOND = { couleurs: 168, tailles: 123 };
+const PLAFOND = { couleurs: 168, tailles: 121 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

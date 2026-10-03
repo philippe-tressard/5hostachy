@@ -73,7 +73,9 @@ export const auth = {
 		ancien_resident?: string | null;
 		ancien_resident_inconnu?: boolean;
 	}) => api.post<any>('/admin/me/accueil-arrivant', data),
-	exportTelemetrie: () => api.get<any[]>('/auth/me/telemetrie'),
+	/** Les évènements (30 jours) ET les mois de présence (12 mois) : tout ce que le serveur tient. */
+	exportTelemetrie: () =>
+		api.get<{ evenements: unknown[]; mois_de_presence: string[] }>('/auth/me/telemetrie'),
 	effacerTelemetrie: () => api.delete('/auth/me/telemetrie'),
 	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) =>
 		api.patch('/auth/me/opt-out-telemetrie', data),

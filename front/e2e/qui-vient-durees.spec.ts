@@ -8,6 +8,7 @@
  */
 import {
 	attendreHydratation,
+	deplierSectionTelemetrie,
 	expect,
 	lotsEnvoyes,
 	MEMBRE_CS,
@@ -33,7 +34,7 @@ test('Qui vient : chaque taux porte ses deux nombres, et les refus sont dits', a
 			return {
 				...TABLEAU_TELEMETRIE_VIDE,
 				adoption: {
-					jours: 30,
+					periode: '30 derniers jours',
 					global: ligne('Tous les comptes', 35, 61, 57),
 					refus: 3,
 					par_profil: [ligne('Résident', 18, 30, 60), ligne('Conseil syndical', 5, 6, 83)],
@@ -45,7 +46,9 @@ test('Qui vient : chaque taux porte ses deux nombres, et les refus sont dits', a
 	await page.goto('/admin?onglet=telemetry');
 	await attendreHydratation(page);
 
-	const panneau = page.locator('.card', { hasText: 'Qui vient' }).last();
+	const panneau = await deplierSectionTelemetrie(page, 'Qui vient');
+	//  La période est celle de la VUE : le serveur la nomme, l'intitulé la porte.
+	await expect(panneau.locator('summary')).toContainText('30 derniers jours');
 	await expect(
 		panneau.getByRole('row', { name: /Tous les comptes\s+35 \/ 61\s+57 %/ }),
 	).toBeVisible();
@@ -75,7 +78,7 @@ test('Durées d’affichage : médiane et « 3 sur 4 » dans le format des duré
 	await page.goto('/admin?onglet=telemetry');
 	await attendreHydratation(page);
 
-	const panneau = page.locator('.card', { hasText: 'Durées d’affichage' }).last();
+	const panneau = await deplierSectionTelemetrie(page, 'Durées d’affichage');
 	await expect(
 		panneau.getByRole('row', { name: /Ouverture du site\s+840 ms\s+1,3 s\s+12/ }),
 	).toBeVisible();

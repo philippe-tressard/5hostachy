@@ -9,6 +9,7 @@
  */
 import {
 	attendreHydratation,
+	deplierSectionTelemetrie,
 	type Evenement,
 	expect,
 	lotsEnvoyes,
@@ -85,7 +86,8 @@ test('l’administrateur lit les erreurs dans l’onglet Télémétrie, sans dé
 	await page.goto('/admin?onglet=telemetry');
 	await attendreHydratation(page);
 
-	const ligne = page.getByRole('row', { name: new RegExp(codeLong) });
+	const section = await deplierSectionTelemetrie(page, 'Erreurs vues par les résidents');
+	const ligne = section.getByRole('row', { name: new RegExp(codeLong) });
 	await expect(ligne).toBeVisible();
 	await expect(ligne.getByRole('cell').nth(1)).toHaveText('3');
 	//  Au téléphone, un code long fait défiler la CARTE et jamais la page : les

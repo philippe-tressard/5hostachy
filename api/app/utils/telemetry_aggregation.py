@@ -1,13 +1,31 @@
 """Agrégation et purge de la télémétrie.
 
-Trois niveaux de rétention :
-  - Événements bruts (telemetry_event) : 30 jours
-  - Agrégation journalière (telemetry_daily) : 12 mois
-  - Agrégation mensuelle (telemetry_monthly) : 10 ans
+Rétention, par table :
+  - Événements bruts (telemetry_event) : 30 jours — les seuls à porter le compte,
+    la page et l'heure
+  - Agrégation journalière (telemetry_daily) : 12 mois, en DEUX séries
+    (`gestionnaire` : le gestionnaire du site, les autres)
+  - Agrégation mensuelle (telemetry_monthly) : 10 ans, mêmes deux séries
+  - Présence mensuelle (presence_mensuelle) : 12 mois — par compte et par mois,
+    le seul fait « venu » ; c'est ce qui donne « Qui vient » à la vue Année (#1628)
   - Erreurs vues dans le navigateur (erreur_navigateur) : 30 jours (#1631)
   - Durées d'affichage des écrans (mesure_affichage) : 30 jours (#1632)
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
+
+## Les deux séries (03/10/2026)
+
+L'écran filtre « avec / sans gestionnaire du site ». Au-delà des 30 jours
+d'évènements, seul l'agrégat reste : il doit donc déjà savoir ce qui vient du
+gestionnaire. Chaque jour s'agrège en deux séries disjointes — celle du compte
+`site_manager_user_id` AU MOMENT de l'agrégation, celle de tout le monde d'autre.
+Disjointes, leurs uniques s'additionnent, ce qu'une somme de distincts n'autorise
+jamais autrement. Une ligne agrégée avant ce lot porte `None` : non distinguée.
+Celles des 28 derniers jours sont RÉAGRÉGÉES depuis les évènements, qui existent
+encore ; un mois dont tous les jours sont distingués l'est aussi.
+
+Agréger un jour, c'est donc d'abord EFFACER ses lignes : l'opération est
+idempotente, et la présence mensuelle ne compte jamais deux fois le même compte.
 
 NOTE : Les événements (cree_le) sont stockés en UTC.
 Les bornes jour/mois utilisent le fuseau Europe/Paris pour que le
@@ -15,29 +33,43 @@ découpage corresponde aux journées réelles des utilisateurs.
 """
 
 from datetime import datetime, timedelta
-from app.utils import horloge
 import logging
+import time
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import func, text
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
-from app.utils.declenchement import AUTOMATIQUE
-from app.utils.requete_liee import requete_liee
 from app.database import engine
 from app.models.core import (
-    TelemetryEvent,
-    TelemetryDaily,
-    TelemetryMonthly,
     HistoriqueTelemetrie,
+    PresenceMensuelle,
+    TelemetryDaily,
+    TelemetryEvent,
+    TelemetryMonthly,
 )
+from app.utils import horloge
+from app.utils.declenchement import AUTOMATIQUE
+from app.utils.destinataires import site_manager_user_id
 from app.utils.erreurs_navigateur import purger_erreurs
 from app.utils.mesures_affichage import purger_mesures
 from app.utils.noeud import noeud_courant
+from app.utils.requete_liee import requete_liee
 
 logger = logging.getLogger(__name__)
 
 _PARIS = horloge.TZ_PARIS
+
+#: La page « total du jour » des agrégats : une ligne par série et par jour.
+PAGE_TOTAL = "__total__"
+#: Ce que vivent les évènements bruts, et la présence au-delà (en jours).
+RETENTION_EVENEMENTS_JOURS = 30
+RETENTION_DAILY_JOURS = 365
+RETENTION_MONTHLY_JOURS = 3650
+#: Un jour non distingué ne se réagrège que si ses évènements sont TOUS encore
+#: là : la purge est glissante (maintenant − 30 jours), on garde deux jours de marge.
+REAGREGATION_JOURS = RETENTION_EVENEMENTS_JOURS - 2
 
 
 def _paris_now() -> datetime:
@@ -45,13 +77,196 @@ def _paris_now() -> datetime:
     return horloge.a_paris(horloge.maintenant())
 
 
+def _serie(gestionnaire_id: Optional[int]):
+    """L'expression SQL « cet évènement est du gestionnaire » — `True`/`False`, jamais `None`.
+
+    Sans gestionnaire désigné, aucun compte ne porte l'identifiant −1 : tout est `False`.
+    """
+    cible = gestionnaire_id if gestionnaire_id is not None else -1
+    return sa.case((TelemetryEvent.user_id == cible, True), else_=False)
+
+
+def _agreger_jour(session: Session, jour_paris: datetime, gestionnaire_id: Optional[int]) -> bool:
+    """(Ré)écrit les lignes de `telemetry_daily` et la présence d'UN jour ; True s'il a eu des vues."""
+    debut_utc = horloge.debut_du_jour_utc(jour_paris)
+    fin_utc = horloge.debut_du_jour_utc(jour_paris + timedelta(days=1))
+    jour_str = jour_paris.strftime("%Y-%m-%d")
+    fenetre = (TelemetryEvent.cree_le >= debut_utc, TelemetryEvent.cree_le < fin_utc)
+    serie = _serie(gestionnaire_id)
+
+    session.exec(delete(TelemetryDaily).where(TelemetryDaily.jour == jour_str))
+    rows = session.exec(
+        select(
+            TelemetryEvent.page,
+            TelemetryEvent.action,
+            serie.label("gestionnaire"),
+            func.count().label("total"),
+            func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
+        )
+        .where(*fenetre)
+        .group_by(TelemetryEvent.page, TelemetryEvent.action, serie)
+    ).all()
+    for page, action, gestionnaire, total, uniques in rows:
+        session.add(
+            TelemetryDaily(
+                jour=jour_str,
+                page=page,
+                action=action,
+                total=total,
+                utilisateurs_uniques=uniques,
+                gestionnaire=bool(gestionnaire),
+            )
+        )
+    if not rows:
+        return False
+
+    #  Ligne `__total__` par série : vrais uniques site-wide (COUNT DISTINCT user_id,
+    #  qui ignore les vues anonymes ; `count()` les compte).
+    totaux = session.exec(
+        select(serie, func.count(), func.count(func.distinct(TelemetryEvent.user_id)))
+        .where(*fenetre)
+        .group_by(serie)
+    ).all()
+    for gestionnaire, total, uniques in totaux:
+        session.add(
+            TelemetryDaily(
+                jour=jour_str,
+                page=PAGE_TOTAL,
+                action="view",
+                total=total,
+                utilisateurs_uniques=uniques,
+                gestionnaire=bool(gestionnaire),
+            )
+        )
+
+    #  La présence : un couple (mois, compte) écrit une fois.
+    mois = jour_str[:7]
+    venus = set(
+        session.exec(
+            select(TelemetryEvent.user_id).where(*fenetre, TelemetryEvent.user_id.isnot(None))
+        ).all()
+    )
+    deja = set(
+        session.exec(select(PresenceMensuelle.user_id).where(PresenceMensuelle.mois == mois)).all()
+    )
+    for user_id in sorted(venus - deja):
+        session.add(PresenceMensuelle(mois=mois, user_id=user_id))
+    return True
+
+
+def _jours_a_agreger(session: Session, now_paris: datetime) -> list[datetime]:
+    """Les jours à (ré)agréger, minuit Paris : les nouveaux, et les non distingués récents."""
+    last_daily = session.exec(
+        select(TelemetryDaily.jour).order_by(TelemetryDaily.jour.desc()).limit(1)
+    ).first()
+    aujourd_hui = now_paris.replace(hour=0, minute=0, second=0, microsecond=0)
+    if last_daily:
+        debut = datetime.strptime(last_daily, "%Y-%m-%d").replace(tzinfo=_PARIS) + timedelta(days=1)
+    else:
+        debut = aujourd_hui - timedelta(days=RETENTION_EVENEMENTS_JOURS)
+    jours = set()
+    courant = debut
+    while courant < aujourd_hui:  # jamais le jour en cours : données incomplètes
+        jours.add(courant)
+        courant += timedelta(days=1)
+
+    plancher = (aujourd_hui - timedelta(days=REAGREGATION_JOURS)).strftime("%Y-%m-%d")
+    non_distingues = session.exec(
+        select(TelemetryDaily.jour)
+        .where(TelemetryDaily.gestionnaire.is_(None), TelemetryDaily.jour >= plancher)
+        .distinct()
+    ).all()
+    for jour in non_distingues:
+        jours.add(datetime.strptime(jour, "%Y-%m-%d").replace(tzinfo=_PARIS))
+    return sorted(jours)
+
+
+def _mois_suivant(mois: str) -> str:
+    y, m = map(int, mois.split("-"))
+    return f"{y + 1}-01" if m == 12 else f"{y}-{m + 1:02d}"
+
+
+def _agreger_mois(session: Session, mois_str: str) -> bool:
+    """(Ré)écrit les lignes de `telemetry_monthly` d'UN mois depuis le journalier ; True si des vues."""
+    session.exec(delete(TelemetryMonthly).where(TelemetryMonthly.mois == mois_str))
+    rows = session.exec(
+        select(
+            TelemetryDaily.page,
+            TelemetryDaily.action,
+            TelemetryDaily.gestionnaire,
+            func.sum(TelemetryDaily.total),
+            #  Approximation assumée : la somme des uniques quotidiens compte deux
+            #  fois qui revient deux jours. Acceptable pour une tendance mensuelle.
+            func.sum(TelemetryDaily.utilisateurs_uniques),
+        )
+        .where(TelemetryDaily.jour.startswith(mois_str))
+        .group_by(TelemetryDaily.page, TelemetryDaily.action, TelemetryDaily.gestionnaire)
+    ).all()
+    ecrit = False
+    for page, action, gestionnaire, total, uniques in rows:
+        if not total:
+            continue
+        ecrit = ecrit or page != PAGE_TOTAL
+        session.add(
+            TelemetryMonthly(
+                mois=mois_str,
+                page=page,
+                action=action,
+                total=total,
+                utilisateurs_uniques=uniques or 0,
+                gestionnaire=gestionnaire,
+            )
+        )
+    return ecrit
+
+
+def _mois_a_agreger(session: Session, now_paris: datetime) -> list[str]:
+    """Les mois terminés à agréger, et ceux non distingués dont tous les jours le sont."""
+    mois_courant = now_paris.strftime("%Y-%m")
+    last_monthly = session.exec(
+        select(TelemetryMonthly.mois).order_by(TelemetryMonthly.mois.desc()).limit(1)
+    ).first()
+    if last_monthly:
+        debut = _mois_suivant(last_monthly)
+    else:
+        debut = (now_paris - timedelta(days=365)).strftime("%Y-%m")
+    mois = set()
+    courant = debut
+    while courant < mois_courant:
+        mois.add(courant)
+        courant = _mois_suivant(courant)
+
+    non_distingues = session.exec(
+        select(TelemetryMonthly.mois).where(TelemetryMonthly.gestionnaire.is_(None)).distinct()
+    ).all()
+    for m in non_distingues:
+        jours = session.exec(
+            select(func.count(), func.count(TelemetryDaily.gestionnaire)).where(
+                TelemetryDaily.jour.startswith(m)
+            )
+        ).one()
+        #  `count(colonne)` ignore les NULL : égal au `count()`, tout est distingué.
+        if jours[0] and jours[0] == jours[1]:
+            mois.add(m)
+    return sorted(mois)
+
+
+def _purger(rapport: dict, cle: str, sql: str, **params) -> None:
+    try:
+        with engine.connect() as conn:
+            #  Un `datetime` se lie tel quel, jamais son `isoformat()` (#1298).
+            result = conn.execute(requete_liee(sql, **params) if params else text(sql))
+            conn.commit()
+            rapport[cle] = result.rowcount
+    except Exception as exc:
+        rapport["erreurs"].append(f"{cle}: {exc}")
+
+
 def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     """Exécute l'agrégation complète et retourne un rapport.
 
     Si *entry_id* est fourni, met à jour l'entrée HistoriqueTelemetrie correspondante.
     """
-    import time
-
     t0 = time.monotonic()
 
     rapport = {
@@ -60,6 +275,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         "events_purges": 0,
         "daily_purges": 0,
         "monthly_purges": 0,
+        "presences_purgees": 0,
         "erreurs_navigateur_purgees": 0,
         "mesures_affichage_purgees": 0,
         "erreurs": [],
@@ -69,87 +285,12 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         now_utc = horloge.maintenant()
         now_paris = _paris_now()
 
-        # ─── 1. Agrégation journalière : events → daily ─────────────────
-        # Agréger les événements de la veille (et jours non encore agrégés)
-        # Les bornes utilisent le fuseau Paris pour correspondre aux jours réels.
+        # ─── 1. Agrégation journalière : events → daily (+ présence) ──────
         try:
-            # Trouver le dernier jour agrégé
-            last_daily = session.exec(
-                select(TelemetryDaily.jour).order_by(TelemetryDaily.jour.desc()).limit(1)
-            ).first()
-
-            # Commencer à partir du jour suivant le dernier agrégé, ou il y a 30 jours
-            if last_daily:
-                start_paris = datetime.strptime(last_daily, "%Y-%m-%d").replace(
-                    tzinfo=_PARIS
-                ) + timedelta(days=1)
-            else:
-                start_paris = now_paris - timedelta(days=30)
-
-            # Ne pas agréger le jour en cours (données incomplètes)
-            # end = minuit Paris aujourd'hui (= début du jour courant)
-            end_utc = horloge.debut_du_jour_utc(now_paris)
-            current_paris = start_paris.replace(hour=0, minute=0, second=0, microsecond=0)
-
-            while True:
-                current_utc = horloge.debut_du_jour_utc(current_paris)
-                if current_utc >= end_utc:
-                    break
-                jour_str = current_paris.strftime("%Y-%m-%d")
-                next_paris = current_paris + timedelta(days=1)
-                jour_fin_utc = horloge.debut_du_jour_utc(next_paris)
-
-                rows = session.exec(
-                    select(
-                        TelemetryEvent.page,
-                        TelemetryEvent.action,
-                        func.count().label("total"),
-                        func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
-                    )
-                    .where(
-                        TelemetryEvent.cree_le >= current_utc,
-                        TelemetryEvent.cree_le < jour_fin_utc,
-                    )
-                    .group_by(TelemetryEvent.page, TelemetryEvent.action)
-                ).all()
-
-                if rows:
+            gestionnaire_id = site_manager_user_id(session)
+            for jour in _jours_a_agreger(session, now_paris):
+                if _agreger_jour(session, jour, gestionnaire_id):
                     rapport["jours_agreges"] += 1
-                for r in rows:
-                    session.add(
-                        TelemetryDaily(
-                            jour=jour_str,
-                            page=r[0],
-                            action=r[1],
-                            total=r[2],
-                            utilisateurs_uniques=r[3],
-                        )
-                    )
-
-                # Ligne __total__ : vrais uniques site-wide (COUNT DISTINCT user_id)
-                if rows:
-                    total_uniques = (
-                        session.exec(
-                            select(func.count(func.distinct(TelemetryEvent.user_id))).where(
-                                TelemetryEvent.cree_le >= current_utc,
-                                TelemetryEvent.cree_le < jour_fin_utc,
-                                TelemetryEvent.user_id.isnot(None),
-                            )
-                        ).one()
-                        or 0
-                    )
-                    session.add(
-                        TelemetryDaily(
-                            jour=jour_str,
-                            page="__total__",
-                            action="view",
-                            total=sum(r[2] for r in rows),
-                            utilisateurs_uniques=total_uniques,
-                        )
-                    )
-
-                current_paris = next_paris
-
             session.commit()
         except Exception as exc:
             rapport["erreurs"].append(f"agrégation daily: {exc}")
@@ -157,137 +298,42 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
 
         # ─── 2. Agrégation mensuelle : daily → monthly ──────────────────
         try:
-            last_monthly = session.exec(
-                select(TelemetryMonthly.mois).order_by(TelemetryMonthly.mois.desc()).limit(1)
-            ).first()
-
-            # Mois à agréger : ceux terminés et non encore agrégés
-            if last_monthly:
-                # Mois suivant le dernier agrégé
-                y, m = map(int, last_monthly.split("-"))
-                if m == 12:
-                    start_month = datetime(y + 1, 1, 1, tzinfo=_PARIS)
-                else:
-                    start_month = datetime(y, m + 1, 1, tzinfo=_PARIS)
-            else:
-                start_month = (now_paris - timedelta(days=365)).replace(
-                    day=1, hour=0, minute=0, second=0, microsecond=0
-                )
-
-            # Ne pas agréger le mois en cours
-            current_month_start = now_paris.replace(
-                day=1, hour=0, minute=0, second=0, microsecond=0
-            )
-
-            cursor = start_month
-            while cursor < current_month_start:
-                mois_str = cursor.strftime("%Y-%m")
-
-                rows = session.exec(
-                    select(
-                        TelemetryDaily.page,
-                        TelemetryDaily.action,
-                        func.sum(TelemetryDaily.total).label("total"),
-                        func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
-                    )
-                    .where(
-                        TelemetryDaily.jour.startswith(mois_str),
-                        TelemetryDaily.page != "__total__",
-                    )
-                    .group_by(TelemetryDaily.page, TelemetryDaily.action)
-                ).all()
-
-                for r in rows:
-                    if r[2]:  # Ne pas insérer si aucune donnée
-                        session.add(
-                            TelemetryMonthly(
-                                mois=mois_str,
-                                page=r[0],
-                                action=r[1],
-                                total=r[2],
-                                utilisateurs_uniques=r[3],
-                            )
-                        )
-
-                # Ligne __total__ mensuelle : somme des __total__ daily du mois
-                total_row = session.exec(
-                    select(
-                        func.sum(TelemetryDaily.total).label("total"),
-                        func.sum(TelemetryDaily.utilisateurs_uniques).label("uniques"),
-                    ).where(
-                        TelemetryDaily.jour.startswith(mois_str),
-                        TelemetryDaily.page == "__total__",
-                    )
-                ).first()
-                if total_row and total_row[0]:
-                    session.add(
-                        TelemetryMonthly(
-                            mois=mois_str,
-                            page="__total__",
-                            action="view",
-                            total=total_row[0],
-                            # Approximation : somme des uniques quotidiens (même user sur 2 jours = compté 2×)
-                            # Acceptable pour les tendances mensuelles longue durée.
-                            utilisateurs_uniques=total_row[1] or 0,
-                        )
-                    )
-
-                if any(r[2] for r in rows):
+            for mois in _mois_a_agreger(session, now_paris):
+                if _agreger_mois(session, mois):
                     rapport["mois_agreges"] += 1
-
-                # Avancer au mois suivant
-                if cursor.month == 12:
-                    cursor = cursor.replace(year=cursor.year + 1, month=1)
-                else:
-                    cursor = cursor.replace(month=cursor.month + 1)
-
             session.commit()
         except Exception as exc:
             rapport["erreurs"].append(f"agrégation monthly: {exc}")
             session.rollback()
 
-        # ─── 3. Purge : events > 30 jours ───────────────────────────────
-        try:
-            cutoff = now_utc - timedelta(days=30)
-            with engine.connect() as conn:
-                #  Le `datetime` lié, jamais son `isoformat()` (#1298).
-                result = conn.execute(
-                    requete_liee(
-                        "DELETE FROM telemetry_event WHERE cree_le < :cutoff", cutoff=cutoff
-                    )
-                )
-                conn.commit()
-                rapport["events_purges"] = result.rowcount
-        except Exception as exc:
-            rapport["erreurs"].append(f"purge events: {exc}")
+        # ─── 3 à 6. Purges : events 30 j, daily 12 mois, monthly 10 ans, présence 12 mois
+        cutoff_daily = (now_paris - timedelta(days=RETENTION_DAILY_JOURS)).strftime("%Y-%m-%d")
+        _purger(
+            rapport,
+            "events_purges",
+            "DELETE FROM telemetry_event WHERE cree_le < :cutoff",
+            cutoff=now_utc - timedelta(days=RETENTION_EVENEMENTS_JOURS),
+        )
+        _purger(
+            rapport,
+            "daily_purges",
+            "DELETE FROM telemetry_daily WHERE jour < :cutoff",
+            cutoff=cutoff_daily,
+        )
+        _purger(
+            rapport,
+            "monthly_purges",
+            "DELETE FROM telemetry_monthly WHERE mois < :cutoff",
+            cutoff=(now_paris - timedelta(days=RETENTION_MONTHLY_JOURS)).strftime("%Y-%m"),
+        )
+        _purger(
+            rapport,
+            "presences_purgees",
+            "DELETE FROM presence_mensuelle WHERE mois < :cutoff",
+            cutoff=cutoff_daily[:7],
+        )
 
-        # ─── 4. Purge : daily > 12 mois ─────────────────────────────────
-        try:
-            cutoff_daily = (now_paris - timedelta(days=365)).strftime("%Y-%m-%d")
-            with engine.connect() as conn:
-                result = conn.execute(
-                    text("DELETE FROM telemetry_daily WHERE jour < :cutoff"),
-                    {"cutoff": cutoff_daily},
-                )
-                conn.commit()
-                rapport["daily_purges"] = result.rowcount
-        except Exception as exc:
-            rapport["erreurs"].append(f"purge daily: {exc}")
-
-        # ─── 5. Purge : monthly > 10 ans ────────────────────────────────
-        try:
-            cutoff_monthly = (now_paris - timedelta(days=3650)).strftime("%Y-%m")
-            with engine.connect() as conn:
-                result = conn.execute(
-                    text("DELETE FROM telemetry_monthly WHERE mois < :cutoff"),
-                    {"cutoff": cutoff_monthly},
-                )
-                conn.commit()
-                rapport["monthly_purges"] = result.rowcount
-        except Exception as exc:
-            rapport["erreurs"].append(f"purge monthly: {exc}")
-
-        # ─── 6. Purge : erreurs vues dans le navigateur (#1631) ─────────
+        # ─── 7. Purge : erreurs vues dans le navigateur (#1631) ─────────
         try:
             rapport["erreurs_navigateur_purgees"] = purger_erreurs(
                 session, horloge.jour_civil(now_utc)
@@ -296,7 +342,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
             rapport["erreurs"].append(f"purge erreurs navigateur: {exc}")
             session.rollback()
 
-        # ─── 7. Purge : durées d'affichage des écrans (#1632) ───────────
+        # ─── 8. Purge : durées d'affichage des écrans (#1632) ───────────
         try:
             rapport["mesures_affichage_purgees"] = purger_mesures(
                 session, horloge.jour_civil(now_utc)

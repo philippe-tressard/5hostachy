@@ -8,9 +8,10 @@
 	 * place aurait été refusé au pré-check ; le découper est ce que la règle
 	 * « au fil de l'eau » demande.
 	 *
-	 * Sa carte et son intitulé passent par `PanneauTelemetrie` depuis le
-	 * 03/10/2026 : `.titre-panneau`, écrit ici, était la copie au caractère près
-	 * de l'intitulé des autres panneaux.
+	 * Son intitulé passe par `PanneauTelemetrie` depuis le 03/10/2026 :
+	 * `.titre-panneau`, écrit ici, était la copie au caractère près de l'intitulé
+	 * des autres panneaux. Un BLOC de la section « Fréquentation », pas une
+	 * section : l'onglet regroupe graphe, top pages et utilisateurs actifs.
 	 */
 	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
 
@@ -33,7 +34,7 @@
 </script>
 
 {#if pages.length > 0}
-	<PanneauTelemetrie titre="🏆 Top pages">
+	<PanneauTelemetrie titre="🏆 Top pages" niveau="bloc">
 		<div class="table-wrap">
 			<table class="table">
 				<thead>

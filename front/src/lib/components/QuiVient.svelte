@@ -12,30 +12,50 @@
 	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
 	import type { Adoption, LigneAdoption } from '$lib/api';
 
-	export let adoption: Adoption;
+	/** `null` : la vue ne sait pas qui est venu (Total) — la section, vide, ne se déplie pas. */
+	export let adoption: Adoption | null;
+	/** Section dépliée ? L'onglet décide, et reçoit `basculer` (`PanneauTelemetrie`). */
+	export let ouvert = false;
 
-	$: groupes = [
-		{ titre: 'Par profil', lignes: adoption.par_profil },
-		{ titre: 'Par type de résident', lignes: adoption.par_type },
-		{ titre: 'Par bâtiment', lignes: adoption.par_batiment },
-	] satisfies { titre: string; lignes: LigneAdoption[] }[];
+	$: vide = !adoption || adoption.global.comptes === 0;
+
+	$: groupes = (
+		adoption
+			? [
+					{ titre: 'Par profil', lignes: adoption.par_profil },
+					{ titre: 'Par type de résident', lignes: adoption.par_type },
+					{ titre: 'Par bâtiment', lignes: adoption.par_batiment },
+				]
+			: []
+	) satisfies { titre: string; lignes: LigneAdoption[] }[];
 
 	const pourcentage = (l: LigneAdoption) => (l.taux == null ? '—' : `${l.taux} %`);
 </script>
 
-<PanneauTelemetrie titre="👥 Qui vient" periode="{adoption.jours} derniers jours">
+<PanneauTelemetrie
+	titre="👥 Qui vient"
+	periode={adoption?.periode ?? ''}
+	{ouvert}
+	{vide}
+	videLibelle={adoption
+		? 'aucun compte mesuré'
+		: 'au-delà de 12 mois, on ne sait plus qui est venu'}
+	on:basculer
+>
 	<div class="table-wrap">
 		<table class="table">
 			<thead>
 				<tr><th></th><th class="nombre">Venus / comptes</th><th class="nombre">%</th></tr>
 			</thead>
-			<tbody>
-				<tr class="global">
-					<td>{adoption.global.libelle}</td>
-					<td class="nombre">{adoption.global.actifs} / {adoption.global.comptes}</td>
-					<td class="nombre">{pourcentage(adoption.global)}</td>
-				</tr>
-			</tbody>
+			{#if adoption}
+				<tbody>
+					<tr class="global">
+						<td>{adoption.global.libelle}</td>
+						<td class="nombre">{adoption.global.actifs} / {adoption.global.comptes}</td>
+						<td class="nombre">{pourcentage(adoption.global)}</td>
+					</tr>
+				</tbody>
+			{/if}
 			{#each groupes as g (g.titre)}
 				{#if g.lignes.length}
 					<tbody>
@@ -56,7 +76,7 @@
 		<p>
 			Un compte est « venu » s’il a ouvert au moins une page sur la période. Un compte peut avoir
 			plusieurs profils : leurs lignes ne s’additionnent pas.
-			{#if adoption.refus}
+			{#if adoption?.refus}
 				{adoption.refus} compte{adoption.refus > 1 ? 's ont' : ' a'} refusé la mesure d’audience : exclu{adoption.refus >
 				1
 					? 's'
