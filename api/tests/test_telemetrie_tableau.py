@@ -18,13 +18,14 @@ import pytest
 
 from app.models.core import (
     ConfigSite,
+    HistoriqueTelemetrie,
     RoleUtilisateur,
     TelemetryDaily,
     TelemetryEvent,
     TelemetryMonthly,
 )
 from app.utils import horloge
-from sqlmodel import Session
+from sqlmodel import Session, select
 from tests.aides_http import base_http, client_http
 
 #: Un jeudi d'automne, 12 h UTC (14 h à Paris, heure d'été).
@@ -162,6 +163,7 @@ def test_le_filtre_n_est_pas_propose_sans_gestionnaire(admin_http):
     #  Demandé « sans », appliqué « avec » : rien à écarter, l'écran ne le propose pas.
     assert d["filtre_gestionnaire"] == {
         "propose": False,
+        "gestionnaire_designe": False,
         "applique": "avec",
         "non_distingue_jusqu_au": None,
     }
@@ -172,6 +174,7 @@ def test_sans_gestionnaire_ecarte_ses_vues_du_jour(gestionnaire_http):
     avec = gestionnaire_http.get("/telemetry/dashboard?scope=jour").json()
     assert avec["kpi"]["vues"] == 7 and avec["kpi"]["utilisateurs"] == 3
     assert avec["filtre_gestionnaire"]["propose"] is True
+    assert avec["filtre_gestionnaire"]["gestionnaire_designe"] is True
     sans = gestionnaire_http.get("/telemetry/dashboard?scope=jour&gestionnaire=sans").json()
     assert sans["filtre_gestionnaire"]["applique"] == "sans"
     #  Les cinq vues des résidents, l'anonyme comprise ; le gestionnaire sort du palmarès.
@@ -209,3 +212,33 @@ def test_users_active_rend_le_meme_palmares_que_le_mois(admin_http):
     lignes = admin_http.get("/telemetry/users-active").json()
     assert [(ligne["total"], ligne["pages"]) for ligne in lignes] == _palmares(mois)
     assert [ligne["user_id"] for ligne in lignes] == [7, 8, 9]
+
+
+def test_une_reagregation_en_attente_se_rejoue_sans_attendre_02h(monkeypatch):
+    """🔴 La vue Mois ne proposait pas le filtre le jour de la mise en production
+    (03/10/2026) : les lignes déjà agrégées portent `None` jusqu'au passage de
+    02:00, donc zéro vue du gestionnaire. Le rattrapage du démarrage les rejoue —
+    il lisait seulement « la dernière agrégation a-t-elle moins de 24 h ? »."""
+    from app.utils.telemetry_aggregation import (
+        derniere_agregation_ou_rejeu,
+        reagregation_en_attente,
+    )
+
+    with base_http() as moteur:
+        monkeypatch.setattr(horloge, "maintenant", lambda: MAINTENANT)
+        with Session(moteur) as s:
+            #  Une agrégation réussie il y a une heure…
+            s.add(HistoriqueTelemetrie(statut="succes", cree_le=MAINTENANT.replace(hour=11)))
+            #  …et un jour récent resté non distingué.
+            s.add(TelemetryDaily(jour="2026-09-25", page="__total__", total=4, gestionnaire=None))
+            s.commit()
+            assert reagregation_en_attente(s) is True
+            assert derniere_agregation_ou_rejeu(s) is None  # → le rattrapage rejoue
+            #  Distingué (ou trop ancien pour être réagrégé) : plus rien à rejouer.
+            for ligne in s.exec(select(TelemetryDaily)).all():
+                ligne.gestionnaire = False
+                s.add(ligne)
+            s.add(TelemetryDaily(jour="2026-08-01", page="__total__", total=1, gestionnaire=None))
+            s.commit()
+            assert reagregation_en_attente(s) is False
+            assert derniere_agregation_ou_rejeu(s) == MAINTENANT.replace(hour=11)

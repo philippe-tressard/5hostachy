@@ -130,7 +130,7 @@ def taches_rattrapables() -> tuple[TacheRattrapable, ...]:
     from app.database import engine
     from app.utils.backup import derniere_sauvegarde_reussie, run_backup
     from app.utils.telemetry_aggregation import (
-        derniere_agregation_reussie,
+        derniere_agregation_ou_rejeu,
         run_telemetry_aggregation_cron,
     )
 
@@ -145,7 +145,7 @@ def taches_rattrapables() -> tuple[TacheRattrapable, ...]:
         TacheRattrapable(
             "Agrégation télémétrie",
             "telemetry_rattrapage",
-            _avec_session(derniere_agregation_reussie),
+            _avec_session(derniere_agregation_ou_rejeu),
             run_telemetry_aggregation_cron,
         ),
         TacheRattrapable(

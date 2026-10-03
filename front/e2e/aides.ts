@@ -115,12 +115,17 @@ export const TABLEAU_TELEMETRIE_VIDE = {
 		par_type: [],
 		par_batiment: [],
 	},
-	filtre_gestionnaire: { propose: false, applique: 'avec', non_distingue_jusqu_au: null },
+	filtre_gestionnaire: {
+		propose: false,
+		gestionnaire_designe: true,
+		applique: 'avec',
+		non_distingue_jusqu_au: null,
+	},
 };
 
 /**
  * Déplie une SECTION de l'onglet Télémétrie et la rend (03/10/2026) : les panneaux
- * sont des `<details>` repliés à l'arrivée, sauf « Fréquentation » — lire un
+ * sont des `<details>` repliés à l'arrivée, sauf « Indicateurs et fréquentation » — lire un
  * tableau demande d'abord d'ouvrir sa section, comme le fait l'administrateur.
  */
 export async function deplierSectionTelemetrie(

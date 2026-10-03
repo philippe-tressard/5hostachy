@@ -55,6 +55,8 @@ export type FiltreGestionnaire = 'avec' | 'sans';
 export interface EtatFiltreGestionnaire {
 	/** Proposé seulement s'il changerait quelque chose : un gestionnaire qui a des vues, et d'autres aussi. */
 	propose: boolean;
+	/** Faux : aucun administrateur n'est désigné gestionnaire du site — le filtre n'a rien à écarter. */
+	gestionnaire_designe: boolean;
 	/** Ce qui a été appliqué — « avec » quoi qu'on demande si le filtre n'est pas proposé. */
 	applique: FiltreGestionnaire;
 	/** Dernier jour dont l'agrégat ne sépare pas le gestionnaire (compté dans les deux lectures). */

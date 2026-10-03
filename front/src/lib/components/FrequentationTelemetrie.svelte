@@ -1,11 +1,11 @@
 <script lang="ts">
 	/**
-	 * **Fréquentation** — la section de l'onglet Télémétrie dépliée par défaut
-	 * (03/10/2026) : le graphe des vues (par heure, jour, mois ou année selon la
-	 * vue), les top pages et les utilisateurs les plus actifs. Trois blocs qui
-	 * répondent à la même question — qui lit quoi, et quand — dans UNE section,
-	 * comme demandé : « met Vues par heure, top pages et utilisateurs les plus
-	 * actifs dans une même section ».
+	 * **Indicateurs et fréquentation** — la section de l'onglet Télémétrie dépliée
+	 * par défaut (03/10/2026) : les nombres clés de la vue, puis le graphe des vues
+	 * (par heure, jour, mois ou année), les top pages et les utilisateurs les plus
+	 * actifs. Ils répondent à la même question — qui lit quoi, et quand — dans UNE
+	 * section, comme demandé : « fusionner les sections Indicateurs & Fréquentation
+	 * (qui devient la section par défaut dépliée) ».
 	 *
 	 * Extrait d'`OngletTelemetrie` avec ses deux cents lignes de style de graphe :
 	 * l'onglet gagnait quatre vues, un filtre et cinq sections pliables, et le
@@ -18,11 +18,15 @@
 	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
 	import type { TableauTelemetrie } from '$lib/api';
-	import { fmtDatetimeShort as fmt } from '$lib/date';
+	import { fmtDate, fmtDatetimeShort as fmt } from '$lib/date';
 
 	export let donnees: TableauTelemetrie;
 	/** Section dépliée ? L'onglet décide, et reçoit `basculer` (`PanneauTelemetrie`). */
 	export let ouvert = false;
+	/** « Pages vues aujourd'hui », « Pages vues (30 j) »… : la vue consultée le dit. */
+	export let libelleVues = 'Pages vues';
+
+	$: kpi = donnees.kpi;
 
 	//  Un bâton par mois ou par année est plus large qu'un bâton par heure ou
 	//  par jour : il y en a douze ou dix, pas vingt-quatre ou trente.
@@ -39,12 +43,116 @@
 </script>
 
 <PanneauTelemetrie
-	titre="📈 Fréquentation"
+	titre="📊 Indicateurs et fréquentation"
 	{ouvert}
-	vide={donnees.chart.length === 0}
+	vide={(kpi.vues ?? 0) === 0 && donnees.chart.length === 0}
 	videLibelle="aucune vue sur la période"
 	on:basculer
 >
+	<div class="tl-kpi-row">
+		<div class="tl-kpi">
+			<div class="tl-kpi-value">{kpi.vues ?? 0}</div>
+			<div class="tl-kpi-label">{libelleVues}</div>
+		</div>
+		{#if kpi.utilisateurs != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.utilisateurs}</div>
+				<div class="tl-kpi-label">
+					{donnees.scope === 'jour'
+						? "Utilisateurs actifs aujourd'hui"
+						: 'Utilisateurs uniques (pic)'}
+				</div>
+			</div>
+		{/if}
+		<div class="tl-kpi">
+			<div class="tl-kpi-value">{kpi.pages ?? 0}</div>
+			<div class="tl-kpi-label">Pages distinctes visitées</div>
+		</div>
+		{#if kpi.heure_pointe}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.heure_pointe}</div>
+				<div class="tl-kpi-label">🔺 Heure de pointe</div>
+			</div>
+		{/if}
+		{#if kpi.moy_vues_utilisateur != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.moy_vues_utilisateur}</div>
+				<div class="tl-kpi-label">Moy. vues / utilisateur</div>
+			</div>
+		{/if}
+		{#if kpi.moy_vues_jour != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.moy_vues_jour}</div>
+				<div class="tl-kpi-label">Moy. vues / jour</div>
+			</div>
+		{/if}
+		{#if kpi.moy_utilisateurs_jour != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.moy_utilisateurs_jour}</div>
+				<div class="tl-kpi-label">Moy. utilisateurs / jour</div>
+			</div>
+		{/if}
+		{#if kpi.mois_actifs != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.mois_actifs}</div>
+				<div class="tl-kpi-label">Mois avec activité</div>
+			</div>
+		{/if}
+		{#if kpi.moy_vues_mois != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.moy_vues_mois}</div>
+				<div class="tl-kpi-label">Moy. vues / mois</div>
+			</div>
+		{/if}
+		{#if kpi.annees_actives != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.annees_actives}</div>
+				<div class="tl-kpi-label">Années avec activité</div>
+			</div>
+		{/if}
+		{#if kpi.moy_vues_an != null}
+			<div class="tl-kpi">
+				<div class="tl-kpi-value">{kpi.moy_vues_an}</div>
+				<div class="tl-kpi-label">Moy. vues / an</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Jour le plus actif (vue Mois) · Records (vues Année et Total) -->
+	{#if kpi.jour_pointe || kpi.record_jour || kpi.record_mois}
+		<div class="tl-kpi-row tl-kpi-row-suite">
+			{#if kpi.jour_pointe}
+				<div class="tl-kpi">
+					<div class="tl-kpi-value">
+						{kpi.jour_pointe.uniques}
+						<span class="tl-kpi-unite">utilisateurs</span>
+					</div>
+					<div class="tl-kpi-label">
+						🏆 Jour le plus actif — {fmtDate(kpi.jour_pointe.jour)}
+					</div>
+				</div>
+			{/if}
+			{#if kpi.record_jour}
+				<div class="tl-kpi">
+					<div class="tl-kpi-value">
+						{kpi.record_jour.uniques}
+						<span class="tl-kpi-unite">utilisateurs</span>
+					</div>
+					<div class="tl-kpi-label">🏆 Record jour — {fmtDate(kpi.record_jour.jour)}</div>
+				</div>
+			{/if}
+			{#if kpi.record_mois}
+				<div class="tl-kpi">
+					<div class="tl-kpi-value">
+						{kpi.record_mois.uniques}
+						<span class="tl-kpi-unite">utilisateurs</span>
+					</div>
+					<div class="tl-kpi-label">🏆 Record mois — {kpi.record_mois.mois}</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	<PanneauTelemetrie titre={donnees.chart_label} niveau="bloc">
 		<div class="tl-chart-wrap">
 			<div class="tl-y-axis">
@@ -115,6 +223,37 @@
 	    balisage sans ses règles est la régression que ce dépôt cite dans une
 	    dizaine de commentaires depuis la v2.67.11 ; `npm run lint:classes-nues`
 	    est le contrôle qui échoue. Elles voyagent ici avec le graphe. */
+	.tl-kpi-row {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+		gap: 1rem;
+		margin: 0 1rem 1rem;
+	}
+	.tl-kpi-row-suite {
+		margin-top: 0;
+	}
+	.tl-kpi {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius, 8px);
+		padding: 1.25rem 1rem;
+		text-align: center;
+	}
+	.tl-kpi-value {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--color-primary);
+		line-height: 1.1;
+	}
+	.tl-kpi-unite {
+		font-size: var(--fs-sm);
+		font-weight: 400;
+	}
+	.tl-kpi-label {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin-top: 0.3rem;
+	}
 	.tl-chart-wrap {
 		display: flex;
 		gap: 0;
