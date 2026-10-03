@@ -34,7 +34,7 @@ import pathlib
 
 import pytest
 
-from app.utils.copie_auteur import copie_demandee, proprietaire
+from app.utils.copie_auteur import copie_demandee, destinataires_et_copie, proprietaire
 from tests.aides_saisi_pour import ObjetSaisiPour as _Ticket
 from tests.aides_saisi_pour import alice_et_bruno
 
@@ -122,3 +122,58 @@ def test_le_FIL_et_la_COPIE_lisent_la_MEME_fonction():
     assert "auteur_nom(ctx.session, tk.auteur_id)" not in flux, (
         "le fil ne doit plus nommer l'auteur directement : le « Saisi pour » prime"
     )
+
+
+def test_la_copie_COCHEE_SEULE_devient_le_destinataire_avec_SON_gabarit(session):
+    """🔴 03/10/2026 : « quand on met l'auteur seul, celui-ci ne reçoit pas de
+    mail ». La copie n'était qu'un `bcc` accroché à l'envoi au syndic / au
+    conseil : sans eux, rien ne partait. Le propriétaire devient alors le
+    destinataire de l'envoi, sans copie cachée, et `seule` commande son gabarit."""
+    destinataires, bcc, seule = destinataires_et_copie(
+        session, _Ticket(auteur_id=1, sp_user=2), [], demandee=True
+    )
+    assert destinataires == [(None, "bruno@x.fr")]
+    assert bcc is None
+    assert seule is True
+
+
+def test_sans_la_case_et_sans_destinataire_rien_ne_part(session):
+    assert destinataires_et_copie(session, _Ticket(auteur_id=1), [], demandee=False) == (
+        [],
+        None,
+        False,
+    )
+
+
+def test_avec_des_destinataires_la_copie_reste_un_bcc_et_le_gabarit_ne_change_pas(session):
+    principaux = [(9, "cs@x.fr")]
+    destinataires, bcc, seule = destinataires_et_copie(
+        session, _Ticket(auteur_id=1, sp_user=2), principaux, demandee=True
+    )
+    assert destinataires == principaux
+    assert bcc == ["bruno@x.fr"]
+    assert seule is False
+
+
+def test_les_gabarits_de_copie_existent_et_ne_portent_pas_la_reference_du_syndic():
+    """Le message d'un résident n'a pas à porter la référence de copropriété du syndic."""
+    from app.seed import EMAIL_TEMPLATES
+
+    seed = {m[0]: m for m in EMAIL_TEMPLATES}
+    for copie in ("ticket_copie_auteur", "publication_copie_auteur"):
+        assert copie in seed, copie
+        assert "prefixe_copro" not in seed[copie][2], copie
+        assert "reference_copro" not in seed[copie][3], copie
+
+
+def test_les_envois_se_declenchent_aussi_sur_la_seule_copie():
+    """Garde statique : la condition d'appel portait seulement syndic / conseil, ce
+    qui rendait la correction de `destinataires_et_copie` inatteignable."""
+    racine = pathlib.Path(__file__).resolve().parents[1] / "app" / "routers" / "tickets"
+    for nom, motif in (
+        ("crud.py", 'or getattr(body, "envoyer_auteur"'),
+        ("evolutions.py", 'or getattr(body, "envoyer_auteur"'),
+        ("mise_a_jour.py", "or copie_auteur"),
+        ("actualite.py", "if syndic or cs or auteur"),
+    ):
+        assert motif in (racine / nom).read_text(encoding="utf-8"), nom

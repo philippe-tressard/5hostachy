@@ -94,6 +94,8 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "calendrier_evenement_suivi": "information",
     "document_publie": "information",
     "publication_syndic": "information",
+    "ticket_copie_auteur": "information",
+    "publication_copie_auteur": "information",
     "publication_externe": "information",
     "acces_apparies_auto": "information",
     "etage_divergent": "information",

@@ -127,6 +127,11 @@ EXPECTED_VARS: dict[str, set[str]] = {
     },
 }
 
+#  Les copies de l'auteur (cochées SEULES, 03/10/2026) partagent le corps — donc les
+#  variables — du gabarit au syndic : seuls l'objet et les phrases changent.
+EXPECTED_VARS["ticket_copie_auteur"] = EXPECTED_VARS["ticket_syndic"]
+EXPECTED_VARS["publication_copie_auteur"] = EXPECTED_VARS["publication_syndic"]
+
 # Modèles dont l'objet doit NOMMER ce dont il parle, et l'expression qui le fait.
 #
 # « Ticket #TK-427648 — 5Hostachy » n'apprenait rien : deux tickets de la même
@@ -140,12 +145,14 @@ EXPECTED_VARS: dict[str, set[str]] = {
 # migration qui réécrit un objet le ferait disparaître sans un test rouge.
 SUJETS_QUI_NOMMENT_L_OBJET: dict[str, str] = {
     "ticket_syndic": "{{ ticket.titre }}",
+    "ticket_copie_auteur": "{{ ticket.titre }}",
     "ticket_statut_change": "{{ ticket.titre }}",
     "ticket_nouveau_message": "{{ ticket.titre }}",
     "ticket_partage": "{{ ticket.titre }}",
     "ticket_bug_admin": "{{ ticket.titre }}",
     "ticket_externe": "{{ ticket.titre }}",
     "publication_syndic": "{{ publication.titre }}",
+    "publication_copie_auteur": "{{ publication.titre }}",
     "publication_externe": "{{ publication.titre }}",
     "calendrier_evenement_cree": "{{ evenement.titre }}",
     "idee_statut": "{{ idee.titre }}",

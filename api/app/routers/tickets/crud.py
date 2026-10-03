@@ -261,7 +261,11 @@ def create_ticket(
     if body.partager_whatsapp and est_cs and not reservee_au_conseil(ticket) and not bug:
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
-    if ticket.destinataire_syndic or ticket.destinataire_cs:
+    if (
+        ticket.destinataire_syndic
+        or ticket.destinataire_cs
+        or getattr(body, "envoyer_auteur", False)
+    ):
         envoyer_email_syndic_cs(
             ticket,
             user,

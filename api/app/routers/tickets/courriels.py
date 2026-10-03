@@ -24,7 +24,7 @@ from app.models.core import (
 )
 from app.utils.photos import parse_photos
 from app.utils.categories_ticket import libelle_categorie, ticket_urgent
-from app.utils.copie_auteur import copie_demandee
+from app.utils.copie_auteur import destinataires_et_copie
 from app.utils.perimetres import perimetre_label_json
 from app.utils.dates_fr import date_courte, datetime_longue_paris as fmt_paris
 from app.utils.fichiers import chemins_locaux
@@ -87,7 +87,14 @@ def envoyer_email_syndic_cs(
     Elle est calculée ici sur ce qui est **réellement attaché**, pas sur
     l'intention.
     """
-    destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
+    destinataires, auteur_bcc, seule = destinataires_et_copie(
+        session,
+        ticket,
+        destinataires_syndic_cs(session, syndic=syndic, cs=cs),
+        demandee=auteur,
+    )
+    #  Cochée SEULE, la copie a son gabarit (03/10/2026).
+    code = "ticket_copie_auteur" if seule else "ticket_syndic"
     if not destinataires:
         return
 
@@ -108,13 +115,6 @@ def envoyer_email_syndic_cs(
     #  La règle, ses trois états successifs du 31/08/2026 et la déduplication
     #  vivent dans `app/utils/copie_auteur.py` — elle sert aussi les publications
     #  et le calendrier, où elle avait trois comportements différents.
-    auteur_bcc = copie_demandee(
-        session,
-        ticket,
-        (e for _, e in destinataires),
-        demandee=auteur,
-    )
-
     #  🔴 L'ADRESSE DE RÉPONSE (#703). C'est le SEUL courriel du site auquel on
     #  attend une réponse écrite : le syndic répond, et sa réponse doit rejoindre
     #  le fil du ticket au lieu de dormir dans une boîte que personne n'ouvre.
@@ -125,7 +125,7 @@ def envoyer_email_syndic_cs(
     #  `tickets+42@`. Voir `utils/courriel_entrant.py`.
     background_tasks.add_task(
         send_email_group,
-        code="ticket_syndic",
+        code=code,
         to_recipients=destinataires,
         context=ctx,
         session=session,

@@ -54,7 +54,7 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import Ticket, TicketEvolution, Utilisateur
-from app.utils.copie_auteur import adresse_copie, objet_de
+from app.utils.copie_auteur import adresse_copie, objet_de, repartir_copie
 from app.utils.apercu_diffusion import (
     ApercuCanal,
     ApercuDiffusion,
@@ -210,7 +210,7 @@ def apercu_diffusion(
     # ── E-mail syndic / conseil syndical ────────────────────────────────────
     #  Une actualité écrit avec le gabarit de l'actualité, composé par la
     #  fonction même qui l'enverra (`contexte_actualite`).
-    if brouillon.destinataire_syndic or brouillon.destinataire_cs:
+    if brouillon.destinataire_syndic or brouillon.destinataire_cs or brouillon.envoyer_auteur:
         if actualite:
             contexte, pieces = contexte_actualite(
                 ticket,
@@ -228,22 +228,31 @@ def apercu_diffusion(
                 commentaire=brouillon.commentaire or None,
                 evolutions=evolutions,
             )
+        destinataires = destinataires_syndic_cs(
+            session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
+        )
+        #  🔴 L'auteur du TICKET, pas le rédacteur : sur un commentaire du CS, ce sont
+        #  deux personnes différentes (31/08/2026).
+        copie = (
+            adresse_copie(session, objet_de(session, Ticket, brouillon.ticket_id), user)
+            if brouillon.envoyer_auteur
+            else None
+        )
+        #  Cochée SEULE, la copie est le destinataire — avec son gabarit, comme à l'envoi.
+        destinataires, bcc, seule = repartir_copie(destinataires, copie)
+        copie = bcc[0] if bcc else None
+        if actualite:
+            code_modele = "publication_copie_auteur" if seule else "publication_syndic"
+        else:
+            code_modele = "ticket_copie_auteur" if seule else "ticket_syndic"
         canaux.append(
             apercu_email(
                 session,
-                code_modele="publication_syndic" if actualite else "ticket_syndic",
+                code_modele=code_modele,
                 contexte=contexte,
-                destinataires=destinataires_syndic_cs(
-                    session, syndic=brouillon.destinataire_syndic, cs=brouillon.destinataire_cs
-                ),
+                destinataires=destinataires,
                 pieces_jointes=pieces,
-                #  🔴 L'auteur du TICKET, pas le rédacteur : sur un commentaire du
-                #  CS, ce sont deux personnes différentes (31/08/2026).
-                copie_auteur=(
-                    adresse_copie(session, objet_de(session, Ticket, brouillon.ticket_id), user)
-                    if brouillon.envoyer_auteur
-                    else None
-                ),
+                copie_auteur=copie,
             )
         )
 

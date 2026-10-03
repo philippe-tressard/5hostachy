@@ -123,13 +123,26 @@
 	    🔒 `e2e/etoile-valeur-defaut.spec.ts`. */
 	$: modifiee =
 		confidentiel || (defaut ? destinataires.length > 0 : !concerneTousLesResidents(destinataires));
+	/*  Une Suite n'a pas de `lecture`, mais un défaut (`parDefaut`) : liste vide, le
+	    badge disait « Tous » alors que la pastille cochée était « Résident concerné »
+	    (signalé à l'écran le 03/10/2026). Le badge lit ce que la rangée coche. */
+	$: luePar = relire($perimetresStore, () =>
+		lectureDe({
+			actualite: false,
+			confidentiel: concerneActif,
+			publicCible: destinataires.length ? destinataires : defautConcerne ? [] : (defaut ?? []),
+			perimetreRestreint: false,
+			reservePerimetre: false,
+		}),
+	);
+	$: sansLecture = !lecture && !!defaut && !concerneTousLesResidents(defaut) ? luePar : null;
 </script>
 
 <SectionFormulaire
 	{premiere}
 	{pliable}
-	badge={lecture ? titreLecture(lue) : badge}
-	badgeIcones={lecture ? lue.icones : []}
+	badge={lecture ? titreLecture(lue) : sansLecture ? titreLecture(sansLecture) : badge}
+	badgeIcones={lecture ? lue.icones : (sansLecture?.icones ?? [])}
 	badgeIconeFin={lecture && lue.perimetreReserve ? 'lock' : ''}
 	titre={SECTIONS_LIBELLE.destinataires}
 	{inactive}

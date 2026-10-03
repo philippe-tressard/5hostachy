@@ -71,25 +71,24 @@ _FIL_MESSAGES_EXTERNE = (
     "{% endif %}"
 )
 
-MODELES = [
-    (
-        "ticket_bug_admin",
-        "Affaire de type Bug — notification admin site",
-        "Bug signalé via les Affaires — {{ ticket.titre }} — {{ residence.nom }}",
-        titre("⚠ Bug signalé", couleur=ROUGE)
-        + '<p style="margin:0 0 12px">Une affaire de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
-        + encart(
-            f'<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:{TEXTE}">{{{{ ticket.titre }}}}</p>'
-            f'<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ ticket.description }}}}</p>',
-            fond="#FDF0F0",
-            filet=ROUGE,
-        )
-        + _bouton_ticket("Traiter le bug", fond=ROUGE),
-        True,
-    ),
-    (
-        "ticket_syndic",
-        "Affaire transmise au syndic",
+
+def _modele_ticket_transmis(
+    code: str,
+    nom: str,
+    objet: str,
+    titre_creation: str,
+    phrase_creation: str,
+    phrase_commentaire: str,
+) -> tuple:
+    """Une affaire (ou son commentaire) adressée par courriel : `ticket_syndic` et sa copie à l'auteur.
+
+    Même corps, mêmes variables — seuls l'objet, le titre et les deux phrases changent. Le
+    second modèle (`ticket_copie_auteur`, 03/10/2026) est celui d'un auteur qui coche
+    SEULE la copie : « Affaire transmise au syndic » lui mentait.
+    """
+    return (
+        code,
+        nom,
         #  `{{ prefixe_copro }}` ouvre les DEUX branches — il ne manquait qu'à celle
         #  du commentaire, donc un échange sur un ticket déjà transmis arrivait sans
         #  référence. La règle et sa forme unique : `seed/emails/__init__.py`.
@@ -98,17 +97,19 @@ MODELES = [
         #  n'affiche qu'une soixantaine de caractères, et sur ces quatre
         #  informations, celle que le destinataire ne connaît pas encore est le
         #  titre. La résidence est ce qu'on accepte de perdre.
-        "{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}",
+        objet,
         titre(
-            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}📋 Affaire transmise par le conseil syndical{% endif %}"
+            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}"
+            + titre_creation
+            + "{% endif %}"
         )
         + '<p style="margin:0 0 16px">'
-        "{% if is_commentaire %}"
-        "Un nouveau commentaire a été ajouté sur l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
-        "{% else %}"
-        "Une affaire a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
-        "{% endif %}"
-        "</p>"
+        + "{% if is_commentaire %}"
+        + phrase_commentaire
+        + "{% else %}"
+        + phrase_creation
+        + "{% endif %}"
+        + "</p>"
         + "{% if is_commentaire %}"
         + cadre_commentaire(perimetre="commentaire_perimetre")
         + HISTORIQUE_DISCRET
@@ -142,6 +143,43 @@ MODELES = [
         "</table>"
         "{% endif %}" + _bouton_ticket(marge=MARGE_BOUTON_SELON_COMMENTAIRE),
         True,
+    )
+
+
+MODELES = [
+    (
+        "ticket_bug_admin",
+        "Affaire de type Bug — notification admin site",
+        "Bug signalé via les Affaires — {{ ticket.titre }} — {{ residence.nom }}",
+        titre("⚠ Bug signalé", couleur=ROUGE)
+        + '<p style="margin:0 0 12px">Une affaire de type <strong style="color:#c0392b">Bug</strong> a été soumis par <strong>{{ auteur.affiche }}</strong>{% if auteur.email %} (<a href="mailto:{{ auteur.email }}" style="color:#1E3A5F">{{ auteur.email }}</a>){% endif %}.</p>'
+        + encart(
+            f'<p style="margin:0 0 4px;font-weight:700;font-size:16px;color:{TEXTE}">{{{{ ticket.titre }}}}</p>'
+            f'<p style="margin:0;font-size:14px;color:{GRIS}">{{{{ ticket.description }}}}</p>',
+            fond="#FDF0F0",
+            filet=ROUGE,
+        )
+        + _bouton_ticket("Traiter le bug", fond=ROUGE),
+        True,
+    ),
+    _modele_ticket_transmis(
+        "ticket_syndic",
+        "Affaire transmise au syndic",
+        "{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}{{ prefixe_copro }}Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}",
+        "📋 Affaire transmise par le conseil syndical",
+        "Une affaire a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.",
+        "Un nouveau commentaire a été ajouté sur l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.",
+    ),
+    #  🔴 LA COPIE DE L'AUTEUR, cochée SEULE (03/10/2026). Pas de `prefixe_copro` : le
+    #  message ne s'adresse pas au syndic, la référence de copropriété n'a rien à
+    #  faire dans l'objet d'un résident. « Information » : rien n'est attendu.
+    _modele_ticket_transmis(
+        "ticket_copie_auteur",
+        "Copie de votre affaire",
+        "{% if is_commentaire %}💬 Commentaire — Affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% else %}Copie de votre affaire #{{ ticket.numero }} — {{ ticket.titre }} — {{ residence.nom }}{% endif %}",
+        "📋 Copie de votre affaire",
+        "Voici une copie de l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> qui vous concerne, déposée sur le site de <strong>{{ residence.nom }}</strong>.",
+        "Un nouveau commentaire a été ajouté sur l’affaire <strong>#{{ ticket.numero }} — {{ ticket.titre }}</strong> qui vous concerne, par {{ auteur.affiche }}.",
     ),
     (
         "ticket_statut_change",

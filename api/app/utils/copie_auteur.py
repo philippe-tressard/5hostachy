@@ -143,6 +143,45 @@ def copie_demandee(
     return [adresse]
 
 
+def repartir_copie(
+    destinataires: list[tuple[int | None, str]],
+    adresse: Optional[str],
+) -> tuple[list[tuple[int | None, str]], Optional[list[str]], bool]:
+    """(destinataires, bcc, seule) d'un envoi, pour l'adresse de la copie demandée.
+
+    🔴 La copie n'était qu'un `bcc` accroché à l'envoi au syndic / au conseil : cochée
+    SEULE, elle ne partait pas (03/10/2026, signalé à l'écran — « quand on met
+    l'auteur seul, celui-ci ne reçoit pas de mail »). Sans destinataire, le
+    propriétaire devient le destinataire de l'envoi et `seule` est vrai : l'appelant
+    emploie alors SON gabarit (`ticket_copie_auteur`, `publication_copie_auteur`),
+    « Affaire transmise au syndic » mentirait à qui ne l'a transmise à personne.
+    Sans adresse, rien n'est ajouté. Pure : l'aperçu et l'envoi la partagent, pour
+    annoncer ce qui part.
+
+    ⚠️ Le gabarit est choisi par l'appelant, en toutes lettres (`… if seule else …`) :
+    `test_email_contexte_appel` lit ces codes dans le source pour vérifier que le
+    contexte fourni tient dans CHAQUE gabarit.
+    """
+    if not adresse:
+        return destinataires, None, False
+    if not destinataires:
+        return [(None, adresse)], None, True
+    servies = {e.lower() for _, e in destinataires if e}
+    return destinataires, (None if adresse.lower() in servies else [adresse]), False
+
+
+def destinataires_et_copie(
+    session: Session,
+    objet,
+    destinataires: list[tuple[int | None, str]],
+    *,
+    demandee: bool,
+) -> tuple[list[tuple[int | None, str]], Optional[list[str]], bool]:
+    """`repartir_copie` pour la copie due au PROPRIÉTAIRE de l'objet, si elle est demandée."""
+    adresse = proprietaire(session, objet)[1] if demandee else None
+    return repartir_copie(destinataires, adresse)
+
+
 def objet_de(session: Session, modele, objet_id: Optional[int]):
     """L'objet déjà enregistré, ou `None` s'il n'existe pas.
 
