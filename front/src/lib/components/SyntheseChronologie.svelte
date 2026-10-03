@@ -63,6 +63,10 @@
 		</li>
 	{/each}
 </ol>
+<!--  Relevé à l'écran le 03/10/2026 : « +6 j » à côté de « Chez le prestataire »
+      se lisait « 6 jours chez le prestataire ». C'est l'écart DEPUIS le jalon
+      précédent — la frise, elle, dit le temps passé à chaque étape. -->
+<p class="aide">« +N j » : jours ouvrés écoulés depuis le jalon précédent.</p>
 
 <style>
 	/*  Le trait passe DERRIÈRE les puces : il court sur toute la hauteur du fil,

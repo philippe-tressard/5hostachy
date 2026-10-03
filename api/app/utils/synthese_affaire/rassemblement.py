@@ -23,6 +23,7 @@ compte syndic ou d'un courriel entrant ».
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Callable, Optional
 
@@ -37,6 +38,7 @@ from app.models.tickets import STATUTS_TICKET_CLOS
 from app.utils import horloge
 from app.utils.annonce_hall import texte_brut
 from app.utils.categories_ticket import libelle_categorie
+from app.utils.corrections import est_correction
 from app.utils.dates_fr import date_courte
 from app.utils.destinataires import est_adresse_syndic
 from app.utils.jours_ouvres import libelle_jours
@@ -81,13 +83,39 @@ def _evolutions(session: Session, ticket_id: int) -> list[TicketEvolution]:
     )
 
 
+#: « État : Ouvert → Chez le syndic » — ce qu'une CORRECTION écrit quand l'état
+#: change par la fiche (`routers/tickets/mise_a_jour`), et non par une Suite.
+_ETAT_CORRIGE = re.compile(r"État : (.+?) → (.+?)(?: ; |$)")
+
+
+def etat_corrige(e: TicketEvolution) -> Optional[tuple[str, str]]:
+    """(avant, après) d'un état changé par correction, ou `None`.
+
+    Une correction n'écrit pas d'étape — c'est voulu, elle rectifie — mais elle
+    DIT l'état quitté et l'état posé, avec sa date. Sans elle, la frise prêtait
+    toute l'attente à l'état d'après (03/10/2026). Les libellés se relisent par
+    la table de l'écran (`STATUT_LABELS`), la seule qui les a écrits.
+    """
+    from app.routers.tickets.commun import STATUT_LABELS
+
+    if not est_correction(e):
+        return None
+    trouve = _ETAT_CORRIGE.search(texte_brut(e.contenu or ""))
+    if not trouve:
+        return None
+    codes = {libelle: code for code, libelle in STATUT_LABELS.items()}
+    avant, apres = (codes.get(x.strip()) for x in trouve.groups())
+    return (avant, apres) if avant and apres else None
+
+
 def _fait(e: TicketEvolution, est_syndic: Callable[[int], bool]) -> m.Fait:
     venue_d_un_courriel = bool(e.contenu_origine) or e.versement_id is not None
+    corrige = etat_corrige(e)
     return m.Fait(
         quand=e.cree_le,
-        type=e.type,
-        ancien_statut=e.ancien_statut,
-        nouveau_statut=e.nouveau_statut,
+        type="etat" if corrige else e.type,
+        ancien_statut=corrige[0] if corrige else e.ancien_statut,
+        nouveau_statut=corrige[1] if corrige else e.nouveau_statut,
         syndic=est_syndic(e.auteur_id) or venue_d_un_courriel,
     )
 

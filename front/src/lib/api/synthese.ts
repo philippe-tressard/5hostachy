@@ -83,6 +83,18 @@ export interface EtatSynthese {
 	en_attente: boolean;
 }
 
+/** `PropositionSynthese` — ce que « Relancer » et « Recommencer » rendent : une
+ *  rédaction PROPOSÉE, rien n'est remplacé avant « Appliquer ». `actuelle` est la
+ *  synthèse relue, métriques recalculées. */
+export interface PropositionSynthese {
+	tentative_id: number;
+	synthese: string;
+	difficultes: string;
+	amelioration: string;
+	prompt_complement: string | null;
+	actuelle: SyntheseAffaire;
+}
+
 export interface ModificationSynthese {
 	synthese?: string;
 	difficultes?: string;
@@ -96,11 +108,15 @@ export const syntheses = {
 	modifier: (ticketId: number, corps: ModificationSynthese) =>
 		api.patch<SyntheseAffaire>(`/tickets/${ticketId}/synthese`, corps),
 	relancer: (ticketId: number, promptComplement: string) =>
-		api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/relancer`, {
+		api.post<PropositionSynthese>(`/tickets/${ticketId}/synthese/relancer`, {
 			prompt_complement: promptComplement,
 		}),
 	recommencer: (ticketId: number) =>
-		api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/recommencer`),
+		api.post<PropositionSynthese>(`/tickets/${ticketId}/synthese/recommencer`),
+	appliquer: (ticketId: number, tentativeId: number) =>
+		api.post<SyntheseAffaire>(
+			`/tickets/${ticketId}/synthese/propositions/${tentativeId}/appliquer`,
+		),
 	valider: (ticketId: number) => api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/valider`),
 	produire: (ticketId: number) =>
 		api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/produire`),

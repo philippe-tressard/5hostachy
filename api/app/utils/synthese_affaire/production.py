@@ -6,8 +6,11 @@
 |---|---|---|
 | la file (`file.traiter_file`) | la tâche permanente, 30 min après la clôture | crée la Suite, avise le gestionnaire et le conseil |
 | « Produire la synthèse » | le conseil, sur une affaire close d'avant la MEP | idem |
-| « Relancer » | le conseil, sur un brouillon | avec un complément ajouté au prompt |
-| « Recommencer » | le conseil, sur un brouillon | sans complément : il est effacé |
+| « Relancer » | le conseil, sur un brouillon | PROPOSE, avec un complément ajouté au prompt |
+| « Recommencer » | le conseil, sur un brouillon | PROPOSE, sans complément |
+
+Une relance ne remplace rien : elle propose une rédaction, que le conseil
+applique (`appliquer_tentative` — le complément suit) ou annule.
 
 Chaque production est journalisée deux fois : ses compteurs dans `appel_ia`
 (par `llm.demander`, comme tout appel), son texte, son complément et son coût
@@ -73,6 +76,8 @@ class Resultat:
     motif: Optional[str] = None
     #: La première production d'une demande : l'avis est à envoyer.
     a_aviser: bool = False
+    #: La tentative écrite — sur une relance, c'est la PROPOSITION à appliquer.
+    tentative_id: Optional[int] = None
 
 
 def peut_etre_produite(ticket: Ticket) -> bool:
@@ -181,36 +186,43 @@ async def produire(
     from app.utils.llm_journal import cout_appel
 
     maintenant = horloge.maintenant()
-    session.add(
-        TentativeSynthese(
-            synthese_id=synthese.id,
-            auteur_id=auteur_id,
-            statut=statut,
-            prompt_complement=complement or None,
-            jetons_entree=rep.jetons_entree if rep else None,
-            jetons_sortie=rep.jetons_sortie if rep else None,
-            cout_usd=(
-                cout_appel(
-                    session,
-                    USAGE_SYNTHESE_AFFAIRE,
-                    rep.jetons_entree,
-                    rep.jetons_sortie,
-                    rep.jetons_cache,
-                )
-                if rep
-                else None
-            ),
-            cree_le=maintenant,
-            **(champs or {}),
-        )
+    tentative = TentativeSynthese(
+        synthese_id=synthese.id,
+        auteur_id=auteur_id,
+        statut=statut,
+        prompt_complement=complement or None,
+        jetons_entree=rep.jetons_entree if rep else None,
+        jetons_sortie=rep.jetons_sortie if rep else None,
+        cout_usd=(
+            cout_appel(
+                session,
+                USAGE_SYNTHESE_AFFAIRE,
+                rep.jetons_entree,
+                rep.jetons_sortie,
+                rep.jetons_cache,
+            )
+            if rep
+            else None
+        ),
+        cree_le=maintenant,
+        **(champs or {}),
     )
-    if champs is None and not premiere:
-        #  Une relance qui échoue garde le texte en place : on ne remplace pas
-        #  une rédaction relue par un vide.
-        session.commit()
-        return Resultat(produite=True, motif=motif)
-
+    session.add(tentative)
+    session.flush()
     synthese.metriques_json = json.dumps(met, ensure_ascii=False)
+    if not premiere:
+        #  🔴 Une relance PROPOSE, elle ne remplace pas (03/10/2026, demandé à
+        #  l'écran : « il manque une option Annuler si on veut sortir sans
+        #  sauvegarder »). Le texte relu reste en place ; la rédaction neuve est
+        #  dans la tentative, que le conseil applique (`appliquer_tentative`) ou
+        #  laisse. Les métriques, elles, sont du code : recalculées, elles valent.
+        synthese.mis_a_jour_le = maintenant
+        session.add(synthese)
+        session.commit()
+        return Resultat(
+            produite=True, redigee=champs is not None, motif=motif, tentative_id=tentative.id
+        )
+
     synthese.prompt_complement = complement or None
     synthese.produite_le = maintenant
     synthese.mis_a_jour_le = maintenant
@@ -237,13 +249,6 @@ async def produire(
         session.flush()
         synthese.evolution_id = evol.id
         _remplacer_les_precedentes(session, synthese)
-    else:
-        evol = (
-            session.get(TicketEvolution, synthese.evolution_id) if synthese.evolution_id else None
-        )
-        if evol is not None and champs is not None:
-            evol.assiste_ia = True
-            session.add(evol)
     session.add(synthese)
     session.commit()
     return Resultat(
@@ -252,6 +257,28 @@ async def produire(
         motif=motif,
         a_aviser=premiere and synthese.mail_envoye_le is None,
     )
+
+
+def appliquer_tentative(
+    session: Session, synthese: SyntheseAffaire, tentative: TentativeSynthese
+) -> None:
+    """Le conseil garde la rédaction proposée par une relance — texte, complément.
+
+    « Recommencer » a proposé sans complément : l'appliquer l'efface (arbitré).
+    """
+    synthese.synthese = tentative.synthese
+    synthese.difficultes = tentative.difficultes
+    synthese.amelioration = tentative.amelioration
+    synthese.prompt_complement = tentative.prompt_complement
+    synthese.assiste_ia = True
+    synthese.motif_vide = None
+    synthese.mis_a_jour_le = horloge.maintenant()
+    session.add(synthese)
+    evol = session.get(TicketEvolution, synthese.evolution_id) if synthese.evolution_id else None
+    if evol is not None:
+        evol.assiste_ia = True
+        session.add(evol)
+    session.commit()
 
 
 async def envoyer_avis(session: Optional[Session], synthese_id: int) -> bool:
@@ -302,6 +329,7 @@ async def envoyer_avis(session: Optional[Session], synthese_id: int) -> bool:
 
 __all__ = [
     "Resultat",
+    "appliquer_tentative",
     "USAGE_SYNTHESE_AFFAIRE",
     "envoyer_avis",
     "peut_etre_produite",

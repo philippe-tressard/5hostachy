@@ -18,7 +18,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { syntheses, type SyntheseAffaire } from '$lib/api';
+	import { syntheses, type PropositionSynthese, type SyntheseAffaire } from '$lib/api';
 	import { confirmer } from '$lib/confirmation';
 	import { demander } from '$lib/saisie';
 	import { fmtDatetime } from '$lib/date';
@@ -26,7 +26,6 @@
 	import { safeDescription } from '$lib/sanitize';
 	import EncartAvertissement from './EncartAvertissement.svelte';
 	import FormulaireCreation from './FormulaireCreation.svelte';
-	import MarqueIA from './MarqueIA.svelte';
 	import PiedFormulaire from './PiedFormulaire.svelte';
 	import RichEditor from './RichEditor.svelte';
 	import SyntheseChronologie from './SyntheseChronologie.svelte';
@@ -73,6 +72,32 @@
 		}
 	}
 
+	//  🔴 Relancer et Recommencer PROPOSENT (03/10/2026, demandé à l'écran : « il
+	//  manque une option Annuler si on veut sortir sans sauvegarder ») : le texte
+	//  relu reste en place, la rédaction neuve s'affiche à part, et le conseil
+	//  l'applique ou l'annule. Les métriques, recalculées, valent tout de suite.
+	let proposition: PropositionSynthese | null = null;
+
+	async function proposer(appel: () => Promise<PropositionSynthese>) {
+		enCours = true;
+		try {
+			proposition = await appel();
+			synthese = proposition.actuelle;
+			toast('success', 'Proposition de l’assistant : à appliquer ou annuler');
+		} catch (e) {
+			toast('error', messageErreur(e));
+		} finally {
+			enCours = false;
+		}
+	}
+
+	async function appliquer() {
+		if (!proposition) return;
+		const id = proposition.tentative_id;
+		await geste(() => syntheses.appliquer(synthese.ticket_id, id), 'Proposition appliquée');
+		proposition = null;
+	}
+
 	const enregistrer = () =>
 		geste(() => syntheses.modifier(synthese.ticket_id, texte), 'Synthèse enregistrée');
 
@@ -80,23 +105,23 @@
 		const complement = await demander({
 			titre: 'Relancer la synthèse',
 			message:
-				"L'assistant rédige à nouveau la synthèse. Votre consigne s'ajoute au prompt de l'usage ; elle est gardée pour la prochaine relance.",
+				"L'assistant propose une nouvelle rédaction, que vous appliquerez ou annulerez. Votre consigne s'ajoute au prompt de l'usage ; appliquée, elle est gardée pour la prochaine relance.",
 			libelle: 'Consigne complémentaire',
 			placeholder: 'Plus court, insister sur les relances restées sans réponse…',
 			libelleValider: 'Relancer',
 		});
 		if (complement === null) return;
-		await geste(() => syntheses.relancer(synthese.ticket_id, complement), 'Synthèse rédigée');
+		await proposer(() => syntheses.relancer(synthese.ticket_id, complement));
 	}
 
 	async function recommencer() {
 		const ok = await confirmer({
 			titre: 'Recommencer la synthèse',
 			message:
-				"L'assistant rédige à nouveau la synthèse, sans consigne complémentaire : celle-ci est effacée. Les rédactions précédentes restent dans l'historique.",
+				"L'assistant propose une nouvelle rédaction, sans consigne complémentaire — appliquée, celle-ci est effacée. Les rédactions précédentes restent dans l'historique.",
 			libelleConfirmer: 'Recommencer',
 		});
-		if (ok) await geste(() => syntheses.recommencer(synthese.ticket_id), 'Synthèse rédigée');
+		if (ok) await proposer(() => syntheses.recommencer(synthese.ticket_id));
 	}
 
 	async function valider() {
@@ -113,8 +138,16 @@
 <section class="synthese" aria-label="Synthèse de l'affaire">
 	<div class="tete">
 		<h3 class="titre">🧾 Synthèse de l'affaire</h3>
-		<MarqueIA assiste={synthese.assiste_ia} />
 	</div>
+	{#if synthese.assiste_ia}
+		<!--  Le préambule choisi par l'utilisateur le 03/10/2026, parmi quatre : il
+		      remplace la seule marque ✨, trop discrète pour un texte qui sera lu
+		      en assemblée générale. -->
+		<p class="aide">
+			✨ Ce texte a été produit par une intelligence artificielle et peut comporter des imprécisions
+			: seul le fil de l’affaire fait foi.
+		</p>
+	{/if}
 
 	{#if brouillon}
 		<EncartAvertissement role="status" compact>
@@ -203,6 +236,34 @@
 		{/if}
 	{/if}
 
+	{#if proposition}
+		<section class="bloc proposition" aria-label="Proposition de l'assistant">
+			<h4 class="bloc-titre">Proposition de l’assistant — à appliquer ou annuler</h4>
+			<div class="rich-content texte">{@html safeDescription(proposition.synthese)}</div>
+			{#if proposition.difficultes}
+				<h5 class="proposition-titre">Difficultés</h5>
+				<div class="rich-content texte">{@html safeDescription(proposition.difficultes)}</div>
+			{/if}
+			{#if proposition.amelioration}
+				<h5 class="proposition-titre">Amélioration suggérée</h5>
+				<div class="rich-content texte">{@html safeDescription(proposition.amelioration)}</div>
+			{/if}
+			<!--  Le motif de l'assistant des descriptions (`AssistantDescription`) : deux
+			      gestes, pas un formulaire — rien n'est saisi ici. -->
+			<div class="gestes">
+				<button
+					class="btn btn-outline btn-sm"
+					type="button"
+					disabled={enCours}
+					on:click={() => (proposition = null)}>Annuler</button
+				>
+				<button class="btn btn-primary btn-sm" type="button" disabled={enCours} on:click={appliquer}
+					>Appliquer</button
+				>
+			</div>
+		</section>
+	{/if}
+
 	{#if synthese.statut === 'validee' && synthese.validee_le}
 		<p class="aide">
 			Validée le {fmtDatetime(synthese.validee_le)}{synthese.validee_par_nom
@@ -221,25 +282,25 @@
 				aria-pressed={edition}
 				aria-label="Modifier la synthèse"
 				title="Modifier"
-				disabled={enCours}
+				disabled={enCours || !!proposition}
 				on:click={ouvrirEdition}>✏️</button
 			>
 			<button
 				type="button"
 				class="btn btn-outline btn-sm"
-				disabled={enCours || edition}
+				disabled={enCours || edition || !!proposition}
 				on:click={relancer}>✨ Relancer</button
 			>
 			<button
 				type="button"
 				class="btn btn-outline btn-sm"
-				disabled={enCours || edition}
+				disabled={enCours || edition || !!proposition}
 				on:click={recommencer}>↺ Recommencer</button
 			>
 			<button
 				type="button"
 				class="btn btn-primary btn-sm"
-				disabled={enCours || edition || vide}
+				disabled={enCours || edition || vide || !!proposition}
 				title={vide ? 'Rédigez la synthèse avant de la valider' : undefined}
 				on:click={valider}>✅ Valider</button
 			>
@@ -289,6 +350,16 @@
 	}
 	.texte :global(p) {
 		margin: 0 0 0.4em;
+	}
+	/*  La proposition se distingue du texte relu : bordure de l'accent. */
+	.proposition {
+		border-color: var(--color-primary);
+	}
+	.proposition-titre {
+		margin: 0;
+		font-size: var(--fs-sm);
+		font-weight: 600;
+		color: var(--color-text);
 	}
 	.edition {
 		display: flex;

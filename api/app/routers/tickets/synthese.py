@@ -4,8 +4,9 @@
 |---|---|---|
 | `GET …/synthese` | qui lit l'affaire | la synthèse lisible (brouillon : conseil seul), et si l'on peut en produire une |
 | `PATCH …/synthese` | conseil, admin | « Modifier » les trois textes d'un brouillon — les métriques ne s'éditent pas |
-| `POST …/synthese/relancer` | conseil, admin | une nouvelle rédaction, avec un complément au prompt |
-| `POST …/synthese/recommencer` | conseil, admin | une nouvelle rédaction, complément effacé |
+| `POST …/synthese/relancer` | conseil, admin | PROPOSE une rédaction, avec un complément au prompt |
+| `POST …/synthese/recommencer` | conseil, admin | PROPOSE une rédaction, sans complément |
+| `POST …/propositions/{id}/appliquer` | conseil, admin | la rédaction proposée remplace le texte |
 | `POST …/synthese/valider` | conseil, admin | le brouillon devient lisible de tous les lecteurs de l'affaire, et du carnet |
 | `POST …/synthese/produire` | conseil, admin | une affaire du carnet close sans synthèse — celles d'avant la mise en service |
 
@@ -25,14 +26,31 @@ from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import est_moderateur, get_current_user
 from app.database import get_session
 from app.models.core import Ticket, Utilisateur
-from app.models.synthese import A_PRODUIRE, BROUILLON, VALIDEE, SyntheseAffaire
+from app.models.synthese import (
+    A_PRODUIRE,
+    BROUILLON,
+    VALIDEE,
+    SyntheseAffaire,
+    TentativeSynthese,
+)
 from app.schemas_synthese import SyntheseLue
 
-from .synthese_schemas import SyntheseEtat, SyntheseModification, SyntheseRelance
+from .synthese_schemas import (
+    PropositionSynthese,
+    SyntheseEtat,
+    SyntheseModification,
+    SyntheseRelance,
+)
 from app.utils import horloge
 from app.utils.limiter import LIMITE_APPEL_FACTURE, limiter
 from app.utils.synthese_affaire.lecture import lisible, synthese_courante, synthese_lue
-from app.utils.synthese_affaire.production import envoyer_avis, peut_etre_produite, produire
+from app.utils.recuperer import ou_404
+from app.utils.synthese_affaire.production import (
+    appliquer_tentative,
+    envoyer_avis,
+    peut_etre_produite,
+    produire,
+)
 from app.utils.visibility import ticket_visible
 
 router = APIRouter()
@@ -103,15 +121,24 @@ def modifier_synthese(
     return synthese_lue(session, synthese)
 
 
-async def _rediger_a_nouveau(session: Session, synthese: SyntheseAffaire, user, complement):
+async def _proposer(session: Session, synthese: SyntheseAffaire, user, complement):
+    """Une rédaction PROPOSÉE — le texte relu reste en place jusqu'à « Appliquer »."""
     resultat = await produire(session, synthese, auteur_id=user.id, complement=complement)
     if not resultat.redigee:
         raise HTTPException(502, resultat.motif or "L'assistant n'a pas rendu de synthèse")
+    tentative = session.get(TentativeSynthese, resultat.tentative_id)
     session.refresh(synthese)
-    return synthese_lue(session, synthese)
+    return PropositionSynthese(
+        tentative_id=tentative.id,
+        synthese=tentative.synthese or "",
+        difficultes=tentative.difficultes or "",
+        amelioration=tentative.amelioration or "",
+        prompt_complement=tentative.prompt_complement,
+        actuelle=synthese_lue(session, synthese),
+    )
 
 
-@router.post("/{ticket_id}/synthese/relancer", response_model=SyntheseLue)
+@router.post("/{ticket_id}/synthese/relancer", response_model=PropositionSynthese)
 @limiter.limit(LIMITE_APPEL_FACTURE)
 async def relancer_synthese(
     request: Request,
@@ -124,10 +151,10 @@ async def relancer_synthese(
     synthese = _brouillon(
         session, exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     )
-    return await _rediger_a_nouveau(session, synthese, user, body.prompt_complement)
+    return await _proposer(session, synthese, user, body.prompt_complement)
 
 
-@router.post("/{ticket_id}/synthese/recommencer", response_model=SyntheseLue)
+@router.post("/{ticket_id}/synthese/recommencer", response_model=PropositionSynthese)
 @limiter.limit(LIMITE_APPEL_FACTURE)
 async def recommencer_synthese(
     request: Request,
@@ -135,12 +162,37 @@ async def recommencer_synthese(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    """Arbitré : « Recommencer » efface le prompt complémentaire ; l'historique reste."""
+    """Arbitré : « Recommencer » propose sans complément — l'appliquer l'efface ;
+    l'historique des tentatives reste."""
     _exiger_conseil(user)
     synthese = _brouillon(
         session, exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     )
-    return await _rediger_a_nouveau(session, synthese, user, None)
+    return await _proposer(session, synthese, user, None)
+
+
+@router.post(
+    "/{ticket_id}/synthese/propositions/{tentative_id}/appliquer", response_model=SyntheseLue
+)
+def appliquer_proposition(
+    ticket_id: int,
+    tentative_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """« Appliquer » : la rédaction proposée par une relance remplace le texte."""
+    _exiger_conseil(user)
+    synthese = _brouillon(
+        session, exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
+    )
+    tentative = ou_404(
+        session, TentativeSynthese, tentative_id, "Proposition", sous={"synthese_id": synthese.id}
+    )
+    if not (tentative.synthese or "").strip():
+        raise HTTPException(409, "Cette tentative n'a pas rendu de rédaction")
+    appliquer_tentative(session, synthese, tentative)
+    session.refresh(synthese)
+    return synthese_lue(session, synthese)
 
 
 @router.post("/{ticket_id}/synthese/valider", response_model=SyntheseLue)

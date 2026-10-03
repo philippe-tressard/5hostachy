@@ -158,3 +158,19 @@ def test_la_moyenne_est_masquee_sous_trois_affaires():
         "relances": 1.0,
         "suites": 5.0,
     }
+
+
+def test_la_frise_et_la_chronologie_partent_du_meme_etat():
+    """Relevé à l'écran le 03/10/2026 : la frise disait « Chez le syndic 6 j »,
+    la chronologie partait de « Ouvert ». Une étape non tracée avant la première
+    transition : les deux graphiques la lisent de la même source."""
+    fil = [
+        Fait(_t(13), "etat", "en_cours", "chez_prestataire"),
+        Fait(_t(14), "etat", "chez_prestataire", "résolu"),
+    ]
+    met = calculer(cree_le=_t(5), cloture_le=_t(14), issue="résolu", faits=fil)
+    assert met["etapes"][0]["statut"] == "en_cours"
+    assert met["chronologie"][0] == met["chronologie"][0] | {
+        "type": "creation",
+        "statut": "en_cours",
+    }
