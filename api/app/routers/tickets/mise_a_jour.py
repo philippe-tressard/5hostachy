@@ -435,8 +435,13 @@ def update_ticket(
     if body.partager_whatsapp and is_cs_admin and not reservee_au_conseil(ticket):
         _partager_sur_le_groupe(session, ticket, background_tasks)
 
-    if (ticket.destinataire_syndic and not syndic_avant) or (
-        ticket.destinataire_cs and not cs_avant
+    #  La copie à l'auteur est un ACTE, comme WhatsApp : la case revient décochée,
+    #  rien à comparer à un état antérieur (03/10/2026).
+    copie_auteur = bool(getattr(body, "envoyer_auteur", False))
+    if (
+        (ticket.destinataire_syndic and not syndic_avant)
+        or (ticket.destinataire_cs and not cs_avant)
+        or copie_auteur
     ):
         envoyer_email_syndic_cs(
             ticket,
@@ -446,6 +451,7 @@ def update_ticket(
             syndic=ticket.destinataire_syndic and not syndic_avant,
             cs=ticket.destinataire_cs and not cs_avant,
             pieces_jointes=chemins_locaux(pieces_du_ticket(ticket)),
+            auteur=copie_auteur,
         )
 
     return ticket_read(ticket, session, user)

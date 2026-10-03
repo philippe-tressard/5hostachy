@@ -68,24 +68,39 @@ _FIL_EVOLUTIONS = (
     "{% endif %}"
 )
 
-MODELES = [
-    (
-        "publication_syndic",
-        "Publication transmise au syndic",
+
+def _modele_publication_transmise(
+    code: str,
+    nom: str,
+    objet: str,
+    titre_creation: str,
+    phrase_creation: str,
+    phrase_commentaire: str,
+) -> tuple:
+    """Une publication (ou son commentaire) adressée par courriel : `publication_syndic` et sa copie à l'auteur.
+
+    Même corps, mêmes variables — seuls l'objet, le titre et les deux phrases changent
+    (`publication_copie_auteur`, 03/10/2026 : la copie cochée SEULE).
+    """
+    return (
+        code,
+        nom,
         #  Mêmes deux règles que `ticket_syndic`, où elles sont expliquées. Ici la
         #  branche « commentaire » nommait déjà la publication ; c'est celle de la
         #  création qui annonçait « Nouvelle publication » sans dire laquelle.
-        "{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}",
+        objet,
         titre(
-            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}📢 Publication du conseil syndical{% endif %}"
+            "{% if is_commentaire %}💬 Nouveau commentaire{% else %}"
+            + titre_creation
+            + "{% endif %}"
         )
         + '<p style="margin:0 0 16px">'
-        "{% if is_commentaire %}"
-        "Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
-        "{% else %}"
-        "Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}."
-        "{% endif %}"
-        "</p>"
+        + "{% if is_commentaire %}"
+        + phrase_commentaire
+        + "{% else %}"
+        + phrase_creation
+        + "{% endif %}"
+        + "</p>"
         #  ⚠️ Pas de périmètre ici : `PublicationEvolution` n'en porte AUCUN, là où
         #  `TicketEvolution` a `perimetre_cible`. Ce n'est pas une divergence entre
         #  deux copies — c'est une différence de modèle, et le paramètre absent la
@@ -102,6 +117,27 @@ MODELES = [
             marge=MARGE_BOUTON_SELON_COMMENTAIRE,
         ),
         True,
+    )
+
+
+MODELES = [
+    _modele_publication_transmise(
+        "publication_syndic",
+        "Publication transmise au syndic",
+        "{% if is_commentaire %}{{ prefixe_copro }}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}{{ prefixe_copro }}Nouvelle publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}",
+        "📢 Publication du conseil syndical",
+        "Une publication a été transmise à votre attention par le conseil syndical de <strong>{{ residence.nom }}</strong>{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.",
+        "Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> par {{ auteur.affiche }}{% if reference_copro %} — réf. {{ reference_copro }}{% endif %}.",
+    ),
+    #  La copie de l'auteur cochée SEULE : pas de référence de copropriété, le
+    #  message ne va pas au syndic.
+    _modele_publication_transmise(
+        "publication_copie_auteur",
+        "Copie de votre publication",
+        "{% if is_commentaire %}💬 Commentaire sur «\xa0{{ publication.titre }}\xa0»{% else %}Copie de votre publication — {{ publication.titre }}{% endif %} — {{ residence.nom }}",
+        "📢 Copie de votre publication",
+        "Voici une copie de la publication <strong>{{ publication.titre }}</strong> qui vous concerne, publiée sur le site de <strong>{{ residence.nom }}</strong>.",
+        "Un nouveau commentaire a été ajouté sur la publication <strong>{{ publication.titre }}</strong> qui vous concerne, par {{ auteur.affiche }}.",
     ),
     (
         "publication_externe",

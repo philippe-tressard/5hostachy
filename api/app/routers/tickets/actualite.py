@@ -241,11 +241,18 @@ def _ecrire_au_syndic_et_au_cs(
     commentaire: Optional[str],
     fichiers_urls: Optional[list[str]],
 ) -> None:
-    from app.utils.copie_auteur import copie_demandee
+    from app.utils.copie_auteur import destinataires_et_copie
     from app.utils.destinataires import destinataires_syndic_cs
     from app.utils.email import send_email_group
 
-    destinataires = destinataires_syndic_cs(session, syndic=syndic, cs=cs)
+    destinataires, bcc, seule = destinataires_et_copie(
+        session,
+        ticket,
+        destinataires_syndic_cs(session, syndic=syndic, cs=cs),
+        demandee=auteur,
+    )
+    #  Cochée SEULE, la copie a son gabarit (03/10/2026).
+    code = "publication_copie_auteur" if seule else "publication_syndic"
     if not destinataires:
         return
     ctx, pieces = contexte_actualite(
@@ -257,11 +264,11 @@ def _ecrire_au_syndic_et_au_cs(
     )
     background_tasks.add_task(
         send_email_group,
-        code="publication_syndic",
+        code=code,
         to_recipients=destinataires,
         context=ctx,
         session=session,
-        bcc=copie_demandee(session, ticket, (email for _, email in destinataires), demandee=auteur),
+        bcc=bcc,
         attachments=pieces or None,
         #  La préférence « mes bâtiments » se décide sur ce que l'actualité vise.
         batiments_concernes=batiments_cibles(parse_json_perimetres(ticket.perimetre_cible)),
@@ -357,7 +364,7 @@ def diffuser_actualite(
         return
     if whatsapp:
         _partager_sur_le_groupe(session, ticket, background_tasks, commentaire=commentaire)
-    if syndic or cs:
+    if syndic or cs or auteur:
         _ecrire_au_syndic_et_au_cs(
             session,
             ticket,

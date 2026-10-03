@@ -384,7 +384,7 @@ def add_evolution(
                     lien=suite.lien,
                 )
 
-        if body.envoyer_syndic or body.envoyer_cs:
+        if body.envoyer_syndic or body.envoyer_cs or getattr(body, "envoyer_auteur", False):
             envoyer_email_syndic_cs(
                 ticket,
                 user,
