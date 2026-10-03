@@ -131,6 +131,18 @@ EXIGENCES = [
         ("utils/mesures_affichage.py", "def enregistrer_mesure"),
         ("durées d'affichage",),
     ),
+    (
+        #  #1585 : une boîte hébergée chez un tiers, relevée par l'application.
+        "la relève d'une boîte de réception chez un service de messagerie",
+        ("utils/courriel_boite.py", "imaplib"),
+        ("réception des courriels",),
+    ),
+    (
+        #  #1580 : l'identifiant du compte dans chaque ligne du journal de sécurité.
+        "le journal de sécurité",
+        ("utils/journal_securite.py", "def journaliser_securite"),
+        ("journal de sécurité",),
+    ),
 ]
 
 
@@ -274,3 +286,24 @@ def test_la_duree_annoncee_des_courriels_est_celle_que_le_code_applique():
     )
     assert CONSERVATION_COURRIELS in politique
     assert "Aucune purge automatique" not in politique
+
+
+_NOMBRES = {"deux": 2, "trois": 3, "quatre": 4, "cinq": 5, "six": 6, "sept": 7}
+
+
+def test_le_nombre_de_services_tiers_annonce_est_celui_de_la_liste():
+    """🔴 #1585 : « Trois fonctions » devant une liste de quatre.
+
+    La politique comptait ses services tiers en toutes lettres ; le code en a
+    gagné un sans que le mot bouge. Le mot se compare au nombre d'éléments.
+    """
+    from app.seed.contenus_legaux import DEFAULT_LEGAL
+
+    brut = DEFAULT_LEGAL["politique_confidentialite"]
+    m = re.search(r"Services tiers qui reçoivent des données\.</strong>\s+(\w+) fonctions", brut)
+    assert m, "l'intitulé « Services tiers… N fonctions » n'est plus dans la politique"
+    liste = brut[m.end() :].split("<ul>", 1)[1].split("</ul>", 1)[0]
+    annonce = _NOMBRES[m.group(1).lower()]
+    assert liste.count("<li>") == annonce, (
+        f"la politique annonce {annonce} fonctions tierces et en liste {liste.count('<li>')}"
+    )
