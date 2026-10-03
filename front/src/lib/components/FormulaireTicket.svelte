@@ -133,6 +133,11 @@
 	//  décoché → coché envoie, et c'est le serveur qui le décide (14/08/2026).
 	let destinataireSyndic = ticket?.destinataire_syndic ?? false;
 	let destinataireCs = ticket?.destinataire_cs ?? false;
+	//  🔴 Une AFFAIRE neuve est adressée au conseil par défaut (03/10/2026) : le courriel
+	//  « Nouvelle affaire » ne part plus de lui-même quand le conseil diffuse, la case
+	//  décide — décochée, rien ne lui est envoyé. Une actualité, c'est le conseil qui la
+	//  publie : elle repart décochée. En correction, la valeur enregistrée fait foi.
+	$: if (!modeEdition) destinataireCs = !actualite;
 	let envoyerAuteur = false;
 	//  Un ACTE, pas une colonne : la case repart décochée à chaque ouverture.
 	let partagerWhatsapp = false;

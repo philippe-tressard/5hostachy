@@ -52,8 +52,15 @@ def _notifier_cs_creation(
     auteur: Optional[Utilisateur] = None,
     background_tasks: Optional[BackgroundTasks] = None,
     deja_servies: Optional[set[str]] = None,
+    par_courriel: bool = True,
 ) -> None:
     """Prévient le conseil syndical d’un nouveau ticket — in-app ET par courriel.
+
+    🔴 `par_courriel=False` : l’auteur est du conseil et DIFFUSE lui-même — la case
+    « Conseil syndical » de sa Diffusion décide du courriel (`ticket_syndic`), pas
+    cette notification (03/10/2026, signalé à l’écran : *« si CS n’est pas
+    sélectionné, il ne doit pas envoyer au CS »*). Un résident n’a pas cette case :
+    pour lui le conseil est toujours prévenu. La cloche, elle, reste posée.
 
     🔴 **Le courriel manquait** (08/09/2026, vérification demandée à l’écran).
     Cette fonction ne posait qu’une `Notification`, et sa docstring le disait en
@@ -92,7 +99,7 @@ def _notifier_cs_creation(
             urgente=urgence,
         )
 
-    if background_tasks is None or auteur is None:
+    if background_tasks is None or auteur is None or not par_courriel:
         #  Sans tâche de fond, il n’y a pas d’envoi possible : le dire plutôt que
         #  de laisser croire que le courriel est parti.
         return
