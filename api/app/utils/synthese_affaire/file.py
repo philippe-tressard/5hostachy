@@ -12,8 +12,6 @@ tâche permanente déclarée dans `TACHES_PERMANENTES`.
 ## Ce qui inscrit une demande
 
 - l'affaire **passe** en résolu ou annulé (et contribue au carnet) ;
-- l'équipement est **posé** sur une affaire déjà close — elle entre alors au
-  carnet, et en file à ce moment (arbitré) ;
 - jamais une simple correction d'une affaire close : une affaire close avant la
   mise en service ne se produit que par le bouton « Produire la synthèse ».
 
@@ -50,15 +48,15 @@ def inscrire_si_eligible(
     ticket: Ticket,
     *,
     statut_avant: object,
-    equipement_avant: Optional[str],
 ) -> Optional[SyntheseAffaire]:
-    """Inscrit une demande si l'affaire vient d'entrer au carnet close. N'écrit
-    que dans la session de l'appelant, qui valide."""
+    """Inscrit une demande si l'affaire du carnet vient d'être close. N'écrit
+    que dans la session de l'appelant, qui valide.
+
+    L'équipement n'y entre plus (v2.99.2) : il ne décide pas de l'éligibilité,
+    le poser après la clôture ne change donc rien à la file."""
     if not peut_etre_produite(ticket):
         return None
-    vient_de_clore = valeur(statut_avant) not in STATUTS_TICKET_CLOS
-    equipement_pose = not equipement_avant and bool(ticket.equipement)
-    if not (vient_de_clore or equipement_pose):
+    if valeur(statut_avant) in STATUTS_TICKET_CLOS:
         return None
     deja = session.exec(
         select(SyntheseAffaire).where(

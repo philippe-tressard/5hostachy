@@ -95,15 +95,17 @@ def est_du_bati(categorie) -> bool:
 
 
 def contribue_au_carnet(ticket) -> bool:
-    """L'affaire contribue-t-elle au carnet d'entretien ? — catégorie du bâti ET
-    équipement désigné par le conseil (#1097).
+    """L'affaire contribue-t-elle au carnet d'entretien ? — sa catégorie parle du bâti.
 
     C'est la règle d'éligibilité de la synthèse d'une affaire close (#1643,
-    arbitré : « uniquement les affaires du carnet ») : une affaire sans
-    équipement y figure sous « Sans équipement rattaché » tant que le conseil
-    ne l'a pas rangée — la poser plus tard la fait entrer en file à ce moment.
+    arbitré : « uniquement les affaires du carnet »). L'équipement n'y entre
+    PAS : le carnet range une affaire sans équipement sous « Sans équipement
+    rattaché » (revirement du 24/09/2026) — elle y figure, donc elle est
+    éligible. v2.99.0 exigeait l'équipement, comme le disait le ticket, et
+    l'utilisateur l'a relevé à l'écran : « pourquoi faut-il un équipement
+    puisqu'il est dans le carnet d'entretien ? » (03/10/2026).
     """
-    return est_du_bati(ticket.categorie) and bool(ticket.equipement)
+    return est_du_bati(ticket.categorie)
 
 
 @dataclass

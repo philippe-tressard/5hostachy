@@ -102,7 +102,7 @@ def _vieillir(session, demande):
 
 
 def _produite(session, ticket):
-    demande = inscrire_si_eligible(session, ticket, statut_avant="en_cours", equipement_avant=None)
+    demande = inscrire_si_eligible(session, ticket, statut_avant="en_cours")
     session.commit()
     _vieillir(session, demande)
     traiter_file(session)
@@ -113,31 +113,28 @@ def _produite(session, ticket):
 def test_une_cloture_du_carnet_inscrit_une_seule_demande(session):
     resident, _ = _personnes(session)
     ticket = _close(session, resident)
-    assert inscrire_si_eligible(session, ticket, statut_avant="en_cours", equipement_avant=None)
+    assert inscrire_si_eligible(session, ticket, statut_avant="en_cours")
     session.commit()
-    assert not inscrire_si_eligible(session, ticket, statut_avant="ouvert", equipement_avant=None)
+    assert not inscrire_si_eligible(session, ticket, statut_avant="ouvert")
     #  Une simple correction d'une affaire déjà close n'inscrit rien.
     autre = _close(session, resident, n=2)
-    assert not inscrire_si_eligible(
-        session, autre, statut_avant="résolu", equipement_avant="ascenseur"
-    )
+    assert not inscrire_si_eligible(session, autre, statut_avant="résolu")
 
 
-def test_hors_carnet_aucune_demande_puis_l_equipement_la_fait_entrer(session):
+def test_hors_carnet_aucune_demande_et_l_equipement_n_est_pas_exige(session):
+    """L'éligibilité est celle du carnet : la catégorie du bâti, avec ou sans
+    équipement — le carnet range l'affaire sous « Sans équipement rattaché »
+    (signalé à l'écran le 03/10/2026, v2.99.2)."""
     resident, _ = _personnes(session)
     question = _close(session, resident, categorie="question", equipement=None)
-    assert not inscrire_si_eligible(session, question, statut_avant="ouvert", equipement_avant=None)
+    assert not inscrire_si_eligible(session, question, statut_avant="ouvert")
     sans = _close(session, resident, equipement=None, n=2)
-    assert not inscrire_si_eligible(session, sans, statut_avant="ouvert", equipement_avant=None)
-    sans.equipement = "plomberie"
-    assert inscrire_si_eligible(session, sans, statut_avant="résolu", equipement_avant=None)
+    assert inscrire_si_eligible(session, sans, statut_avant="en_cours")
 
 
 def test_la_file_attend_le_delai_de_grace(session, envois):
     resident, _ = _personnes(session)
-    demande = inscrire_si_eligible(
-        session, _close(session, resident), statut_avant="en_cours", equipement_avant=None
-    )
+    demande = inscrire_si_eligible(session, _close(session, resident), statut_avant="en_cours")
     session.commit()
     assert traiter_file(session)["produites"] == 0
     _vieillir(session, demande)
@@ -220,7 +217,7 @@ def test_une_nouvelle_cloture_remplace_la_synthese_validee(session, envois, assi
 def test_une_demande_perimee_est_annulee(session, envois):
     resident, _ = _personnes(session)
     ticket = _close(session, resident)
-    demande = inscrire_si_eligible(session, ticket, statut_avant="en_cours", equipement_avant=None)
+    demande = inscrire_si_eligible(session, ticket, statut_avant="en_cours")
     ticket.statut = "en_cours"  # rouverte pendant le délai de grâce
     session.add(ticket)
     session.commit()
