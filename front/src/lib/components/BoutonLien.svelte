@@ -88,9 +88,14 @@
 	function suspendre() {
 		clearTimeout(minuterie);
 	}
+	/*  🔴 `composedPath()`, pas `e.target.contains` (03/10/2026) : « L'envoyer par
+	    courriel » est REMPLACÉ par le champ au clic, donc le bouton a quitté le DOM
+	    quand l'événement atteint la fenêtre — `zone.contains(cible)` rendait faux, et
+	    la bulle se fermait avant que le champ ne se voie. Le chemin est fixé au
+	    départ de l'événement. 🔒 `e2e/partage-courriel-champ.spec.ts`. */
 	function clicDehors(e: MouseEvent) {
-		const cible = e.target as Node;
-		if (bulle && !zone?.contains(cible) && !bouton.contains(cible)) fermer();
+		const chemin = e.composedPath();
+		if (bulle && !chemin.includes(zone) && !chemin.includes(bouton)) fermer();
 	}
 
 	/** « Lien copié » — et, pour ce qui se transmet, la proposition de l'envoyer. */
