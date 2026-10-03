@@ -22,6 +22,10 @@
 	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
+	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
+	import ErreursNavigateur from '$lib/components/ErreursNavigateur.svelte';
+	import DureesAffichage from '$lib/components/DureesAffichage.svelte';
+	import QuiVient from '$lib/components/QuiVient.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
@@ -37,6 +41,9 @@
 	 *   pour mot, sur le seul écran qui sert à savoir si le site est lu. */
 	let telemetryErreur = '';
 	let tlScope: 'jour' | 'mois' | 'annee' = 'jour';
+	/** Ce que couvrent les panneaux tirés du détail (erreurs, durées) : le jour
+	 *  même, sinon leurs 30 jours de conservation — l'année n'en a pas plus. */
+	$: periodeDetail = tlScope === 'jour' ? 'aujourd’hui' : '30 derniers jours';
 
 	export async function loadTelemetry() {
 		telemetryLoading = true;
@@ -192,40 +199,12 @@
 			</div>
 		{/if}
 
-		<!--  Erreurs vues par les résidents (#1631) — avant le graphe : un écran qui
-		      casse compte plus qu'une courbe de fréquentation. La clé (page, code) est
-		      unique : le serveur les regroupe par ce couple. -->
-		<div class="card tl-panneau">
-			<h3 class="tl-section-title">
-				⚠️ Erreurs vues par les résidents
-				<span class="tl-periode">{tlScope === 'jour' ? 'aujourd’hui' : '30 derniers jours'}</span>
-			</h3>
-			{#if telemetryData.erreurs?.length}
-				<table class="table">
-					<thead>
-						<tr><th>Page et erreur</th><th class="tl-nombre">Onglets</th><th>Dernière</th></tr>
-					</thead>
-					<tbody>
-						{#each telemetryData.erreurs as e (`${e.page}|${e.code}`)}
-							<tr>
-								<td>
-									<code>{e.page}</code>
-									<span class="tl-code">{e.code}</span>
-								</td>
-								<td class="tl-nombre">{e.total}</td>
-								<td class="tl-discret">{fmt(e.derniere_le)}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{:else}
-				<p class="tl-note">✅ Aucune erreur signalée sur la période.</p>
-			{/if}
-			<p class="tl-note">
-				Chaque onglet ouvert signale une même erreur une seule fois. Les comptes qui ont refusé la
-				mesure d’audience n’envoient rien. Conservation : 30 jours.
-			</p>
-		</div>
+		<!--  Erreurs (#1631), puis qui vient (#1628) et ce qu'il attend (#1632) —
+		      avant le graphe : un écran qui casse ou qui traîne compte plus qu'une
+		      courbe de fréquentation. -->
+		<ErreursNavigateur erreurs={telemetryData.erreurs} periode={periodeDetail} />
+		<QuiVient adoption={telemetryData.adoption} />
+		<DureesAffichage durees={telemetryData.performance} periode={periodeDetail} />
 
 		<!-- Graphe (barres CSS) — adaptatif au scope -->
 		{#if telemetryData.chart.length > 0}
@@ -239,8 +218,7 @@
 					) * (maxVal < 10 ? 1 : maxVal < 50 ? 5 : maxVal < 200 ? 10 : maxVal < 1000 ? 50 : 100);
 				return [4, 3, 2, 1, 0].map((i) => i * step);
 			})()}
-			<div class="card" style="margin-top:1.25rem">
-				<h3 class="tl-section-title">📈 {telemetryData.chart_label}</h3>
+			<PanneauTelemetrie titre="📈 {telemetryData.chart_label}">
 				<div class="tl-chart-wrap">
 					<div class="tl-y-axis">
 						<!--  🔴 `tick` est une clé SÛRE, et ça se démontre plutôt que ça ne se
@@ -280,7 +258,7 @@
 						</div>
 					</div>
 				</div>
-			</div>
+			</PanneauTelemetrie>
 		{/if}
 
 		<!-- Top pages — tableau et total extraits en composant (#total des vues) -->
@@ -291,38 +269,39 @@
 
 		<!-- Utilisateurs les plus actifs (scope jour et mois) -->
 		{#if telemetryData.top_users && telemetryData.top_users.length > 0}
-			<div class="card" style="margin-top:1.25rem">
-				<h3 class="tl-section-title">👥 Utilisateurs les plus actifs</h3>
-				<table class="table">
-					<thead
-						><tr
-							><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right"
-								>Vues</th
-							><th style="text-align:right">Pages diff.</th><th style="text-align:right"
-								>Dernière connexion</th
-							></tr
-						></thead
-					>
-					<tbody>
-						{#each telemetryData.top_users as u (u.nom)}
-							<tr>
-								<td style="font-size:var(--fs-md)">{u.nom}</td>
-								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-									>{u.statut ?? '—'}</td
-								>
-								<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-									>{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td
-								>
-								<td style="text-align:right;font-weight:600">{u.total}</td>
-								<td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
-								<td style="text-align:right;font-size:var(--fs-md);color:var(--color-text-muted)"
-									>{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td
-								>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<PanneauTelemetrie titre="🏅 Utilisateurs les plus actifs">
+				<div class="table-wrap">
+					<table class="table">
+						<thead
+							><tr
+								><th>Utilisateur</th><th>Type</th><th>Bâtiment</th><th style="text-align:right"
+									>Vues</th
+								><th style="text-align:right">Pages diff.</th><th style="text-align:right"
+									>Dernière connexion</th
+								></tr
+							></thead
+						>
+						<tbody>
+							{#each telemetryData.top_users as u (u.nom)}
+								<tr>
+									<td style="font-size:var(--fs-md)">{u.nom}</td>
+									<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+										>{u.statut ?? '—'}</td
+									>
+									<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+										>{u.batiment_id ? `Bât. ${u.batiment_id}` : '—'}</td
+									>
+									<td style="text-align:right;font-weight:600">{u.total}</td>
+									<td style="text-align:right;color:var(--color-text-muted)">{u.pages}</td>
+									<td style="text-align:right;font-size:var(--fs-md);color:var(--color-text-muted)"
+										>{u.derniere_connexion ? fmt(u.derniere_connexion) : '—'}</td
+									>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</PanneauTelemetrie>
 		{/if}
 	</EtatListe>
 </section>
@@ -368,43 +347,6 @@
 		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin-top: 0.3rem;
-	}
-	.tl-section-title {
-		font-size: var(--fs-lg);
-		font-weight: 600;
-		margin: 0 0 0.75rem;
-		padding: 0.75rem 1rem 0;
-	}
-	/*  Le panneau des erreurs (#1631). Au téléphone, un code long fait défiler
-	    la CARTE, pas la page : c'est la règle des tableaux (`normes.css`,
-	    cellules sans retour à la ligne, carte en `overflow-x: auto`). */
-	.tl-panneau {
-		margin-top: 1.25rem;
-	}
-	.tl-periode {
-		font-size: var(--fs-sm);
-		font-weight: 400;
-		color: var(--color-text-muted);
-		margin-left: 0.4rem;
-	}
-	.tl-code {
-		display: block;
-		margin-top: 0.2rem;
-		font-size: var(--fs-sm);
-		color: var(--color-danger);
-	}
-	.tl-nombre {
-		text-align: right;
-		font-weight: 600;
-	}
-	.tl-discret {
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-	}
-	.tl-note {
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-		margin: 0.5rem 1rem 0.75rem;
 	}
 	.tl-chart-wrap {
 		display: flex;

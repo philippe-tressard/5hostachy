@@ -53,7 +53,7 @@ import { fileURLToPath } from 'node:url';
  *  Puis 416 : `LegalEditor` fondu dans `RichEditor` — son espaceur
  *  `style="flex:1"` part avec lui (#1539).
  */
-const PLAFOND = 415;
+const PLAFOND = 411;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

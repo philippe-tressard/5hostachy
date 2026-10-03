@@ -27,10 +27,11 @@ base : plafond par minute ET par jour (`LIMITE_COLLECTE_AUDIENCE`), lot borné e
 nombre, champs bornés en taille — refusés en bloc (422), pas tronqués : le
 client du site n'envoie rien de tel, une charge hors norme vient d'ailleurs.
 
-## Les erreurs vues dans le navigateur passent par ici (#1631)
+## Les erreurs et les durées d'affichage passent par ici (#1631, #1632)
 
-Même route, même plafond, même refus du profil — mais un compteur à part
-(`utils/erreurs_navigateur`), sans identifiant de compte.
+Même route, même plafond, même refus du profil — mais chacune dans sa table
+(`TRAITEMENTS_A_PART`), sans identifiant de compte : dans `telemetry_event`,
+le tableau de bord les compterait comme des pages vues.
 """
 
 from fastapi import APIRouter, Depends, Request
@@ -42,9 +43,17 @@ from app.database import get_session
 from app.models.core import TelemetryEvent, Utilisateur
 from app.utils import horloge
 from app.utils.erreurs_navigateur import ACTION_ERREUR, enregistrer_erreur
+from app.utils.mesures_affichage import ACTION_MESURE, enregistrer_mesure
 from app.utils.limiter import LIMITE_COLLECTE_AUDIENCE, limiter
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
+
+#: Les actions qui ne sont PAS des pages vues, et qui les écrit — chacune sans
+#: identifiant de compte, avec la même signature `(session, page, detail, instant)`.
+TRAITEMENTS_A_PART = {
+    ACTION_ERREUR: enregistrer_erreur,
+    ACTION_MESURE: enregistrer_mesure,
+}
 
 #: Le client vide sa file toutes les 30 secondes, et dès qu'elle atteint ce
 #: nombre (`front/src/lib/telemetry.ts`, `EVENEMENTS_PAR_LOT`) : un lot plus
@@ -77,10 +86,9 @@ def collect(
     user_id = user.id if user else None
     now = horloge.maintenant()
     for ev in body.events:
-        #  Un signalement d'erreur est COMPTÉ à part, sans compte (#1631) :
-        #  dans `telemetry_event`, il passerait pour une page vue.
-        if ev.action == ACTION_ERREUR:
-            enregistrer_erreur(session, ev.page, ev.detail, now)
+        traitement = TRAITEMENTS_A_PART.get(ev.action)
+        if traitement is not None:
+            traitement(session, ev.page, ev.detail, now)
             continue
         session.add(
             TelemetryEvent(

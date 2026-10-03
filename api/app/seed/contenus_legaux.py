@@ -106,6 +106,15 @@ TELEMETRIE_ERREURS = (
     "et conservés 30\xa0jours. Ils servent à corriger les pannes que personne ne signale. "
     "Votre refus de la mesure d'audience les coupe aussi.</li>"
 )
+#: Les durées d'affichage des écrans (#1632) : par page, SANS rattachement au
+#: compte (`utils/mesures_affichage`). Écrite une fois : le gabarit et la
+#: migration 0252, qui l'insère dans le texte servi, la lisent ici.
+TELEMETRIE_PERFORMANCE = (
+    "<li><strong>Durées d'affichage des écrans\xa0:</strong> le temps d'ouverture du site et "
+    "de passage d'un écran à l'autre, par page, mesurés dans votre navigateur "
+    "<strong>sans rattachement à votre compte</strong> et conservés 30\xa0jours. Elles servent "
+    "à savoir quels écrans sont lents. Votre refus de la mesure d'audience les coupe aussi.</li>"
+)
 TELEMETRIE_BASE_LEGALE = (
     "<li><strong>Mesure d'audience interne</strong> — base : intérêt légitime "
     "(art. 6-1-f) à savoir quels écrans servent et à qui ; vous pouvez vous y "
@@ -168,6 +177,7 @@ DEFAULT_LEGAL = {
         "rattachés.</li>"
         + TELEMETRIE_COLLECTE
         + TELEMETRIE_ERREURS
+        + TELEMETRIE_PERFORMANCE
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "
         "base\xa0: intérêt légitime (art.\xa06-1-f).</li><li><strong>Communication résidents/CS</strong> — "

@@ -104,6 +104,20 @@ export function fmtOctets(n: number | null | undefined): string {
 }
 
 /**
+ * Durée en millisecondes, telle qu'un écran la fait attendre (#1632).
+ *
+ * `340` → `340 ms` · `1 250` → `1,3 s` · `12 400` → `12,4 s` · `null` → `—`
+ *
+ * Sous la seconde, les millisecondes entières ; au-delà, une décimale — une
+ * attente se lit en secondes. Le `—` suit `fmtNombre` et `fmtOctets`.
+ */
+export function fmtDuree(ms: number | null | undefined): string {
+	if (ms == null) return '—';
+	if (ms < 999.5) return `${fmtNombre(Math.round(ms))} ms`;
+	return `${UNE_DECIMALE.format(ms / 1000)} s`;
+}
+
+/**
  * Périmètres — la table a disparu d'ici, et de partout ailleurs.
  *
  * `PERIMETRE_LABELS` vivait juste en dessous : sept clés écrites en dur, arrêtées

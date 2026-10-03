@@ -590,6 +590,13 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	padding: 0.75rem;
 	border-bottom: 1px solid var(--color-border);
 }
+/*  Une cellule CHIFFRÉE — en-tête compris : alignée à droite, chiffres de même
+    largeur pour que les colonnes se lisent d'un coup d'œil (03/10/2026, #1628).
+    Les tableaux de télémétrie l'écrivaient en `style="text-align:right"`. */
+.table .nombre {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
 @media (hover: hover) and (pointer: fine) {
 	.table tbody tr:hover {
 		background: var(--color-bg);

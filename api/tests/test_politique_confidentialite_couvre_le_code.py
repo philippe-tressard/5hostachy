@@ -125,6 +125,12 @@ EXIGENCES = [
         ("utils/erreurs_navigateur.py", "def enregistrer_erreur"),
         ("erreurs techniques",),
     ),
+    (
+        #  #1632 : mesurées sans compte, mais dans le navigateur de chacun.
+        "les durées d'affichage mesurées dans le navigateur",
+        ("utils/mesures_affichage.py", "def enregistrer_mesure"),
+        ("durées d'affichage",),
+    ),
 ]
 
 

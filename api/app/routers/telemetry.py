@@ -15,7 +15,9 @@ from sqlmodel import Session, select
 from app.auth.deps import require_admin
 from app.database import get_session
 from app.utils import horloge
+from app.utils.adoption import adoption
 from app.utils.erreurs_navigateur import CONSERVATION_JOURS, synthese_erreurs
+from app.utils.mesures_affichage import synthese_mesures
 from app.utils.noms import nom_affiche
 from app.models.core import (
     TelemetryEvent,
@@ -130,12 +132,12 @@ def _fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
     }
 
 
-def _erreurs(session: Session, scope: str) -> list[dict]:
-    """Les erreurs vues dans le navigateur (#1631) : celles du jour, sinon toute la
-    conservation — l'année n'en a pas davantage, les compteurs ne vivent que
-    `CONSERVATION_JOURS`. L'écran le dit."""
+def _depuis(scope: str):
+    """Le premier jour des erreurs (#1631) et des durées d'affichage (#1632) :
+    celui du jour, sinon toute la conservation — l'année n'en a pas davantage,
+    ces tables ne vivent que `CONSERVATION_JOURS`. L'écran le dit."""
     jours = 0 if scope == "jour" else CONSERVATION_JOURS
-    return synthese_erreurs(session, horloge.aujourd_hui() - timedelta(days=jours))
+    return horloge.aujourd_hui() - timedelta(days=jours)
 
 
 @router.get("/dashboard")
@@ -236,7 +238,9 @@ def dashboard(
             "chart_label": "Vues par heure",
             "top_pages": [{"page": r[0], "total": r[1], "uniques": r[2]} for r in today_stats],
             "top_users": _palmares(user_rows, fiches),
-            "erreurs": _erreurs(session, scope),
+            "erreurs": synthese_erreurs(session, _depuis(scope)),
+            "performance": synthese_mesures(session, _depuis(scope)),
+            "adoption": adoption(session),
         }
 
     elif scope == "mois":
@@ -342,7 +346,9 @@ def dashboard(
             "chart_label": "Vues par jour (30j)",
             "top_pages": sorted(top_pages.values(), key=lambda x: -x["total"]),
             "top_users": _palmares(user_rows, fiches),
-            "erreurs": _erreurs(session, scope),
+            "erreurs": synthese_erreurs(session, _depuis(scope)),
+            "performance": synthese_mesures(session, _depuis(scope)),
+            "adoption": adoption(session),
         }
 
     else:
@@ -422,7 +428,9 @@ def dashboard(
             "chart_label": "Vues par mois (10 ans)",
             "top_pages": sorted(top_pages_all.values(), key=lambda x: -x["total"]),
             "top_users": [],
-            "erreurs": _erreurs(session, scope),
+            "erreurs": synthese_erreurs(session, _depuis(scope)),
+            "performance": synthese_mesures(session, _depuis(scope)),
+            "adoption": adoption(session),
         }
 
 

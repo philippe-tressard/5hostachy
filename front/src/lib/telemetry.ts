@@ -31,6 +31,11 @@ const SIGNALEMENTS_PAR_ONGLET = 10;
 /** Le `max_length` du `detail` côté serveur (`EvenementAudience`) : au-delà, le
  *  lot entier serait refusé, vues comprises. */
 const LONGUEUR_DETAIL = 100;
+/** L'action d'une durée d'affichage (#1632). ⚠️ Tenue à la main, avec la durée
+ *  maximale, avec `ACTION_MESURE` et `DUREE_MAX_MS` de
+ *  `api/app/utils/mesures_affichage.py`. */
+const ACTION_MESURE = 'perf';
+const DUREE_MAX_MS = 60_000;
 
 const buffer: { page: string; action: string; detail?: string }[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -91,10 +96,45 @@ export function codeErreur(e: unknown): string {
 	return (signature ? `${nom}: ${signature}` : nom).slice(0, LONGUEUR_DETAIL);
 }
 
-/** Le code d'une réponse en échec : statut et chemin, identifiants masqués
- *  (`HTTP 502 /tickets/#`) — mille affaires ne font pas mille lignes. */
+/** Un chemin aux identifiants masqués, sans sa requête (`/tickets/#`) — mille
+ *  affaires ne font pas mille lignes. */
+function sansIdentifiants(chemin: string): string {
+	return chemin.split('?')[0].replace(/\d+/g, '#');
+}
+
+/** Le code d'une réponse en échec : statut et chemin (`HTTP 502 /tickets/#`). */
 export function codeHttp(status: number, chemin: string): string {
-	return `HTTP ${status} ${chemin.split('?')[0].replace(/\d+/g, '#')}`.slice(0, LONGUEUR_DETAIL);
+	return `HTTP ${status} ${sansIdentifiants(chemin)}`.slice(0, LONGUEUR_DETAIL);
+}
+
+/** Le début de la navigation en cours — `performance.now()`, ou `null`. */
+let debutNavigation: number | null = null;
+
+/** À appeler par `beforeNavigate` : une navigation commence. */
+export function commencerNavigation() {
+	if (typeof performance !== 'undefined') debutNavigation = performance.now();
+}
+
+/**
+ * **La durée d'affichage d'un écran** (#1632) — à appeler par `afterNavigate`.
+ *
+ * - `enter` (la première page de l'onglet) : `chargement`, de l'ouverture de
+ *   l'onglet à l'application prête — `performance.now()` part de là ;
+ * - toute autre navigation : `navigation`, depuis `commencerNavigation`.
+ *
+ * Mesurée de la même façon dans tous les navigateurs (le LCP n'existe pas sous
+ * Safari). ⚠️ Ni l'une ni l'autre ne compte le temps qu'un écran passe ensuite à
+ * lire ses données : l'écran de télémétrie le dit.
+ */
+export function mesurerNavigation(type: string) {
+	if (typeof window === 'undefined' || typeof performance === 'undefined') return;
+	const indicateur = type === 'enter' ? 'chargement' : 'navigation';
+	const debut = type === 'enter' ? 0 : debutNavigation;
+	debutNavigation = null;
+	if (debut === null) return;
+	const duree = Math.round(performance.now() - debut);
+	if (duree < 0 || duree > DUREE_MAX_MS) return;
+	trackEvent(sansIdentifiants(window.location.pathname), ACTION_MESURE, `${indicateur}:${duree}`);
 }
 
 /** Signale une erreur vue à l'écran — une fois par page et par code, pour cet onglet. */

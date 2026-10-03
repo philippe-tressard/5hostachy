@@ -7,7 +7,13 @@
 	 * lignes — le contrôle de modularité refuse qu'il grossisse. L'étoffer sur
 	 * place aurait été refusé au pré-check ; le découper est ce que la règle
 	 * « au fil de l'eau » demande.
+	 *
+	 * Sa carte et son intitulé passent par `PanneauTelemetrie` depuis le
+	 * 03/10/2026 : `.titre-panneau`, écrit ici, était la copie au caractère près
+	 * de l'intitulé des autres panneaux.
 	 */
+	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
+
 	export let pages: { page: string; total: number; uniques: number }[] = [];
 
 	/** Vues comptées ici mais rattachées à aucun utilisateur (#354).
@@ -27,86 +33,73 @@
 </script>
 
 {#if pages.length > 0}
-	<div class="card" style="margin-top:1.25rem">
-		<h3 class="titre-panneau">&#x1F3C6; Top pages</h3>
-		<table class="table">
-			<thead>
-				<tr>
-					<th>Page</th>
-					<th style="text-align:right">Vues</th>
-					<th style="text-align:right">Utilisateurs</th>
-					<th style="text-align:right">%</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each pages as p (p.page)}
+	<PanneauTelemetrie titre="🏆 Top pages">
+		<div class="table-wrap">
+			<table class="table">
+				<thead>
 					<tr>
-						<td><code style="font-size:var(--fs-md)">{p.page}</code></td>
-						<td style="text-align:right;font-weight:600">{p.total}</td>
-						<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
-						<td style="text-align:right;color:var(--color-text-muted)">
-							{((p.total / diviseur) * 100).toFixed(1)}%
-						</td>
+						<th>Page</th>
+						<th style="text-align:right">Vues</th>
+						<th style="text-align:right">Utilisateurs</th>
+						<th style="text-align:right">%</th>
 					</tr>
-				{/each}
-			</tbody>
-			<tfoot>
-				<tr class="total">
-					<td>Total — {pages.length} page{pages.length > 1 ? 's' : ''}</td>
-					<td style="text-align:right">{totalVues}</td>
-					<td style="text-align:right;color:var(--color-text-muted)">
-						<!--  Additionner la colonne serait FAUX : un même utilisateur compte
+				</thead>
+				<tbody>
+					{#each pages as p (p.page)}
+						<tr>
+							<td><code style="font-size:var(--fs-md)">{p.page}</code></td>
+							<td style="text-align:right;font-weight:600">{p.total}</td>
+							<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
+							<td style="text-align:right;color:var(--color-text-muted)">
+								{((p.total / diviseur) * 100).toFixed(1)}%
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+				<tfoot>
+					<tr class="total">
+						<td>Total — {pages.length} page{pages.length > 1 ? 's' : ''}</td>
+						<td style="text-align:right">{totalVues}</td>
+						<td style="text-align:right;color:var(--color-text-muted)">
+							<!--  Additionner la colonne serait FAUX : un même utilisateur compte
 						      dans chaque page qu'il a vue, et la somme dirait « 17 personnes »
 						      là où il n'y en a qu'une. Le nombre réel d'utilisateurs distincts
 						      est celui de l'indicateur en tête d'écran. -->
-						<span
-							title="La somme des utilisateurs par page compterait plusieurs fois la même personne. Le nombre d'utilisateurs distincts est donné par l'indicateur « Utilisateurs » en haut de cette page."
-							>—</span
-						>
-					</td>
-					<td style="text-align:right;color:var(--color-text-muted)">
-						{totalVues > 0 ? '100.0%' : '—'}
-					</td>
-				</tr>
-			</tfoot>
-		</table>
-		{#if vuesNonAttribuees > 0}
-			<p class="tl-note">
-				Dont <strong>{vuesNonAttribuees}</strong> vue{vuesNonAttribuees > 1 ? 's' : ''}
-				non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees >
-				1
-					? 's'
-					: ''}
-				avant l'ouverture de la session ou après son expiration. C'est ce qui explique l'écart avec le
-				tableau « Utilisateurs les plus actifs ».
+							<span
+								title="La somme des utilisateurs par page compterait plusieurs fois la même personne. Le nombre d'utilisateurs distincts est donné par l'indicateur « Utilisateurs » en haut de cette page."
+								>—</span
+							>
+						</td>
+						<td style="text-align:right;color:var(--color-text-muted)">
+							{totalVues > 0 ? '100.0%' : '—'}
+						</td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+		<svelte:fragment slot="pied">
+			{#if vuesNonAttribuees > 0}
+				<p>
+					Dont <strong>{vuesNonAttribuees}</strong> vue{vuesNonAttribuees > 1 ? 's' : ''}
+					non rattachée{vuesNonAttribuees > 1 ? 's' : ''} à un utilisateur — enregistrée{vuesNonAttribuees >
+					1
+						? 's'
+						: ''}
+					avant l'ouverture de la session ou après son expiration. C'est ce qui explique l'écart avec
+					le tableau « Utilisateurs les plus actifs ».
+				</p>
+			{/if}
+			<p>
+				Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au total du site.
 			</p>
-		{/if}
-		<p class="muted" style="font-size:var(--fs-sm);margin:.5rem 0 0">
-			Les pourcentages se rapportent aux vues des pages listées ci-dessus, pas au total du site.
-		</p>
-	</div>
+		</svelte:fragment>
+	</PanneauTelemetrie>
 {/if}
 
 <style>
-	.tl-note {
-		font-size: var(--fs-sm);
-		color: var(--color-text-muted);
-		line-height: 1.5;
-		margin: 0.6rem 0 0;
-	}
 	tfoot tr.total > td {
 		border-top: 2px solid var(--color-border);
 		font-weight: 700;
 		padding-top: 0.5rem;
-	}
-	/*  L'intitulé d'un panneau de télémétrie. Il s'appelait `.tl-section-title`
-	    et sa règle vivait dans la PAGE : `TopPages` étant un composant à part, il
-	    ne l'a jamais reçue — un composant enfant n'hérite pas d'un style scopé
-	    (#495). Renommé pour ne pas laisser croire qu'il partage une définition. */
-	.titre-panneau {
-		font-size: var(--fs-lg);
-		font-weight: 600;
-		margin: 0 0 0.75rem;
-		padding: 0.75rem 1rem 0;
 	}
 </style>
