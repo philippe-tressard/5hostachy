@@ -31,6 +31,7 @@ from app.utils.fichiers import nom_lisible
 #  La configuration du canal SMTP est un sujet distinct de la composition
 #  d'un message : elle vit dans `app/utils/smtp.py` depuis le 08/08/2026.
 from app.utils.liens import base_site, nom_site
+from app.utils.arrivees_notification import etiqueter_courriel
 from app.seed.emails import expediteur_du_modele
 from app.utils.smtp import (  # noqa: F401  (ré-export : config.py l'importe d'ici)
     _get_smtp_config,
@@ -241,6 +242,9 @@ def composer_email(
         pieces_jointes=[nom_lisible(p) for p in (attachments or [])],
         intention=template.intention,
     )
+    #  L'étiquette d'arrivée (#1634), ici et pas dans les modèles : elle vaut pour
+    #  tous, et l'aperçu la montre. Jamais sur un lien à jeton ni un courriel de compte.
+    html = etiqueter_courriel(html, site_url, template.code)
     return _sujet_sur_une_ligne(_render(template.sujet, ctx)), html
 
 

@@ -33,6 +33,7 @@ from app.models.core import (
 )
 from app.utils import horloge
 from app.utils.adoption import Fenetre, adoption
+from app.utils.arrivees_notification import synthese_arrivees
 from app.utils.erreurs_navigateur import CONSERVATION_JOURS, synthese_erreurs
 from app.utils.gestes_formulaire import synthese_gestes
 from app.utils.mesures_affichage import synthese_mesures
@@ -231,6 +232,7 @@ def communs(session: Session, lecture: Lecture) -> dict:
         "erreurs": synthese_erreurs(session, _depuis_detail(lecture.scope)),
         "performance": synthese_mesures(session, _depuis_detail(lecture.scope)),
         "gestes": synthese_gestes(session, _depuis_detail(lecture.scope)),
+        "arrivees": synthese_arrivees(session, _depuis_detail(lecture.scope), lecture.evenements()),
         "adoption": adoption(session, fenetre, lecture.exclus()) if fenetre else None,
         "retour": retour_comptes(session),
     }

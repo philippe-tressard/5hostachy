@@ -37,6 +37,7 @@
 	import QuiVient from '$lib/components/QuiVient.svelte';
 	import RetourComptes from '$lib/components/RetourComptes.svelte';
 	import GestesAboutis from '$lib/components/GestesAboutis.svelte';
+	import ArriveesNotification from '$lib/components/ArriveesNotification.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
@@ -73,7 +74,8 @@
 
 	//  L'ACCORDÉON : une section dépliée à la fois, l'état tenu ici (cf. OngletIA).
 	//  « frequentation » à l'arrivée : c'est ce qu'on vient lire le plus souvent.
-	type Section = 'frequentation' | 'erreurs' | 'qui-vient' | 'retour' | 'gestes' | 'durees';
+	type Section =
+		'frequentation' | 'erreurs' | 'qui-vient' | 'retour' | 'gestes' | 'arrivees' | 'durees';
 	let sectionOuverte: Section | null = 'frequentation';
 	function basculerSection(code: Section, ouvert: boolean) {
 		if (ouvert) sectionOuverte = code;
@@ -156,8 +158,8 @@
 	{#if filtre === 'sans' && telemetryData}
 		<p class="aide">
 			Les vues du gestionnaire du site sont écartées des indicateurs, du graphe, des pages, des
-			utilisateurs et de « Qui vient ». Les erreurs et les durées d’affichage, sans compte, ne
-			changent pas.
+			utilisateurs, de « Qui vient » et des arrivées par notification. Les erreurs, les gestes et
+			les durées d’affichage, sans compte, ne changent pas.
 			{#if telemetryData.filtre_gestionnaire.non_distingue_jusqu_au}
 				Jusqu’au {fmtDate(telemetryData.filtre_gestionnaire.non_distingue_jusqu_au)}, les agrégats
 				ne distinguaient pas le gestionnaire : ses vues y restent comptées.
@@ -202,6 +204,12 @@
 				periode={periodeDetail}
 				ouvert={sectionOuverte === 'gestes'}
 				on:basculer={(e) => basculerSection('gestes', e.detail)}
+			/>
+			<ArriveesNotification
+				arrivees={telemetryData.arrivees}
+				periode={periodeDetail}
+				ouvert={sectionOuverte === 'arrivees'}
+				on:basculer={(e) => basculerSection('arrivees', e.detail)}
 			/>
 			<DureesAffichage
 				durees={telemetryData.performance}

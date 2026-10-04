@@ -172,6 +172,18 @@ TELEMETRIE_PERFORMANCE = (
     "<strong>sans rattachement à votre compte</strong> et conservés 30\xa0jours. Elles servent "
     "à savoir quels écrans sont lents. Votre refus de la mesure d'audience les coupe aussi.</li>"
 )
+#: Les arrivées par notification (#1634) : le canal (et le modèle d'un courriel)
+#: lu dans le lien, joint à la vue de page — donc RATTACHÉ AU COMPTE comme elle.
+#: Écrite une fois : le gabarit et la migration 0262, qui l'insère juste après
+#: `TELEMETRIE_PERFORMANCE` dans le texte servi, la lisent ici.
+TELEMETRIE_ARRIVEES = (
+    "<li><strong>Notification qui vous amène\xa0:</strong> quand vous ouvrez le site depuis un "
+    "courriel ou depuis le groupe WhatsApp de la résidence, le lien porte ce canal — et, pour "
+    "un courriel, son type —, jamais votre adresse ni votre identité. Il est joint à la page "
+    "consultée, comme le reste de la mesure d'audience rattachée à votre compte, et conservé "
+    "30\xa0jours. Il sert à savoir quelles notifications font venir. Votre refus de la mesure "
+    "d'audience le coupe aussi.</li>"
+)
 #: Les gestes aboutis (#1633) : ouvertures et envois des formulaires, comptés par
 #: jour SANS rattachement au compte (`utils/gestes_formulaire`). Écrite une fois :
 #: le gabarit et la migration 0261, qui l'insère juste après
@@ -304,6 +316,7 @@ DEFAULT_LEGAL = {
         + TELEMETRIE_COLLECTE
         + TELEMETRIE_ERREURS
         + TELEMETRIE_PERFORMANCE
+        + TELEMETRIE_ARRIVEES
         + TELEMETRIE_GESTES
         + JOURNAL_SECURITE
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "

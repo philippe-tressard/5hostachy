@@ -144,6 +144,12 @@ EXIGENCES = [
         ("réception des courriels",),
     ),
     (
+        #  #1634 : le canal de la notification, joint à la vue rattachée au compte.
+        "la notification qui amène sur le site",
+        ("utils/arrivees_notification.py", "def etiqueter_lien"),
+        ("notification qui vous amène",),
+    ),
+    (
         #  #1633 : comptés sans compte, mais dans le navigateur de chacun.
         "les ouvertures et envois des formulaires",
         ("utils/gestes_formulaire.py", "def enregistrer_ouverture"),

@@ -108,6 +108,7 @@ export const TABLEAU_TELEMETRIE_VIDE = {
 	erreurs: [],
 	performance: { indicateurs: [], pages: [] },
 	gestes: [],
+	arrivees: [],
 	adoption: {
 		periode: 'aujourd’hui',
 		global: { libelle: 'Tous les comptes', actifs: 0, comptes: 0, taux: null },

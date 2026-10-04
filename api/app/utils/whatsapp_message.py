@@ -15,6 +15,7 @@ import html
 import json
 import re
 
+from app.utils.arrivees_notification import SOURCE_WHATSAPP, etiqueter_lien
 from app.utils.liens import base_site
 from app.utils.perimetres import est_perimetre_par_defaut
 
@@ -200,13 +201,20 @@ def construire_message(
     envoyé.
     """
     footer = config.get("whatsapp_footer", "").strip()
+    site_url = base_site(config.get("site_url"))
+    #  L'étiquette d'arrivée (#1634) : écrite une fois, pour les deux formes.
+    lien = etiqueter_lien(lien, SOURCE_WHATSAPP, site_url) if lien else None
     if message_sans_contenu(public_cible, confidentiel):
-        site_url = base_site(config.get("site_url"))
         #  🔴 Le titre PART, confidentiel compris (#623) ; le repli ne sert
         #  plus qu'aux actualités sans titre.
         titre_affiche = titre or TITRE_CONFIDENTIEL
         return _build_message_restreint(
-            titre_affiche, urgente, perimetre_cible, site_url, footer, lien
+            titre_affiche,
+            urgente,
+            perimetre_cible,
+            site_url,
+            footer,
+            lien or etiqueter_lien(site_url + "/", SOURCE_WHATSAPP, site_url),
         )
     #  Le lien ne concerne QUE le message normal : le message restreint en porte
     #  déjà un, qui renvoie vers l'application parce que le contenu n'y est pas.

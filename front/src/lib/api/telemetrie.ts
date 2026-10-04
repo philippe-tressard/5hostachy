@@ -35,6 +35,21 @@ export interface GesteAbouti {
 	taux: number | null;
 }
 
+/** Les arrivées par une notification (#1634) — `utils/arrivees_notification.synthese_arrivees`. */
+export interface ArriveeNotification {
+	canal: 'courriel' | 'whatsapp';
+	/** Le code du modèle d'un courriel ; `null` pour le groupe WhatsApp. */
+	modele: string | null;
+	/** Le libellé du modèle, tel qu'il est en base ; `null` s'il n'y est pas. */
+	libelle: string | null;
+	/** Vues arrivées par ce lien, anonymes comprises (renvoyées à la connexion). */
+	arrivees: number;
+	/** Comptes distincts parmi elles. */
+	comptes: number;
+	/** Messages envoyés sur la période ; `null` : inconnu. Un envoi groupé compte pour un. */
+	envois: number | null;
+}
+
 /** Une ligne de « Qui vient » : comptes venus sur comptes mesurés (#1628). */
 export interface LigneAdoption {
 	libelle: string;
@@ -178,6 +193,7 @@ export interface TableauTelemetrie {
 	erreurs: ErreurNavigateur[];
 	performance: SyntheseDurees;
 	gestes: GesteAbouti[];
+	arrivees: ArriveeNotification[];
 	/** `null` : la vue ne sait pas qui est venu (Total). */
 	adoption: Adoption | null;
 	/** Dormants et arrivants, à seuils fixes quelle que soit la vue (#1629). */
