@@ -32,7 +32,7 @@ l'est pas deux fois, le paragraphe n'est inséré que s'il n'y est pas.
 les requêtes du remplissage les écrivent en clair, sans f-string.
 
 Revision ID: 0260
-Revises: 0258
+Revises: 0259
 """
 
 from datetime import timedelta
@@ -42,7 +42,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0260"
-down_revision = "0258"
+down_revision = "0259"
 branch_labels = None
 depends_on = None
 

@@ -29,7 +29,7 @@ from app.utils.purge_comptes.regles import DELAI_AVANT_SUPPRESSION_JOURS, INACTI
 
 #: La conservation des comptes (#1580, arbitrée le 04/10/2026). L'ancienne phrase
 #: annonçait une durée qu'aucun code n'appliquait ; elle reste écrite ici pour que
-#: la migration 0261 la remplace EXACTEMENT (`utils/textes_livres`). La nouvelle
+#: la migration 0263 la remplace EXACTEMENT (`utils/textes_livres`). La nouvelle
 #: se compose des constantes de la purge (`utils/purge_comptes/regles`) : la durée
 #: annoncée ne peut pas diverger de celle qui est appliquée.
 CONSERVATION_COMPTES_ANCIEN = "Données de compte actif\xa0: durée de la relation + 2 ans."

@@ -1,4 +1,4 @@
-"""La 0261 pose la date d'avertissement et corrige la durée annoncée (#1580).
+"""La 0263 pose la date d'avertissement et corrige la durée annoncée (#1580).
 
 Exécutée pour de vrai par le contexte d'Alembic, sur une base en mémoire qui
 porte la phrase « durée de la relation + 2 ans » telle que la 0029 l'a posée.
@@ -25,7 +25,7 @@ POLITIQUE_AVANT = (
 def _jouer(moteur, sens: str = "upgrade") -> None:
     with moteur.begin() as conn:
         with Operations.context(MigrationContext.configure(conn)):
-            getattr(charger_migration("0261_purge_comptes_inactifs"), sens)()
+            getattr(charger_migration("0263_purge_comptes_inactifs"), sens)()
 
 
 def _moteur(politique: str = POLITIQUE_AVANT):

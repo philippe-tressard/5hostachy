@@ -24,16 +24,16 @@ remplacée, l'ancienne ne figure plus.
 
 ⚠️ Les noms de table et de colonne sont des CONSTANTES du fichier.
 
-Revision ID: 0261
-Revises: 0258
+Revision ID: 0263
+Revises: 0262
 """
 
 import sqlalchemy as sa
 
 from alembic import op
 
-revision = "0261"
-down_revision = "0258"
+revision = "0263"
+down_revision = "0262"
 branch_labels = None
 depends_on = None
 
