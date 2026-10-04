@@ -95,12 +95,9 @@ SOURCE = ("auth/deps.py", "est_rattache_au_lot")
 #: `require_cs_or_admin`. Elles sont nommées **une par une** : le jour où l'une
 #: d'elles disparaît ou cesse de lire `UserLot`, ce test échoue et l'exception se
 #: retire. Une exception qui survit à son motif finit par couvrir autre chose.
+#: `supprimer_utilisateur` en est sortie le 04/10/2026 (#1580) : l'effacement vit
+#: dans `utils/suppression_compte`, qui délie les lots sans rien décider ni lever.
 EXCEPTIONS = {
-    (
-        "routers/admin/utilisateurs.py",
-        "supprimer_utilisateur",
-    ): "détache les liens d'un compte supprimé — l'exception porte sur la "
-    "suppression, pas sur une appartenance",
     (
         "routers/admin/comptes.py",
         "traiter_compte",

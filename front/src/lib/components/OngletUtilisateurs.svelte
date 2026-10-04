@@ -20,6 +20,7 @@
 		ETIQUETTES_COMPTE,
 		formulaireCompte,
 	} from '$lib/comptes';
+	import { fmtDate } from '$lib/date';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import { badgeStatut, badgesDeRoles, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
@@ -259,6 +260,15 @@
 								{:else}
 									<span class="badge badge-gray">En attente</span>
 								{/if}
+								<!--  #1580 : averti de sa suppression pour inactivité ; s'efface à la reconnexion. -->
+								{#if u.purge_avertie_le}
+									<div
+										class="purge-avertie"
+										title="Supprimé trente jours après cet avertissement s'il ne se reconnecte pas"
+									>
+										⏳ Inactif, averti le {fmtDate(u.purge_avertie_le)}
+									</div>
+								{/if}
 							</td>
 							<td>
 								<div style="display:flex;gap:.3rem;flex-wrap:wrap">
@@ -457,6 +467,11 @@
 		flex-wrap: wrap;
 		gap: 0.2rem;
 		margin-top: 0.15rem;
+	}
+	.purge-avertie {
+		margin-top: 0.15rem;
+		font-size: var(--fs-xs);
+		color: var(--color-warning-texte);
 	}
 	.utag {
 		font-size: 0.6rem;

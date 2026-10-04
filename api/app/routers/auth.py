@@ -21,6 +21,7 @@ from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
 from app.utils.journal_securite import journaliser_securite
+from app.utils.purge_comptes.regles import marquer_activite
 from app.auth.jwt import (
     creer_jeton_acces,
     create_refresh_token,
@@ -238,7 +239,8 @@ def login(
     if new_hash:
         user.hashed_password = new_hash  # rehash silencieux 12→10 rounds
 
-    user.derniere_connexion = horloge.maintenant()
+    #  La connexion remet aussi à zéro un avertissement de purge (#1580).
+    marquer_activite(user, horloge.maintenant())
     session.add(user)
 
     access = creer_jeton_acces(user.id, user.hashed_password)
@@ -297,6 +299,12 @@ def refresh(
 
     # Rotation : révoquer l'ancien token, émettre un nouveau
     remplacer(session, stored, maintenant)
+    #  🔴 Un résident resté connecté ne repasse JAMAIS par `login` : c'est cet
+    #  échange — au plus un toutes les deux heures, jamais à chaque requête — qui
+    #  dit qu'il est là. Sans lui, la purge des comptes inactifs (#1580) l'aurait
+    #  cru parti depuis sa dernière saisie de mot de passe.
+    marquer_activite(user, maintenant)
+    session.add(user)
 
     new_refresh = create_refresh_token({"sub": str(user.id)})
     rt = RefreshToken(

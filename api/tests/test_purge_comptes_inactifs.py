@@ -36,7 +36,7 @@ from app.routers.auth_schemas import LoginRequest
 from app.utils import horloge
 from app.utils.purge_comptes import regles
 from app.utils.purge_comptes import tache as tache_purge
-from app.utils.purge_comptes.tache import CODE_MODELE, purger_comptes_inactifs
+from app.utils.purge_comptes.tache import purger_comptes_inactifs
 from tests.aides_base import compte
 from tests.conftest import requete_de_test
 
@@ -103,7 +103,7 @@ def test_inactif_depuis_deux_ans_il_est_averti_et_rien_n_est_supprime(session, j
     assert _existe(session, vieux.id), "un avertissement ne supprime rien"
     session.refresh(vieux)
     assert vieux.purge_avertie_le == T, "la date de l'avertissement doit être mémorisée"
-    (destinataire, contexte), = envois.recus
+    ((destinataire, contexte),) = envois.recus
     assert destinataire == vieux.id
     #  Le courriel dit QUAND, et ce qu'il suffit de faire : le contexte porte la date.
     assert set(contexte) == {"destinataire", "date_suppression", "derniere_activite"}
@@ -128,9 +128,7 @@ def test_sans_connexion_la_date_de_reference_est_celle_du_compte(session):
     assert [uid for uid, _ in envois.recus] == [jamais.id]
 
 
-def test_averti_il_y_a_31_jours_et_toujours_inactif_il_est_supprime(
-    session, journal, monkeypatch
-):
+def test_averti_il_y_a_31_jours_et_toujours_inactif_il_est_supprime(session, journal, monkeypatch):
     """Par la suppression de l'administration — la même fonction, jamais une seconde."""
     vise = _averti(session, timedelta(days=31))
     jeton = RefreshToken(user_id=vise.id, token="x", expires_at=T + timedelta(days=1))
@@ -232,7 +230,9 @@ def test_un_echec_d_envoi_n_enregistre_rien(session, journal):
     rendu = _passer(session, _Envois(reussit=False))
     assert rendu["avertis"] == 0 and rendu["echecs_envoi"] == 1
     session.refresh(vise)
-    assert vise.purge_avertie_le is None, "un courriel non parti a été compté comme un avertissement"
+    assert vise.purge_avertie_le is None, (
+        "un courriel non parti a été compté comme un avertissement"
+    )
     assert journal() == []
     #  …et donc, trente et un jours plus tard, rien n'est supprimé.
     rendu = _passer(session, _Envois(reussit=False), maintenant=T + timedelta(days=31))
@@ -260,7 +260,9 @@ def test_send_email_dit_s_il_est_parti(session, monkeypatch):
     from app.seed import EMAIL_TEMPLATES
     from app.utils.email import send_email
 
-    code, libelle, sujet, corps, _ = next(r for r in EMAIL_TEMPLATES if r[0] == CODE_MODELE)
+    code, libelle, sujet, corps, _ = next(
+        r for r in EMAIL_TEMPLATES if r[0] == "compte_inactif_avertissement"
+    )
     session.add(ModeleEmail(code=code, libelle=libelle, sujet=sujet, corps_html=corps))
     session.add(ConfigSite(cle="smtp_enabled", valeur="1"))
     session.commit()
@@ -276,14 +278,16 @@ def test_send_email_dit_s_il_est_parti(session, monkeypatch):
                 raise ConnectionError("serveur injoignable")
 
     monkeypatch.setattr("fastapi_mail.FastMail", _FauxFastMail)
+    #  La connexion n'est pas ce qu'on éprouve : sa validation exigerait un serveur réel.
+    monkeypatch.setattr("app.utils.email.connexion_smtp", lambda *a, **k: None)
     contexte = {
         "destinataire": {"prenom": "Prénom", "nom": "Nom"},
         "date_suppression": "1er janvier 2030",
         "derniere_activite": "1er janvier 2028",
     }
-    assert asyncio.run(send_email(code, "a@exemple.test", contexte, session)) is True
+    assert asyncio.run(send_email(code, "resident@exemple.fr", contexte, session)) is True
     _FauxFastMail.echoue = True
-    assert asyncio.run(send_email(code, "a@exemple.test", contexte, session)) is False
+    assert asyncio.run(send_email(code, "resident@exemple.fr", contexte, session)) is False
 
 
 # ── Ceux que la purge ne supprime jamais ─────────────────────────────────────
@@ -367,7 +371,7 @@ def test_un_passage_anormal_ne_supprime_aucun_compte(session, caplog):
     assert rendu["suspendue"] is True and rendu["supprimes"] == 0
     assert all(_existe(session, uid) for uid in vises)
     avertissements = [r for r in caplog.records if r.levelno == logging.WARNING]
-    assert any("suspendue" in r.getMessage() for r in avertissements)
+    assert any("suspendue" in r.getMessage().lower() for r in avertissements)
     assert not any(r.levelno >= logging.ERROR for r in caplog.records), (
         "un passage suspendu est un WARNING : le pré-check compte les ERROR"
     )

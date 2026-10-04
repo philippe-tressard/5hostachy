@@ -53,10 +53,13 @@ from app.seed import EMAIL_TEMPLATES
 #: ⬇️ Mise à jour le 03/10/2026 : DEUX modèles AJOUTÉS, `ticket_copie_auteur` et
 #: `publication_copie_auteur` (la copie à l'auteur cochée SEULE), posés par le seed ;
 #: l'empreinte des 31 autres est inchangée (vérifié en les écartant : d1927163…).
-EMPREINTE = "ca8db203a63c92e4c4f54fb1bf420787f7673defe2aa5397ee301772ad3312d7"
-NOMBRE_ATTENDU = 33  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549),
-#  synthese_a_valider (#1643), ticket_copie_auteur, publication_copie_auteur — AJOUTÉS,
-#  donc posés par le seed : aucune migration.
+#: ⬇️ Mise à jour le 04/10/2026 (#1580) : un modèle AJOUTÉ, `compte_inactif_avertissement`,
+#: posé par le seed ; l'empreinte des 33 autres est inchangée (vérifié en
+#: l'écartant : ca8db203…).
+EMPREINTE = "e4d7162a6c71a40ad9deb17a8599a622ef5d8da8525d8fafda5418465737754f"
+NOMBRE_ATTENDU = 34  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549),
+#  synthese_a_valider (#1643), ticket_copie_auteur, publication_copie_auteur,
+#  compte_inactif_avertissement (#1580) — AJOUTÉS, donc posés par le seed : aucune migration.
 
 
 def _empreinte() -> str:

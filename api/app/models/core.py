@@ -151,6 +151,8 @@ class Utilisateur(SQLModel, table=True):
     last_seen_actualites: Optional[NaiveDatetime] = None
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     derniere_connexion: Optional[NaiveDatetime] = None
+    #  L'avertissement avant purge pour inactivité (#1580) — `utils/purge_comptes`.
+    purge_avertie_le: Optional[NaiveDatetime] = None
 
     user_lots: List["UserLot"] = Relationship(back_populates="utilisateur")
 

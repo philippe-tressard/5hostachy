@@ -254,8 +254,12 @@ async def _envoyer_modele(
     bcc: list[str] | None = None,
     attachments: list[str] | None = None,
     jeton_reponse: str | None = None,
-) -> None:
+) -> bool:
     """Le tronc commun des deux envois : modèle, rendu, SMTP, journal, nettoyage.
+
+    Rend vrai si le message est PARTI, faux sinon (modèle inactif, erreur SMTP) —
+    sans jamais lever. La purge des comptes inactifs en dépend (#1580) : un
+    avertissement qui n'est pas parti ne doit pas ouvrir le délai de suppression.
 
     🔴 `send_email` (103 l.) et `send_email_group` (112 l.) étaient identiques à
     **68 %** — mesuré. Deux écritures d'une même séquence, donc deux occasions de
@@ -278,7 +282,7 @@ async def _envoyer_modele(
         #  groupe abandonnait en silence, et un envoi qui n'a pas eu lieu sans
         #  trace est indistinguable d'un envoi qui n'a jamais ete demande.
         _log_email(session, code, trace, "ignore", erreur="template inactive ou inexistante")
-        return
+        return False
 
     ctx, site_nom, site_url, email_footer = _contexte_rendu(session, context)
     smtp_cfg = _get_smtp_config(session)
@@ -324,6 +328,7 @@ async def _envoyer_modele(
             msg_kwargs["attachments"] = _preparer_pieces_jointes(attachments)
         await fm.send_message(MessageSchema(**msg_kwargs))
         _log_email(session, code, trace, "succes", sujet=rendered_subject)
+        return True
     except Exception as exc:
         #  L'ADRESSE EST MASQUEE (#777) : ces lignes partent dans les alertes du
         #  monitoring et dans les rapports qu'on recopie ailleurs. L'historique
@@ -339,6 +344,7 @@ async def _envoyer_modele(
         else:
             logger.error("Erreur envoi email [%s] -> %s : %s", code, _masquer(trace), exc)
         _log_email(session, code, trace, "erreur", erreur=str(exc)[:500])
+        return False
 
 
 def _envoi_actif(session: Session) -> bool:
@@ -378,11 +384,13 @@ async def send_email(
     destinataire_id: int | None = None,
     batiments_concernes: set[int] | None = None,
     jeton_reponse: str | None = None,
-):
+) -> bool:
     """Envoie le modèle `code` à UN destinataire, si ses préférences l'acceptent.
 
     Fail graceful : une erreur d'envoi est journalisée, jamais propagée — un
-    ticket créé ne doit pas échouer parce que le SMTP est indisponible.
+    ticket créé ne doit pas échouer parce que le SMTP est indisponible. Rend
+    vrai si le message est parti : faux pour une préférence, un envoi éteint,
+    un modèle inactif ou une erreur — l'appelant qui en dépend le sait (#1580).
 
     Rendu, envoi et journal vivent dans `_envoyer_modele`, partagé avec l'envoi
     groupé : ne reste ici que **la préférence du destinataire**.
@@ -398,12 +406,12 @@ async def send_email(
                     destinataire_id,
                 )
                 _log_email(session, code, to, "ignore", erreur="preference de batiment")
-                return
+                return False
 
         if not _envoi_actif(session):
-            return
+            return False
 
-        await _envoyer_modele(
+        return await _envoyer_modele(
             code,
             context,
             session,

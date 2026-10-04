@@ -71,6 +71,9 @@ INTENTIONS_PAR_MODELE: dict[str, str] = {
     "annonce_hall": "action_requise",
     "nouvel_arrivant_bal": "action_requise",
     "alerte_systeme": "action_requise",
+    #  Se connecter pour garder son compte (#1580) : un geste demandé — et qui ne
+    #  peut plus se connecter doit pouvoir répondre, d'où `contact@`.
+    "compte_inactif_avertissement": "action_requise",
     # On attend une réponse écrite — ce sont les envois vers l'extérieur, ceux
     # dont le silence est justement le problème qu'on cherche à traiter.
     "ticket_syndic": "reponse_attendue",

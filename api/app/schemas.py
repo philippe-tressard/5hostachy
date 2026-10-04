@@ -69,6 +69,9 @@ class UserRead(BaseModel):
     delegations_aidant: list[dict] = []  # délégations actives où l'utilisateur est aidant
     cree_le: datetime
     derniere_connexion: Optional[datetime] = None
+    #  L'avertissement avant purge pour inactivité (#1580) : l'écran des
+    #  utilisateurs le montre, la reconnexion l'efface.
+    purge_avertie_le: Optional[datetime] = None
 
     class Config:
         from_attributes = True
