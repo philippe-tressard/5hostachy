@@ -32,6 +32,18 @@
 #      extraction de composant y pousse du contenu. Les mesurer à 500 ferait de
 #      chaque factorisation réussie une violation.
 #
+#  Les WORKFLOWS (`.github/workflows/*.yml`) sont du code — du bash en ligne que
+#  `rejouer-ci.sh` extrait et exécute — et se mesurent comme lui (#1547). L'un d'eux
+#  dépasse : `ci.yml`, qui déclare le pipeline entier (plus de 2 000 lignes de `run:`).
+#  Le découper en `scripts/ci/*.sh` changerait la mécanique de `rejouer-ci.sh`, de
+#  `lint:ci` et de `check-ci-complete.mjs`, qui le lisent tous trois : c'est un
+#  chantier, pas un reflet de la règle. Il est donc EXCLU PAR UNE DÉCISION ÉCRITE
+#  (`EXCEPTIONS_PLAFOND`, arbitrage du 04/10/2026), et non par un angle mort :
+#    - l'exception est NOMINATIVE, avec sa raison ;
+#    - elle ÉCHOUE quand elle ne sert plus (fichier revenu sous le plafond, ou
+#      disparu) : une exception qu'on ne nettoie pas finit par tout autoriser ;
+#    - tout AUTRE workflow reste soumis au plafond de 500 lignes.
+#
 #  Usage : bash scripts-ci-modularite.sh
 #          bash scripts-ci-modularite.sh --selftest
 # =============================================================================
@@ -39,12 +51,27 @@ set -uo pipefail
 PLAFOND=500
 PLAFOND_STYLE=1500
 
+#  Fichiers admis au-dessus de leur plafond : « chemin|raison ». Nominatif, daté,
+#  et vérifié par `exceptions_inutiles` — jamais une extension entière.
+EXCEPTIONS_PLAFOND=(
+  ".github/workflows/ci.yml|déclare le pipeline entier ; le découper change rejouer-ci.sh, lint:ci et check-ci-complete.mjs (#1547, arbitrage du 04/10/2026)"
+)
+
+exception_de() {
+  local e
+  for e in "${EXCEPTIONS_PLAFOND[@]}"; do
+    [ "${e%%|*}" = "$1" ] && { echo "${e#*|}"; return 0; }
+  done
+  return 1
+}
+
 #  Plafond d'un chemin selon sa nature ; RIEN pour une extension hors règle —
 #  et la sortie le dit (« NON MESURÉ ») plutôt que de laisser croire à
 #  l'exhaustivité (`standards/04`).
 plafond_de() {
   case "$1" in
     *.py|*.ts|*.js|*.mjs|*.svelte|*.sh) echo "$PLAFOND" ;;
+    .github/workflows/*.yml)            echo "$PLAFOND" ;;
     *.css)                              echo "$PLAFOND_STYLE" ;;
   esac
 }
@@ -58,7 +85,26 @@ hors_plafond() {
     [ "$f" = "total" ] && continue        # ligne de cumul de `wc`
     p=$(plafond_de "$f")
     [ -n "$p" ] || continue
+    exception_de "$f" >/dev/null && continue    # décision écrite, vérifiée par exceptions_inutiles
     [ "$n" -gt "$p" ] && echo "  $f : $n lignes (plafond $p)"
+  done
+  return 0
+}
+
+#  Les exceptions qui ne servent plus : le fichier est revenu sous son plafond, ou
+#  n'est plus mesuré. Même entrée que `hors_plafond` ; fonction PURE.
+exceptions_inutiles() {
+  local mesures e f p n
+  mesures=$(cat)
+  for e in "${EXCEPTIONS_PLAFOND[@]}"; do
+    f="${e%%|*}"
+    p=$(plafond_de "$f")
+    n=$(printf '%s\n' "$mesures" | awk -v f="$f" '$2 == f { print $1 }')
+    if [ -z "$n" ]; then
+      echo "  $f : exception sur un fichier absent des mesures"
+    elif [ -n "$p" ] && [ "$n" -le "$p" ]; then
+      echo "  $f : $n lignes, sous le plafond $p — l'exception ne sert plus"
+    fi
   done
   return 0
 }
@@ -78,6 +124,15 @@ if [ "${1:-}" = "--selftest" ]; then
   t "ligne de cumul de wc ignorée"    "99999 total"              ""
   #  Un chemin à espace reste entier : `read` lui laisse tout le reste de la ligne.
   t "chemin avec une espace"          "600 front/a b.ts"         "  front/a b.ts : 600 lignes (plafond 500)"
+  #  #1547 — un workflow se mesure ; `ci.yml` seul est admis, par décision écrite.
+  t "ci.yml admis (exception)"        "2269 .github/workflows/ci.yml"    ""
+  t "autre workflow au-dessus"        "600 .github/workflows/autre.yml"  "  .github/workflows/autre.yml : 600 lignes (plafond 500)"
+  t "autre workflow sous le plafond"  "120 .github/workflows/autre.yml"  ""
+  u() { r=$(printf '%s\n' "$2" | exceptions_inutiles); [ "$r" = "$3" ] && echo "PASS  $1" \
+        || { echo "FAIL  $1  attendu=[$3] obtenu=[$r]"; st=1; }; }
+  u "exception qui sert"              "2269 .github/workflows/ci.yml"    ""
+  u "exception revenue sous le plafond" "400 .github/workflows/ci.yml"   "  .github/workflows/ci.yml : 400 lignes, sous le plafond 500 — l'exception ne sert plus"
+  u "exception sur un fichier disparu"  "40 front/a.ts"                  "  .github/workflows/ci.yml : exception sur un fichier absent des mesures"
   [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st
 fi
@@ -95,7 +150,7 @@ if ! LISTE=$(git ls-files -z --cached --others --exclude-standard 2>&1 | tr '\0'
   echo "::error::Modularité INCONNUE — git ls-files a échoué : $LISTE"
   exit 2
 fi
-MESURES=$(printf '%s\n' "$LISTE" | grep -E '\.(py|ts|js|mjs|svelte|sh|css)$' \
+MESURES=$(printf '%s\n' "$LISTE" | grep -E '\.(py|ts|js|mjs|svelte|sh|css)$|^\.github/workflows/.*\.yml$' \
   | while IFS= read -r f; do [ -f "$f" ] && printf '%s\0' "$f"; done \
   | xargs -0 wc -l | grep -v ' total$')
 
@@ -109,6 +164,11 @@ if [ "$nb" -lt 100 ]; then
 fi
 
 fautifs=$(printf '%s\n' "$MESURES" | hors_plafond)
+inutiles=$(printf '%s\n' "$MESURES" | exceptions_inutiles)
+if [ -n "$inutiles" ]; then
+  printf "::error::Modularité — exception(s) de plafond devenue(s) inutile(s) (à retirer de EXCEPTIONS_PLAFOND) :\n%s\n" "$inutiles"
+  exit 1
+fi
 if [ -n "$fautifs" ]; then
   printf "::error::Modularité (rang 1) — fichier(s) au-dessus de leur plafond :\n%s\n" "$fautifs"
   printf "\nDécouper — et factoriser d'abord s'il y a de la copie : scinder un fichier\n"
@@ -116,4 +176,5 @@ if [ -n "$fautifs" ]; then
   exit 1
 fi
 echo "✓ Modularité : $nb fichiers mesurés, aucun au-dessus de son plafond (code $PLAFOND l. · styles $PLAFOND_STYLE l.)."
-echo "  NON MESURÉ, faute de règle : .html .md .json .yml .sql, et toute autre extension."
+echo "  Admis par décision écrite (EXCEPTIONS_PLAFOND) : ${EXCEPTIONS_PLAFOND[*]%%|*}"
+echo "  NON MESURÉ, faute de règle : .html .md .json .sql, les .yml hors workflows, et toute autre extension."
