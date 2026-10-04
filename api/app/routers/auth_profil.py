@@ -45,6 +45,7 @@ from app.utils.limiter import (
 )
 from app.utils.batiments import libelle_batiment_ou
 from app.utils.etages import ETAGE_HORS_BORNES, etage_hors_bornes
+from app.utils.lecture import lire_objet
 from app.utils.lecture_utilisateur import construire_user_read
 from app.utils.verification_adresse import demander_changement_adresse
 
@@ -177,7 +178,39 @@ class DemandeModifCreate(BaseModel):
     motif: str | None = None
 
 
-@router.post("/me/demande-modification", status_code=201)
+class DemandeModifRead(BaseModel):
+    """Une de MES demandes : la ligne, plus le libellé du bâtiment souhaité."""
+
+    id: int
+    utilisateur_id: int
+    statut_souhaite: str | None = None
+    batiment_id_souhaite: int | None = None
+    motif: str | None = None
+    statut_demande: StatutDemandeProfil
+    motif_refus: str | None = None
+    traite_par_id: int | None = None
+    cree_le: datetime
+    traite_le: datetime | None = None
+    batiment_nom_souhaite: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+def _lire_demande(session: Session, demande: DemandeModificationProfil) -> DemandeModifRead:
+    """La lecture des DEUX routes ci-dessous — la création comme la liste (#1686).
+
+    Le libellé du bâtiment n'était composé que par la liste : une demande tout
+    juste déposée n'affichait pas « déménagement vers … » avant un rechargement.
+    """
+    bat_id = demande.batiment_id_souhaite
+    bat = session.get(Batiment, bat_id) if bat_id else None
+    return lire_objet(
+        DemandeModifRead, demande, batiment_nom_souhaite=libelle_batiment_ou(bat, None)
+    )
+
+
+@router.post("/me/demande-modification", status_code=201, response_model=DemandeModifRead)
 @limiter.limit(LIMITE_PREFERENCE)
 def creer_demande_modif(
     request: Request,
@@ -215,10 +248,10 @@ def creer_demande_modif(
     session.add(demande)
     session.commit()
     session.refresh(demande)
-    return demande
+    return _lire_demande(session, demande)
 
 
-@router.get("/me/demandes-modification")
+@router.get("/me/demandes-modification", response_model=list[DemandeModifRead])
 @limiter.limit(LIMITE_LECTURE_AUTHENTIFIEE)
 def mes_demandes_modif(
     request: Request,
@@ -232,17 +265,7 @@ def mes_demandes_modif(
         .order_by(DemandeModificationProfil.cree_le.desc())
         .limit(10)
     ).all()
-    # Enrichir avec nom bâtiment souhaité
-    result = []
-    for d in demandes:
-        item = d.model_dump()
-        if d.batiment_id_souhaite:
-            bat = session.get(Batiment, d.batiment_id_souhaite)
-            item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
-        else:
-            item["batiment_nom_souhaite"] = None
-        result.append(item)
-    return result
+    return [_lire_demande(session, d) for d in demandes]
 
 
 # ──────────────────────────────────────────────

@@ -48,9 +48,11 @@ export * from './assistant';
 //  Lus dans le code serveur, route par route — jamais supposés (même motif que
 //  `communaute.ts`). Les dates arrivent en chaîne ISO sans fuseau (UTC naïf).
 
-/**  Une demande de modification de profil, telle que `POST /auth/me/demande-modification`
- *   la rend : la LIGNE `demande_modification_profil`, sans `response_model`. */
-export interface MaDemandeProfilCreee {
+/**  Une de MES demandes de modification de profil — `DemandeModifRead`
+ *   (`auth_profil._lire_demande`) : la ligne `demande_modification_profil`, plus le
+ *   libellé du bâtiment souhaité. La création et la liste la rendent toutes deux
+ *   ainsi ; la création l'omettait jusqu'à #1686. */
+export interface MaDemandeProfil {
 	id: number;
 	utilisateur_id: number;
 	/** La valeur de `StatutUtilisateur` souhaitée, ou `null`. */
@@ -62,14 +64,6 @@ export interface MaDemandeProfilCreee {
 	traite_par_id: number | null;
 	cree_le: string;
 	traite_le: string | null;
-}
-
-/**  Une de MES demandes — `GET /auth/me/demandes-modification` : la même ligne,
- *   plus le libellé du bâtiment souhaité (`auth_profil.mes_demandes_modif`).
- *
- *   ⚠️ La création ne le rend PAS : une demande qu'on vient de déposer n'a pas
- *   de `batiment_nom_souhaite` tant que la liste n'est pas relue. */
-export interface MaDemandeProfil extends MaDemandeProfilCreee {
 	batiment_nom_souhaite: string | null;
 }
 
@@ -173,7 +167,7 @@ export const auth = {
 	batiments: () => api.get<{ id: number; numero: string }[]>('/auth/batiments'),
 	mesDemandes: () => api.get<MaDemandeProfil[]>('/auth/me/demandes-modification'),
 	demanderModification: (data: unknown) =>
-		api.post<MaDemandeProfilCreee>('/auth/me/demande-modification', data),
+		api.post<MaDemandeProfil>('/auth/me/demande-modification', data),
 	declarerNouvelArrivant: (data: {
 		batiment?: string | null;
 		ancien_resident?: string | null;
