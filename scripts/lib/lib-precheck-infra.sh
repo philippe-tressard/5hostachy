@@ -17,22 +17,28 @@
 # =============================================================================
 
 precheck_points_infra() {
-  # 12 — image du service touché reconstruite après le commit
-  IMG=$(sur "$ACTIF" 'docker inspect hostachy_api --format "{{.Created}}" 2>/dev/null')
-  CMT=$(sur "$ACTIF" 'git -C /opt/5hostachy log -1 --format=%cI 2>/dev/null')
-  if [ -z "$IMG" ] || [ -z "$CMT" ]; then V12=INCONNU
-  elif [ "$(date -d "$IMG" +%s 2>/dev/null)" -ge "$(date -d "$CMT" +%s 2>/dev/null)" ]; then V12=OK
-  else V12=FAIL; fi
-  #  Les deux instants s'affichent dans le MÊME référentiel — celui du poste.
-  #  Tronquer à 19 caractères supprimait justement ce qui portait le fuseau : le
-  #  `Z` de Docker (UTC) d'un côté, le `+02:00` de git (local) de l'autre. Le
-  #  détail montrait alors « image=…20:24:29 commit=…22:19:39 » à côté d'un verdict
-  #  OK — deux chiffres incomparables qui contredisaient leur propre conclusion,
-  #  alors que la comparaison, elle, était juste (#313). Un contrôle dont le détail
-  #  dément le verdict pousse à ignorer le détail.
-  horodate() { date -d "$1" '+%d/%m %H:%M:%S' 2>/dev/null || echo "?"; }
-  rapporter 12 "$V12" "Image postérieure au commit déployé" \
-            "image=$(horodate "$IMG") commit=$(horodate "$CMT") (heure du poste)"
+  # 12 — chaque conteneur a-t-il été recréé APRÈS le dernier commit qui touche
+  #      ce dont son image est faite ? Décision : `verdict_image_service`, qui dit
+  #      pourquoi la question se pose par service (04/10/2026). Le Caddyfile est
+  #      MONTÉ, pas bâti : il n'entre pas dans l'image de Caddy.
+  R12=$(sur "$ACTIF" 'cd /opt/5hostachy && for p in hostachy_api:api hostachy_front:front hostachy_whatsapp:whatsapp-bridge hostachy_caddy:Dockerfile.caddy; do printf "%s %s %s
+" "${p%%:*}" "$(docker inspect "${p%%:*}" --format "{{.Created}}" 2>/dev/null)" "$(git log -1 --format=%cI -- "${p#*:}" 2>/dev/null)"; done')
+  #  Les deux instants s'affichent dans le MÊME référentiel — celui du poste :
+  #  le `Z` de Docker (UTC) d'un côté, le `+02:00` de git de l'autre (#313).
+  horodate() { date -d "$1" '+%d/%m %H:%M' 2>/dev/null || echo "?"; }
+  V12=OK; D12=""
+  [ -z "$R12" ] && V12=INCONNU
+  while read -r c img cmt; do
+    [ -z "$c" ] && continue
+    v=$(verdict_image_service "$img" "$cmt")
+    case "$v" in
+      FAIL)    V12=FAIL ;;
+      INCONNU) [ "$V12" = OK ] && V12=INCONNU ;;
+    esac
+    [ "$v" = OK ] || D12="$D12 ${c#hostachy_}=$(horodate "$img")<$(horodate "$cmt")"
+  done <<< "$R12"
+  [ -z "$D12" ] && D12=" 4 conteneurs recréés après le dernier commit de leur service"
+  rapporter 12 "$V12" "Image de chaque service postérieure à son commit" "${D12# } (heure du poste)"
 
   # 13 — le canal d'alerte a-t-il émis ? On croise la dernière ALERTE et le dernier
   #      ÉCHEC, tous deux horodatés. Les « Email KO » ne le sont pas : les compter

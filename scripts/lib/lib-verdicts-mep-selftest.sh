@@ -180,6 +180,14 @@ feat(b) : deux"
   t "build échoué : images en arrière"     FAIL    verdict_images_standby abc1234 def4567
   t "marqueur absent : rien de prouvé"     INCONNU verdict_images_standby abc1234 ""
   t "code du standby non mesuré"           INCONNU verdict_images_standby "" abc1234
+  #  Le point 12, par SERVICE (04/10/2026) : une MEP du seul front laissait le
+  #  conteneur de l'API antérieur au dernier commit, et le point rendait FAIL.
+  t "conteneur recréé après son commit"    OK      verdict_image_service 2026-10-04T12:05:21+02:00 2026-10-04T12:00:27+02:00
+  t "commit du service non reconstruit"    FAIL    verdict_image_service 2026-10-04T10:51:43+02:00 2026-10-04T12:00:27+02:00
+  t "fuseaux différents, même instant"     OK      verdict_image_service 2026-10-04T10:00:27Z 2026-10-04T12:00:27+02:00
+  t "aucun commit pour ce répertoire"      INCONNU verdict_image_service 2026-10-04T10:51:43+02:00 ""
+  t "conteneur absent"                     INCONNU verdict_image_service "" 2026-10-04T12:00:27+02:00
+  t "date illisible"                       INCONNU verdict_image_service hier 2026-10-04T12:00:27+02:00
   t "parité non mesurable"               INCONNU verdict_parite "" def456
   t "battement récent"                   OK      verdict_age_min 5 20
   t "battement manquant"                 FAIL    verdict_age_min 90 20

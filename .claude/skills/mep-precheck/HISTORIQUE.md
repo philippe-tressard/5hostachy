@@ -343,6 +343,7 @@ Colonne clé : **qui** a détecté.
 | Aucune alerte pendant la panne (`Email KO`) | Lecture de log | Alerting mono-canal, qui tombe avec le réseau → **point 13** |
 | Faux vert « 0 inode fantôme » (sudo muet en SSH) | Demande de vérification | **Le pré-check lui-même** était en cause → **règle 1** + point 4 sans `sudo` |
 | Faux positif « image API périmée » | Vérification avant d'alarmer | Point 12 ne bornait pas le périmètre → **règle 3** + point 12 corrigé |
+| Point 12 en FAIL après une MEP du seul front (04/10/2026, #1658 puis v2.102.1) | Le « borné au périmètre » ci-dessus n'avait jamais été écrit dans le code : il comparait le conteneur de l'API au dernier commit du DÉPÔT | `verdict_image_service` (`lib-images-servies.sh`) : chaque conteneur face au dernier commit de SON répertoire, auto-testé |
 | Version périmée servie à un onglet resté ouvert (footer bloqué en v2.22.8 après la MEP v2.23.0) | **L'utilisateur, en lisant le footer** | Le cache d'une PWA n'était surveillé par rien, et P3 lit « la version servie » sur le serveur, pas chez le client → bandeau de mise à jour (v2.24.0) + `test_pwa_maj.py` |
 | Service worker plus enregistré du tout (URL relative → 404 hors racine), cache hors ligne cassé en production | **P7**, dans un navigateur réel | P1–P6 ne regardent que des artefacts : image, version du conteneur, code présent dans le bundle — tous corrects pendant que rien ne s'exécutait → encadré P7 « tester sur une route imbriquée » + `npm run lint:sw` sur le bundle construit |
 
