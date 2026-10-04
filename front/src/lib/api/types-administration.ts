@@ -182,7 +182,8 @@ export interface AccueilArrivantResultat {
 
 //  ── Demandes à traiter (`routers/admin/acces.py`, `profils.py`) ─────────────────
 
-/**  Une commande de badge en attente — la LIGNE `commande_acces` telle quelle. */
+/**  Une commande de badge en attente : la LIGNE `commande_acces`, plus ce qui la
+ *   rend lisible (#1679) — l'espace CS et l'onglet « À traiter » la lisent ici. */
 export interface CommandeAcces {
 	id: number;
 	user_id: number;
@@ -196,6 +197,12 @@ export interface CommandeAcces {
 	motif_refus: string | null;
 	cree_le: string;
 	traite_le: string | null;
+	/** « ? » quand le compte ou le lot a disparu — vaut pour le suivant. */
+	demandeur_nom: string;
+	/** « Parking 12 ». */
+	lot: string;
+	/** « Bât. 4 », `null` pour un lot sans bâtiment. */
+	batiment: string | null;
 }
 
 /**  Une demande de modification de profil en attente : la ligne
