@@ -235,6 +235,23 @@ ci_dependances_etat() {    # $1 = verdict du vérificateur → "" (mesurable) | 
   esac
 }
 
+# ── Combien de workers e2e sur un poste occupé ? (#1665, 04/10/2026) ─────────
+#  Trois rejeux complets de suite sont tombés sur les MÊMES quatre specs
+#  d'administration, la machine prise à ~55 % par d'autres sessions : hydratation
+#  médiane 2,9 s contre 0,8 s, pour des attentes de 5 s. La suite entière passait
+#  à 335/335 avec `--workers=1`, et la CI GitHub — au repos — était verte. Ce
+#  n'était pas le code mais la contention entre workers. La charge se mesure
+#  AVANT le rejeu : c'est celle des autres, pas la nôtre. (PURE)
+#    $1 = valeur imposée par qui lance (E2E_WORKERS), $2 = charge CPU en %
+#    (vide si non mesurable), $3 = seuil en % → nombre de workers, ou vide
+#    (le défaut de Playwright, celui de la CI).
+ci_workers_e2e() {
+  [ -n "${1:-}" ] && { echo "$1"; return; }
+  #  Charge inconnue → le défaut : ne pas mesurer n'autorise pas à brider.
+  case "${2:-}" in ''|*[!0-9]*) echo ""; return ;; esac
+  [ "$2" -ge "$3" ] && echo 1 || echo ""
+}
+
 # ── Self-test ────────────────────────────────────────────────────────────────
 ci_replay_selftest() {
   local st=0 got
@@ -326,6 +343,14 @@ YAML
   #  🔴 Le cas zéro : un vérificateur qui n'a rien dit ne vaut pas un « aligné ».
   t "dépendances — muet : jamais mesurable" \
     "$(ci_dependances_etat '')" "dépendances du poste non vérifiables : vérificateur muet"
+
+  t "workers — poste au repos : défaut"      "$(ci_workers_e2e "" 12 30)" ""
+  t "workers — poste occupé : un seul"       "$(ci_workers_e2e "" 55 30)" "1"
+  t "workers — au seuil : un seul"           "$(ci_workers_e2e "" 30 30)" "1"
+  t "workers — imposé : il prime"            "$(ci_workers_e2e 3 90 30)" "3"
+  #  🔴 Le cas zéro : une charge non mesurée ne bride pas en silence.
+  t "workers — charge inconnue : défaut"     "$(ci_workers_e2e "" "" 30)" ""
+  t "workers — charge illisible : défaut"    "$(ci_workers_e2e "" "n/a" 30)" ""
 
   #  Éprouvé sur le VRAI fichier quand il est là : c'est le seul contrôle qui
   #  verrait un `ci.yml` réécrit dans une forme que le parseur ne sait plus lire.

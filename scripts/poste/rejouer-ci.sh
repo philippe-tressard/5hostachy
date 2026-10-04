@@ -73,6 +73,31 @@ fi
 echo $$ > "$VERROU_REJEU/pid"
 trap 'rm -rf "$VERROU_REJEU"' EXIT
 
+#  ── Workers e2e sur un poste occupé (#1665) — la règle : `ci_workers_e2e` ────
+#  La charge est mesurée MAINTENANT, avant nos propres étapes : c'est celle des
+#  autres sessions. Sous Git Bash, `/proc/loadavg` est une émulation figée ; on
+#  demande donc à Windows. Trois relevés, l'instantané seul est trop bruité.
+charge_cpu() {             # → pourcentage entier, vide si non mesurable
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+      command -v powershell.exe >/dev/null 2>&1 || return
+      powershell.exe -NoProfile -Command '$s=0; 1..3 | ForEach-Object { $s += (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average; Start-Sleep -Milliseconds 500 }; [int]($s/3)' 2>/dev/null | tr -d '\r' ;;
+    *)
+      [ -r /proc/loadavg ] && command -v nproc >/dev/null 2>&1 || return
+      awk -v n="$(nproc)" '{ printf "%d\n", $1 * 100 / n }' /proc/loadavg ;;
+  esac
+}
+SEUIL_CHARGE_E2E=30
+CHARGE=$(charge_cpu)
+E2E_WORKERS=$(ci_workers_e2e "${E2E_WORKERS:-}" "$CHARGE" "$SEUIL_CHARGE_E2E")
+if [ -n "$E2E_WORKERS" ]; then
+  export E2E_WORKERS
+  echo "· e2e sur ${E2E_WORKERS} worker(s) — charge du poste ${CHARGE:-?} % avant le rejeu (seuil ${SEUIL_CHARGE_E2E} %, imposable par E2E_WORKERS)"
+else
+  unset E2E_WORKERS
+  echo "· e2e au défaut de Playwright — charge du poste ${CHARGE:-non mesurée}${CHARGE:+ %} avant le rejeu"
+fi
+
 #  ─────────────────────────────────────────────────────────────────────────────
 #  Le fichier de CI se CHARGE-t-il ? (17/09/2026)
 #

@@ -87,11 +87,27 @@ if (!process.env.E2E_PORT) {
 const PORT = Number(process.env.E2E_PORT);
 const BASE = `http://localhost:${PORT}`;
 
+/*
+ *  ## Le nombre de workers, réglable par `E2E_WORKERS` (#1665, 04/10/2026)
+ *
+ *  Sur un poste déjà occupé par d'autres sessions, les workers se disputent la
+ *  machine : quatre specs d'administration tombaient en délai d'hydratation,
+ *  vertes seules et vertes à un worker (335/335). `rejouer-ci.sh` mesure la
+ *  charge et pose la variable ; absente — en CI —, c'est le défaut de Playwright.
+ *  Une valeur illisible est une ERREUR : l'ignorer rejouerait en silence dans
+ *  les conditions qu'on voulait éviter.
+ */
+const WORKERS_DEMANDES = process.env.E2E_WORKERS;
+if (WORKERS_DEMANDES && !/^[1-9][0-9]*$/.test(WORKERS_DEMANDES)) {
+	throw new Error(`E2E_WORKERS doit être un entier positif, reçu « ${WORKERS_DEMANDES} ».`);
+}
+
 export default defineConfig({
 	testDir: './e2e',
 	//  Pas de test « flaky » toléré en silence : un test d'interface qui échoue
 	//  une fois sur deux ne dit rien, et on finit par ne plus le lire.
 	retries: 0,
+	workers: WORKERS_DEMANDES ? Number(WORKERS_DEMANDES) : undefined,
 	//  ⚠️ Le rapport HTML ne s'ouvre PAS tout seul : en session non interactive il
 	//  bloquerait sur un serveur qui attend une touche.
 	//  `rapport-hydratation` : le bilan des durées d'hydratation du passage (#1475).
