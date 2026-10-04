@@ -17,6 +17,7 @@
 	 */
 	import PanneauTelemetrie from '$lib/components/PanneauTelemetrie.svelte';
 	import TopPages from '$lib/components/TopPages.svelte';
+	import EcransNonVisites from '$lib/components/EcransNonVisites.svelte';
 	import type { TableauTelemetrie } from '$lib/api';
 	import { fmtDate, fmtDatetimeShort as fmt } from '$lib/date';
 
@@ -27,6 +28,14 @@
 	export let libelleVues = 'Pages vues';
 
 	$: kpi = donnees.kpi;
+	//  Ce que couvrent les pages vues, pour les deux vues assez longues pour que
+	//  « non visité » veuille dire quelque chose ; vide sinon, et le bloc se tait.
+	$: periodeEcrans =
+		donnees.scope === 'mois'
+			? '30 derniers jours'
+			: donnees.scope === 'annee'
+				? '12 derniers mois'
+				: '';
 
 	//  Un bâton par mois ou par année est plus large qu'un bâton par heure ou
 	//  par jour : il y en a douze ou dix, pas vingt-quatre ou trente.
@@ -185,6 +194,11 @@
 	</PanneauTelemetrie>
 
 	<TopPages pages={donnees.top_pages} vuesNonAttribuees={donnees.kpi.vues_non_attribuees ?? 0} />
+
+	<!--  Mois et Année seulement (#1630) : sur une journée, presque tout écran est « non visité ». -->
+	{#if periodeEcrans}
+		<EcransNonVisites pages={donnees.top_pages} periode={periodeEcrans} />
+	{/if}
 
 	{#if donnees.top_users.length > 0}
 		<PanneauTelemetrie titre="🏅 Utilisateurs les plus actifs" niveau="bloc">

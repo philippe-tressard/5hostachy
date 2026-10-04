@@ -31,6 +31,7 @@
 	import SyntheseChronologie from './SyntheseChronologie.svelte';
 	import SyntheseFrise from './SyntheseFrise.svelte';
 	import SyntheseMoyenne from './SyntheseMoyenne.svelte';
+	import SyntheseRecidive from './SyntheseRecidive.svelte';
 	import SyntheseRythme from './SyntheseRythme.svelte';
 	import SyntheseTuiles from './SyntheseTuiles.svelte';
 	import { toast } from './Toast.svelte';
@@ -163,6 +164,12 @@
 	{#if m}
 		<!--  Chaque bloc a son sous-titre, d'après la maquette arbitrée le
 		      03/10/2026 — sans son repère de travail (M1…M5). -->
+		{#if m.recidive}
+			<section class="bloc">
+				<h4 class="bloc-titre">La récidive — le même équipement, déjà réparé</h4>
+				<SyntheseRecidive metriques={m} />
+			</section>
+		{/if}
 		<section class="bloc">
 			<h4 class="bloc-titre">Les chiffres — durée, étapes, suites et relances</h4>
 			<SyntheseTuiles metriques={m} />

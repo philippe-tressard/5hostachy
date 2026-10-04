@@ -1264,6 +1264,9 @@ jobs:
           # `$lib/init-prestataires.ts` — que Node lit directement, donc le
           # module éprouvé est CELUI QUE LE SITE EMBARQUE, pas une copie.
           npm run lint:init-prestataires
+          # Les écrans que personne n'a ouverts (#1630) : la comparaison de la table
+          # des pages aux pages vues, éprouvée sur le module que le site embarque.
+          npm run lint:ecrans-non-visites
           # La mécanique des cartes dépliables (#640) : elle vivait DEUX fois
           # dans `espace-cs` — membres du CS et du syndic —, avec deux fonctions
           # de retrait littéralement identiques, et rien ne l'éprouvait. Le

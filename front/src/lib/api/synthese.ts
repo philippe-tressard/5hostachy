@@ -35,6 +35,16 @@ export interface ComparaisonSynthese {
 	suites: number;
 }
 
+/** La récidive d'un équipement (#1647) — `utils/synthese_affaire/recidive.py`.
+ *  Envoyée au CONSEIL seul : le serveur retire la clé pour tout autre lecteur. */
+export interface RecidiveSynthese {
+	equipement: string;
+	/** La fenêtre, en mois avant la clôture. */
+	mois: number;
+	/** Les AUTRES affaires résolues, de la plus récente à la plus ancienne. */
+	autres: { id: number; numero: string; titre: string; ferme_le: string }[];
+}
+
 /** Les métriques figées — `utils/synthese_affaire/metriques.py`. */
 export interface MetriquesSynthese {
 	version: number;
@@ -53,6 +63,8 @@ export interface MetriquesSynthese {
 	chronologie: JalonSynthese[];
 	reouvertures: number;
 	comparaison: ComparaisonSynthese | null;
+	/** Absente sous le seuil, et pour tout lecteur qui n'est pas du conseil. */
+	recidive?: RecidiveSynthese | null;
 }
 
 /** `SyntheseLue` — la synthèse telle que la fiche et le carnet la lisent. */

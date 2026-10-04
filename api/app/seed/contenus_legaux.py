@@ -79,12 +79,20 @@ ASSISTANT_DEUX_AUTOMATIQUES = (
     "le message qu'elle cite — est transmise pour en retirer la signature, les mentions "
     "légales et les lignes vides ; le texte reçu reste conservé tel quel dans l'affaire."
 )
+#: Ce que la synthèse dit d'AUTRES affaires (#1647, 04/10/2026) : leur numéro et leur
+#: date de clôture, jamais leur contenu. La migration 0257 l'insère dans le texte servi.
+SYNTHESE_RECIDIVE = (
+    " — et, quand l'équipement a déjà fait l'objet d'au moins deux autres affaires "
+    "résolues sur le même périmètre en 24 mois, le numéro et la date de clôture de "
+    "celles-ci, jamais leur contenu —"
+)
 SYNTHESE_AFFAIRE_CLOSE = (
     " La seconde : la <strong>synthèse d'une affaire close</strong> du carnet "
     "d'entretien — une fois l'affaire résolue ou annulée, son titre, sa description, ses "
     "suites et relances datées et ses messages non réservés au conseil syndical, sans les "
-    "pièces jointes ni les notes internes, les personnes désignées par leur rôle, sont "
-    "transmis pour en rédiger un bilan, que le conseil syndical relit et valide avant que "
+    "pièces jointes ni les notes internes, les personnes désignées par leur rôle"
+    + SYNTHESE_RECIDIVE
+    + ", sont transmis pour en rédiger un bilan, que le conseil syndical relit et valide avant que "
     "les autres lecteurs de l'affaire le voient."
 )
 

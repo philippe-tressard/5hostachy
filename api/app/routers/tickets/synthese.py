@@ -91,8 +91,12 @@ def lire_synthese(
 ):
     ticket = exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     synthese = synthese_courante(session, ticket.id)
-    lue = synthese_lue(session, synthese) if synthese and lisible(synthese, ticket, user) else None
     conseil = est_moderateur(user)
+    lue = (
+        synthese_lue(session, synthese, conseil=conseil)
+        if synthese and lisible(synthese, ticket, user)
+        else None
+    )
     attente = conseil and _en_attente(session, ticket)
     return SyntheseEtat(
         synthese=lue,
@@ -118,7 +122,7 @@ def modifier_synthese(
     session.add(synthese)
     session.commit()
     session.refresh(synthese)
-    return synthese_lue(session, synthese)
+    return synthese_lue(session, synthese, conseil=True)
 
 
 async def _proposer(session: Session, synthese: SyntheseAffaire, user, complement):
@@ -134,7 +138,7 @@ async def _proposer(session: Session, synthese: SyntheseAffaire, user, complemen
         difficultes=tentative.difficultes or "",
         amelioration=tentative.amelioration or "",
         prompt_complement=tentative.prompt_complement,
-        actuelle=synthese_lue(session, synthese),
+        actuelle=synthese_lue(session, synthese, conseil=True),
     )
 
 
@@ -192,7 +196,7 @@ def appliquer_proposition(
         raise HTTPException(409, "Cette tentative n'a pas rendu de rédaction")
     appliquer_tentative(session, synthese, tentative)
     session.refresh(synthese)
-    return synthese_lue(session, synthese)
+    return synthese_lue(session, synthese, conseil=True)
 
 
 @router.post("/{ticket_id}/synthese/valider", response_model=SyntheseLue)
@@ -215,7 +219,7 @@ def valider_synthese(
     session.add(synthese)
     session.commit()
     session.refresh(synthese)
-    return synthese_lue(session, synthese)
+    return synthese_lue(session, synthese, conseil=True)
 
 
 @router.post("/{ticket_id}/synthese/produire", response_model=SyntheseLue, status_code=201)
@@ -244,4 +248,4 @@ async def produire_synthese(
     if resultat.a_aviser:
         background_tasks.add_task(envoyer_avis, None, demande.id)
     session.refresh(demande)
-    return synthese_lue(session, demande)
+    return synthese_lue(session, demande, conseil=True)
