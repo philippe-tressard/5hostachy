@@ -13,6 +13,15 @@
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, postFormData } from './client';
+import type { ExerciceLu, ResumeAffaires } from './synthese';
+
+/**  Les affaires closes d'un prestataire (#1646) — `routers/prestataires_metriques`.
+ *   L'ensemble, puis chaque exercice comptable, le plus récent d'abord. */
+export interface MetriquesPrestataire {
+	prestataire_id: number;
+	ensemble: ResumeAffaires;
+	exercices: (ResumeAffaires & ExerciceLu)[];
+}
 
 //  ── Ce que le serveur RENVOIE (#1572) ───────────────────────────────────────────
 //
@@ -199,4 +208,8 @@ export const prestataires = {
 	// Synthèse
 	synthese: (prestataireId: number) =>
 		api.get<SynthesePrestataire>(`/prestataires/synthese/${prestataireId}`),
+	/**  Les métriques des affaires où il était l'intervenant désigné — RÉSERVÉES au
+	 *   conseil syndical (`require_cs_or_admin`, arbitré le 04/10/2026). */
+	metriques: (prestataireId: number) =>
+		api.get<MetriquesPrestataire>(`/prestataires/${prestataireId}/metriques`),
 };

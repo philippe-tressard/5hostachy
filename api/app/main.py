@@ -109,6 +109,7 @@ from app.routers import (
     calendrier,
     prestataires,
     prestataires_archivage,
+    prestataires_metriques,
     compteurs,
     sondages,
     idees,
@@ -426,6 +427,8 @@ app.include_router(prestataires.router)
 app.include_router(compteurs.router)
 #  Le geste 📦 des prestataires et des contrats (#1538), même préfixe aussi.
 app.include_router(prestataires_archivage.router)
+#  Les métriques des affaires d'un prestataire (#1646), même préfixe.
+app.include_router(prestataires_metriques.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
