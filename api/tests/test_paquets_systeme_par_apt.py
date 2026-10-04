@@ -13,7 +13,7 @@ celle que C30 compare entre les nœuds : elle n'est pas recopiée ici.
 
 import re
 
-from tests.conftest import racine_depot
+from tests.conftest import racine_depot, scripts_shell_versionnes
 
 RACINE = racine_depot()
 INSTALLEUR = "scripts/installation/install-cloudflared.sh"
@@ -26,13 +26,6 @@ def _paquets_parite() -> list[str]:
     return m.group(1).split()
 
 
-def _scripts() -> list[str]:
-    return sorted(
-        str(p.relative_to(RACINE)).replace("\\", "/")
-        for p in (RACINE / "scripts").rglob("*.sh")
-    )
-
-
 def test_la_liste_des_composants_est_lue():
     #  Cas zéro : une liste vide rendrait le test suivant vert sans rien vérifier.
     assert "cloudflared" in _paquets_parite()
@@ -40,8 +33,9 @@ def test_la_liste_des_composants_est_lue():
 
 def test_aucun_script_ne_pose_un_composant_suivi_hors_apt():
     fautes = []
-    for chemin in _scripts():
-        texte = (RACINE / chemin).read_text(encoding="utf-8", errors="replace")
+    for script in scripts_shell_versionnes():
+        chemin = script.relative_to(RACINE).as_posix()
+        texte = script.read_text(encoding="utf-8", errors="replace")
         for paquet in _paquets_parite():
             if re.search(rf"-o\s+\S*/usr/local/bin/{re.escape(paquet)}\b", texte) or re.search(
                 rf"releases/\S*/{re.escape(paquet)}-linux", texte
