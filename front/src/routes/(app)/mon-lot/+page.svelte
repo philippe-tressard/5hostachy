@@ -7,7 +7,13 @@
 	import FormulaireBail from '$lib/components/FormulaireBail.svelte';
 	import ModaleAccesBail from '$lib/components/ModaleAccesBail.svelte';
 	import { onMount } from 'svelte';
-	import { lots as lotsApi, bailleur as bailApi, type Bail, type MonLot } from '$lib/api';
+	import {
+		lots as lotsApi,
+		bailleur as bailApi,
+		type Bail,
+		type BailLocataire,
+		type MonLot,
+	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
 		isBailleur,
@@ -67,7 +73,7 @@
 	//  l'identique ici et dans le composant qui le rend.
 
 	// ── State (locataire bail) ────────────────────────────────────────────────
-	let monBailData: any = null;
+	let monBailData: BailLocataire | null = null;
 
 	// ── State (lots) ──────────────────────────────────────────────────────────
 	let lots: MonLot[] = [];

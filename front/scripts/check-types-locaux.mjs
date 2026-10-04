@@ -19,7 +19,7 @@
  *  est le signe d'une entité : c'est la clé que le serveur lui donne.
  *
  *  Le type va dans `$lib/api/types.ts` ou dans le module du domaine
- *  (`$lib/api/patrimoine.ts` pour un bail), et le CLIENT le rend.
+ *  (`$lib/api/bailleur.ts` pour un bail), et le CLIENT le rend.
  *
  *  ## Ce qui est déclaré, et pourquoi deux listes
  *
@@ -52,7 +52,6 @@ const RACINES = ['src/routes', 'src/lib/components'];
 
 /** Types d'entité encore déclarés dans un écran — à monter (#1044). */
 const DETTE = {
-	'lib/components/RechercheLocataire.svelte::Compte': '#1044',
 	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingAcces': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
@@ -64,7 +63,6 @@ const DETTE = {
  */
 const PLAFOND_ANY_CLIENT = {
 	'administration.ts': 41,
-	'patrimoine.ts': 25,
 	'telemetrie.ts': 1,
 };
 

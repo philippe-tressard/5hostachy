@@ -3,7 +3,7 @@
 	 *   remontée par la page comme le reste de la configuration. */
 	export let referenceCopro = '';
 	import { onMount } from 'svelte';
-	import { config as configApi, copropriete as coproprieteApi } from '$lib/api';
+	import { config as configApi, copropriete as coproprieteApi, type Copropriete } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
@@ -61,7 +61,8 @@
 			const data = await coproprieteApi.get();
 			if (data) {
 				Object.keys(form).forEach((k) => {
-					if (data[k] !== undefined) form[k] = data[k] ?? '';
+					const v = data[k as keyof Copropriete];
+					if (v !== undefined) form[k] = v ?? '';
 				});
 				//  Lu, jamais réécrit — cf. le commentaire de `fiche`.
 				fiche = data;

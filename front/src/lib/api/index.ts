@@ -34,6 +34,7 @@ export * from './types';
 export * from './documents';
 export * from './communaute';
 export * from './patrimoine';
+export * from './bailleur';
 export * from './acces';
 export * from './prestataires';
 export * from './administration';

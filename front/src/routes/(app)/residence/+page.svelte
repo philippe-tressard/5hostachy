@@ -17,6 +17,9 @@
 		copropriete as coproprieteApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
+		type Batiment,
+		type Copropriete,
+		type DiagnosticType,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -41,8 +44,8 @@
 	$: _siteNom = $siteNomStore;
 
 	// ── State ──────────────────────────────────────────────────────────────────
-	let copropriete: any = null;
-	let batiments: any[] = [];
+	let copropriete: Copropriete | null = null;
+	let batiments: Batiment[] = [];
 	let plans: any[] = [];
 	let reglements: any[] = [];
 	let crAg: any[] = [];
@@ -73,7 +76,7 @@
 	//  trois fois, et la copie du plan liait son périmètre à celle de l'AG (#470).
 
 	// Diagnostics réglementaires
-	let diagnosticTypes: any[] = [];
+	let diagnosticTypes: DiagnosticType[] = [];
 	//  ⚠️ L'état du dépôt et de la correction d'un rapport vit dans
 	//  `SectionDiagnostics` : il n'a d'objet que là où il est employé.
 
