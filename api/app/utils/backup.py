@@ -28,10 +28,28 @@ PREFIXE_ARCHIVE = "hostachy_backup_"
 MOTIF_ARCHIVE = f"{PREFIXE_ARCHIVE}*.tar.gz"
 _FORMAT_HORODATAGE = "%Y%m%d_%H%M%S"
 _SUFFIXE_ARCHIVE = ".tar.gz"
+#  🔴 Le nom ÉCRIT son fuseau (#1611). Il portait l'horloge UTC sans le dire :
+#  `…_020000` désignait une sauvegarde prise à 04:00, l'heure que le planificateur
+#  règle. Il dit désormais l'heure de Paris, et le suffixe distingue une archive
+#  nouvelle d'une ancienne (UTC, sans suffixe) — sans lui, rien ne dirait laquelle on
+#  lit pendant les `keep` versions où les deux coexistent. Le suffixe vient APRÈS les
+#  secondes : le tri alphabétique reste le tri chronologique (rotation, export), et les
+#  lecteurs par JOUR (`jours_manquants`) lisent la date de Paris, celle du résident.
+SUFFIXE_FUSEAU = "_paris"
+
+
+def nom_archive(instant: datetime) -> str:
+    """Le nom d'une archive prise à `instant` (UTC naïf) — à l'heure de Paris."""
+    heure = horloge.a_paris(instant).strftime(_FORMAT_HORODATAGE)
+    return f"{PREFIXE_ARCHIVE}{heure}{SUFFIXE_FUSEAU}{_SUFFIXE_ARCHIVE}"
 
 
 def horodatage_archive(nom_fichier: str) -> datetime | None:
-    """Date UTC de création lue dans le nom d'une archive, ou None si illisible.
+    """Date de création (UTC naïf) lue dans le nom d'une archive, ou None si illisible.
+
+    Deux formats coexistent pendant la rétention (#1611) : `…_HHMMSS_paris` (heure de
+    Paris, converti ici) et `…_HHMMSS` (l'ancien, déjà en UTC). Un suffixe de fuseau
+    inconnu est refusé : lire autre chose en UTC serait deviner.
 
     Rend None plutôt que de lever : un nom non conforme (fichier déposé à la
     main, archive renommée) ne doit pas faire échouer un contrôle de santé —
@@ -44,10 +62,14 @@ def horodatage_archive(nom_fichier: str) -> datetime | None:
     if not base.startswith(PREFIXE_ARCHIVE) or not base.endswith(_SUFFIXE_ARCHIVE):
         return None
     brut = base[len(PREFIXE_ARCHIVE) : -len(_SUFFIXE_ARCHIVE)]
+    paris = brut.endswith(SUFFIXE_FUSEAU)
+    if paris:
+        brut = brut[: -len(SUFFIXE_FUSEAU)]
     try:
-        return datetime.strptime(brut, _FORMAT_HORODATAGE)
+        lu = datetime.strptime(brut, _FORMAT_HORODATAGE)
     except ValueError:
         return None
+    return horloge.de_paris(lu) if paris else lu
 
 
 def run_backup(history_id: int | None = None):
@@ -67,8 +89,7 @@ def run_backup(history_id: int | None = None):
 
         try:
             os.makedirs(settings.backup_dir, exist_ok=True)
-            ts = horloge.maintenant().strftime(_FORMAT_HORODATAGE)
-            filename = f"{PREFIXE_ARCHIVE}{ts}{_SUFFIXE_ARCHIVE}"
+            filename = nom_archive(horloge.maintenant())
             dest = os.path.join(settings.backup_dir, filename)
 
             db_path = settings.database_url.replace("sqlite:////", "/")

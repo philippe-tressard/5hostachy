@@ -115,5 +115,28 @@
   check "keep=0 ne tire rien"  "" "$(archives_a_rattraper 0 "$LOC" "$DIST")"
   check "pair vide"            "" "$(archives_a_rattraper 2 "$LOC" '')"
 
+  # ── Archives nommées à l'heure de Paris (#1611) ───────────────────────────
+  # `…_HHMMSS_paris` remplace `…_HHMMSS` (UTC) : le suffixe vient APRÈS les secondes,
+  # donc le tri alphabétique reste chronologique et les lecteurs par JOUR lisent la
+  # date de Paris. Anciennes et nouvelles archives coexistent pendant la rétention.
+  P5=hostachy_backup_20261005_040000_paris.tar.gz
+  P4=hostachy_backup_20261004_040000_paris.tar.gz
+  P6=hostachy_backup_20261006_040000_paris.tar.gz
+  U4=hostachy_backup_20261004_020000.tar.gz
+  tn "nom à l'heure de Paris"    "$P5" ok
+  check "série à l'heure de Paris, complète" "" \
+        "$(printf '%s\n%s' "$P5" "$P4" | jours_manquants 2 20261006)"
+  check "trou dans la série de Paris" "20261004" \
+        "$(printf '%s' "$P5" | jours_manquants 2 20261006)"
+  # Le défaut d'origine : prise à 00:30 à Paris, l'archive porte le jour de PARIS (le
+  # nom UTC portait la veille, et le jour semblait manquer).
+  check "00:30 à Paris compte pour son jour" "" \
+        "$(printf '%s\n%s' hostachy_backup_20261005_003000_paris.tar.gz "$P4" | jours_manquants 2 20261006)"
+  # Mélange à la bascule : l'ancienne (UTC) précède la nouvelle (Paris), l'ordre tient.
+  check "rotation : la plus ancienne (UTC) part d'abord" "$U4" \
+        "$(printf '%s\n%s\n%s\n' "$U4" "$P5" "$P6" | archives_a_supprimer 2)"
+  check "rattrapage : anciennes et nouvelles mêlées" "$P6" \
+        "$(archives_a_rattraper 2 "$P5" "$(printf '%s\n%s' "$U4" "$P6")")"
+
   [ $st_fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
   exit $st_fail

@@ -99,7 +99,8 @@ verdict_archive() { # $1=octets $2=empreintes_identiques $3=contient_db $4=integ
 
 # ── Quelles copies locales supprimer ? ───────────────────────────────────────
 # Reçoit la liste des noms DÉJÀ TRIÉE par ordre chronologique croissant (le nom
-# porte l'horodatage : hostachy_backup_YYYYmmdd_HHMMSS.tar.gz — même convention
+# porte l'horodatage : hostachy_backup_YYYYmmdd_HHMMSS_paris.tar.gz (heure de Paris,
+# #1611 ; les anciennes, sans `_paris`, sont en UTC) — même convention
 # que _rotate_backups() côté API). Rend les noms excédentaires, les plus anciens
 # d'abord. `keep <= 0` ne supprime RIEN : une valeur de configuration aberrante
 # ne doit jamais effacer les sauvegardes.
