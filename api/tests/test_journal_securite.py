@@ -81,6 +81,13 @@ GESTES_SENSIBLES = {
     "détournement de compte, que rien ne traçait (#1549)",
     ("utils/verification_adresse.py", "_confirmer_changement"): "une nouvelle adresse "
     "confirmée : c'est désormais elle qui reçoit le mot de passe oublié (#1549)",
+    #  La purge des comptes inactifs (#1580) : personne n'agit, le planificateur
+    #  efface. Après lui, il ne reste QUE cette ligne pour dire qu'un compte a
+    #  existé et pourquoi il n'est plus là.
+    ("utils/purge_comptes/tache.py", "_supprimer"): "un compte effacé par la purge "
+    "des comptes inactifs, sans acteur humain",
+    ("utils/purge_comptes/tache.py", "_avertir"): "l'avertissement qui ouvre le délai "
+    "de trente jours avant l'effacement",
 }
 
 #: Ce qui reconnaît un geste sur un compte dans un routeur — le relevé mécanique
@@ -89,10 +96,17 @@ GESTES_SENSIBLES = {
 #:   • `marquer_decide(...)` — la décision sur un compte (valider, refuser,
 #:     désactiver) : `utils/comptes.py` la rend obligatoire pour les trois ;
 #:   • `.ajouter_role(...)` / `.retirer_role(...)` — les droits ;
-#:   • `purger(session, "utilisateur", ...)` — l'effacement d'un compte ;
+#:   • `purger(session, "utilisateur", ...)` ou `supprimer_compte(...)` —
+#:     l'effacement d'un compte (la seconde porte la première depuis #1580) ;
 #:   • `Delegation(...)` ou `.statut = StatutDelegation.…` — la lecture au nom
 #:     d'autrui qui commence ou cesse.
-APPELS_SIGNATURES = {"marquer_decide", "ajouter_role", "retirer_role", "Delegation"}
+APPELS_SIGNATURES = {
+    "marquer_decide",
+    "ajouter_role",
+    "retirer_role",
+    "Delegation",
+    "supprimer_compte",
+}
 
 
 def _arbre(chemin: Path) -> ast.Module:
