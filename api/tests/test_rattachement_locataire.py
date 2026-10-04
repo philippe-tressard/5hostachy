@@ -67,7 +67,9 @@ def parc(session):
         "autre_bat": _lot_au_fichier(session, "27", TypeLot.appartement, batiment_id=2),
         "cave": _lot_au_fichier(session, "408", TypeLot.cave),
         "parking": _lot_au_fichier(session, "462", TypeLot.parking, batiment_id=None),
-        "voisin": _lot_au_fichier(session, "14", TypeLot.appartement, copro="BAILLEUR Alice", no="408002"),
+        "voisin": _lot_au_fichier(
+            session, "14", TypeLot.appartement, copro="BAILLEUR Alice", no="408002"
+        ),
     }
     badges = {
         "vigik": Vigik(code="V1", lot_id=lots["appart"].id),
@@ -87,7 +89,7 @@ def _locataire(session, nom_proprietaire="DURANDAL", statut=StatutUtilisateur.lo
 
 
 def _numeros(proposes):
-    return {nature: [l.numero for l in lots] for nature, lots in proposes.items()}
+    return {nature: [lot.numero for lot in lots] for nature, lots in proposes.items()}
 
 
 def test_les_lots_du_proprietaire_nomme_sont_proposes_par_nature(session, parc):
@@ -204,13 +206,13 @@ def test_les_routes_proposent_puis_rattachent():
         )
         propositions = http.get("/lots/ma-location/propositions").json()
         assert propositions["proprietaire"] == "DURANDAL"
-        assert [l["numero"] for l in propositions["appartement"]] == ["13"]
+        assert [lot["numero"] for lot in propositions["appartement"]] == ["13"]
         assert propositions["parking"][0]["acces"] == {"vigik": 0, "telecommande": 0}
 
         lot_id = propositions["appartement"][0]["id"]
         assert http.post("/lots/ma-location", json={"lot_ids": [lot_id]}).status_code == 200
         mes_lots = http.get("/lots/mes-lots").json()
-        assert [(l["id"], l["type_lien"]) for l in mes_lots] == [(lot_id, "locataire")]
+        assert [(lot["id"], lot["type_lien"]) for lot in mes_lots] == [(lot_id, "locataire")]
         #  Déjà rattaché : une seconde déclaration ne passe plus.
         assert http.post("/lots/ma-location", json={"lot_ids": [lot_id]}).status_code == 403
 

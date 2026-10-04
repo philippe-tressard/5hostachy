@@ -70,11 +70,14 @@ def lots_proposes(user: Utilisateur, session: Session) -> dict[str, list[Lot]]:
     if not ids:
         return vide
     lots = session.exec(select(Lot).where(Lot.id.in_(ids))).all()  # type: ignore[union-attr]
-    par_nature = {n: sorted((l for l in lots if valeur(l.type) == n), key=lambda l: l.numero) for n in NATURES}
+    par_nature = {
+        n: sorted((lot for lot in lots if valeur(lot.type) == n), key=lambda lot: lot.numero)
+        for n in NATURES
+    }
     #  Le bâtiment du profil départage les appartements — sauf s'il n'en laisse
     #  aucun : un bâtiment mal saisi ne doit pas cacher le seul logement.
     batiments = batiments_de_l_utilisateur(user)
-    dans_le_batiment = [l for l in par_nature["appartement"] if l.batiment_id in batiments]
+    dans_le_batiment = [lot for lot in par_nature["appartement"] if lot.batiment_id in batiments]
     if dans_le_batiment:
         par_nature["appartement"] = dans_le_batiment
     return par_nature
@@ -82,7 +85,9 @@ def lots_proposes(user: Utilisateur, session: Session) -> dict[str, list[Lot]]:
 
 def acces_des_lots(session: Session, lot_ids: list[int]) -> dict[int, dict[str, int]]:
     """Combien de badges de chaque type chaque lot fait remettre — `{lot: {clé: n}}`."""
-    compte: dict[int, dict[str, int]] = {i: {t.cle: 0 for t in TYPES_ACCES.values()} for i in lot_ids}
+    compte: dict[int, dict[str, int]] = {
+        i: {t.cle: 0 for t in TYPES_ACCES.values()} for i in lot_ids
+    }
     for t, objet in _acces_remissibles(session, lot_ids):
         compte[objet.lot_id][t.cle] += 1
     return compte
@@ -96,7 +101,10 @@ def _acces_remissibles(session: Session, lot_ids: list[int]):
     """
     if not lot_ids:
         return
-    natures = {l.id: valeur(l.type) for l in session.exec(select(Lot).where(Lot.id.in_(lot_ids))).all()}  # type: ignore[union-attr]
+    natures = {
+        lot.id: valeur(lot.type)
+        for lot in session.exec(select(Lot).where(Lot.id.in_(lot_ids))).all()
+    }  # type: ignore[union-attr]
     for t in TYPES_ACCES.values():
         for objet in session.exec(
             select(t.modele).where(
@@ -115,24 +123,26 @@ def rattacher_lots_declares(user: Utilisateur, lots: list[Lot], session: Session
     Ne committe pas : l'appelant (la route) le fait.
     """
     for lot in lots:
-        session.add(UserLot(user_id=user.id, lot_id=lot.id, type_lien=TypeLien.locataire, actif=True))
+        session.add(
+            UserLot(user_id=user.id, lot_id=lot.id, type_lien=TypeLien.locataire, actif=True)
+        )
     #  Ses bâtiments viennent de changer : ce qu'il lit en dépend (`mes_batiments`).
     invalider_cache(user.id)
     remis = {t.cle: 0 for t in TYPES_ACCES.values()}
-    for t, objet in _acces_remissibles(session, [l.id for l in lots]):
+    for t, objet in _acces_remissibles(session, [lot.id for lot in lots]):
         objet.chez_locataire = True
         objet.user_id = user.id
         session.add(objet)
         remis[t.cle] += 1
 
-    numeros = ", ".join(l.numero for l in lots)
+    numeros = ", ".join(lot.numero for lot in lots)
     #  Des IDENTIFIANTS, jamais un nom : le journal ne porte aucune donnée
     #  personnelle (`test_journal_securite.py`).
     journaliser_securite(
         "rattachement_declare",
         acteur_id=user.id,
         cible_id=user.id,
-        detail="lots " + ",".join(str(l.id) for l in lots),
+        detail="lots " + ",".join(str(lot.id) for lot in lots),
     )
     prevenir_gestionnaire(
         session,

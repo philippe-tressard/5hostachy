@@ -244,9 +244,7 @@ def propositions_de_location(
     return PropositionsLocation(
         proprietaire=user.nom_proprietaire,
         **{
-            nature: [
-                LotPropose(**_lot_read(lot).model_dump(), acces=acces[lot.id]) for lot in lots
-            ]
+            nature: [LotPropose(**_lot_read(lot).model_dump(), acces=acces[lot.id]) for lot in lots]
             for nature, lots in par_nature.items()
         },
     )
