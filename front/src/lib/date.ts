@@ -145,6 +145,14 @@ export function libelleExercice(moisDebut: number | null | undefined): string {
 	return `de ${NOMS_MOIS[m - 1]} à ${NOMS_MOIS[(m + 10) % 12]}`;
 }
 
+/** Le mois court d'un numéro (1 à 12) : "sept.", "oct." — légende d'un graphe par jour. */
+export function fmtMoisCourt(mois: number): string {
+	return new Date(Date.UTC(2000, mois - 1, 15, 12)).toLocaleDateString(LOCALE, {
+		month: 'short',
+		timeZone: TZ,
+	});
+}
+
 /** "2 avril" (jour + mois long, sans année) */
 export function fmtDayMonth(d: string | null | undefined): string {
 	if (!d) return '—';
