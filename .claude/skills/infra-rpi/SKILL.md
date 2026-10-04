@@ -610,6 +610,12 @@ Si le build du standby échoue, une alerte part (cooldown 6 h) : c'est l'état l
 plus trompeur, la parité **git** devenant verte alors que les **images** sont
 restées vieilles — distinction que le point 10 ne sait pas faire.
 
+**L'actif recrée l'API seule, puis le reste** (#1662, `servir_images` dans
+`auto-deploy.sh`) : il attend le 200 de `http://localhost/api/health` avant de
+recréer le front, borné par `API_PRETE_MAX_S`. Au journal, « API prête en N s »
+ou « ⚠ API sans réponse 200 … le reste est recréé quand même » — la seconde ne
+bloque jamais le déploiement, elle dit qu'il faut lire `docker logs hostachy_api`.
+
 ## Le noyau du standby se met à jour seul (#1395 — 27/09/2026)
 
 Le 27/09/2026, rpi1 tournait en 6.12.62 et rpi2 en 6.12.75 : `unattended-upgrades`
