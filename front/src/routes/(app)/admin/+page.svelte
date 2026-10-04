@@ -2,7 +2,15 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
-	import { admin as adminApi, auth as authApi, config as configApi } from '$lib/api';
+	import {
+		admin as adminApi,
+		auth as authApi,
+		config as configApi,
+		type CommandeAcces,
+		type CompteEnAttenteEnrichi,
+		type DemandeProfil,
+		type UtilisateurAdmin,
+	} from '$lib/api';
 	import { aRole } from '$lib/stores/auth';
 	import OngletUtilisateurs from '$lib/components/OngletUtilisateurs.svelte';
 	import { essayer, messagePartiel, TITRE_PARAMETRAGE_ILLISIBLE } from '$lib/chargement';
@@ -73,7 +81,7 @@
 	}
 
 	//  Comptes en attente
-	let comptes: any[] = [];
+	let comptes: CompteEnAttenteEnrichi[] = [];
 	let comptesLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	let erreurComptes = '';
@@ -89,7 +97,7 @@
 	}
 
 	//  Commandes d'acces
-	let commandes: any[] = [];
+	let commandes: CommandeAcces[] = [];
 	let commandesLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	let erreurCommandes = '';
@@ -108,7 +116,7 @@
 	//  laissé deux appels d'API sans lecteur.
 
 	//  Utilisateurs & rôles
-	let utilisateurs: any[] = [];
+	let utilisateurs: UtilisateurAdmin[] = [];
 	let utilisateursLoading = true;
 	let batimentsList: { id: number; numero: string }[] = [];
 
@@ -139,7 +147,7 @@
 	//  Chacune était cohérente avec elle-même : aucun contrôle ne pouvait le voir.
 
 	//  Demandes de modification de profil
-	let demandesProfil: any[] = [];
+	let demandesProfil: DemandeProfil[] = [];
 	let demandesProfilLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	let erreurDemandesProfil = '';

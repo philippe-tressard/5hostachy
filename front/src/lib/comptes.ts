@@ -21,7 +21,7 @@
  * 🔴 `standards/02` §4 bis : quand deux implémentations coexistent, on retient
  * **la plus disante**. C'est elle qui est ici, et les deux écrans l'obtiennent.
  */
-import { admin as adminApi } from '$lib/api';
+import { admin as adminApi, type CompteTraite } from '$lib/api';
 import { nomAffiche } from '$lib/noms';
 
 /** Un message à afficher, et le ton sur lequel le dire. */
@@ -36,7 +36,7 @@ export interface Annonce {
  * ⚠️ Séparée de l'appel réseau pour être vérifiable sans rien monter : c'est la
  * partie qui porte les six cas, donc celle qui peut se tromper.
  */
-export function annonceValidation(reponse: any, utilisateur: any): Annonce {
+export function annonceValidation(reponse: CompteTraite, utilisateur: any): Annonce {
 	const auto = reponse?.auto_match;
 	const aide = auto?.aide_match;
 	if (aide?.aide_trouve) {

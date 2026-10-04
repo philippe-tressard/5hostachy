@@ -5,7 +5,12 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { currentUser, isCS, quandAuthResolue } from '$lib/stores/auth';
-	import { delegations as delegationsApi, admin as adminApi } from '$lib/api';
+	import {
+		delegations as delegationsApi,
+		admin as adminApi,
+		type Delegation,
+		type UtilisateurAdmin,
+	} from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -23,9 +28,9 @@
 	$: _pc = getPageConfig($configStore, 'delegations', defautsDePage('delegations'));
 	$: _siteNom = $siteNomStore;
 
-	let delegations: any[] = [];
+	let delegations: Delegation[] = [];
 	let loading = true;
-	let users: any[] = []; // pour le formulaire CS
+	let users: UtilisateurAdmin[] = []; // pour le formulaire CS
 	/** Non vide = la liste des résidents n'a pas pu être chargée (#522). */
 	let erreurUtilisateurs = '';
 
@@ -45,7 +50,7 @@
 				//  Donnée de RÉFÉRENCE : elle garnit deux menus déroulants. Un
 				//  échec les laissait vides, et l'écran donnait à croire qu'aucun
 				//  résident n'était délégable (#522).
-				[users, erreurUtilisateurs] = await essayer<any[]>(adminApi.utilisateurs(), []);
+				[users, erreurUtilisateurs] = await essayer(adminApi.utilisateurs(), []);
 			}
 		} catch {
 			toast('error', 'Erreur de chargement');

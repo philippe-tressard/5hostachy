@@ -103,7 +103,7 @@
 		imapTesting = true;
 		imapResultat = '';
 		try {
-			const r: any = await configApi.testerImap();
+			const r = await configApi.testerImap();
 			imapResultat = r.message;
 			toast('success', 'Connexion à la boîte réussie.');
 		} catch (e: any) {

@@ -13,7 +13,7 @@
   l'onglet Site en lit aussi les gestionnaires possibles.
 -->
 <script lang="ts">
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type UtilisateurAdmin } from '$lib/api';
 	import {
 		adresseChangee,
 		annonceLienEnvoye,
@@ -33,7 +33,7 @@
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 
 	/** La liste des comptes — chargée par la page (l'onglet Site la lit aussi). */
-	export let utilisateurs: any[] = [];
+	export let utilisateurs: UtilisateurAdmin[] = [];
 	export let chargement = false;
 	/** Non vide = la liste n'a pas pu être lue : elle ne se dit pas vide (#1459). */
 	export let erreur = '';

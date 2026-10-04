@@ -67,7 +67,6 @@ const DETTE = {
  */
 const PLAFOND_ANY_CLIENT = {
 	'acces.ts': 21,
-	'administration.ts': 41,
 	'client.ts': 1,
 	'documents.ts': 3,
 	'index.ts': 10,

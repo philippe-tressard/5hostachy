@@ -34,7 +34,7 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { onMount } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type EnvoiEmail } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmer } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
@@ -94,7 +94,7 @@
 	const labelIntention = (v: string | null | undefined) =>
 		INTENTIONS.find((i) => i.valeur === (v ?? ''))?.label ?? '';
 	let emailSaving = false;
-	let emailHistory: any[] = [];
+	let emailHistory: EnvoiEmail[] = [];
 	let emailHistoryLoading = true;
 
 	/*  🔴 Ce chargement n'avait AUCUN `catch` (#816). Une erreur remontait sans

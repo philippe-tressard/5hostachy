@@ -35,7 +35,9 @@
 		prenom: string;
 		nom: string;
 		statut: string;
-		batiment_id: number | null;
+		//  Optionnel comme dans `User`, que le client rend (#1572) : le serveur
+		//  l'envoie toujours (`UserRead`, `null` par défaut).
+		batiment_id?: number | null;
 		cree_le: string;
 		nom_aide?: string | null;
 		prenom_aide?: string | null;
@@ -117,7 +119,12 @@
 			]);
 			erreurReference = messagePartiel(eBat, eUsers, eLots, eImports);
 			comptesEnAttente = comptes;
-			commandesEnAttente = commandes;
+			//  ⚠️ ÉCART ÉCRAN ↔ SERVEUR, relevé en typant le client (#1572) et laissé
+			//  EN L'ÉTAT : `PendingAcces` lit `lot`, `proprietaire` et `type_acces`,
+			//  que `GET /admin/commandes-acces` ne rend pas (il rend la ligne
+			//  `CommandeAcces` : `user_id`, `lot_id`, `type`). La conversion le DIT au
+			//  lieu de le taire ; la correction est un ticket à part.
+			commandesEnAttente = commandes as unknown as PendingAcces[];
 			batimentsMap = Object.fromEntries((batList as any[]).map((b) => [b.id, `Bât. ${b.numero}`]));
 			allUsers = (users as any[]).map((u) => ({
 				id: u.id,
