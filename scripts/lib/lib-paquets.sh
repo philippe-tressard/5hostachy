@@ -57,7 +57,13 @@ cle_version() { echo "ver_${1//[^A-Za-z0-9]/_}"; }
 #     par des virgules. Le marqueur « ok: » distingue « aucun » de « simulation
 #     impossible » (verrou pris, apt-get absent), qui rend VIDE — cas zéro ;
 #   - ver_<paquet> : la version installée, « absent » si dpkg répond que le
-#     paquet n est pas installé, VIDE si dpkg-query manque.
+#     paquet n est pas installé ET qu aucun binaire du même nom ne répond,
+#     VIDE si dpkg-query manque. 🔴 Le binaire est interrogé quand dpkg ne
+#     connaît pas le paquet : le 04/10/2026, rpi2 faisait tourner un cloudflared
+#     2026.3.0 posé à la main (scripts/installation/install-cloudflared.sh, hors
+#     apt) et le contrôle disait « absent » — comme si le tunnel n existait pas,
+#     alors que c était lui qui portait la production. On mesure ce qui TOURNE,
+#     pas ce que le gestionnaire de paquets en sait (standards/04 §3, §14).
 collecte_paquets() {
     local p
     printf '%s' '
@@ -74,7 +80,7 @@ else
 echo "apt_retenus="
 fi
 if command -v dpkg-query >/dev/null 2>&1; then
-_pv() { _s=$(dpkg-query -W -f "\${Status}|\${Version}" "$1" 2>/dev/null); case "$_s" in "install ok installed|"*) echo "${_s#*|}" ;; *) echo absent ;; esac; }
+_pv() { _s=$(dpkg-query -W -f "\${Status}|\${Version}" "$1" 2>/dev/null); case "$_s" in "install ok installed|"*) echo "${_s#*|}" ;; *) _b=$("$1" --version 2>/dev/null | head -1 | grep -oE "[0-9]+(\.[0-9]+)+" | head -1); echo "${_b:-absent}" ;; esac; }
 '
     for p in $PAQUETS_PARITE; do printf 'echo "%s=$(_pv %s)"\n' "$(cle_version "$p")" "$p"; done
     printf '%s\n' 'else'
@@ -230,7 +236,14 @@ X
     t "collecte : retenus, sur plusieurs lignes, triés" "ok:initramfs-tools-core,linux-image-rpi-2712,raspi-firmware" champ apt_retenus
     t "collecte : version installée (époque comprise)" "5:29.2.1-1~debian.13~trixie" champ ver_docker_ce
     t "collecte : paquet à point dans son champ"        2.2.1-1  champ ver_containerd_io
-    t "collecte : paquet non installé → absent"         absent   champ ver_cloudflared
+    cloudflared() { return 1; }
+    t "collecte : paquet non installé, aucun binaire → absent"  absent   champ ver_cloudflared
+    #  04/10/2026 : rpi2 portait un cloudflared 2026.3.0 posé hors apt ; dpkg disait « absent ».
+    cloudflared() { echo "cloudflared version 2026.3.0 (built 2026-03-09-14:08 UTC)"; }
+    t "collecte : hors apt mais binaire présent → sa version, pas « absent »" 2026.3.0 champ ver_cloudflared
+    t "collecte : le binaire ne masque pas un paquet que dpkg connaît"        "5:29.2.1-1~debian.13~trixie" champ ver_docker_ce
+    unset -f cloudflared
+    t "hors apt 2026.3.0 / apt 2026.9.3 → DIVERGENCE (rpi2 / rpi1, 04/10)" DIVERGENCE verdict_versions_parite 2026.3.0 2026.9.3
     apt-get() { cat <<'X'
 Reading package lists...
 Calculating upgrade...
