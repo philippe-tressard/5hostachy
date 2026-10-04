@@ -80,6 +80,7 @@
 		"lint:manuel-menus": "node scripts/check-manuel-menus.mjs",
 		"lint:manuel-profils": "node scripts/check-manuel-profils.mjs",
 		"lint:init-prestataires": "node --experimental-strip-types scripts/check-init-prestataires.mjs --selftest",
+		"lint:ecrans-non-visites": "node --experimental-strip-types scripts/check-ecrans-non-visites.mjs --selftest",
 		"lint:prompt-origine": "node --experimental-strip-types scripts/check-prompt-origine.mjs --selftest",
 		"lint:liste-depliable": "node --experimental-strip-types scripts/check-liste-depliable.mjs --selftest",
 		"lint:accordeon": "node --experimental-strip-types scripts/check-accordeon.mjs --selftest",
