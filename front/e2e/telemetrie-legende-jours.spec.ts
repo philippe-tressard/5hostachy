@@ -61,6 +61,8 @@ test('le 🏆 est sur le bâton du jour le plus actif, la ligne qui le disait a 
 	await expect(pic.locator('.tl-bulle')).toContainText('29');
 	await expect(pic.locator('.tl-bulle')).toContainText('6 utilisateurs');
 	await expect(page.getByText('Jour le plus actif —')).toHaveCount(0);
+	//  Ni le grand bloc « Pic d'utilisateurs » : le même chiffre est déjà en première ligne.
+	await expect(page.getByText("Pic d'utilisateurs en un jour")).toHaveCount(0);
 	//  Le pic n'est PAS le bâton le plus haut (27/09) : il se mesure en utilisateurs.
 	await expect(page.locator('.tl-bar-pic')).toHaveCount(1);
 });
