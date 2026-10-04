@@ -623,6 +623,9 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   deux). Un workflow se mesure comme du code (500 lignes) ; `ci.yml` seul est admis
   au-dessus, par une **exception nominative** de `scripts-ci-modularite.sh`
   (`EXCEPTIONS_PLAFOND`, #1547) qui échoue quand elle ne sert plus.
+  L'image de Caddy porte une **mineure explicite** (`FROM caddy:2.11`,
+  `test_image_caddy_epinglee.py`, #1602) : Dependabot propose alors ses montées. Python et
+  Node restent flottants, par choix de `dependabot.yml`.
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)
