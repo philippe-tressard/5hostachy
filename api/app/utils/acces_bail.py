@@ -52,6 +52,29 @@ def remettre(objet, bail) -> None:
     objet.user_id = bail.locataire_id
 
 
+def adopter_declares(session: Session, bail) -> None:
+    """Le bail adopte les badges que son locataire s'était remis sur ce lot.
+
+    Un locataire dont le propriétaire n'avait pas de compte se déclare lui-même
+    (`utils/rattachement_locataire`) : ses badges sont chez lui, sans bail. Quand
+    le propriétaire pose ensuite le bail, ces badges deviennent CEUX du bail —
+    et sa fin les rendra, comme s'il les avait remis lui-même.
+    """
+    if bail.locataire_id is None:
+        return
+    for t in TYPES_ACCES.values():
+        for o in session.exec(
+            select(t.modele).where(
+                t.modele.lot_id == bail.lot_id,
+                t.modele.user_id == bail.locataire_id,
+                t.modele.chez_locataire == True,  # noqa: E712
+                t.modele.bail_id == None,  # noqa: E711
+            )
+        ).all():
+            o.bail_id = bail.id
+            session.add(o)
+
+
 def rendre_au_bailleur(
     session: Session,
     bail,
@@ -76,4 +99,4 @@ def rendre_au_bailleur(
     return rendus
 
 
-__all__ = ["confies", "remettre", "rendre_au_bailleur"]
+__all__ = ["adopter_declares", "confies", "remettre", "rendre_au_bailleur"]

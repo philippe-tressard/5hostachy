@@ -99,10 +99,31 @@ export interface MonLot {
 	batiment_id: number | null;
 	batiment_nom: string | null;
 	est_logement_de_reference: boolean;
+	/** Mon lien à ce lot : `locataire` pour un lot que je LOUE, sinon propriétaire, bailleur… */
+	type_lien: string | null;
+}
+
+/** Un lot que le locataire peut se dire louer — `LotPropose` (`routers/lots.py`). */
+export interface LotPropose extends MonLot {
+	/** Les badges que la location de ce lot remet, par type d'accès. */
+	acces: Record<string, number>;
+}
+
+/** Les trois questions du locataire — `PropositionsLocation` (`routers/lots.py`). */
+export interface PropositionsLocation {
+	proprietaire: string | null;
+	appartement: LotPropose[];
+	cave: LotPropose[];
+	parking: LotPropose[];
 }
 
 export const lots = {
 	mesList: () => api.get<MonLot[]>('/lots/mes-lots'),
+	//  Le locataire dit ce qu'il loue, d'après le fichier des lots du syndic
+	//  (04/10/2026) : les lots proposés, puis sa réponse.
+	propositionsLocation: () => api.get<PropositionsLocation>('/lots/ma-location/propositions'),
+	declarerLocation: (lot_ids: number[]) =>
+		api.post<Record<string, number>>('/lots/ma-location', { lot_ids }),
 	//  🔴 `get` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint : les écrans
 	//  tiennent leurs lots par `mesList()` / `tous()` et travaillent dessus.
 	//  Relire un lot seul donnait un second exemplaire du même objet, libre de

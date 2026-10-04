@@ -105,6 +105,31 @@ def exiger_lot_du_bailleur(session: Session, lot_id: int, user: Utilisateur) -> 
     return lot
 
 
+def exiger_lots_proposes_au_locataire(
+    session: Session, lot_ids: list[int], user: Utilisateur
+) -> list[Lot]:
+    """Les lots, si CHACUN est proposé à ce locataire — **403** sinon, et rien n'est rattaché.
+
+    « Ce lot est-il celui que je loue ? » n'a qu'une réponse : il figure parmi
+    les lots du propriétaire nommé à l'inscription
+    (`utils/rattachement_locataire.lots_proposes`). Ni le conseil syndical ni
+    l'administration n'y passent : ils rattachent par leurs propres écrans.
+
+    Le refus est journalisé, comme `exiger_lot_du_bailleur` : l'écran ne
+    propose que ces lots, une autre désignation est une requête forgée.
+    """
+    from app.utils.journal_securite import journaliser_securite
+    from app.utils.rattachement_locataire import lots_proposes
+
+    proposes = {lot.id: lot for lots in lots_proposes(user, session).values() for lot in lots}
+    if not lot_ids or any(i not in proposes for i in lot_ids):
+        journaliser_securite(
+            "rattachement_hors_proposition", acteur_id=user.id, detail=f"lots={lot_ids}"
+        )
+        raise HTTPException(status_code=403, detail="Ces lots ne vous sont pas proposés")
+    return [proposes[i] for i in dict.fromkeys(lot_ids)]
+
+
 def exiger_aidant_de_la_delegation(delegation, user: Utilisateur) -> None:
     """Seul l'aidant désigné accepte une délégation — **403** sinon.
 

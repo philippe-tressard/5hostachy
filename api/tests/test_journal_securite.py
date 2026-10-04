@@ -61,6 +61,10 @@ GESTES_SENSIBLES = {
     "d'un autre — l'écran ne le propose pas, la requête a été forgée (#1535)",
     #  Le cycle de vie d'un compte (#1548, audit du 02/10/2026) : #1040 avait posé
     #  la porte, la liste s'arrêtait aux mots de passe et aux rôles.
+    ("auth/appartenance.py", "exiger_lots_proposes_au_locataire"): "un locataire qui "
+    "se dit locataire d'un lot qu'on ne lui proposait pas — requête forgée",
+    ("utils/rattachement_locataire.py", "rattacher_lots_declares"): "un locataire "
+    "rattaché sur sa seule déclaration : il reçoit les badges du lot",
     ("routers/admin/comptes.py", "traiter_compte"): "un compte validé ou refusé — "
     "le geste qui OUVRE l'accès, fait par le conseil syndical",
     ("routers/admin/utilisateurs.py", "modifier_utilisateur"): "un compte désactivé ou "

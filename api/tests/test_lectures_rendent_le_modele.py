@@ -428,6 +428,7 @@ ATTENDU_LOT = {
     "superficie": 61.5,
     "batiment_nom": "Bât. B",
     "est_logement_de_reference": False,
+    "type_lien": None,
 }
 ATTENDU_ACCES = {
     "code": "V-9",

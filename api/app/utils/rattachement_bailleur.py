@@ -56,12 +56,31 @@ STATUTS_BAILLEUR = frozenset(
 )
 
 
-def _deja_rattache(user: Utilisateur, session: Session) -> bool:
+def deja_rattache(user: Utilisateur, session: Session) -> bool:
     lien = session.exec(
         select(UserLot).where(UserLot.user_id == user.id, UserLot.actif == True)  # noqa: E712
     ).first()
     bail = session.exec(select(LocationBail).where(LocationBail.locataire_id == user.id)).first()
     return lien is not None or bail is not None
+
+
+def prevenir_gestionnaire(session: Session, titre: str, corps: str) -> None:
+    """Signale un rattachement au gestionnaire du site, qui le défait s'il est faux.
+
+    Écrit UNE fois : le rattachement par le bailleur (ci-dessous) et celui que le
+    locataire déclare lui-même (`utils/rattachement_locataire`) s'en servent.
+    """
+    gestionnaire = site_manager_user_id(session)
+    if gestionnaire is not None:
+        sonner_systeme(
+            session,
+            "rattachement",
+            destinataire_id=gestionnaire,
+            type="system",
+            titre=titre,
+            corps=corps,
+            lien="/admin?onglet=a_traiter",
+        )
 
 
 def bailleur_designe(user: Utilisateur, session: Session) -> Utilisateur | None:
@@ -83,7 +102,7 @@ def rattacher_au_bailleur(user: Utilisateur, session: Session) -> int:
 
     Ne committe pas — l'appelant (`auto_match_pour_utilisateur`) le fait.
     """
-    if valeur(user.statut) != StatutUtilisateur.locataire.value or _deja_rattache(user, session):
+    if valeur(user.statut) != StatutUtilisateur.locataire.value or deja_rattache(user, session):
         return 0
     bailleur = bailleur_designe(user, session)
     if bailleur is None:
@@ -124,20 +143,14 @@ def rattacher_au_bailleur(user: Utilisateur, session: Session) -> int:
     journaliser_securite(
         "rattachement_auto", cible_id=user.id, detail=f"bailleur {bailleur.id} · {quoi}"
     )
-    gestionnaire = site_manager_user_id(session)
-    if gestionnaire is not None:
-        sonner_systeme(
-            session,
-            "rattachement",
-            destinataire_id=gestionnaire,
-            type="system",
-            titre="Locataire rattaché automatiquement",
-            corps=f"{nom_affiche(user.prenom, user.nom)} a été rattaché au {quoi} de "
-            f"{nom_affiche(bailleur.prenom, bailleur.nom)}, "
-            "d'après le nom de propriétaire déclaré. À défaire s'il s'agit d'un homonyme.",
-            lien="/admin?onglet=a_traiter",
-        )
+    prevenir_gestionnaire(
+        session,
+        "Locataire rattaché automatiquement",
+        f"{nom_affiche(user.prenom, user.nom)} a été rattaché au {quoi} de "
+        f"{nom_affiche(bailleur.prenom, bailleur.nom)}, "
+        "d'après le nom de propriétaire déclaré. À défaire s'il s'agit d'un homonyme.",
+    )
     return 1
 
 
-__all__ = ["bailleur_designe", "rattacher_au_bailleur"]
+__all__ = ["bailleur_designe", "deja_rattache", "prevenir_gestionnaire", "rattacher_au_bailleur"]

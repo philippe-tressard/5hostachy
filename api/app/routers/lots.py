@@ -15,7 +15,14 @@ from app.auth.deps import (
     get_current_user,
     require_cs_or_admin,
 )
+from app.auth.appartenance import exiger_lots_proposes_au_locataire
 from app.database import get_session
+from app.utils.rattachement_locataire import (
+    acces_des_lots,
+    lots_proposes,
+    rattacher_lots_declares,
+)
+from app.utils.valeurs import valeur
 from app.utils.lecture import lire_objet
 from app.utils.recuperer import ou_404
 from app.utils.etages import (
@@ -66,6 +73,10 @@ class LotRead(BaseModel):
     #: y aurait pris sa deuxième écriture, et la divergence que l'API signale
     #: n'aurait plus été la même que celle que l'écran affiche.
     est_logement_de_reference: bool = False
+    #: Mon lien à ce lot (`propriétaire`, `bailleur`, `locataire`…), lu dans
+    #: `/lots/mes-lots` : l'écran du locataire sépare ce qu'il LOUE de ce qu'il
+    #: possède. `None` hors de cette liste.
+    type_lien: Optional[str] = None
 
 
 def _lot_read(lot: Lot) -> LotRead:
@@ -104,10 +115,12 @@ def mes_lots(
     #  porte sur l'ENSEMBLE des lots (« un seul logement »), donc elle ne peut pas
     #  se calculer lot par lot dans `_lot_read`.
     reference = logement_de_reference(lots)
+    liens = {ul.lot_id: valeur(ul.type_lien) for ul in user_lots}
     lectures = []
     for lot in lots:
         lecture = _lot_read(lot)
         lecture.est_logement_de_reference = reference is not None and lot.id == reference.id
+        lecture.type_lien = liens.get(lot.id)
         lectures.append(lecture)
     return lectures
 
@@ -195,6 +208,61 @@ def maj_etage_de_mon_lot(
     session.commit()
     session.refresh(lot)
     return _lot_read(lot)
+
+
+#  Ce que LOUE un locataire, d'après le fichier des lots du syndic (04/10/2026).
+#  La règle — quels lots, quels badges, ce qui la borne — vit dans
+#  `utils/rattachement_locataire` ; la question « ce lot m'est-il proposé ? »
+#  dans `auth/appartenance`. La route ne fait que les appeler.
+
+
+class LotPropose(LotRead):
+    #: Les badges que la location de ce lot remet — `{"vigik": 2, "telecommande": 0}`.
+    acces: dict[str, int] = {}
+
+
+class PropositionsLocation(BaseModel):
+    #: Le propriétaire tel que le locataire l'a nommé à l'inscription.
+    proprietaire: Optional[str] = None
+    appartement: list[LotPropose] = []
+    cave: list[LotPropose] = []
+    parking: list[LotPropose] = []
+
+
+class RattachementLocation(BaseModel):
+    lot_ids: list[int]
+
+
+@router.get("/ma-location/propositions", response_model=PropositionsLocation)
+def propositions_de_location(
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Les lots que ce locataire peut se dire louer — vide s'il n'y a rien à demander."""
+    par_nature = lots_proposes(user, session)
+    acces = acces_des_lots(session, [lot.id for lots in par_nature.values() for lot in lots])
+    return PropositionsLocation(
+        proprietaire=user.nom_proprietaire,
+        **{
+            nature: [
+                LotPropose(**_lot_read(lot).model_dump(), acces=acces[lot.id]) for lot in lots
+            ]
+            for nature, lots in par_nature.items()
+        },
+    )
+
+
+@router.post("/ma-location")
+def declarer_ma_location(
+    body: RattachementLocation,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Le locataire se rattache aux lots qu'il dit louer, et en reçoit les badges."""
+    lots = exiger_lots_proposes_au_locataire(session, body.lot_ids, user)
+    remis = rattacher_lots_declares(user, lots, session)
+    session.commit()
+    return remis
 
 
 #  🔴 « COMMANDER UN ACCÈS » N'EXISTE QU'UNE FOIS — ici, il n'existe plus

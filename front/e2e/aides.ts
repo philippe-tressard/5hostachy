@@ -151,6 +151,15 @@ const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
 	'/api/config/llm-consommation': { mois: [], limites: [], mois_courant: '' },
 	//  `CourrielReleve[]` — le chemin contient « config », d'où l'objet vide.
 	'/api/config/releves-courriel': [],
+	//  `PropositionsLocation` : « Mes lots » d'un locataire lit ses trois listes.
+	'/api/lots/ma-location/propositions': {
+		proprietaire: null,
+		appartement: [],
+		cave: [],
+		parking: [],
+	},
+	//  `bailleur.monBail()` rend `null` sans bail — une liste vide passerait pour un bail.
+	'/api/bailleur/mon-bail': null,
 };
 
 /**
