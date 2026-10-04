@@ -21,6 +21,7 @@ import type {
 	User,
 	TransfertVerse,
 } from './types';
+import type { ExportTelemetrie } from './telemetrie';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
@@ -173,9 +174,8 @@ export const auth = {
 		ancien_resident?: string | null;
 		ancien_resident_inconnu?: boolean;
 	}) => api.post<CompteRenduArrivee>('/admin/me/accueil-arrivant', data),
-	/** Les évènements (30 jours) ET les mois de présence (12 mois) : tout ce que le serveur tient. */
-	exportTelemetrie: () =>
-		api.get<{ evenements: unknown[]; mois_de_presence: string[] }>('/auth/me/telemetrie'),
+	/** Évènements (30 jours), mois de présence et dernière visite (12 mois) : tout ce que le serveur tient. */
+	exportTelemetrie: () => api.get<ExportTelemetrie>('/auth/me/telemetrie'),
 	effacerTelemetrie: () => api.delete('/auth/me/telemetrie'),
 	toggleOptOutTelemetrie: (data: { opt_out_telemetrie: boolean }) =>
 		api.patch('/auth/me/opt-out-telemetrie', data),

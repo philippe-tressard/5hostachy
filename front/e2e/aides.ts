@@ -115,6 +115,24 @@ export const TABLEAU_TELEMETRIE_VIDE = {
 		par_type: [],
 		par_batiment: [],
 	},
+	retour: {
+		comptes_mesures: 0,
+		refus: 0,
+		dormants: [
+			{ seuil: 60, nombre: 0 },
+			{ seuil: 90, nombre: 0 },
+		],
+		liste_dormants: [],
+		arrivants: {
+			periode: '30 derniers jours',
+			fenetre_jours: 7,
+			valides: 0,
+			revenus: 0,
+			jamais_revenus: 0,
+			en_attente: 0,
+			taux: null,
+		},
+	},
 	filtre_gestionnaire: {
 		propose: false,
 		gestionnaire_designe: true,

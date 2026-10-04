@@ -35,6 +35,7 @@
 	import ErreursNavigateur from '$lib/components/ErreursNavigateur.svelte';
 	import DureesAffichage from '$lib/components/DureesAffichage.svelte';
 	import QuiVient from '$lib/components/QuiVient.svelte';
+	import RetourComptes from '$lib/components/RetourComptes.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
@@ -71,7 +72,7 @@
 
 	//  L'ACCORDÉON : une section dépliée à la fois, l'état tenu ici (cf. OngletIA).
 	//  « frequentation » à l'arrivée : c'est ce qu'on vient lire le plus souvent.
-	type Section = 'frequentation' | 'erreurs' | 'qui-vient' | 'durees';
+	type Section = 'frequentation' | 'erreurs' | 'qui-vient' | 'retour' | 'durees';
 	let sectionOuverte: Section | null = 'frequentation';
 	function basculerSection(code: Section, ouvert: boolean) {
 		if (ouvert) sectionOuverte = code;
@@ -189,6 +190,11 @@
 				adoption={telemetryData.adoption}
 				ouvert={sectionOuverte === 'qui-vient'}
 				on:basculer={(e) => basculerSection('qui-vient', e.detail)}
+			/>
+			<RetourComptes
+				retour={telemetryData.retour}
+				ouvert={sectionOuverte === 'retour'}
+				on:basculer={(e) => basculerSection('retour', e.detail)}
 			/>
 			<DureesAffichage
 				durees={telemetryData.performance}

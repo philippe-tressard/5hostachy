@@ -61,7 +61,6 @@ const DETTE = {
  *  (#1572, carte #1571). Un module typé retire sa ligne.
  */
 const PLAFOND_ANY_CLIENT = {
-	'telemetrie.ts': 1,
 };
 
 const RACINE_CLIENT = 'src/lib/api';

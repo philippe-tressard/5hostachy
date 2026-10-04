@@ -230,6 +230,16 @@ TELEMETRIE_CONSERVATION = (
     "pendant 10 ans. L'effacement demandé depuis votre profil est immédiat et porte sur "
     "le tout.</li>"
 )
+#: Le jour de la dernière visite (#1629) : `DerniereVisite`, un jour par compte,
+#: pour repérer les comptes qui ne viennent plus. Écrite une fois : le gabarit
+#: et la migration 0260, qui l'insère juste après `TELEMETRIE_CONSERVATION`
+#: dans le texte servi, la lisent ici.
+TELEMETRIE_DERNIERE_VISITE = (
+    "<li>Jour de votre dernière visite\xa0: <strong>un seul jour</strong>, ni page ni heure, "
+    "pour repérer les comptes qui ne viennent plus\xa0; effacé après <strong>12 mois</strong> "
+    "sans visite. Il n'est pas tenu si vous refusez la mesure d'audience, et l'effacement "
+    "demandé depuis votre profil l'emporte aussi.</li>"
+)
 #: La phrase du point 6 sur ce qu'un compte fait depuis son profil : il y
 #: exporte et efface sa télémétrie.
 DROITS_DEPUIS_LE_PROFIL = (
@@ -325,6 +335,7 @@ DEFAULT_LEGAL = {
         + "</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
         "configuration.</li></ul><ul>"
         + TELEMETRIE_CONSERVATION
+        + TELEMETRIE_DERNIERE_VISITE
         + CONSERVATION_COURRIELS
         + "</li>"
         + CONSERVATION_RELEVES

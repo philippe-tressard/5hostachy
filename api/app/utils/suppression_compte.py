@@ -45,12 +45,12 @@ from app.models.core import (
     RemiseObjet,
     StatutImport,
     StatutLotImport,
-    TelemetryEvent,
     UserLot,
     VoteIdee,
     VoteSondage,
 )
 from app.utils.purge_referentielle import purger
+from app.utils.telemetrie_compte import effacer_telemetrie
 from app.utils.types_acces import TYPES_ACCES
 
 
@@ -59,9 +59,8 @@ def supprimer_compte(session: Session, user_id: int) -> dict[str, int]:
 
     ⚠️ Ne fait **pas** de `commit` et ne journalise rien (voir l'en-tête).
     """
-    # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
-    for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
-        session.delete(ev)
+    # 0. Télémétrie (RGPD art. 17) — évènements, présence et dernière visite (#1629)
+    effacer_telemetrie(session, user_id)
 
     # 1. Tokens d'authentification
     for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():

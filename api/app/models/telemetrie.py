@@ -108,6 +108,28 @@ class PresenceMensuelle(SQLModel, table=True):
     user_id: int = Field(index=True)
 
 
+class DerniereVisite(SQLModel, table=True):
+    """Le JOUR de la dernière visite d'un compte — un seul, et rien d'autre (#1629, 04/10/2026).
+
+    « Sans visite depuis 60 jours » ne se calculait pas : les évènements, seuls à
+    porter le compte au jour près, vivent 30 jours ; la présence mensuelle ne
+    sait que le mois. `Utilisateur.derniere_connexion` ne suffit pas non plus :
+    elle ne bouge qu'à la saisie du mot de passe, et la session se renouvelle
+    seule pendant 7 jours glissants (`/auth/refresh`) — un résident qui vient
+    chaque semaine ne se reconnecte jamais, et passerait pour dormant.
+
+    Une ligne par compte, écrite par l'agrégation quotidienne depuis les
+    évènements (`utils/retour_comptes.noter_visites`), JAMAIS pour un compte qui
+    a refusé la mesure — son refus l'efface. Purgée après 12 mois d'absence,
+    exportée et effacée depuis le profil (`auth_telemetrie`). La politique de
+    confidentialité le dit (`TELEMETRIE_DERNIERE_VISITE`).
+    """
+
+    __tablename__ = "derniere_visite"
+    user_id: int = Field(primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+
+
 class ErreurNavigateur(SQLModel, table=True):
     """Une erreur vue par les résidents, COMPTÉE par jour, page et code (#1631).
 

@@ -144,6 +144,12 @@ EXIGENCES = [
         ("réception des courriels",),
     ),
     (
+        #  #1629 : un jour par compte, pour dire qui ne vient plus.
+        "le jour de la dernière visite d'un compte",
+        ("models/telemetrie.py", "class DerniereVisite"),
+        ("jour de votre dernière visite",),
+    ),
+    (
         #  #1580 : l'identifiant du compte dans chaque ligne du journal de sécurité.
         "le journal de sécurité",
         ("utils/journal_securite.py", "def journaliser_securite"),

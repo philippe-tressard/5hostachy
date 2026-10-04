@@ -56,6 +56,20 @@ def nb_comptes_en_attente(session: Session) -> int:
     )
 
 
+def valide_le(user: Utilisateur) -> datetime | None:
+    """Quand ce compte OUVERT a été validé — `None` s'il ne l'est pas (#1629).
+
+    La première décision (`decision_compte_le`), qui est la validation pour un
+    compte ouvert — sauf le cas rare d'un compte refusé puis validé, qui garde
+    la date du refus. À défaut, sa création : la 0148 a rempli les comptes déjà
+    ouverts avec `cree_le`, la seule date qu'elle connaissait, et un compte ouvert
+    sans décision a été créé ouvert.
+    """
+    if not user.actif:
+        return None
+    return user.decision_compte_le or user.cree_le
+
+
 def marquer_decide(user: Utilisateur, maintenant: datetime | None = None) -> None:
     """Acter qu'une décision vient d'être prise sur ce compte.
 

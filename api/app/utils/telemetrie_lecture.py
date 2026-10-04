@@ -36,6 +36,7 @@ from app.utils.adoption import Fenetre, adoption
 from app.utils.erreurs_navigateur import CONSERVATION_JOURS, synthese_erreurs
 from app.utils.mesures_affichage import synthese_mesures
 from app.utils.noms import nom_affiche
+from app.utils.retour_comptes import retour_comptes
 
 PAGE_TOTAL = "__total__"
 
@@ -222,10 +223,12 @@ def record(uniques: dict[str, int], cle: str) -> Optional[dict]:
 
 
 def communs(session: Session, lecture: Lecture) -> dict:
-    """Ce que toute portée rend : erreurs, durées, « Qui vient »."""
+    """Ce que toute portée rend : erreurs, durées, « Qui vient », et le retour des
+    comptes (#1629) — dormants et arrivants, à seuils fixes, quelle que soit la vue."""
     fenetre = _fenetre_adoption(lecture)
     return {
         "erreurs": synthese_erreurs(session, _depuis_detail(lecture.scope)),
         "performance": synthese_mesures(session, _depuis_detail(lecture.scope)),
         "adoption": adoption(session, fenetre, lecture.exclus()) if fenetre else None,
+        "retour": retour_comptes(session),
     }
