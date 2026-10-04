@@ -15,6 +15,7 @@
 //  composé à la main, ou la LIGNE de la table telle quelle (`model_dump`). Les
 //  dates arrivent en chaîne ISO sans fuseau (UTC naïf, comme la base).
 import type { User } from './types';
+import type { CommandeAcces } from './acces';
 
 /**  Un « OK » sans autre contenu — les écritures de l'annuaire, d'un message
  *   WhatsApp planifié. */
@@ -183,15 +184,9 @@ export interface AccueilArrivantResultat {
 //  ── Demandes à traiter (`routers/admin/acces.py`, `profils.py`) ─────────────────
 
 /**  Une commande de badge en attente : la LIGNE `commande_acces`, plus ce qui la
- *   rend lisible (#1679) — l'espace CS et l'onglet « À traiter » la lisent ici. */
-export interface CommandeAcces {
-	id: number;
-	user_id: number;
-	lot_id: number;
-	/** `vigik` | `telecommande`. */
-	type: string;
-	quantite: number;
-	motif: string | null;
+ *   rend lisible (#1679) — l'espace CS et l'onglet « À traiter » la lisent ici.
+ *   La ligne elle-même est `CommandeAcces` (`./acces`) : déclarée UNE fois. */
+export interface CommandeAccesEnAttente extends CommandeAcces {
 	statut: 'en_attente' | 'acceptee' | 'refusee';
 	traite_par_id: number | null;
 	motif_refus: string | null;

@@ -6,7 +6,7 @@
 		admin as adminApi,
 		auth as authApi,
 		config as configApi,
-		type CommandeAcces,
+		type CommandeAccesEnAttente,
 		type CompteEnAttenteEnrichi,
 		type DemandeProfil,
 		type UtilisateurAdmin,
@@ -97,7 +97,7 @@
 	}
 
 	//  Commandes d'acces
-	let commandes: CommandeAcces[] = [];
+	let commandes: CommandeAccesEnAttente[] = [];
 	let commandesLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	let erreurCommandes = '';

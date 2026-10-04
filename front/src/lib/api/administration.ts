@@ -17,7 +17,7 @@ import type {
 	Accuse,
 	AutoMatchRelance,
 	BailSansLocataire,
-	CommandeAcces,
+	CommandeAccesEnAttente,
 	CompositionConseil,
 	CompteEnAttenteEnrichi,
 	CompteTraite,
@@ -99,7 +99,7 @@ export const admin = {
 		//  ici est devenu `CompteTraite`, lu dans `traiter_compte` (#1572).
 		api.post<CompteTraite>(`/admin/comptes/${id}/traiter`, data),
 	// Commandes accès
-	commandesAccesEnAttente: () => api.get<CommandeAcces[]>('/admin/commandes-acces'),
+	commandesAccesEnAttente: () => api.get<CommandeAccesEnAttente[]>('/admin/commandes-acces'),
 	traiterCommandeAcces: (
 		id: number,
 		data: { action: string; motif_refus?: string; codes?: string[] },

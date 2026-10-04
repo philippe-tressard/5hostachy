@@ -53,7 +53,6 @@ const RACINES = ['src/routes', 'src/lib/components'];
 /** Types d'entité encore déclarés dans un écran — à monter (#1044). */
 const DETTE = {
 	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
-	'routes/(app)/espace-cs/+page.svelte::PendingAcces': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
 };
 
@@ -62,7 +61,6 @@ const DETTE = {
  *  (#1572, carte #1571). Un module typé retire sa ligne.
  */
 const PLAFOND_ANY_CLIENT = {
-	'administration.ts': 41,
 	'telemetrie.ts': 1,
 };
 

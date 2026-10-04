@@ -18,7 +18,7 @@
 		admin as adminApi,
 		auth as authApi,
 		lots as lotsApi,
-		type CommandeAcces,
+		type CommandeAccesEnAttente,
 	} from '$lib/api';
 	import { typeAccesLabel } from '$lib/types-acces';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -69,7 +69,7 @@
 	// -- Validations --------------------------------------------------------
 	let batimentsMap: Record<number, string> = {};
 	let comptesEnAttente: PendingUser[] = [];
-	let commandesEnAttente: CommandeAcces[] = [];
+	let commandesEnAttente: CommandeAccesEnAttente[] = [];
 	let loading = true;
 	$: nbComptes = comptesEnAttente.length;
 	$: nbCommandes = commandesEnAttente.length;
