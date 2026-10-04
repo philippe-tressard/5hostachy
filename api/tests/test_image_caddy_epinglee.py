@@ -31,7 +31,9 @@ def test_le_dockerfile_de_caddy_est_lu():
 
 
 def test_caddy_porte_une_mineure_explicite():
-    flottantes = [f"caddy:{tag or '(latest)'}" for _, tag in _bases() if not (tag and _MINEURE.match(tag))]
+    flottantes = [
+        f"caddy:{tag or '(latest)'}" for _, tag in _bases() if not (tag and _MINEURE.match(tag))
+    ]
     assert not flottantes, (
         f"image(s) de base sans version mineure : {flottantes} — écrire `caddy:<majeure>.<mineure>` "
         "(la mineure servie se lit : `docker exec hostachy_caddy caddy version`)"
