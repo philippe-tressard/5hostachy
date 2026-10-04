@@ -78,7 +78,7 @@ process.exit(
 			['\t\tindex: nombreOuNull(releveForm.index),', 0],
 			//  Une configuration lue avec repli : hors portée.
 			["\t\tsmtpConfig.port = parseInt(lues['smtp_port'] ?? '587') || 587;", 0],
-			['\t$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;', 0],
+			['\t$: appelsMois = Number(valeurs[cles.appels_mois]) || 0;', 0],
 			//  Un commentaire qui cite la forme refusée.
 			["\t// on écrivait v === '' ? null : Number(v)", 0],
 		],

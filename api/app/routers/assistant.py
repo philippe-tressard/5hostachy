@@ -71,7 +71,7 @@ async def proposer_description(
     request: Request,
     body: DemandeDescription,
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Rend une PROPOSITION. N'enregistre rien.
 
@@ -91,6 +91,7 @@ async def proposer_description(
                 precision=body.precision,
                 avec_titre=body.avec_titre,
             ),
+            demandeur=user.id,
         )
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))

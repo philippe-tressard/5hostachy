@@ -34,13 +34,15 @@ export function fmtMontant(
 	v: number | null | undefined,
 	/** « USD » pour ce que facture un fournisseur d'IA : ses grilles sont en dollars. */
 	devise: 'EUR' | 'USD' = 'EUR',
+	/** 4 pour le coût d'UN appel d'IA (0,0041 $), que deux décimales liraient « 0 $ ». */
+	decimales: 2 | 4 = 2,
 ): string {
 	if (v == null) return '—';
 	return new Intl.NumberFormat('fr-FR', {
 		style: 'currency',
 		currency: devise,
 		minimumFractionDigits: 0,
-		maximumFractionDigits: 2,
+		maximumFractionDigits: decimales,
 	}).format(v);
 }
 

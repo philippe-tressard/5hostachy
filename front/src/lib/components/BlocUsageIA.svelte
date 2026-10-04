@@ -29,7 +29,7 @@
   - Le ✨ à côté du modèle (30/09/2026) cherche le prix du modèle ENREGISTRÉ
     de cet usage dans la grille de son fournisseur, le convertit au taux BCE
     et l'ENREGISTRE — c'est l'exception au « un seul Enregistrer » ci-dessus,
-    demandée telle quelle. Les trois prix de « Coût et plafond » reprennent
+    demandée telle quelle. Les trois prix de « Coût et limites » reprennent
     alors ce que le serveur a écrit. Il ne s'affiche que si l'onglet dit l'usage
     « Tarif d'un modèle » prêt (`tarifDisponible`) — un usage coupé ne montre
     pas d'icône ✨, c'est la règle de tout le produit.
@@ -41,7 +41,12 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import CoutUsageIA, { PRIX } from '$lib/components/CoutUsageIA.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
-	import { assistant as assistantApi, config as configApi, type UsageIA } from '$lib/api';
+	import {
+		assistant as assistantApi,
+		config as configApi,
+		type LimitesUsageIA,
+		type UsageIA,
+	} from '$lib/api';
 	import { memePrompt } from '$lib/promptOrigine';
 	import { fmtNombre } from '$lib/utils';
 
@@ -69,6 +74,11 @@
 	/**  L'usage « Tarif d'un modèle » est-il prêt ? Décidé par l'ONGLET, qui voit
 	 *   le commun et tous les usages : sans lui, pas de ✨ à côté du modèle. */
 	export let tarifDisponible = false;
+	/**  Où en est l'usage — appels du mois, premier essai —, lu par l'ONGLET en une
+	 *   requête pour tous les blocs ; `relireLimites` la rejoue quand un tarif
+	 *   enregistré change le coût du premier essai. */
+	export let limites: LimitesUsageIA | undefined = undefined;
+	export let relireLimites: () => void = () => {};
 
 	const dispatch = createEventDispatcher<{ basculer: boolean }>();
 
@@ -130,6 +140,7 @@
 				if (prix !== null) poser(cles[champ], prix);
 			}
 			tarif = { etat: 'ok', message: r.remarque };
+			relireLimites();
 		} catch (e: any) {
 			tarif = { etat: 'ko', message: e?.message ?? 'La recherche du tarif a échoué' };
 		}
@@ -298,7 +309,13 @@
 	<!--  Plafond et prix : `CoutUsageIA` (30/09/2026) — ce bloc franchissait 500
 	      lignes en recevant l'effort de raisonnement. Le ✨ du tarif reste ICI,
 	      à côté du modèle : il n'en passe que le compte rendu. -->
-	<CoutUsageIA bind:valeurs {cles} tarifEnregistre={tarif.etat === 'ok' ? tarif.message : ''} />
+	<CoutUsageIA
+		bind:valeurs
+		{cles}
+		{limites}
+		gesteManuel={usage.geste_manuel}
+		tarifEnregistre={tarif.etat === 'ok' ? tarif.message : ''}
+	/>
 
 	<SectionFormulaire titre="Prompt">
 		<div class="field champ-large">

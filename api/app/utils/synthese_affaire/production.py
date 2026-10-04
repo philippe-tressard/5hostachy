@@ -89,9 +89,14 @@ def peut_etre_produite(ticket: Ticket) -> bool:
     )
 
 
-async def _rediger(session: Session, message: str, complement: Optional[str]):
-    """L'appel à l'assistant — (champs, réponse, statut, motif). Ne lève jamais."""
-    from app.utils.llm import ErreurLLM, config_llm, demander
+async def _rediger(
+    session: Session, message: str, complement: Optional[str], demandeur: Optional[int]
+):
+    """L'appel à l'assistant — (champs, réponse, statut, motif). Ne lève jamais.
+
+    `demandeur` : le membre du conseil qui relance, ou `None` pour la file
+    automatique — que seule la limite du mois borne."""
+    from app.utils.llm import ErreurLLM, RefusLimite, config_llm, demander
 
     cfg = config_llm(session, USAGE_SYNTHESE_AFFAIRE)
     if not cfg.pret:
@@ -105,11 +110,13 @@ async def _rediger(session: Session, message: str, complement: Optional[str]):
             usage=USAGE_SYNTHESE_AFFAIRE,
             message=message,
             consigne=consigne_complete(cfg.prompt, complement),
+            demandeur=demandeur,
         )
         return lire_reponse(rep.texte), rep, "succes", None
+    except RefusLimite as exc:
+        return None, None, "indisponible", str(exc)
     except ErreurLLM as exc:
-        statut = "indisponible" if str(exc).startswith("Plafond") else "erreur"
-        return None, None, statut, str(exc)
+        return None, None, "erreur", str(exc)
     except ReponseIllisible as exc:
         return None, None, "erreur", f"Réponse de l'assistant illisible : {exc}"
 
@@ -181,7 +188,7 @@ async def produire(
     cloture_le = ticket.ferme_le
     met = metriques_de(session, ticket, cloture_le)
     message = construire_message(session, ticket, met, STATUT_LABELS)
-    champs, rep, statut, motif = await _rediger(session, message, complement)
+    champs, rep, statut, motif = await _rediger(session, message, complement, auteur_id)
 
     from app.utils.llm_journal import cout_appel
 

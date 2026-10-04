@@ -115,7 +115,7 @@ def test_le_tarif_trouve_est_converti_et_enregistre(session, sources, monkeypatc
     monkeypatch.setattr(llm, "demander", _modele(reponse, recus))
 
     t, remarque = asyncio.run(
-        chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001")
+        chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001", demandeur=None)
     )
 
     assert t.prix() == {"prix_entree": "1", "prix_sortie": "5", "prix_cache": "0.1"}
@@ -140,14 +140,16 @@ def test_un_modele_affiche_mais_pas_enregistre_est_refuse(session, sources, monk
     recus: list = []
     monkeypatch.setattr(llm, "demander", _modele("{}", recus))
     with pytest.raises(ErreurLLM, match="n'est pas celui qui est enregistré"):
-        asyncio.run(chercher_et_enregistrer(session, "description", "gpt-5.6-luna"))
+        asyncio.run(chercher_et_enregistrer(session, "description", "gpt-5.6-luna", demandeur=None))
     assert recus == [] and sources == []
 
 
 def test_seul_le_prix_trouve_s_enregistre(session, sources, monkeypatch):
     reponse = '{"ligne": "x", "prix_entree": 0.5, "prix_sortie": null, "prix_cache": null}'
     monkeypatch.setattr(llm, "demander", _modele(reponse))
-    t, _ = asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
+    t, _ = asyncio.run(
+        chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001", demandeur=None)
+    )
     assert (t.prix_entree, t.prix_sortie, t.prix_cache) == ("0.5", None, None)
     #  Celui de l'administrateur reste, et aucun prix de cache n'est inventé.
     assert _valeur(session, "llm_description_prix_sortie") == "9.99"
@@ -158,7 +160,11 @@ def test_un_modele_absent_de_la_grille_se_dit_et_rien_n_est_ecrit(session, sourc
     reponse = '{"ligne": null, "prix_entree": null, "prix_sortie": null, "prix_cache": null}'
     monkeypatch.setattr(llm, "demander", _modele(reponse))
     with pytest.raises(ErreurLLM, match="ne donne pas le tarif"):
-        asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
+        asyncio.run(
+            chercher_et_enregistrer(
+                session, "description", "claude-haiku-4-5-20251001", demandeur=None
+            )
+        )
     assert _valeur(session, "llm_description_prix_entree") is None
 
 
@@ -168,12 +174,16 @@ def test_une_grille_injoignable_se_dit(session, monkeypatch):
 
     monkeypatch.setattr(tarif_sources, "lire_grille", panne)
     with pytest.raises(ErreurLLM, match="Grille de Claude \\(Anthropic\\) indisponible"):
-        asyncio.run(chercher_et_enregistrer(session, "description", "claude-haiku-4-5-20251001"))
+        asyncio.run(
+            chercher_et_enregistrer(
+                session, "description", "claude-haiku-4-5-20251001", demandeur=None
+            )
+        )
 
 
 def test_un_usage_inconnu_est_refuse(session):
     with pytest.raises(ErreurLLM, match="Usage inconnu"):
-        asyncio.run(chercher_et_enregistrer(session, "nimporte", "m"))
+        asyncio.run(chercher_et_enregistrer(session, "nimporte", "m", demandeur=None))
 
 
 def test_chaque_fournisseur_nomme_sa_grille():

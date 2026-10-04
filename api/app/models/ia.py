@@ -42,5 +42,6 @@ class AppelIA(SQLModel, table=True):
     jetons_cache: Optional[int] = None
     duree_ms: int = 0
     #: `succes` · `erreur` (le fournisseur a répondu en échec) · `plafond`
-    #: (refusé AVANT l'envoi : le plafond mensuel de l'usage est atteint).
+    #: (refusé AVANT l'envoi : la limite d'appels du mois est atteinte) · `quota`
+    #: (refusé AVANT l'envoi : la personne a atteint sa limite de l'heure).
     statut: str = "succes"

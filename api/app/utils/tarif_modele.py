@@ -13,7 +13,7 @@
 > « en interrogeant OpenAI, il y a 3 paramètres de coût et non 2 » — et les
 >   prix en dollars, comme les grilles.
 
-Les trois valeurs sont les prix de la section « Coût et plafond » d'un usage —
+Les trois valeurs sont les prix de la section « Coût et limites » d'un usage —
 jetons envoyés, jetons produits, jetons d'entrée lus en cache — en DOLLARS par
 million de jetons, que lit `llm_journal` pour chiffrer la consommation (#1383).
 
@@ -157,7 +157,7 @@ def remarque(tarif: Tarif, url: str) -> str:
 
 
 async def chercher_et_enregistrer(
-    session: Session, usage: str, modele_affiche: str
+    session: Session, usage: str, modele_affiche: str, *, demandeur: Optional[int]
 ) -> tuple[Tarif, str]:
     """Lit la grille du fournisseur, y fait trouver le modèle de `usage` et
     ENREGISTRE les prix trouvés. Rend le tarif et sa remarque. Lève `ErreurLLM`
@@ -196,6 +196,7 @@ async def chercher_et_enregistrer(
         usage=USAGE_TARIF_MODELE,
         consigne=cfg.prompt.rstrip() + "\n\n" + FORMAT_REPONSE,
         message=construire_message(cible.fournisseur.libelle, modele, grille),
+        demandeur=demandeur,
     )
     try:
         tarif = lire_tarif(reponse.texte)

@@ -64,6 +64,10 @@ class Usage:
     #: raisonne dépasse les 45 s communes ; relever le délai de tous pour lui
     #: ferait attendre une minute de plus un geste qui en demande dix.
     delai_min_s: int = 0
+    #: Un geste de PERSONNE peut-il l'appeler ? `False` pour un usage purement
+    #: automatique : la limite par heure et par personne n'y a pas de sens, et
+    #: l'écran ne la propose pas (`llm_limites`, 04/10/2026).
+    geste_manuel: bool = True
 
     def cle(self, champ: str) -> str:
         """La clé `ConfigSite` d'un réglage de cet usage."""
@@ -71,16 +75,22 @@ class Usage:
 
 
 #: Les réglages qu'un usage porte, dans l'ordre de l'écran.
-#: `plafond_mois` (jetons par mois, 0 = aucun) et les trois PRIX sont lus par
-#: `llm_journal` : le suivi de ce que coûte l'usage (#1383). Les prix sont en
+#: `appels_mois` et `appels_heure` (par personne ; vide = aucune limite) sont
+#: lus par `llm_limites` — ils ont remplacé, le 04/10/2026, un plafond en
+#: jetons que personne ne savait estimer. Les trois PRIX sont lus par
+#: `llm_journal` : le suivi de ce que coûte l'usage (#1383). Ils sont en
 #: DOLLARS par million de jetons, en texte décimal — comme les grilles des
 #: fournisseurs (30/09/2026) ; `prix_cache` est celui de l'entrée lue en cache.
+#:
+#: ⚠️ `llm_<usage>_reference` (le premier essai) n'est PAS ici : le serveur
+#: seul l'écrit, et l'écran renvoie les clés de cette liste à l'enregistrement.
 CHAMPS_USAGE = (
     "actif",
     "modele",
     "prompt",
     "max_jetons",
-    "plafond_mois",
+    "appels_mois",
+    "appels_heure",
     "prix_entree",
     "prix_sortie",
     "prix_cache",
@@ -150,9 +160,10 @@ USAGES: dict[str, Usage] = {
         ),
         prompt_defaut=CONSIGNE_REPONSE_COURRIEL,
         max_jetons_defaut=2_000,
+        geste_manuel=False,
     ),
     #  Un usage au service des AUTRES (30/09/2026) : son ✨ se tient à côté du
-    #  modèle de chaque bloc, et remplit les deux prix de « Coût et plafond ».
+    #  modèle de chaque bloc, et remplit les deux prix de « Coût et limites ».
     USAGE_TARIF_MODELE: Usage(
         code=USAGE_TARIF_MODELE,
         libelle="Tarif d'un modèle",
@@ -226,6 +237,7 @@ def decrire() -> list[dict]:
             "description": u.description,
             "prompt_defaut": u.prompt_defaut,
             "max_jetons_defaut": u.max_jetons_defaut,
+            "geste_manuel": u.geste_manuel,
             "cles": {champ: u.cle(champ) for champ in CHAMPS_USAGE},
             "efforts": [{"val": c, "label": libelle} for c, libelle, _ in EFFORTS],
         }

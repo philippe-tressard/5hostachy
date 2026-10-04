@@ -148,7 +148,7 @@ const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
 	//  `santeMaintenance` : `TachesPlanifiees` lit `taches` et `anomalies_recentes`.
 	'/api/admin/maintenance/sante': { taches: [], anomalies_recentes: [] },
 	//  `ConsommationIA`.
-	'/api/config/llm-consommation': { mois: [], plafonds: [], mois_courant: '' },
+	'/api/config/llm-consommation': { mois: [], limites: [], mois_courant: '' },
 	//  `CourrielReleve[]` — le chemin contient « config », d'où l'objet vide.
 	'/api/config/releves-courriel': [],
 };
