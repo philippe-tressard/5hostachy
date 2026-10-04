@@ -11,12 +11,14 @@
 #  deux nœuds se relaient chaque nuit ») vaut pour le moteur de conteneurs et
 #  pour le tunnel, le composant exposé.
 #
-#  Trois questions, toutes en WARN (digest quotidien — aucune n'arrête le site) :
+#  Quatre questions, toutes en WARN (digest quotidien — aucune n'arrête le site) :
 #    1. combien de paquets HORS sécurité attendent-ils, au-delà d'un seuil ?
 #    2. des paquets sont-ils RETENUS (« kept back ») — `apt upgrade` ne les
 #       installe pas, et `unattended-upgrades` non plus ?
 #    3. docker, containerd et cloudflared sont-ils à la MÊME version sur les
 #       deux nœuds ?
+#    4. `Unattended-Upgrade::Mail` a-t-il la même valeur EFFECTIVE sur les deux
+#       nœuds (#1677, 04/10/2026 : posé sur rpi1 seul, une ERROR par passage) ?
 #
 #  ⚠️ Ce module MESURE et DIT. Il ne pose rien : aucune commande de mise à jour
 #  n'est écrite ici (volet « geste » de #1591, hors de ce lot).
@@ -86,6 +88,16 @@ _pv() { _s=$(dpkg-query -W -f "\${Status}|\${Version}" "$1" 2>/dev/null); case "
     printf '%s\n' 'else'
     for p in $PAQUETS_PARITE; do printf 'echo "%s="\n' "$(cle_version "$p")"; done
     printf '%s\n' 'fi'
+    #  uu_mail : « ok: » puis la valeur EFFECTIVE de Unattended-Upgrade::Mail
+    #  (vide après « ok: » si elle n est pas posée), lue par apt-config sans sudo ;
+    #  VIDE si apt-config manque ou échoue — cas zéro (#1677).
+    printf '%s' '
+if command -v apt-config >/dev/null 2>&1 && _ac=$(apt-config dump 2>/dev/null); then
+echo "uu_mail=ok:$(printf "%s\n" "$_ac" | sed -n "s/^Unattended-Upgrade::Mail \"\(.*\)\";\$/\1/p" | head -1)"
+else
+echo "uu_mail="
+fi
+'
 }
 COLLECT_PAQUETS=$(collecte_paquets)
 
@@ -168,6 +180,25 @@ paquets_verdicts() {
     if [ -z "$ecarts" ] && [ -z "$inconnus" ]; then
         ok "Mêmes versions de ${PAQUETS_PARITE// /, } sur les 2 nœuds"
     fi
+    #  #1677 : `Unattended-Upgrade::Mail "root"` sur rpi1 seul — sans /usr/bin/mail,
+    #  une ERROR par passage et aucun courrier. La comparaison est celle des
+    #  versions (`verdict_versions_parite`) : « ok: » vide des deux côtés est un
+    #  fait mesuré, identique ; un relevé VIDE n'est jamais une égalité.
+    a=${S_uu_mail:-} b=${P_uu_mail:-}
+    case "$(verdict_versions_parite "$a" "$b")" in
+        OK)         ok   "Unattended-Upgrade::Mail identique sur les 2 nœuds ($(valeur_uu_mail "$a"))" ;;
+        DIVERGENCE) warn "Unattended-Upgrade::Mail DIFFÈRE entre $SELF et $PEER — $SELF $(valeur_uu_mail "$a"), $PEER $(valeur_uu_mail "$b") : sans /usr/bin/mail, le nœud qui le pose écrit une ERROR à chaque passage et rien ne part ; aligner les deux (/etc/apt/apt.conf.d/50unattended-upgrades, #1677)" ;;
+        *)          warn "Unattended-Upgrade::Mail : comparaison INCONNUE entre $SELF et $PEER (apt-config illisible sur un nœud) — ni vert ni rouge" ;;
+    esac
+}
+
+#  PURE. Le relevé « ok:<valeur> » → « « valeur » » ou « non posé ».
+valeur_uu_mail() {
+    case "${1:-}" in
+        ok:) echo "non posé" ;;
+        ok:*) echo "« ${1#ok:} »" ;;
+        *) echo "illisible" ;;
+    esac
 }
 
 # ── Auto-test (job CI `test-scripts`) ─────────────────────────────────────────
@@ -251,11 +282,19 @@ Calculating upgrade...
 X
     }
     t "collecte : aucun retenu → « ok: » vide (mesuré)" "ok:" champ apt_retenus
+    #  #1677 : la valeur EFFECTIVE de Unattended-Upgrade::Mail, lue sans sudo.
+    apt-config() { printf '%s\n' 'APT::Install-Recommends "0";' 'Unattended-Upgrade::Mail "root";' 'Unattended-Upgrade::MailReport "on-change";'; }
+    t "collecte : Unattended-Upgrade::Mail posé (rpi1, 04/10)" "ok:root" champ uu_mail
+    apt-config() { printf '%s\n' 'APT::Install-Recommends "0";' 'Unattended-Upgrade::MailReport "on-change";'; }
+    t "collecte : Mail non posé (rpi2) → « ok: » vide, mesuré" "ok:" champ uu_mail
+    apt-config() { return 1; }
+    t "collecte : apt-config en échec → VIDE (INCONNU)" "" champ uu_mail
+    unset -f apt-config
     apt() { return 1; }; apt-get() { return 100; }
     t "collecte : apt en échec → hors sécurité VIDE (INCONNU)" "" champ apt_hors_secu
     t "collecte : simulation en échec (verrou) → retenus VIDE"  "" champ apt_retenus
     unset -f apt apt-get dpkg-query champ
-    t "collecte : sans apt ni dpkg → champs vides, jamais 0/absent" "apt_hors_secu=|apt_retenus=|ver_docker_ce=|ver_containerd_io=|ver_cloudflared=" \
+    t "collecte : sans apt ni dpkg → champs vides, jamais 0/absent" "apt_hors_secu=|apt_retenus=|ver_docker_ce=|ver_containerd_io=|ver_cloudflared=|uu_mail=" \
       eval 'PATH=/nonexistent "$BASH" -c "$COLLECT_PAQUETS" | paste -sd"|" -'
     t "collecte : un champ par paquet de la liste" 3 eval 'grep -c "^ver_" <<< "$(PATH=/nonexistent "$BASH" -c "$COLLECT_PAQUETS")"'
     if bash -n <(printf '%s' "$COLLECT_PAQUETS") 2>/dev/null; then echo "PASS  COLLECT_PAQUETS est du shell valide"
@@ -270,6 +309,7 @@ X
         S_apt_hors_secu=12 P_apt_hors_secu=9 S_apt_retenus="ok:" P_apt_retenus="ok:linux-image-rpi-2712"
         S_ver_docker_ce=5:29.4.0-1 P_ver_docker_ce=5:29.4.0-1 S_ver_containerd_io=2.2.3 P_ver_containerd_io=2.2.3
         S_ver_cloudflared=2026.9.3 P_ver_cloudflared=2026.9.3 S_apt_en_cours=non P_apt_en_cours=non
+        S_uu_mail="ok:" P_uu_mail="ok:"
     }
     plein; sortie=$(paquets_verdicts)
     t "deux nœuds sains → aucun WARN"       0 eval 'grep -c "^WARN" <<< "$sortie"'
@@ -293,6 +333,16 @@ X
       eval 'echo "$(grep -c "^WARN .*INCONNUS" <<< "$sortie")|$(grep -c "^OK .* sur rpi1 : [0-9]" <<< "$sortie")"'
     plein; S_apt_hors_secu=""; S_apt_retenus=""; S_apt_en_cours=oui; sortie=$(paquets_verdicts)
     t "mesure impossible PENDANT un passage d'installation → aucun WARN" 0 eval 'grep -c "^WARN" <<< "$sortie"'
+    #  #1677 : rpi1 portait `Unattended-Upgrade::Mail "root"`, rpi2 non — une
+    #  ERROR par passage sur rpi1 (aucun /usr/bin/mail), que rien ne comparait.
+    plein; S_uu_mail="ok:root"; sortie=$(paquets_verdicts)
+    t "Mail posé sur rpi1 seul → UN WARN qui nomme la valeur des deux nœuds" 1 \
+      eval 'grep -c "^WARN Unattended-Upgrade::Mail DIFFÈRE entre rpi1 et rpi2 — rpi1 « root », rpi2 non posé" <<< "$sortie"'
+    plein; S_uu_mail="ok:root" P_uu_mail="ok:root"; sortie=$(paquets_verdicts)
+    t "même valeur sur les deux → aucun WARN" 0 eval 'grep -c "^WARN" <<< "$sortie"'
+    plein; P_uu_mail=""; sortie=$(paquets_verdicts)
+    t "Mail illisible sur rpi2 → WARN INCONNU, jamais OK" 1 \
+      eval 'grep -c "^WARN Unattended-Upgrade::Mail : comparaison INCONNUE" <<< "$sortie"'
     plein; PEER_OK=255; sortie=$(paquets_verdicts)
     t "pair injoignable : rien sur rpi2, pas de parité" "0" eval 'grep -c "rpi2" <<< "$sortie"'
     unset -f plein ok warn
