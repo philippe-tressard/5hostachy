@@ -33,7 +33,6 @@ SANS_SET_U = {
     "qui le redémarre en conditions réelles, pas en passant",
     "scripts/exploitation/MaJ-Hostachy.sh": "reprise en main manuelle — à durcir "
     "avec une répétition sur le standby",
-    "scripts/installation/install-cloudflared.sh": "installation ponctuelle d'un nœud",
     ".claude/cloud/garde-git.sh": "hook de session cloud — lit des variables "
     "d'environnement facultatives",
 }

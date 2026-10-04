@@ -677,8 +677,10 @@ une simulation faite sur un nœud n'éprouve pas l'autre tant qu'ils ne sont pas
 Le 04/10/2026, rpi1 avait le paquet apt (2026.9.3) et rpi2 un binaire **posé à la main**
 (`scripts/installation/install-cloudflared.sh` → `/usr/local/bin`, 2026.3.0), que `apt` ne met
 jamais à jour : C30 le disait « absent ». Il lit maintenant la version du binaire quand `dpkg` ne
-connaît pas le paquet. L'aligner se fait par le dépôt apt de Cloudflare (`/etc/apt/sources.list.d/cloudflared.list`
-et sa clé, comme sur rpi1), **sur le standby**, en laissant l'unité `inactive`/`disabled`.
+connaît pas le paquet. Les deux nœuds passent depuis par le dépôt apt de Cloudflare
+(`/etc/apt/sources.list.d/cloudflared.list` et sa clé) — et `install-cloudflared.sh` aussi (#1591) :
+il retire un ancien binaire de `/usr/local/bin`, et `test_paquets_systeme_par_apt.py` refuse qu'un
+script pose à nouveau un composant de `PAQUETS_PARITE` hors apt.
 
 ## Correctifs de sécurité en attente — lire C30 (#1441, 28/09/2026)
 
