@@ -152,18 +152,11 @@
 		{/if}
 	</div>
 
-	<!-- Pic d'utilisateurs (vue Mois : son jour porte le 🏆 sur le graphe) · Records (Année et Total) -->
-	{#if kpi.jour_pointe || kpi.record_jour || kpi.record_mois}
+	<!--  Records (Année et Total). Le pic de la vue Mois n'a pas de bloc : c'est déjà le
+	      « Utilisateurs uniques (pic) » de la première ligne, et son jour porte le 🏆
+	      et sa bulle sur le graphe. -->
+	{#if kpi.record_jour || kpi.record_mois}
 		<div class="tl-kpi-row tl-kpi-row-suite">
-			{#if kpi.jour_pointe}
-				<div class="tl-kpi">
-					<div class="tl-kpi-value">
-						{kpi.jour_pointe.uniques}
-						<span class="tl-kpi-unite">utilisateurs</span>
-					</div>
-					<div class="tl-kpi-label">Pic d'utilisateurs en un jour</div>
-				</div>
-			{/if}
 			{#if kpi.record_jour}
 				<div class="tl-kpi">
 					<div class="tl-kpi-value">
