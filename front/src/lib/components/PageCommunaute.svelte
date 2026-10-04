@@ -29,6 +29,7 @@
 		type PetiteAnnonce,
 		type Signalement,
 		type Sondage,
+		type SondageDetail,
 	} from '$lib/api';
 	import { currentUser, isAdmin, isCS, isGestionnaire, quandAuthResolue } from '$lib/stores/auth';
 	import { refuserLaCommunaute } from '$lib/communaute';
@@ -88,14 +89,28 @@
 	//  La correction d'un sondage (#783). L'état vit ICI, pas dans
 	//  `ListeSondages` : celui-ci est rendu DEUX fois (courants et Archives), et
 	//  l'y mettre en aurait monté deux exemplaires sur le même sondage.
-	let editSondage: Sondage | null = null;
+	//
+	//  🔴 Une FICHE (`SondageDetail`), jamais la ligne de la liste (#1661) : la liste
+	//  (`GET /sondages`) ne porte pas les options, et le formulaire les corrige par
+	//  leur `id`. Ouvert avec la ligne de la liste, il montrait deux champs vides, et
+	//  ce qu'on y tapait était ignoré — l'enregistrement ne renvoie que les options
+	//  qui ont un `id`.
+	let editSondage: SondageDetail | null = null;
 
-	function modifierSondage(s: Sondage, e: Event) {
+	async function modifierSondage(s: Sondage, e: Event) {
 		//  Le `preventDefault` date du temps où la carte ÉTAIT un lien : il ne sert
 		//  plus (#1329, lien étiré sous des boutons qui ne sont plus dedans), et il
 		//  est sans effet sur un bouton.
 		e.preventDefault();
-		editSondage = editSondage?.id === s.id ? null : s;
+		if (editSondage?.id === s.id) {
+			editSondage = null;
+			return;
+		}
+		try {
+			editSondage = await sondagesApi.get(s.id);
+		} catch (err) {
+			toast('error', messageErreur(err, 'Impossible de charger le sondage'));
+		}
 	}
 
 	async function arreterSondage(s: Sondage, e: Event) {

@@ -34,7 +34,12 @@
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { SONDAGE } from '$lib/entites/sondage';
 	import { pliageDe, requisDe } from '$lib/pliage';
-	import { sondages as sondagesApi, type SondageCorrige, type SondageCree } from '$lib/api';
+	import {
+		sondages as sondagesApi,
+		type SondageCorrige,
+		type SondageCree,
+		type SondageDetail,
+	} from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
@@ -59,11 +64,10 @@
 	 *   faute de frappe imposait de supprimer et recréer, donc de perdre les votes.
 	 *   Le constat était juste ; il devient l'implantation.
 	 *
-	 *   ⚠️ Reste `any` (#1572) : la fiche passe un `SondageDetail`, mais la
-	 *   correction depuis la LISTE (`PageCommunaute`) passe un `Sondage`, qui ne
-	 *   porte pas `options` — les libellés n'y sont donc pas préremplis. Écart
-	 *   réel, à trancher avant de typer. */
-	export let sondage: any = null;
+	 *   🔴 Une FICHE, toujours (#1661) : la liste ne porte pas `options`, et
+	 *   `PageCommunaute` charge la fiche avant d'ouvrir la correction. Le typer
+	 *   `Sondage` ferait de nouveau échouer la vérification sur cet écart. */
+	export let sondage: SondageDetail | null = null;
 
 	$: modeEdition = sondage !== null;
 	$: etat = (modeEdition ? 'edition' : 'creation') as Etat;
@@ -80,10 +84,10 @@
 	let clotureLe = sondage?.cloture_le ? String(sondage.cloture_le).slice(0, 16) : '';
 	let resultatsPublics = sondage?.resultats_publics ?? true;
 	let options: OptionForm[] = sondage?.options?.length
-		? sondage.options.map((o: any) => ({
+		? sondage.options.map((o) => ({
 				id: o.id,
 				libelle: o.libelle,
-				champ_libre: o.champ_libre ?? false,
+				champ_libre: o.champ_libre,
 			}))
 		: [
 				{ libelle: '', champ_libre: false },
@@ -147,6 +151,7 @@
 	 *   Les options nouvelles (sans `id`) sont donc écartées ici plutôt que
 	 *   refusées là-bas : l'écran ne les propose pas non plus. */
 	async function corriger() {
+		if (!sondage) return;
 		if (!question.trim()) {
 			toast('error', 'La question est obligatoire');
 			return;
