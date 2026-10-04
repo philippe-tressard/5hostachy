@@ -699,6 +699,11 @@ pendant qu'un autre tourne : un verrou dans le répertoire git commun le refuse,
 worktrees compris. Le rejeu de #1415 avait rendu « pytest OK » sur sqlmodel
 0.0.39 pour un lot qui posait 0.0.44.
 
+Sur un poste déjà chargé par d'autres sessions, le rejeu passe les e2e à **un
+seul worker** (`E2E_WORKERS`, seuil et mesure dans `rejouer-ci.sh`, règle
+`ci_workers_e2e`) : les workers s'y disputaient la machine et quatre specs
+tombaient en délai d'hydratation (#1665). La CI GitHub garde le défaut.
+
 ---
 
 ## Infrastructure — l'essentiel

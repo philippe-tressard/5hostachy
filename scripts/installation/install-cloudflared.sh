@@ -2,9 +2,9 @@
 # install-cloudflared.sh — installe et configure cloudflared sur le RPi5
 # Usage : bash install-cloudflared.sh <TOKEN>
 
-set -e
+set -eu
 
-TOKEN="${1}"
+TOKEN="${1:-}"
 
 if [ -z "$TOKEN" ]; then
   echo "Usage: bash install-cloudflared.sh <TOKEN>"
@@ -23,10 +23,27 @@ if [ "$VERDICT" != "ok" ]; then
   exit 1
 fi
 
-echo "==> Téléchargement de cloudflared (ARM64)..."
-curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 \
-  -o /usr/local/bin/cloudflared
-chmod +x /usr/local/bin/cloudflared
+#  Par le dépôt apt de Cloudflare, jamais en binaire téléchargé (#1591, 04/10/2026).
+#  Ce script posait `/usr/local/bin/cloudflared` depuis les « releases » GitHub :
+#  apt ne le mettait jamais à jour, et rpi2 a tourné sept mois sur la 2026.3.0
+#  pendant que rpi1, passé par le paquet, suivait. Mêmes source et clé que les
+#  deux nœuds de production. 🔒 api/tests/test_paquets_systeme_par_apt.py
+CLE=/usr/share/keyrings/cloudflare-public-v2.gpg
+echo "==> Dépôt apt de Cloudflare..."
+mkdir -p --mode=0755 /usr/share/keyrings
+curl -fsSL https://pkg.cloudflare.com/cloudflare-public-v2.gpg -o "$CLE"
+echo "deb [signed-by=$CLE] https://pkg.cloudflare.com/cloudflared any main" \
+  > /etc/apt/sources.list.d/cloudflared.list
+apt-get update -qq
+apt-get install -y cloudflared
+
+#  Un binaire posé à la main par l'ancienne version de ce script passerait
+#  DEVANT le paquet dans le PATH : on le retire (un lien vers le paquet reste).
+if [ -f /usr/local/bin/cloudflared ] && [ ! -L /usr/local/bin/cloudflared ]; then
+  echo "==> Retrait de l'ancien binaire /usr/local/bin/cloudflared (hors apt)"
+  rm -f /usr/local/bin/cloudflared
+fi
+hash -r
 
 echo "==> Version installée : $(cloudflared --version)"
 
