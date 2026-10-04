@@ -87,6 +87,16 @@ def a_paris(instant: datetime) -> datetime:
     return instant.astimezone(TZ_PARIS)
 
 
+def de_paris(heure_murale: datetime) -> datetime:
+    """Une heure MURALE de Paris (naïve, lue dans un nom de fichier) en UTC naïf.
+
+    Le sens inverse de `a_paris` : ce qu'on écrit à l'heure de Paris se relit
+    pour être comparé à une date de la base. Pendant l'heure répétée du passage à
+    l'heure d'hiver, la première occurrence est retenue (`fold=0`).
+    """
+    return heure_murale.replace(tzinfo=TZ_PARIS).astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def jour_civil(instant: date | datetime) -> date:
     """Le jour qu'il était **à Paris** à cet instant de la base (UTC naïf).
 

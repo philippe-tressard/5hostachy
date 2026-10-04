@@ -135,6 +135,13 @@ toucher à celui qui sert), puis le secours (tunnel laissé arrêté). Jamais
   nuit, chaque nœud n'accumule qu'un jour sur deux, et `_rotate_backups()` ne voit que
   ses fichiers locaux → 7 versions ≈ 14 jours **à trous**, aucun nœud n'ayant celle de
   la veille. Copie hors site : `scripts/poste/export-hors-site.cmd` (voir ci-dessous)
+- **Le nom d'une archive dit l'heure de PARIS** (#1611, 05/10/2026) :
+  `hostachy_backup_AAAAMMJJ_HHMMSS_paris.tar.gz`. Avant, l'horloge UTC y était écrite
+  sans le dire (`…_020000` pour une sauvegarde prise à 04:00) ; les anciennes archives
+  (sans suffixe) restent en UTC jusqu'à leur rotation. `backup.nom_archive` écrit,
+  `backup.horodatage_archive` relit les deux formats en UTC naïf — c'est le seul parseur.
+  « Restaurer celle de 02:00 » se lit donc au suffixe : sans `_paris`, ajouter deux
+  heures (une l'hiver) pour l'heure de Paris.
 - **`.active` peut disparaître** → le recréer manuellement sur les 2 RPi si absent
 - **Clé d'hôte du pair non épinglée** (#1598, 02/10/2026) : le SSH inter-nœuds
   (`scripts/lib/lib-ssh-noeuds.sh`, seule source) exige `StrictHostKeyChecking=yes`
