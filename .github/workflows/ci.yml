@@ -563,6 +563,7 @@ jobs:
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest
           bash scripts/exploitation/auto-deploy.sh       --selftest
           bash scripts/exploitation/check-reliability.sh --selftest
+          bash scripts/exploitation/alleger-noeud.sh     --selftest
           bash scripts/poste/export-hors-site.sh --selftest
           bash scripts/lib/lib-rapport.sh           --selftest
           bash scripts/lib/lib-rotation.sh          --selftest

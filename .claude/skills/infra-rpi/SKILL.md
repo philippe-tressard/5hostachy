@@ -639,6 +639,40 @@ repli.
 Journal : `/var/log/hostachy-bascule.log`, lignes `[noyau]`. Banc sans effet :
 `noyau-standby.sh --dry-run` (avec `REPO=` pour une copie dans `/tmp`).
 
+## Mettre à jour puis alléger un nœud — `alleger-noeud.sh` (#1648, 04/10/2026)
+
+Les deux nœuds étaient des Pi OS **Desktop** (navigateurs, VNC, CUPS, `rpcbind` sur le LAN) :
+`scripts/exploitation/alleger-noeud.sh` retire cette pile **et elle seule** ; la liste s'écrit
+une fois, dans `lib-paquets-proscrits.sh`, que **C35** relit pour dire si elle est revenue.
+Au moindre doute un composant reste : tous les noyaux, `plymouth` (l'initramfs ne doit pas bouger),
+`nodejs`, `build-essential`, `mkvtoolnix`, `bluez`. Le principe générique et son incident :
+`standards/04-fiabilite-des-controles.md` §51 (une simulation lit TOUTE la transaction).
+
+L'ordre qui a fonctionné, **sur le STANDBY seulement** (le script refuse un nœud qui sert) :
+1. `Install-Recommends "0"` : `/etc/apt/apt.conf.d/99-hostachy-sans-recommends` (C35 le mesure) ;
+2. **mettre le nœud à jour AVANT** (`sudo flock /opt/5hostachy/.auto-deploy.lock apt-get
+   -o Dpkg::Options::=--force-confold full-upgrade`) : un « + » est un ordre d'installation, donc
+   de mise à jour — le script refuse désormais tant qu'un paquet gardé le serait ;
+3. `sudo bash scripts/exploitation/alleger-noeud.sh` (`SIM=1` pour simuler sans root) ;
+4. **comparer l'initramfs à celui de l'autre nœud** avant tout redémarrage
+   (`lsinitramfs /boot/firmware/initramfs_2712 | sort | diff`) : seuls des écarts de versions de
+   bibliothèques sont bénins ;
+5. poser la marque `.redemarrage-noyau` **sur l'actif** (`<epoch> <noyau>`, valable 10 min) PUIS
+   `sudo reboot` — sans elle, le redémarrage se lit « pair injoignable ».
+
+Pièges : **ne pas lancer `apt autoremove`** ensuite (il retirerait `rpd-plym-splash` et
+régénérerait l'initramfs) ; `sudo` demande un mot de passe sur les deux nœuds (geste manuel) ;
+le redémarrage de `dockerd` coupe **List-dons** (rpi2) quelques secondes — constater son retour ;
+une simulation faite sur un nœud n'éprouve pas l'autre tant qu'ils ne sont pas à la même version.
+
+## cloudflared : mesurer le binaire qui tourne, pas `dpkg`
+
+Le 04/10/2026, rpi1 avait le paquet apt (2026.9.3) et rpi2 un binaire **posé à la main**
+(`scripts/installation/install-cloudflared.sh` → `/usr/local/bin`, 2026.3.0), que `apt` ne met
+jamais à jour : C30 le disait « absent ». Il lit maintenant la version du binaire quand `dpkg` ne
+connaît pas le paquet. L'aligner se fait par le dépôt apt de Cloudflare (`/etc/apt/sources.list.d/cloudflared.list`
+et sa clé, comme sur rpi1), **sur le standby**, en laissant l'unité `inactive`/`disabled`.
+
 ## Correctifs de sécurité en attente — lire C30 (#1441, 28/09/2026)
 
 Un correctif en attente n'est pas un défaut : `apt-daily-upgrade` passe une fois
