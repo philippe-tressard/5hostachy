@@ -116,10 +116,7 @@ export interface StatsImportLots {
 	avec_user: number;
 }
 
-/**  La résolution automatique des copropriétaires — `resolution_lots.resoudre_imports`.
- *
- *   ⚠️ `OngletImportLots` lit encore `skipped_locataire` et `skipped_no_lot`, que le
- *   serveur ne rend plus : même écart que `ResultatImportLots`, même `any` déclaré. */
+/**  La résolution automatique des copropriétaires — `resolution_lots.resoudre_imports`. */
 export interface ResolutionImportLots {
 	resolus: number;
 	sans_occupant: number;
@@ -276,11 +273,8 @@ export interface PropositionsLocation {
 
 /**  Le compte rendu de l'import des lots — `upload_import_lots` (`routers/lots_imports.py`) :
  *   celui du tableur, puis celui de la résolution automatique (`resoudre_imports`),
- *   ses clés préfixées par `auto_`
- *
- *   ⚠️ `OngletImportLots` lit encore `auto_skipped_locataire` et `auto_skipped_no_lot`,
- *   que le serveur ne rend plus : l'écran garde un `any` tant que l'écart n'est pas
- *   tranché — on n'ajoute pas ici un champ qui n'arrive jamais. */
+ *   ses clés préfixées par `auto_`. L'écran lisait d'anciens noms de compteurs
+ *   (`auto_skipped_…`) que le serveur ne rendait plus (#1685). */
 export interface ResultatImportLots extends CompteImportTableur {
 	auto_resolus: number;
 	auto_sans_occupant: number;
