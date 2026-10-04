@@ -24,6 +24,24 @@ cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie
 """
 
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
+from app.utils.purge_comptes.regles import DELAI_AVANT_SUPPRESSION_JOURS, INACTIVITE_ANS
+
+
+#: La conservation des comptes (#1580, arbitrée le 04/10/2026). L'ancienne phrase
+#: annonçait une durée qu'aucun code n'appliquait ; elle reste écrite ici pour que
+#: la migration 0261 la remplace EXACTEMENT (`utils/textes_livres`). La nouvelle
+#: se compose des constantes de la purge (`utils/purge_comptes/regles`) : la durée
+#: annoncée ne peut pas diverger de celle qui est appliquée.
+CONSERVATION_COMPTES_ANCIEN = "Données de compte actif\xa0: durée de la relation + 2 ans."
+CONSERVATION_COMPTES = (
+    "Données de compte\xa0: un compte qui permet de se connecter et reste "
+    f"<strong>{INACTIVITE_ANS}\xa0ans sans connexion</strong> reçoit un avertissement par "
+    f"courriel, puis il est <strong>supprimé {DELAI_AVANT_SUPPRESSION_JOURS}\xa0jours plus "
+    "tard</strong> avec les données qui lui sont rattachées, sauf s'il s'est reconnecté "
+    "entre-temps. Les comptes d'administration ne sont pas supprimés automatiquement\xa0; "
+    "un compte en attente de validation, refusé ou désactivé n'est supprimé que sur "
+    "décision de l'administration."
+)
 
 
 #: La conservation de l'historique des envois (#1073, 24/09/2026). Il disait
@@ -302,9 +320,9 @@ DEFAULT_LEGAL = {
         + "</li>"
         + ACHEMINEMENT_COURRIELS
         + RECEPTION_COURRIELS
-        + "</ul><h2>5. Durée de "
-        "conservation</h2><ul><li>Données de compte actif\xa0: durée de la relation + 2 "
-        "ans.</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
+        + "</ul><h2>5. Durée de conservation</h2><ul><li>"
+        + CONSERVATION_COMPTES
+        + "</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
         "configuration.</li></ul><ul>"
         + TELEMETRIE_CONSERVATION
         + CONSERVATION_COURRIELS
