@@ -32,9 +32,10 @@ import asyncio
 import pathlib
 import re
 
+from tests.aides_caddy import caddyfile
+
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
 _START = _RACINE / "api" / "start.sh"
-_CADDY = _RACINE / "Caddyfile"
 
 
 def _lancement() -> list[str]:
@@ -53,10 +54,6 @@ def _reseau_uvicorn() -> str:
     return options[0].split("=", 1)[1]
 
 
-def _caddy() -> str:
-    return _CADDY.read_text(encoding="utf-8")
-
-
 def test_uvicorn_lit_l_adresse_transmise_par_un_proxy_de_confiance():
     assert "--proxy-headers" in _lancement()
     reseau = _reseau_uvicorn()
@@ -64,7 +61,7 @@ def test_uvicorn_lit_l_adresse_transmise_par_un_proxy_de_confiance():
 
 
 def test_caddy_lit_cf_connecting_ip_d_un_proxy_de_confiance_seulement():
-    caddy = _caddy()
+    caddy = caddyfile()
     m = re.search(r"trusted_proxies\s+static\s+(\S+)", caddy)
     assert m, "Caddy doit déclarer ses proxys de confiance (cloudflared, via la passerelle Docker)"
     assert m.group(1) == _reseau_uvicorn(), (
@@ -77,7 +74,7 @@ def test_caddy_lit_cf_connecting_ip_d_un_proxy_de_confiance_seulement():
 
 
 def test_chaque_passage_vers_l_api_transmet_l_adresse_du_client():
-    caddy = _caddy()
+    caddy = caddyfile()
     blocs = re.findall(r"reverse_proxy\s+api:8000\s*(\{[^}]*\})?", caddy)
     assert blocs, "aucun `reverse_proxy api:8000` — le contrôle ne mesure rien"
     for bloc in blocs:

@@ -8,6 +8,7 @@
   les callbacks onSubmit / onDelete (puis rafraîchit la liste).
 -->
 <script lang="ts">
+	import type { ReponseCommunaute } from '$lib/api';
 	import { fmtDateShort } from '$lib/date';
 
 	import { peutCommenter } from '$lib/droits';
@@ -15,7 +16,7 @@
 	import { onDestroy } from 'svelte';
 	import { membre } from '$lib/accordeon';
 
-	export let reponses: any[] = [];
+	export let reponses: ReponseCommunaute[] = [];
 	export let currentUserId: number | undefined = undefined;
 	export let isCS = false;
 	export let canRespond = true;

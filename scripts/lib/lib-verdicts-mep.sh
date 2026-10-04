@@ -29,6 +29,10 @@
 #  health-watch et à auto-deploy, qui ne chargent pas les verdicts du pré-check.
 # shellcheck source=./lib-parite.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-parite.sh"
+#  Les images servies (points 12 et 18) — extraites le 04/10/2026, ce fichier
+#  étant à son plafond de 500 lignes.
+# shellcheck source=./lib-images-servies.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-images-servies.sh"
 
 verdict_http() {           # $1 = code HTTP observé
   case "$1" in
@@ -258,26 +262,6 @@ verdict_parite() {         # $1/$2 = HEAD des 2 nœuds
     oui) echo OK ;;
     non) echo ECART ;;   # écart = toléré, resync à la bascule
     *)   echo INCONNU ;;
-  esac
-}
-
-verdict_images_standby() { # $1 = HEAD du standby, $2 = son .images-construites
-  #  🔴 La parité de CODE n'est pas la parité d'IMAGES (#511). `verdict_parite`
-  #  compare deux `git rev-parse` : il rend OK sur un standby dont le
-  #  `docker compose build` a échoué, parce que son code EST à jour. Ce sont ses
-  #  images qui ne le sont pas, et ce sont elles qu'un failover démarre.
-  #
-  #  ⚠️ C'est le seul état du système où tous les contrôles sont verts et où la
-  #  bascule sert quand même une version antérieure. Il est resté invisible parce
-  #  qu'aucun contrôle ne regardait autre chose que git.
-  #
-  #  FAIL et non ECART : un écart de code se rattrape seul en moins de cinq
-  #  minutes (auto-deploy, #448) ; des images périmées ne se rattrapent PAS —
-  #  auto-deploy ne relance le build que si le commit change.
-  case "$(verdict_parite_servie "$1" "$2")" in
-    a-jour)          echo OK ;;
-    images-perimees) echo FAIL ;;
-    *)               echo INCONNU ;;
   esac
 }
 

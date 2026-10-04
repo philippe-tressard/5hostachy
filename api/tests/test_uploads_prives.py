@@ -25,8 +25,9 @@ import re
 
 import pytest
 
+from tests.aides_caddy import bloc_handle, blocs_handle, caddyfile
+
 RACINE = pathlib.Path(__file__).resolve().parents[2]
-CADDYFILE = RACINE / "Caddyfile"
 
 
 def _routeurs_prives() -> tuple:
@@ -56,15 +57,8 @@ def _routeurs_prives() -> tuple:
 ROUTEURS_PRIVES = _routeurs_prives()
 
 
-def _caddyfile() -> str:
-    contenu = CADDYFILE.read_text(encoding="utf-8")
-    # Cible introuvable ⇒ INCONNU, jamais OK.
-    assert len(contenu) > 200, "Caddyfile vide ou illisible : contrôle impossible"
-    return contenu
-
-
 def test_le_repertoire_prive_est_refuse_par_caddy():
-    contenu = _caddyfile()
+    contenu = caddyfile()
     assert re.search(r"handle\s+/uploads/prive/\*\s*\{[^}]*respond\s+404", contenu), (
         "Le Caddyfile ne refuse plus /uploads/prive/* : les PV d'AG et les "
         "rapports de diagnostic redeviennent téléchargeables sans authentification."
@@ -73,7 +67,7 @@ def test_le_repertoire_prive_est_refuse_par_caddy():
 
 def test_le_refus_precede_le_service_statique():
     """L'ordre EST la protection : Caddy applique le premier `handle` qui matche."""
-    contenu = _caddyfile()
+    contenu = caddyfile()
     prive = contenu.find("handle /uploads/prive/*")
     statique = re.search(r"handle\s+/uploads/\*\s*\{", contenu)
 
@@ -87,7 +81,7 @@ def test_le_refus_precede_le_service_statique():
 
 def test_les_annonces_de_hall_restent_protegees():
     """Même mécanisme, antérieur : une régression d'ordre les toucherait aussi."""
-    contenu = _caddyfile()
+    contenu = caddyfile()
     hall = contenu.find("handle /uploads/annonces-hall/*")
     statique = re.search(r"handle\s+/uploads/\*\s*\{", contenu)
     assert hall != -1 and statique and hall < statique.start()
@@ -131,24 +125,21 @@ def test_le_repertoire_prive_est_bien_sous_le_volume_repliqué():
 
 def test_uploads_exige_une_session_authentifiee():
     """Photos de profil, de ticket et pièces jointes ne sont plus publiques."""
-    contenu = _caddyfile()
-    bloc = re.search(r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S)
+    contenu = caddyfile()
+    bloc = bloc_handle(contenu, "/uploads/*")
     assert bloc, "bloc /uploads/* introuvable"
-    assert "forward_auth" in bloc.group(1), (
+    assert "forward_auth" in bloc, (
         "Le service statique de /uploads/* ne passe plus par forward_auth : "
         "toutes les pièces jointes redeviennent publiques."
     )
-    assert "/auth/verifier-acces" in bloc.group(1), (
+    assert "/auth/verifier-acces" in bloc, (
         "forward_auth n'interroge plus l'endpoint de vérification attendu"
     )
 
 
 def _blocs_uploads(contenu: str) -> list[tuple[str, str]]:
     """Chaque `handle /uploads…` du Caddyfile : (chemin, corps du bloc)."""
-    return [
-        (m.group(1), m.group(2))
-        for m in re.finditer(r"handle\s+(/uploads/\S*)\s*\{(.*?)\n    \}", contenu, re.S)
-    ]
+    return blocs_handle(contenu, r"/uploads/\S*")
 
 
 def _servis_sans_session(blocs) -> list[str]:
@@ -168,7 +159,7 @@ def test_aucun_fichier_televerse_n_est_servi_sans_session():
 
     Un bloc placé avant la règle commune ne peut donc que REFUSER (`respond`).
     """
-    fautes = _servis_sans_session(_blocs_uploads(_caddyfile()))
+    fautes = _servis_sans_session(_blocs_uploads(caddyfile()))
     assert not fautes, (
         f"Servi sans session : {fautes}. Un fichier téléversé se lit derrière "
         "`forward_auth` (bloc /uploads/*) ; un bloc qui le précède ne sert qu'à refuser."
@@ -177,11 +168,11 @@ def test_aucun_fichier_televerse_n_est_servi_sans_session():
 
 def test_le_controle_des_blocs_uploads_voit_et_refuse():
     """Cas zéro : il lit bien les blocs du vrai Caddyfile, et il refuse un service anonyme."""
-    blocs = dict(_blocs_uploads(_caddyfile()))
+    blocs = dict(_blocs_uploads(caddyfile()))
     assert "/uploads/*" in blocs and "forward_auth" in blocs["/uploads/*"], (
         "le bloc protégé /uploads/* n'est plus lu : le contrôle ne mesure plus rien"
     )
-    forge = "    handle /uploads/ouvert/* {\n        root * /srv\n        file_server\n    }"
+    forge = "\thandle /uploads/ouvert/* {\n\t\troot * /srv\n\t\tfile_server\n\t}"
     assert _servis_sans_session(_blocs_uploads(forge)) == ["/uploads/ouvert/*"]
 
 
@@ -213,11 +204,11 @@ def test_les_fichiers_proteges_ne_sont_pas_mis_en_cache_par_le_cdn():
     Une purge du cache ne suffit pas : le premier accès autorisé suivant
     repeuple l'edge. Seule la directive à l'origine règle le problème.
     """
-    contenu = _caddyfile()
-    bloc = re.search(r"handle\s+/uploads/\*\s*\{(.*?)\n    \}", contenu, re.S)
+    contenu = caddyfile()
+    bloc = bloc_handle(contenu, "/uploads/*")
     assert bloc, "bloc /uploads/* introuvable"
 
-    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1))
+    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc)
     assert directive, (
         "Le bloc protégé n'impose plus de Cache-Control : Cloudflare remettra "
         "les pièces jointes en cache et les servira sans authentification."
@@ -335,11 +326,11 @@ def test_l_api_entiere_est_non_cacheable():
     session par nature, et la prochaine route qui servira un fichier n'aura pas
     à y penser.
     """
-    contenu = _caddyfile()
-    bloc = re.search(r"handle\s+/api/\*\s*\{(.*?)\n    \}", contenu, re.S)
+    contenu = caddyfile()
+    bloc = bloc_handle(contenu, "/api/*")
     assert bloc, "bloc /api/* introuvable"
 
-    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc.group(1))
+    directive = re.search(r'header\s+Cache-Control\s+"([^"]+)"', bloc)
     assert directive, (
         "Le bloc /api/* n'impose plus de Cache-Control : tout endpoint servant "
         "un fichier avec une extension redeviendra public via le cache du CDN."

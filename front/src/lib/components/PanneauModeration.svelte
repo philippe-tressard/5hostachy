@@ -11,10 +11,11 @@
   Ce composant les montre et dit ce qu'on a cliqué.
 -->
 <script lang="ts">
+	import type { Signalement } from '$lib/api';
 	import { createEventDispatcher } from 'svelte';
 
 	/** Les signalements en attente, tels que l'API les rend. */
-	export let signalements: any[] = [];
+	export let signalements: Signalement[] = [];
 
 	const dispatch = createEventDispatcher<{
 		resoudre: { id: number; decision: 'traite' | 'rejete' };

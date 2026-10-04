@@ -132,3 +132,33 @@ def test_la_mise_a_jour_s_applique_sans_action_de_l_utilisateur():
         "prendre la main rechargerait la page sans fin, sous les yeux de "
         "l'utilisateur et sans échappatoire."
     )
+
+
+def test_un_import_qui_echoue_sur_une_version_retiree_se_rattrape():
+    """Un morceau de code retiré par un déploiement ne laisse plus l'écran amputé (04/10/2026).
+
+    Le 03/10, « Importing a module script failed. » a été relevé trois fois par
+    la télémétrie après deux déploiements : un onglet ouvert avant chargeait à
+    la demande un morceau du build précédent, disparu. SvelteKit rattrape ce cas
+    pendant une navigation, pas pour un import lancé par un composant
+    (DOMPurify, l'éditeur riche). Vite signale chacun (`vite:preloadError`) ;
+    le composant demande à SvelteKit si le site a changé, et n'applique alors
+    qu'aux moments sans risque — jamais de rechargement d'autorité devant
+    l'utilisateur.
+
+    ⚠️ Contrôle de FORME : en `vite dev` (les e2e), `updated.check()` répond
+    toujours faux, et ce comportement ne s'y éprouve pas.
+    """
+    composant = _lire(_COMPOSANT)
+    assert "'vite:preloadError'" in composant, (
+        "MajDisponible.svelte n'écoute plus `vite:preloadError` : un import échoué "
+        "après un déploiement laisse de nouveau l'écran amputé, sans recours."
+    )
+    assert "updated" in composant and ".check()" in composant, (
+        "l'échec d'import n'est plus confronté à `version.json` : une panne réseau "
+        "passagère déclencherait un rechargement inutile."
+    )
+    assert "beforeNavigate" in composant and "to.url.href" in composant, (
+        "une version retirée ne charge plus la page suivante en entier : elle "
+        "resterait sur l'ancien code."
+    )

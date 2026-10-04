@@ -6,6 +6,7 @@ from sqlmodel import Session
 from app.auth.jwt import decode_token, empreinte_secret
 from app.database import get_session
 from app.utils.nature_affaire import est_actualite
+from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
 from app.models.core import (
     Notification,
@@ -327,7 +328,6 @@ def ma_notification(
     notification qu'on n'a pas le droit de voir. C'est le choix qu'avaient déjà
     fait les quatre copies, et il se garde.
     """
-    notif = session.get(Notification, notif_id)
-    if not notif or notif.destinataire_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Notification introuvable")
-    return notif
+    return ou_404(
+        session, Notification, notif_id, "Notification", sous={"destinataire_id": user.id}
+    )

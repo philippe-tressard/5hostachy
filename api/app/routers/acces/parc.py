@@ -277,8 +277,7 @@ def modifier_acces_admin(
         exiger_code_libre(session, type_acces, code, sauf_id=objet.id)
         objet.code = code
     if body.porteur_id is not None:
-        if not session.get(Utilisateur, body.porteur_id):
-            raise HTTPException(404, "Porteur introuvable")
+        ou_404(session, Utilisateur, body.porteur_id, "Porteur")
         objet.user_id = body.porteur_id
     if body.lot_id is not None:
         objet.lot_id = body.lot_id or None

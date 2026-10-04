@@ -20,10 +20,11 @@
   calcule. Rien d'autre ne change, donc rien d'autre ne se paramètre.
 -->
 <script lang="ts">
+	import type { PetiteAnnonce } from '$lib/api';
 	import AnnonceCard from './AnnonceCard.svelte';
 
 	/** Les annonces à rendre, déjà filtrées et triées par l'appelant. */
-	export let liste: any[] = [];
+	export let liste: PetiteAnnonce[] = [];
 	/**  L'annonce dépliée — tenue par l'onglet (un lien profond la désigne).
 	 *
 	 *   ⚠️ `editAnnonce` N'EST PLUS ICI depuis le 02/09/2026 : l'ONGLET tient
@@ -38,9 +39,9 @@
 	export let estAdmin = false;
 	export let currentUserId: number | undefined = undefined;
 
-	export let onToggle: (a: any) => void;
-	export let onToggleGestion: (a: any) => void;
-	export let onModifier: (a: any) => void;
+	export let onToggle: (a: PetiteAnnonce) => void;
+	export let onToggleGestion: (a: PetiteAnnonce) => void;
+	export let onModifier: (a: PetiteAnnonce) => void;
 	export let onUpload: (id: number, f: File) => Promise<string>;
 	export let onRemove: (id: number, url: string) => Promise<string[] | void>;
 	export let onStatut: (id: number, statut: string) => void;

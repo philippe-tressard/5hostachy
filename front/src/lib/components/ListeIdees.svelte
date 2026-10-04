@@ -44,6 +44,10 @@
 	/** Les idées à rendre, déjà filtrées et triées par l'appelant. */
 	import { peutEditer } from '$lib/droits';
 
+	//  ⚠️ Pas encore `Idee[]` (#1572) : la carte lit `idee.assiste_ia`, que
+	//  `GET /idees` ne transporte pas (`idees._enrich`). Le typer ferait échouer la
+	//  vérification sur un écart RÉEL, à corriger côté serveur — pas en ajoutant au
+	//  type un champ qui n'arrive jamais.
 	export let idees: any[] = [];
 	export let currentUserId: number | undefined = undefined;
 	export let estCS = false;

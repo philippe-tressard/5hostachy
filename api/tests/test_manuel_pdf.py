@@ -44,6 +44,7 @@ from app.utils.manuel_pdf import (
     version_du_manuel,
 )
 from app.utils.manuel_pdf_css import css_du_pdf
+from tests.aides_caddy import bloc_handle, caddyfile
 
 _RACINE = Path(__file__).resolve().parents[2]
 _MANUEL = _RACINE / "docs" / "manuel-utilisateur.html"
@@ -420,13 +421,12 @@ def test_le_manuel_impose_la_revalidation_au_navigateur():
     `no-cache` n'interdit pas de stocker : il impose de revalider. Le fichier
     reste donc en cache local, et un `304` suffit quand il n'a pas changé.
     """
-    caddy = (_RACINE / "Caddyfile").read_text(encoding="utf-8")
-    bloc = re.search(r"handle\s+/manuel-utilisateur\.html\s*\{(.*?)\n    \}", caddy, re.S)
+    bloc = bloc_handle(caddyfile(), "/manuel-utilisateur.html")
     assert bloc, (
         "aucun bloc `handle /manuel-utilisateur.html` : le manuel est servi sans "
         "directive de cache, donc mis en cache à l'heuristique du navigateur"
     )
-    directive = re.search(r'header\s+>?Cache-Control\s+"([^"]+)"', bloc.group(1))
+    directive = re.search(r'header\s+>?Cache-Control\s+"([^"]+)"', bloc)
     assert directive, "le bloc du manuel n'impose plus de Cache-Control"
     valeur = directive.group(1).lower()
     assert "no-cache" in valeur or "no-store" in valeur, (
@@ -436,7 +436,7 @@ def test_le_manuel_impose_la_revalidation_au_navigateur():
     #  ⚠️ Le `>` REMPLACE l'en-tête ; sans lui, `header` AJOUTE et la valeur
     #  d'amont subsiste — défaut constaté sur `sw.js` le 14/08/2026, où
     #  « max-age=14400 » avait survécu à la fusion.
-    assert ">Cache-Control" in bloc.group(1), (
+    assert ">Cache-Control" in bloc, (
         "sans `>`, la directive s'AJOUTE à celle d'amont au lieu de la remplacer"
     )
 

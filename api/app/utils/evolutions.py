@@ -44,6 +44,7 @@ from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.auth.deps import peut_editer
+from app.utils.recuperer import ou_404
 
 #: Les types d'entrée qu'un humain ÉCRIT — par opposition à celles que le serveur
 #: trace lui-même (« Correction : … »).
@@ -105,9 +106,7 @@ def evolution_modifiable(
     recevable mais l'objet s'y refuse), le droit en dernier (403). L'inverse
     dirait « accès refusé » sur une entrée qui n'existe pas.
     """
-    evol: Any = session.get(modele, evol_id)
-    if not evol or getattr(evol, champ_parent, None) != parent_id:
-        raise HTTPException(404, "Évolution introuvable")
+    evol: Any = ou_404(session, modele, evol_id, "Évolution", sous={champ_parent: parent_id})
     if getattr(evol, "type", None) not in TYPES_SAISIS:
         raise HTTPException(422, "Ce type d'évolution ne peut pas être modifié")
     #  L'auteur ou un admin — `peut_editer`, du module central d'autorisation.
@@ -132,9 +131,7 @@ def supprimer_evolution(
     d'entrée valide permettrait d'effacer l'entrée d'un AUTRE objet que celui
     dont on a l'adresse, et le contrôle d'accès de l'URL ne servirait à rien.
     """
-    evol: Any = session.get(modele, evol_id)
-    if not evol or getattr(evol, champ_parent, None) != parent_id:
-        raise HTTPException(404, "Entrée introuvable")
+    evol: Any = ou_404(session, modele, evol_id, "Entrée", sous={champ_parent: parent_id})
     if getattr(evol, "type", None) not in TYPES_EFFACABLES:
         raise HTTPException(422, REFUS_TYPE)
     session.delete(evol)

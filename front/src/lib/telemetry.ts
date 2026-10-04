@@ -184,6 +184,45 @@ export function initTelemetry() {
 
 	//  Ce que rien n'a rattrapé (#1631). Les erreurs d'un chargement ou d'une
 	//  navigation n'arrivent pas jusqu'ici : `hooks.client.ts` les prend.
-	window.addEventListener('error', (ev) => signalerErreur(codeErreur(ev.error ?? ev.message)));
-	window.addEventListener('unhandledrejection', (ev) => signalerErreur(codeErreur(ev.reason)));
+	window.addEventListener('error', (ev) => {
+		if (erreurDuSite(ev.error, ev.filename)) signalerErreur(codeErreur(ev.error ?? ev.message));
+	});
+	window.addEventListener('unhandledrejection', (ev) => {
+		if (erreurDuSite(ev.reason)) signalerErreur(codeErreur(ev.reason));
+	});
+}
+
+/** Scripts de NOTRE origine qui ne sont pas les nôtres : l'arête Cloudflare y
+ *  sert les siens (détection des robots, préchargement). */
+const SCRIPTS_DE_L_ARETE = '/cdn-cgi/';
+
+/**
+ * **Une erreur levée par ce site — et non par un script étranger** (04/10/2026).
+ *
+ * L'écran « Erreurs vues par les résidents » a relevé, le 03/10, un
+ * `t().filter is not a function` sur `/annonces` et `/tickets` : du code ES5
+ * transpilé (`function(e){var t=s({},e).type…`) qu'aucun des fichiers servis
+ * ne contient — vérifié sur les 152 morceaux de la production et sur les
+ * scripts de l'arête. Une extension ou le navigateur intégré d'une application
+ * l'avait injecté dans la page ; il était imputé au site.
+ *
+ * - un fichier d'une autre origine, ou masqué par le navigateur
+ *   (`webkit-masked-url://`, `chrome-extension://`…), n'est pas le nôtre ;
+ * - une `Error` venue d'un AUTRE contexte JavaScript (le `object:` du relevé :
+ *   une erreur, mais pas une `Error` d'ici) non plus — le site n'en crée aucun
+ *   qui fasse remonter ses erreurs jusqu'à cette fenêtre.
+ */
+export function erreurDuSite(erreur: unknown, fichier?: string): boolean {
+	if (fichier) {
+		try {
+			const url = new URL(fichier);
+			if (url.origin !== window.location.origin) return false;
+			if (url.pathname.startsWith(SCRIPTS_DE_L_ARETE)) return false;
+		} catch {
+			return false;
+		}
+	}
+	const autreContexte =
+		Object.prototype.toString.call(erreur) === '[object Error]' && !(erreur instanceof Error);
+	return !autreContexte;
 }

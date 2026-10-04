@@ -34,14 +34,18 @@
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { SONDAGE } from '$lib/entites/sondage';
 	import { pliageDe, requisDe } from '$lib/pliage';
-	import { sondages as sondagesApi } from '$lib/api';
+	import { sondages as sondagesApi, type SondageCorrige, type SondageCree } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe } from '$lib/perimetres';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
-	//  L'API des sondages ne rend pas de type dédié : la page recharge sa liste.
-	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
+	//  Ce que le serveur rend, tel quel (#1572) ; la page recharge sa liste.
+	const dispatch = createEventDispatcher<{
+		cree: SondageCree;
+		modifie: SondageCorrige;
+		annule: void;
+	}>();
 
 	//  `id` n'existe QU'EN édition : le serveur corrige un libellé par son
 	//  identifiant, et vérifie qu'il appartient bien à ce sondage.
@@ -53,7 +57,12 @@
 	 *   `PATCH /sondages/{id}` existe côté serveur et personne ne l'appelle ».
 	 *   Tout était écrit et testé sauf le chemin pour y arriver — corriger une
 	 *   faute de frappe imposait de supprimer et recréer, donc de perdre les votes.
-	 *   Le constat était juste ; il devient l'implantation. */
+	 *   Le constat était juste ; il devient l'implantation.
+	 *
+	 *   ⚠️ Reste `any` (#1572) : la fiche passe un `SondageDetail`, mais la
+	 *   correction depuis la LISTE (`PageCommunaute`) passe un `Sondage`, qui ne
+	 *   porte pas `options` — les libellés n'y sont donc pas préremplis. Écart
+	 *   réel, à trancher avant de typer. */
 	export let sondage: any = null;
 
 	$: modeEdition = sondage !== null;

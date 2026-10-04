@@ -22,6 +22,7 @@
   l'API et recharge la liste.
 -->
 <script lang="ts">
+	import type { Sondage } from '$lib/api';
 	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { fmtDateShort } from '$lib/date';
@@ -33,13 +34,13 @@
 	import { currentUser, isAdmin } from '$lib/stores/auth';
 
 	/** Les sondages à rendre, déjà filtrés par l'appelant. */
-	export let sondages: any[] = [];
-	export let arreterSondage: (s: any, e: Event) => void;
-	export let supprimerSondage: (s: any, e: Event) => void;
+	export let sondages: Sondage[] = [];
+	export let arreterSondage: (s: Sondage, e: Event) => void;
+	export let supprimerSondage: (s: Sondage, e: Event) => void;
 	/**  Corriger son sondage (#783). Même condition que « Stopper » : l'auteur
 	 *   ou un admin, et **pas** un sondage clôturé — le serveur le refuse, et un
 	 *   bouton qui déclencherait un refus serait pire qu'absent. */
-	export let modifierSondage: (s: any, e: Event) => void;
+	export let modifierSondage: (s: Sondage, e: Event) => void;
 </script>
 
 {#each sondages as s (s.id)}

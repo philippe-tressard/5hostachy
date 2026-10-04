@@ -25,6 +25,10 @@
 		idees as ideesApi,
 		annonces as annoncesApi,
 		signalements as signalementsApi,
+		type Idee,
+		type PetiteAnnonce,
+		type Signalement,
+		type Sondage,
 	} from '$lib/api';
 	import { currentUser, isAdmin, isCS, isGestionnaire, quandAuthResolue } from '$lib/stores/auth';
 	import { refuserLaCommunaute } from '$lib/communaute';
@@ -63,7 +67,7 @@
 	// Sondages — l'état de SAISIE vit dans `FormulaireSondage.svelte` : le ciblage
 	// (périmètre, destinataires), les options et les canaux y sont désormais, avec
 	// le reste des formulaires du site. Ne restent ici que la LISTE et ses actions.
-	let sondages: any[] = [];
+	let sondages: Sondage[] = [];
 
 	//  🔴 La partition courants / Archives est portée par `ListeEtArchives`, sur
 	//  le `s.archivee` que le SERVEUR calcule (`app/utils/archivage.py`, #515) :
@@ -84,9 +88,9 @@
 	//  La correction d'un sondage (#783). L'état vit ICI, pas dans
 	//  `ListeSondages` : celui-ci est rendu DEUX fois (courants et Archives), et
 	//  l'y mettre en aurait monté deux exemplaires sur le même sondage.
-	let editSondage: any = null;
+	let editSondage: Sondage | null = null;
 
-	function modifierSondage(s: any, e: Event) {
+	function modifierSondage(s: Sondage, e: Event) {
 		//  Le `preventDefault` date du temps où la carte ÉTAIT un lien : il ne sert
 		//  plus (#1329, lien étiré sous des boutons qui ne sont plus dedans), et il
 		//  est sans effet sur un bouton.
@@ -94,7 +98,7 @@
 		editSondage = editSondage?.id === s.id ? null : s;
 	}
 
-	async function arreterSondage(s: any, e: Event) {
+	async function arreterSondage(s: Sondage, e: Event) {
 		e.preventDefault();
 		await confirmerPuis(
 			`Stopper le sondage « ${s.question} » maintenant ?`,
@@ -110,7 +114,7 @@
 		);
 	}
 
-	async function supprimerSondage(s: any, e: Event) {
+	async function supprimerSondage(s: Sondage, e: Event) {
 		e.preventDefault();
 		await confirmerPuis(
 			SUPPRESSION(`Le sondage « ${s.question} »`),
@@ -123,7 +127,7 @@
 	}
 
 	// Idées
-	let idees: any[] = [];
+	let idees: Idee[] = [];
 	let ideesLoading = true;
 	let showFormIdee = false;
 	let filtreStatut = '';
@@ -132,7 +136,7 @@
 	//  rubriques) et les lie à `OngletAnnonces`, qui porte tout le reste — filtres,
 	//  formulaires, gestes. `expandedAnnonce` reste ici parce qu'un lien profond
 	//  (`#annonce-12`) la désigne avant que l'onglet ne soit monté.
-	let annonces: any[] = [];
+	let annonces: PetiteAnnonce[] = [];
 	let annoncesLoading = true;
 	let showFormAnnonce = false;
 	let expandedAnnonce: number | null = null;
@@ -154,7 +158,7 @@
 		//  enregistré ») : il n'est connu qu'après l'appel, d'où le `toast` à
 		//  l'intérieur plutôt qu'en second argument de `tenter`.
 		await tenter(async () => {
-			const res: any = await ideesApi.voter(id);
+			const res = await ideesApi.voter(id);
 			idees = await ideesApi.list();
 			toast('success', res.message ?? 'Vote enregistré');
 		});
@@ -196,7 +200,7 @@
 	// ── Signalements / modération ────────────────────────────────────────────────
 	//  Le dépliement du panneau est parti avec lui (`PanneauModeration`) : c'est son
 	//  affaire, pas celle de l'écran.
-	let signalements: any[] = [];
+	let signalements: Signalement[] = [];
 
 	//  🔴 Un échec se dit au modérateur : taire la file lui fait croire qu'elle
 	//  est vide (#1459).

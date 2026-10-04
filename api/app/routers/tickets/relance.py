@@ -42,6 +42,7 @@ from .commun import (
 )
 from app.utils.noms import nom_affiche
 from app.utils.liens import nom_site
+from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
@@ -208,9 +209,7 @@ def envoyer_relance_syndic(
 
     tickets_relance: list[Ticket] = []
     for tid in body.ticket_ids:
-        t = session.get(Ticket, tid)
-        if not t:
-            raise HTTPException(404, f"Ticket {tid} introuvable")
+        t = ou_404(session, Ticket, tid, f"Ticket {tid}")
         if t.categorie == "bug":
             raise HTTPException(
                 422, f"Ticket {tid} (catégorie bug) non concerné par la relance syndic"

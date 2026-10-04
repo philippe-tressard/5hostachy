@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { afterNavigate } from '$app/navigation';
+	import { get } from 'svelte/store';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
+	import { navigating, updated } from '$app/stores';
 
 	// Mise à jour de l'application — appliquée d'elle-même, sans rien demander.
 	//
@@ -47,27 +49,86 @@
 		return MAX_AUTO - Number(sessionStorage.getItem(CLE_COMPTEUR) ?? 0);
 	}
 
-	function appliquerAutomatiquement() {
-		if (!majPrete || !appliquer) return;
+	/** Une application automatique de plus est-elle permise ? La compte si oui. */
+	function consommerAuto(): boolean {
 		if (autoRestantes() <= 0) {
 			disponible = true; // dernier recours : on laisse la main à l'utilisateur
-			return;
+			return false;
 		}
-		majPrete = false;
-		clearTimeout(minuteurBandeau);
 		try {
 			sessionStorage.setItem(CLE_COMPTEUR, String(MAX_AUTO - autoRestantes() + 1));
 		} catch {
 			/* mode privé : le garde-fou saute, pas la mise à jour */
 		}
+		return true;
+	}
+
+	function appliquerAutomatiquement() {
+		if (!majPrete || !appliquer) return;
+		if (!consommerAuto()) return;
+		majPrete = false;
+		clearTimeout(minuteurBandeau);
 		void appliquer();
 	}
 
+	// ── L'onglet tourne sur une version RETIRÉE (04/10/2026) ──────────────────
+	//
+	// Un déploiement remplace les morceaux de code (`/_app/immutable/…`, noms
+	// hachés) : un onglet ouvert avant ne retrouve plus ceux qu'il charge à la
+	// demande. Pendant une NAVIGATION, SvelteKit s'en charge seul — il relit
+	// `version.json` et recharge vers la page visée. Mais un import lancé par un
+	// composant (DOMPurify dans `$lib/sanitize`, l'éditeur riche…) échouait sans
+	// recours : « Importing a module script failed. » relevé trois fois par la
+	// télémétrie le 03/10, après les déploiements de 15:00 et 17:20.
+	//
+	// Vite signale chacun de ces échecs (`vite:preloadError`). Si le site a bien
+	// changé, on applique aux moments sans risque, comme pour une mise à jour :
+	// onglet caché, ou prochaine navigation (chargée en entier) — et le bandeau
+	// tout de suite, l'écran étant déjà amputé. Jamais de rechargement d'autorité
+	// devant l'utilisateur : une saisie en cours disparaîtrait. Un échec sans
+	// nouvelle version (réseau) ne déclenche rien.
+	let perimee = false;
+
+	function surImportEchoue() {
+		if (get(navigating)) return;
+		updated
+			.check()
+			.then((nouvelle) => {
+				if (!nouvelle) return;
+				perimee = true;
+				if (document.visibilityState === 'hidden') rechargerSiPermis();
+				else disponible = true;
+			})
+			.catch(() => {
+				/* `version.json` injoignable : rien n'est établi, rien ne se fait */
+			});
+	}
+
+	function rechargerSiPermis() {
+		if (consommerAuto()) location.reload();
+	}
+
 	function recharger() {
-		if (!appliquer) return;
 		rechargement = true;
+		//  Version retirée sans service worker en attente : `appliquer()` ne
+		//  ferait rien, et le bouton resterait sur « Rechargement… ».
+		if (perimee && !majPrete) {
+			location.reload();
+			return;
+		}
+		if (!appliquer) {
+			rechargement = false;
+			return;
+		}
 		void appliquer();
 	}
+
+	// Version retirée : la page visée se charge en entier, sur la nouvelle.
+	beforeNavigate(({ willUnload, to, cancel }) => {
+		if (!perimee || willUnload || !to?.url) return;
+		cancel();
+		location.href = to.url.href;
+	});
 
 	// Cas 2 : on vient de changer d'écran — l'ancien contenu est déjà perdu, un
 	// rechargement ici se confond avec la navigation.
@@ -78,6 +139,14 @@
 	onMount(() => {
 		let annule = false;
 		let arreter: (() => void) | undefined;
+
+		//  Indépendants du service worker : une version retirée se constate aussi
+		//  sans lui (premier passage, navigateur qui le refuse).
+		const surPerimeeCachee = () => {
+			if (perimee && document.visibilityState === 'hidden') rechargerSiPermis();
+		};
+		window.addEventListener('vite:preloadError', surImportEchoue);
+		document.addEventListener('visibilitychange', surPerimeeCachee);
 
 		// Import dynamique : le module virtuel n'existe qu'au build (stub inerte en
 		// `vite dev`), et rien ne doit s'exécuter côté serveur au rendu SSR.
@@ -132,6 +201,8 @@
 		});
 
 		return () => {
+			window.removeEventListener('vite:preloadError', surImportEchoue);
+			document.removeEventListener('visibilitychange', surPerimeeCachee);
 			annule = true;
 			clearTimeout(minuteurBandeau);
 			arreter?.();

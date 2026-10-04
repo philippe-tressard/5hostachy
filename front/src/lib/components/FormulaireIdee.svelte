@@ -33,14 +33,15 @@
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 	import { IDEE } from '$lib/entites/idee';
 	import { perimetreDefautListe } from '$lib/perimetres';
-	import { idees as ideesApi } from '$lib/api';
+	import { idees as ideesApi, type Idee, type IdeeCreee } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
-	//  L'API des idées ne rend pas de type dédié : l'événement porte l'objet créé
-	//  tel quel, et la page recharge sa liste depuis le serveur.
-	const dispatch = createEventDispatcher<{ cree: unknown; modifie: unknown; annule: void }>();
+	//  Ce que le serveur rend, tel quel (#1572) : la LIGNE brute à la création —
+	//  la page recharge alors sa liste —, l'idée enrichie à la correction, que la
+	//  liste remplace en place.
+	const dispatch = createEventDispatcher<{ cree: IdeeCreee; modifie: Idee; annule: void }>();
 
 	/**  L'idée à corriger, ou `null` pour un dépôt. C'est la SEULE prop qui
 	 *   distingue les deux gestes — tout le reste en découle. */

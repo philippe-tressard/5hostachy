@@ -69,7 +69,6 @@ const PLAFOND_ANY_CLIENT = {
 	'acces.ts': 21,
 	'administration.ts': 41,
 	'client.ts': 1,
-	'communaute.ts': 15,
 	'documents.ts': 3,
 	'index.ts': 10,
 	'patrimoine.ts': 25,

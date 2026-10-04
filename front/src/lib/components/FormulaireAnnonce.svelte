@@ -57,7 +57,7 @@
 		categorieAnnonceLabel,
 		typeAnnonceLabel,
 	} from '$lib/annonces';
-	import { annonces as annoncesApi } from '$lib/api';
+	import { annonces as annoncesApi, type PetiteAnnonce } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { perimetreDefautListe, nombreOuNull } from '$lib/utils';
@@ -71,7 +71,7 @@
 	 *   dépôt. Le mode ne change pas pendant la vie du composant : l'appelant la
 	 *   remonte à neuf (`{#key}`) quand il passe d'une annonce à l'autre — même
 	 *   contrat que `FormulaireActualite` et `FormulaireTicket`. */
-	export let annonce: any = null;
+	export let annonce: PetiteAnnonce | null = null;
 
 	const modeEdition = annonce !== null;
 
@@ -80,7 +80,11 @@
 	 *   son motif. */
 	const etat: Etat = modeEdition ? 'edition' : 'creation';
 
-	const dispatch = createEventDispatcher<{ cree: any; modifie: any; annule: void }>();
+	const dispatch = createEventDispatcher<{
+		cree: PetiteAnnonce;
+		modifie: PetiteAnnonce;
+		annule: void;
+	}>();
 
 	//  ── 1. Titre ────────────────────────────────────────────────────────────
 	let titre = annonce?.titre ?? '';
@@ -94,7 +98,7 @@
 	//  ── 3. Workflow ─────────────────────────────────────────────────────────
 	//  Absent à la CRÉATION (motif `geste`) : une annonce qu'on dépose est en
 	//  cours par construction. La déclaration le dit, ce fichier ne le décide pas.
-	let statut = annonce?.statut ?? 'en_cours';
+	let statut: string = annonce?.statut ?? 'en_cours';
 
 	//  ── 4 à 9 ───────────────────────────────────────────────────────────────
 	//  Copie défensive du périmètre : le tableau vient de l'annonce affichée dans
@@ -187,12 +191,12 @@
 				...(modeEdition ? { statut } : {}),
 			};
 			if (annonce) {
-				const maj: any = await annoncesApi.update(annonce.id, charge);
+				const maj = await annoncesApi.update(annonce.id, charge);
 				toast('success', 'Annonce mise à jour');
 				dispatch('modifie', maj);
 				return;
 			}
-			const cree: any = await annoncesApi.create(charge);
+			const cree = await annoncesApi.create(charge);
 			const { photos, echecs } = await envoyerPhotos(cree.id);
 			if (photos) cree.photos = photos;
 			reinitialiser();
