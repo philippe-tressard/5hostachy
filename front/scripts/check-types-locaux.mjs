@@ -63,7 +63,6 @@ const DETTE = {
  *  (#1572, carte #1571). Un module typé retire sa ligne.
  */
 const PLAFOND_ANY_CLIENT = {
-	'acces.ts': 21,
 	'administration.ts': 41,
 	'patrimoine.ts': 25,
 	'telemetrie.ts': 1,

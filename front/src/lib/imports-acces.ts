@@ -30,7 +30,10 @@
  * prop `marge` d'`EntetePage` (`ux-patterns` §13) : *tant que le mécanisme
  * d'exception existe, l'exception se reproduit.*
  */
-import { acces as accesApi } from '$lib/api';
+import { acces as accesApi, type LotPourBadge } from '$lib/api';
+
+//  Le type vit à côté du client qui le rend (#1572) ; réexporté pour ses lecteurs.
+export type { LotPourBadge };
 import { parAttribut } from '$lib/table-statuts';
 
 /** Une colonne du tableau, propre à un type d'import. */
@@ -152,14 +155,6 @@ const { libelle, badge } = parAttribut({
 
 export const STATUT_BADGE: Record<string, string> = badge;
 export const STATUT_LABEL: Record<string, string> = libelle;
-
-/** Un lot tel que le proposent les deux formulaires de badge (import, parc). */
-export interface LotPourBadge {
-	id: number;
-	libelle: string;
-	type: string;
-	coproprietaire: string | null;
-}
 
 /**
  * Les lots à proposer pour un badge — une écriture pour les deux formulaires

@@ -57,7 +57,13 @@
 <script lang="ts">
 	import { TYPES_ACCES } from '$lib/types-acces';
 	import { onMount } from 'svelte';
-	import { acces as accesApi, admin as adminApi, type AccesAdmin, type ChoixAcces } from '$lib/api';
+	import {
+		acces as accesApi,
+		admin as adminApi,
+		type AccesAdmin,
+		type ChoixAcces,
+		type LotPourBadge,
+	} from '$lib/api';
 	import { isAdmin } from '$lib/stores/auth';
 	import BoutonNouveau from '$lib/components/BoutonNouveau.svelte';
 	import FormulaireAcces from '$lib/components/FormulaireAcces.svelte';
@@ -108,7 +114,7 @@
 	 *   deux gestes d'écriture. Ici elle PROPOSE, et c'est tout ce qu'un écran
 	 *   sait faire. */
 	let choixAcces: Record<string, ChoixAcces> = {};
-	let lots: any[] = [];
+	let lots: LotPourBadge[] = [];
 	let formOuvert = false;
 	let editId: string | null = null;
 	let enregistrement = false;

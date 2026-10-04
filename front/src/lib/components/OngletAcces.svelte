@@ -35,7 +35,12 @@
 <script lang="ts">
 	import { statutAccesBadge, statutAccesLabel } from '$lib/types-acces';
 	import FormulairesAcces from '$lib/components/FormulairesAcces.svelte';
-	import { acces as accesApi, lots as lotsApi, bailleur as bailApi } from '$lib/api';
+	import {
+		acces as accesApi,
+		lots as lotsApi,
+		bailleur as bailApi,
+		type AccesPorteur,
+	} from '$lib/api';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	//  ⚠️ `confirmer` et `SUPPRESSION` sont partis avec la poubelle (15/09/2026) :
 	//  il ne reste ici aucun geste irréversible à faire confirmer en rouge.
@@ -50,8 +55,8 @@
 	import { bailEnCours, nomLocataire } from '$lib/bail';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
-	let vigiks: any[] = [];
-	let telecommandes: any[] = [];
+	let vigiks: AccesPorteur[] = [];
+	let telecommandes: AccesPorteur[] = [];
 	let mesLots: any[] = [];
 	let accesRecus: any[] = [];
 	let mesBaux: any[] = [];
