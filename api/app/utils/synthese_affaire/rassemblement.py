@@ -44,6 +44,7 @@ from app.utils.destinataires import est_adresse_syndic
 from app.utils.jours_ouvres import libelle_jours
 from app.utils.synthese_affaire import metriques as m
 from app.utils.synthese_affaire.lecture import TYPE_SYNTHESE
+from app.utils.synthese_affaire import recidive as r
 from app.utils.valeurs import valeur
 
 #: Une entrée du fil se coupe là : le récit d'une page n'en demande pas plus.
@@ -150,13 +151,17 @@ def metriques_de(session: Session, ticket: Ticket, cloture_le: datetime) -> dict
     """Les métriques de l'affaire, calculées maintenant — ce que la production fige."""
     est_syndic = reconnaisseur_syndic(session)
     faits = [_fait(e, est_syndic) for e in _evolutions(session, ticket.id)]
-    return m.calculer(
+    met = m.calculer(
         cree_le=ticket.cree_le,
         cloture_le=cloture_le,
         issue=valeur(ticket.statut),
         faits=faits,
         comparaison=_comparaison(session, ticket, est_syndic),
     )
+    #  La récidive d'équipement (#1647) : absente sous le seuil, jamais `None`.
+    if (recid := r.recidive_de(session, ticket, cloture_le)) is not None:
+        met[r.CLE] = recid
+    return met
 
 
 def _role(user: Optional[Utilisateur], ticket: Ticket, est_syndic: Callable[[int], bool]) -> str:
@@ -206,6 +211,21 @@ def _lignes_metriques(met: dict, libelles: dict[str, str]) -> list[str]:
     return lignes
 
 
+def _lignes_recidive(recid: Optional[dict]) -> list[str]:
+    """La récidive, dite à l'assistant par NUMÉROS et dates — jamais les titres : ce
+    sont d'autres affaires, et il n'en a pas besoin pour la nommer (#1647)."""
+    if not recid:
+        return []
+    autres = ", ".join(
+        f"{a['numero']} (close le {date_courte(datetime.fromisoformat(a['ferme_le']).date())})"
+        for a in recid["autres"]
+    )
+    return [
+        f"- Récidive : {len(recid['autres'])} autres affaires résolues sur le même équipement "
+        f"et le même périmètre dans les {recid['mois']} mois précédents — {autres}"
+    ]
+
+
 def construire_message(
     session: Session, ticket: Ticket, met: dict, libelles: dict[str, str]
 ) -> str:
@@ -229,6 +249,7 @@ def construire_message(
     tete += ["", "Description :", _texte(ticket.description) or "(aucune)", ""]
     tete.append("Métriques calculées (jours ouvrés, 9 h–17 h, hors week-ends et jours fériés) :")
     tete += _lignes_metriques(met, libelles)
+    tete += _lignes_recidive(met.get(r.CLE))
 
     entrees: list[tuple[datetime, str]] = []
     for e in _evolutions(session, ticket.id):

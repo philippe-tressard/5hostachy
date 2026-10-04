@@ -31,6 +31,7 @@ from app.models.synthese import BROUILLON, VALIDEE, SyntheseAffaire
 from app.schemas_synthese import SyntheseLue
 from app.utils.lecture import lire_objet
 from app.utils.noms import nom_affiche
+from app.utils.synthese_affaire.recidive import CLE as RECIDIVE
 from app.utils.visibility import ticket_visible
 
 #: Le type de la Suite porteuse — ni `commentaire` ni `etat` (`models/evolution.py`).
@@ -82,23 +83,37 @@ def evolutions_lisibles(
     ]
 
 
-def metriques(synthese: SyntheseAffaire) -> Optional[dict]:
-    """Les métriques figées, relues — `None` si la colonne est vide ou illisible."""
+def metriques(synthese: SyntheseAffaire, *, conseil: bool = False) -> Optional[dict]:
+    """Les métriques figées, relues — `None` si la colonne est vide ou illisible.
+
+    🔴 La récidive d'un équipement (#1647) nomme d'AUTRES affaires : le conseil la
+    lit, les copropriétaires — qui lisent la synthèse validée — non. Elle est
+    retirée ICI, la seule porte de lecture, et le retrait est le comportement par
+    défaut : un appelant qui oublie `conseil=True` ne divulgue rien.
+    """
     try:
-        return json.loads(synthese.metriques_json) if synthese.metriques_json else None
+        lues = json.loads(synthese.metriques_json) if synthese.metriques_json else None
     except ValueError:
         return None
+    if isinstance(lues, dict) and not conseil:
+        lues.pop(RECIDIVE, None)
+    return lues
 
 
-def synthese_lue(session: Session, synthese: SyntheseAffaire) -> SyntheseLue:
-    """La synthèse telle que l'écran et le carnet la lisent — une seule composition."""
+def synthese_lue(
+    session: Session, synthese: SyntheseAffaire, *, conseil: bool = False
+) -> SyntheseLue:
+    """La synthèse telle que l'écran et le carnet la lisent — une seule composition.
+
+    `conseil` : le lecteur est un modérateur (`est_moderateur`) — il reçoit aussi
+    la récidive d'équipement. Le carnet ne le passe jamais."""
     valideur = (
         session.get(Utilisateur, synthese.validee_par_id) if synthese.validee_par_id else None
     )
     return lire_objet(
         SyntheseLue,
         synthese,
-        metriques=metriques(synthese),
+        metriques=metriques(synthese, conseil=conseil),
         validee_par_nom=nom_affiche(valideur.prenom, valideur.nom) if valideur else None,
     )
 
