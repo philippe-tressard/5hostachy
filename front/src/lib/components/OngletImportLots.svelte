@@ -31,7 +31,11 @@
 	async function uploadExcel(fichier: File, remplacer: boolean) {
 		uploading = true;
 		try {
-			const result = await lotsApi.uploadImport(fichier, remplacer);
+			//  ⚠️ Pas encore `ResultatImportLots` (#1572) : l'écran lit `auto_skipped_locataire`
+			//  et `auto_skipped_no_lot`, que le serveur ne rend plus (`resoudre_imports` compte
+			//  `sans_occupant` et `hors_perimetre`). Le typer ferait échouer la vérification sur
+			//  un écart RÉEL, à trancher à part — pas en ajoutant au type un champ qui n'arrive jamais.
+			const result: any = await lotsApi.uploadImport(fichier, remplacer);
 			toast(
 				'success',
 				`Import : ${result.importes} ajoutés, ${result.doublons} doublons, ${result.ignores} ignorés${result.auto_resolus ? ` — ${result.auto_resolus} copropriétaire(s) résolu(s) automatiquement` : ''}`,

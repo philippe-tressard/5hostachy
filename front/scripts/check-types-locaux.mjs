@@ -61,13 +61,10 @@ const DETTE = {
 
 /**
  *  Les `any` du client, par module de `src/lib/api/` — à FAIRE BAISSER, jamais monter
- *  (#1572, carte #1571). Un module typé retire sa ligne ; `client.ts` garde le sien
- *  tant que le générique du transport n'a pas de borne.
+ *  (#1572, carte #1571). Un module typé retire sa ligne.
  */
 const PLAFOND_ANY_CLIENT = {
 	'acces.ts': 21,
-	'client.ts': 1,
-	'documents.ts': 3,
 	'index.ts': 10,
 	'patrimoine.ts': 25,
 	'prestataires.ts': 17,

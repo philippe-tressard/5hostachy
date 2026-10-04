@@ -343,17 +343,6 @@ export interface SourceAffiche {
 	epingle: boolean;
 }
 
-export interface Document {
-	id: number;
-	titre: string;
-	fichier_nom: string;
-	taille_octets?: number;
-	mime_type: string;
-	categorie_id: number;
-	perimetre: string;
-	publie_le: string;
-}
-
 export interface Notification {
 	id: number;
 	type: string;

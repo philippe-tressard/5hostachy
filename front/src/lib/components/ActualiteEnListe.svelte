@@ -28,6 +28,7 @@
 	import {
 		documents as docsApi,
 		type CorrespondanceAffaire,
+		type Document,
 		type Ticket,
 		type TicketEvolution,
 	} from '$lib/api';
@@ -76,7 +77,7 @@
 
 	//  Les `Document` des ANCIENNES publications, chargés au premier dépliage.
 	//  Une actualité récente n'en a aucun : ses pièces sont en URLs.
-	let documents: any[] = [];
+	let documents: Document[] = [];
 	let documentsCharges = false;
 	//  La carte se lit sans eux, mais ne les dit pas absents s'ils n'ont pas été lus (#1459).
 	let erreurDocuments = '';

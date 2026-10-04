@@ -10,7 +10,7 @@
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, buildQuery, postFormData, BASE } from './client';
-import { uploadExcel } from './documents';
+import { uploadExcel, type CompteImportTableur } from './documents';
 import type { SyntheseAffaire } from './synthese';
 import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
 
@@ -117,6 +117,16 @@ export interface PropositionsLocation {
 	parking: LotPropose[];
 }
 
+/**  Le compte rendu de l'import des lots — `upload_import_lots` (`routers/lots_imports.py`) :
+ *   celui du tableur, puis celui de la résolution automatique (`resoudre_imports`),
+ *   ses clés préfixées par `auto_`. */
+export interface ResultatImportLots extends CompteImportTableur {
+	auto_resolus: number;
+	auto_sans_occupant: number;
+	auto_hors_perimetre: number;
+	auto_erreurs: string[];
+}
+
 export const lots = {
 	mesList: () => api.get<MonLot[]>('/lots/mes-lots'),
 	//  Le locataire dit ce qu'il loue, d'après le fichier des lots du syndic
@@ -136,7 +146,7 @@ export const lots = {
 	tous: () => api.get<any[]>('/lots/admin/tous'),
 	// Admin — import staging
 	uploadImport: (file: File, remplacer = false) =>
-		uploadExcel('/lots/admin/imports/upload', file, remplacer),
+		uploadExcel<ResultatImportLots>('/lots/admin/imports/upload', file, remplacer),
 	listImports: (statut?: string, tri?: string) =>
 		api.get<any[]>(`/lots/admin/imports${buildQuery({ statut, tri })}`),
 	statsImports: () => api.get<any>('/lots/admin/imports/stats'),
