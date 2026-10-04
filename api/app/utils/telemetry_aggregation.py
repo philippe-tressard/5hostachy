@@ -12,6 +12,7 @@ Rétention, par table :
     d'absence — c'est ce qui dit qui ne vient plus (#1629)
   - Erreurs vues dans le navigateur (erreur_navigateur) : 30 jours (#1631)
   - Durées d'affichage des écrans (mesure_affichage) : 30 jours (#1632)
+  - Ouvertures et envois des formulaires (geste_formulaire) : 30 jours (#1633)
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
 
@@ -55,6 +56,7 @@ from app.utils import horloge
 from app.utils.declenchement import AUTOMATIQUE
 from app.utils.destinataires import site_manager_user_id
 from app.utils.erreurs_navigateur import purger_erreurs
+from app.utils.gestes_formulaire import purger_gestes
 from app.utils.mesures_affichage import purger_mesures
 from app.utils.noeud import noeud_courant
 from app.utils.requete_liee import requete_liee
@@ -284,6 +286,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         "dernieres_visites_purgees": 0,
         "erreurs_navigateur_purgees": 0,
         "mesures_affichage_purgees": 0,
+        "gestes_purges": 0,
         "erreurs": [],
     }
 
@@ -361,6 +364,13 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
             )
         except Exception as exc:
             rapport["erreurs"].append(f"purge mesures affichage: {exc}")
+            session.rollback()
+
+        # ─── 9. Purge : ouvertures et envois des formulaires (#1633) ────
+        try:
+            rapport["gestes_purges"] = purger_gestes(session, horloge.jour_civil(now_utc))
+        except Exception as exc:
+            rapport["erreurs"].append(f"purge gestes: {exc}")
             session.rollback()
 
     # ─── Mise à jour de l'historique ──────────────────────────────────

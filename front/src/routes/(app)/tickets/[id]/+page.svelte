@@ -32,6 +32,7 @@
 		estTicketClos,
 	} from '$lib/tickets';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 
 	$: _siteNom = $siteNomStore;
 
@@ -88,6 +89,7 @@
 	// d'emblée que sur une intention explicite (`?repondre=1`), que les liens de
 	// notification ne portent pas.
 	let repondreOuvert = false;
+	$: if (repondreOuvert) ouvrirGeste('affaire.repondre'); //  Le geste mesuré (#1633).
 	let msgVise: number | null = null;
 	$: clos = ticket && estTicketClos(ticket.statut);
 
@@ -153,6 +155,7 @@
 				assiste_ia: data.assiste_ia,
 				email_externe: data.email_externe,
 			});
+			aboutirGeste('affaire.repondre');
 			messages = [...messages, msg];
 			newInterne = false;
 			repondreOuvert = false;

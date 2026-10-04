@@ -172,6 +172,17 @@ TELEMETRIE_PERFORMANCE = (
     "<strong>sans rattachement à votre compte</strong> et conservés 30\xa0jours. Elles servent "
     "à savoir quels écrans sont lents. Votre refus de la mesure d'audience les coupe aussi.</li>"
 )
+#: Les gestes aboutis (#1633) : ouvertures et envois des formulaires, comptés par
+#: jour SANS rattachement au compte (`utils/gestes_formulaire`). Écrite une fois :
+#: le gabarit et la migration 0261, qui l'insère juste après
+#: `TELEMETRIE_PERFORMANCE` dans le texte servi, la lisent ici.
+TELEMETRIE_GESTES = (
+    "<li><strong>Formulaires ouverts et envoyés\xa0:</strong> pour quelques formulaires (créer "
+    "une affaire, répondre, voter, déposer un document), le nombre de fois où ils sont ouverts "
+    "puis envoyés, compté par jour <strong>sans rattachement à votre compte</strong> et sans "
+    "rien de ce que vous y saisissez, conservé 30\xa0jours. Il sert à repérer les formulaires "
+    "qui découragent. Votre refus de la mesure d'audience le coupe aussi.</li>"
+)
 #: Le journal de sécurité (#1580) : `utils/journal_securite` écrit, pour chaque geste
 #: sensible, une ligne qui porte l'IDENTIFIANT du compte — jamais l'adresse ni un
 #: secret. La politique ne le nommait pas. Sa durée n'est pas une durée choisie :
@@ -293,6 +304,7 @@ DEFAULT_LEGAL = {
         + TELEMETRIE_COLLECTE
         + TELEMETRIE_ERREURS
         + TELEMETRIE_PERFORMANCE
+        + TELEMETRIE_GESTES
         + JOURNAL_SECURITE
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "

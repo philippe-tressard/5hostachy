@@ -22,6 +22,7 @@
 	import ArchivesParAnnee from '$lib/components/ArchivesParAnnee.svelte';
 	import { chargeCorrection, type ChargeUtileEvolution } from '$lib/evolutions';
 	import FormulaireTicket from '$lib/components/FormulaireTicket.svelte';
+	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
 	import {
@@ -60,8 +61,10 @@
 	$: if (onglet === 'archives') historyExpanded = true;
 
 	let showForm = false;
+	$: if (showForm) ouvrirGeste('affaire.creer'); //  Le geste mesuré (#1633).
 
 	function ticketCree(e: CustomEvent<Ticket>) {
+		aboutirGeste('affaire.creer');
 		ticketList = [e.detail, ...ticketList];
 		showForm = false;
 	}

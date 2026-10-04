@@ -34,6 +34,7 @@ from app.models.core import (
 from app.utils import horloge
 from app.utils.adoption import Fenetre, adoption
 from app.utils.erreurs_navigateur import CONSERVATION_JOURS, synthese_erreurs
+from app.utils.gestes_formulaire import synthese_gestes
 from app.utils.mesures_affichage import synthese_mesures
 from app.utils.noms import nom_affiche
 from app.utils.retour_comptes import retour_comptes
@@ -92,7 +93,7 @@ def mois_il_y_a(now_paris: datetime, n: int) -> str:
 
 
 def _depuis_detail(scope: str):
-    """Le premier jour des erreurs (#1631) et des durées d'affichage (#1632) :
+    """Le premier jour des erreurs (#1631), des durées d'affichage (#1632) et des gestes (#1633) :
     celui du jour, sinon toute la conservation — ces tables ne vivent que
     `CONSERVATION_JOURS`, Année et Total n'en ont pas davantage. L'écran le dit."""
     jours = 0 if scope == "jour" else CONSERVATION_JOURS
@@ -223,12 +224,13 @@ def record(uniques: dict[str, int], cle: str) -> Optional[dict]:
 
 
 def communs(session: Session, lecture: Lecture) -> dict:
-    """Ce que toute portée rend : erreurs, durées, « Qui vient », et le retour des
-    comptes (#1629) — dormants et arrivants, à seuils fixes, quelle que soit la vue."""
+    """Ce que toute portée rend : erreurs, durées, gestes aboutis (#1633), « Qui vient »,
+    et le retour des comptes (#1629) — dormants et arrivants, à seuils fixes."""
     fenetre = _fenetre_adoption(lecture)
     return {
         "erreurs": synthese_erreurs(session, _depuis_detail(lecture.scope)),
         "performance": synthese_mesures(session, _depuis_detail(lecture.scope)),
+        "gestes": synthese_gestes(session, _depuis_detail(lecture.scope)),
         "adoption": adoption(session, fenetre, lecture.exclus()) if fenetre else None,
         "retour": retour_comptes(session),
     }

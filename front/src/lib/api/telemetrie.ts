@@ -25,6 +25,16 @@ export interface SyntheseDurees {
 	pages: (ResumeDurees & { page: string; indicateur: 'chargement' | 'navigation' })[];
 }
 
+/** Un geste mesuré (#1633) — `utils/gestes_formulaire.synthese_gestes`. `geste` est
+ *  un identifiant de `$lib/aboutissement`, qui en porte le libellé. */
+export interface GesteAbouti {
+	geste: string;
+	ouvertures: number;
+	envois: number;
+	/** `null` sans ouverture mesurée. */
+	taux: number | null;
+}
+
 /** Une ligne de « Qui vient » : comptes venus sur comptes mesurés (#1628). */
 export interface LigneAdoption {
 	libelle: string;
@@ -167,6 +177,7 @@ export interface TableauTelemetrie {
 	top_users: UtilisateurActif[];
 	erreurs: ErreurNavigateur[];
 	performance: SyntheseDurees;
+	gestes: GesteAbouti[];
 	/** `null` : la vue ne sait pas qui est venu (Total). */
 	adoption: Adoption | null;
 	/** Dormants et arrivants, à seuils fixes quelle que soit la vue (#1629). */

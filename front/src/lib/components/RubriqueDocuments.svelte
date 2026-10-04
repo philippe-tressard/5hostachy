@@ -32,6 +32,7 @@
 		type ModeDocument,
 	} from '$lib/components/FormulaireEditionDocument.svelte';
 	import SectionDocuments from '$lib/components/SectionDocuments.svelte';
+	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 
 	export let mode: ModeDocument;
 	export let titre: string;
@@ -69,6 +70,7 @@
 	}
 
 	let ouvert = false;
+	$: if (ouvert) ouvrirGeste('document.deposer'); //  Le geste mesuré (#1633).
 	let saisie = saisieVide();
 	let enregistrement = false;
 	let correction: CorrectionDocument = correctionVide();
@@ -92,6 +94,7 @@
 			async () => {
 				const deposes: any[] = [];
 				for (const fichier of fichiers) deposes.push(await deposer(s, categorie, fichier));
+				aboutirGeste('document.deposer');
 				documents = [...deposes, ...documents];
 				ouvert = false;
 				saisie = saisieVide();

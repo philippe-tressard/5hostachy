@@ -144,6 +144,12 @@ EXIGENCES = [
         ("réception des courriels",),
     ),
     (
+        #  #1633 : comptés sans compte, mais dans le navigateur de chacun.
+        "les ouvertures et envois des formulaires",
+        ("utils/gestes_formulaire.py", "def enregistrer_ouverture"),
+        ("formulaires ouverts et envoyés",),
+    ),
+    (
         #  #1629 : un jour par compte, pour dire qui ne vient plus.
         "le jour de la dernière visite d'un compte",
         ("models/telemetrie.py", "class DerniereVisite"),

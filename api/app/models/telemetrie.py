@@ -164,6 +164,24 @@ class MesureAffichage(SQLModel, table=True):
     duree_ms: int
 
 
+class GesteFormulaire(SQLModel, table=True):
+    """Les ouvertures et les envois d'un formulaire, COMPTÉS par jour et par geste (#1633).
+
+    Pas un événement : un compteur, SANS `user_id` — savoir qu'un formulaire
+    décourage ne demande pas de savoir qui l'a abandonné. `geste` est un
+    IDENTIFIANT de la liste fermée du front (`$lib/gestes`), jamais un contenu.
+    Écrit et lu par `utils/gestes_formulaire`, purgé après `CONSERVATION_JOURS`
+    par l'agrégation quotidienne.
+    """
+
+    __tablename__ = "geste_formulaire"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+    geste: str  # « objet.verbe » : affaire.creer, sondage.voter…
+    ouvertures: int = 0
+    envois: int = 0
+
+
 class HistoriqueTelemetrie(SQLModel, table=True):
     """Historique des exécutions d'agrégation de la télémétrie."""
 
