@@ -10,7 +10,7 @@
 	//  hebdomadaire : jamais exécutée » au-dessus d'un tableau qui semblait
 	//  montrer des maintenances quotidiennes réussies.
 	import { onMount } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type ExecutionTache } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
@@ -22,7 +22,7 @@
 	import { LIBELLE_STATUT, AIDE_STATUT, CLASSE_STATUT } from '$lib/taches';
 	import ConfigSauvegarde from '$lib/components/ConfigSauvegarde.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
-	import { colonnesVisibles } from '$lib/taches-colonnes';
+	import { colonnesVisibles, motifEchec } from '$lib/taches-colonnes';
 
 	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
 	//  Défaut : « Lancer <nom de la tâche> », qui reste juste là où le bouton
@@ -113,7 +113,7 @@
 			'journalières puis mensuelles, et purge les données expirées.',
 	};
 
-	let historiques: Record<string, any[]> = {};
+	let historiques: Record<string, ExecutionTache[]> = {};
 	let enChargement: Record<string, boolean> = {};
 
 	/**  L'échec de chargement, PAR tâche — une table comme `enChargement`.
@@ -373,6 +373,7 @@
 														      il aurait suffi de renommer « Statut » pour casser le tableau
 														      sans que rien ne lève — et TypeScript l'a refusé, à raison. -->
 																{#if !c.valeur}
+																	{@const motif = motifEchec(l)}
 																	<td>
 																		<span
 																			class="badge"
@@ -385,9 +386,10 @@
 																		</span>
 																		<!--  Le motif de l'échec était porté par la carte supprimée
 																		      avec #299 : sans lui, un statut « erreur » ne dit pas
-																		      pourquoi. -->
-																		{#if l.erreur}<span
-																				title={l.erreur}
+																		      pourquoi. Sa colonne dépend de la table
+																		      (`motifEchec`, #1681). -->
+																		{#if motif}<span
+																				title={motif}
 																				style="margin-left:.4rem;cursor:help">⚠️</span
 																			>{/if}
 																	</td>
