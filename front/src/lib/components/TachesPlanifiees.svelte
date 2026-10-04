@@ -373,7 +373,6 @@
 														      il aurait suffi de renommer « Statut » pour casser le tableau
 														      sans que rien ne lève — et TypeScript l'a refusé, à raison. -->
 																{#if !c.valeur}
-																	{@const motif = motifEchec(l)}
 																	<td>
 																		<span
 																			class="badge"
@@ -386,10 +385,9 @@
 																		</span>
 																		<!--  Le motif de l'échec était porté par la carte supprimée
 																		      avec #299 : sans lui, un statut « erreur » ne dit pas
-																		      pourquoi. Sa colonne dépend de la table
-																		      (`motifEchec`, #1681). -->
-																		{#if motif}<span
-																				title={motif}
+																		      pourquoi. Sa colonne dépend de la table (`motifEchec`, #1681). -->
+																		{#if motifEchec(l)}<span
+																				title={motifEchec(l)}
 																				style="margin-left:.4rem;cursor:help">⚠️</span
 																			>{/if}
 																	</td>
