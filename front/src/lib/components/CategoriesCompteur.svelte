@@ -11,7 +11,7 @@
 -->
 <script lang="ts">
 	import { nombreOuNull } from '$lib/utils';
-	import { prestataires as prestApi } from '$lib/api';
+	import { prestataires as prestApi, type CompteurConfig, type Prestataire } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { slug } from '$lib/texte';
 	import { isCS } from '$lib/stores/auth';
@@ -21,11 +21,11 @@
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** Les catégories de compteur, liées : la page les charge et les lit. */
-	export let compteurConfigs: any[] = [];
+	export let compteurConfigs: CompteurConfig[] = [];
 	/** La catégorie affichée, liée. */
 	export let typeCompteur = '';
 	/** L'annuaire des prestataires, déjà chargé par la page. */
-	export let prestataires: any[] = [];
+	export let prestataires: Prestataire[] = [];
 
 	let editCompteurId: number | null = null;
 	let editCompteurPrestId = '';
@@ -35,12 +35,12 @@
 
 	$: currentCompteur = compteurConfigs.find((c) => c.type_compteur === typeCompteur) ?? null;
 
-	function startEditCompteur(cfg: any) {
+	function startEditCompteur(cfg: CompteurConfig) {
 		editCompteurId = cfg.id;
 		editCompteurPrestId = cfg.prestataire_id ? String(cfg.prestataire_id) : '';
 	}
 
-	async function saveCompteurPrestataire(cfg: any) {
+	async function saveCompteurPrestataire(cfg: CompteurConfig) {
 		try {
 			const updated = await prestApi.updateCompteurConfig(cfg.id, {
 				prestataire_id: nombreOuNull(editCompteurPrestId),
@@ -75,7 +75,7 @@
 		}
 	}
 
-	async function deleteCompteurConfig(cfg: any) {
+	async function deleteCompteurConfig(cfg: CompteurConfig) {
 		await confirmerPuis(
 			SUPPRESSION(`La catégorie « ${cfg.label} »`),
 			'Catégorie supprimée',

@@ -19,7 +19,13 @@
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
 	import { basculer } from '$lib/accordeon';
-	import { prestataires as prestApi, documents as docsApi } from '$lib/api';
+	import {
+		prestataires as prestApi,
+		documents as docsApi,
+		type ContratEntretien,
+		type Notation,
+		type Prestataire,
+	} from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { EQUIPEMENTS as equipements, contratDepuis, contratVierge } from '$lib/prestataires';
@@ -31,9 +37,9 @@
 	import IntertitreGroupe from '$lib/components/IntertitreGroupe.svelte';
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 
-	export let prestataires: any[] = [];
-	export let contrats: any[] = [];
-	export let notations: any[] = [];
+	export let prestataires: Prestataire[] = [];
+	export let contrats: ContratEntretien[] = [];
+	export let notations: Notation[] = [];
 	/** La boîte de création est ouverte — lue par le bouton de l'en-tête. */
 	export let creationOuverte = false;
 
@@ -97,7 +103,7 @@
 	let contratDocsMap: Record<number, any[]> = {};
 
 	/** Les contrats rangés — `archivee` vient du serveur (`REGLES["contrat"]`). */
-	let archives: any[] = [];
+	let archives: ContratEntretien[] = [];
 
 	// ── Échéances des contrats ────────────────────────────────────
 	//  🔴 L'onglet « Visites » lisait ces mêmes contrats dans un écran à part
@@ -109,7 +115,8 @@
 	//
 	//  ⚠️ Minuit, pas l'instant ; `contrats` cité pour relire (`utils.relire`).
 	$: minuit = relire(contrats, minuitDuJour);
-	$: contratEnRetard = (c: any) => !!c.prochaine_visite && new Date(c.prochaine_visite) < minuit;
+	$: contratEnRetard = (c: ContratEntretien) =>
+		!!c.prochaine_visite && new Date(c.prochaine_visite) < minuit;
 	$: echeancesEnRetard = contrats.filter(contratEnRetard);
 	$: echeancesAVenir = contrats.filter((c) => c.prochaine_visite && !contratEnRetard(c));
 	$: contratsSansEcheance = contrats.filter((c) => !c.prochaine_visite);
@@ -118,7 +125,7 @@
 	 *
 	 *   ⚠️ Sans échéance = en FIN de liste, jamais en tête : `null` se compare mal
 	 *   et un tri naïf les aurait remontés devant les retards. */
-	function parEcheance(liste: any[]): any[] {
+	function parEcheance(liste: ContratEntretien[]): ContratEntretien[] {
 		return [...liste].sort((a, b) => {
 			if (!a.prochaine_visite && !b.prochaine_visite) return 0;
 			if (!a.prochaine_visite) return 1;
@@ -129,7 +136,7 @@
 
 	/**  Les documents de ces contrats, ajoutés à la table — la carte d'un contrat
 	 *   rangé montre les siens comme une autre. */
-	async function chargerDocs(liste: any[]) {
+	async function chargerDocs(liste: ContratEntretien[]) {
 		const results = await Promise.allSettled(
 			liste.map((c) => docsApi.list(undefined, c.id).then((docs: any[]) => ({ id: c.id, docs }))),
 		);
@@ -181,7 +188,7 @@
 	 *   nul, et améliorer une synthèse bâclée reste possible. */
 	let syntheseEnCoursId: number | null = null;
 
-	async function synthetiserContrat(c: any) {
+	async function synthetiserContrat(c: ContratEntretien) {
 		syntheseEnCoursId = c.id;
 		try {
 			const { synthese } = await prestApi.synthetiserContrat(c.id);
@@ -196,7 +203,7 @@
 		}
 	}
 
-	function startEditContrat(c: any) {
+	function startEditContrat(c: ContratEntretien) {
 		contratForm = contratDepuis(
 			c,
 			perimetreDefautListe(),
