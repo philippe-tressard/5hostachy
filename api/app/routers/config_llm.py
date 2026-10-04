@@ -65,7 +65,7 @@ async def llm_test(
     if usage not in USAGES:
         raise HTTPException(422, f"Usage inconnu : « {usage} ».")
     try:
-        return await tester(session, usage)
+        return await tester(session, usage, demandeur=user.id)
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
 
@@ -102,7 +102,9 @@ async def llm_tarif(
     from app.utils.tarif_modele import chercher_et_enregistrer
 
     try:
-        tarif, remarque = await chercher_et_enregistrer(session, body.usage, body.modele)
+        tarif, remarque = await chercher_et_enregistrer(
+            session, body.usage, body.modele, demandeur=user.id
+        )
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
     return TarifEnregistre(**tarif.prix(), remarque=remarque)
@@ -137,10 +139,13 @@ def llm_consommation(
 ):
     """Ce que l'assistant a consommé, par mois, usage et modèle (#1383).
 
-    Jetons, appels, échecs et refus au plafond — et le coût estimé au tarif que
-    l'administrateur a saisi pour chaque usage, `None` sans tarif. Des compteurs
-    seulement : aucune question ni réponse n'est conservée (`models/ia.py`).
+    Jetons, appels, échecs et refus avant l'envoi — et le coût estimé au tarif
+    que l'administrateur a saisi pour chaque usage, `None` sans tarif. Des
+    compteurs seulement : aucune question ni réponse n'est conservée
+    (`models/ia.py`). Et les LIMITES de chaque usage — appels du mois, premier
+    essai (`llm_limites.suivi`) —, que l'onglet de l'assistant montre aussi.
     """
     from app.utils.llm_journal import consommation
+    from app.utils.llm_limites import suivi
 
-    return consommation(session)
+    return {**consommation(session), "limites": suivi(session)}

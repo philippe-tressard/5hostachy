@@ -1,7 +1,14 @@
 <!--
-  Le COÛT d'un usage de l'assistant : son plafond mensuel et ses trois prix
+  Le COÛT d'un usage de l'assistant : ses limites d'appels et ses trois prix
   (#1383, prix en dollars et cache le 30/09/2026). Sorti de `BlocUsageIA` le
   30/09/2026 : le bloc franchissait 500 lignes (modularité, rang 1).
+
+  🔴 Les limites COMPTENT DES APPELS (04/10/2026), plus des jetons : un
+  plafond de « 100000 » jetons ne disait pas combien de synthèses il permet.
+  Le PREMIER ESSAI — le premier appel réussi avec le modèle et l'effort
+  enregistrés — chiffre ce qu'un appel coûte, donc ce que la limite laisse
+  dépenser. C'est le serveur qui le reconnaît et le chiffre (`llm_limites`) :
+  l'écran ne recalcule aucun coût.
 
   Il ÉCRIT dans `valeurs` (lié), comme le bloc : c'est l'onglet qui enregistre,
   d'un seul geste. Le ✨ qui cherche le tarif reste dans le bloc, à côté du
@@ -36,40 +43,76 @@
 
 <script lang="ts">
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
-	import type { UsageIA } from '$lib/api';
+	import type { LimitesUsageIA, UsageIA } from '$lib/api';
+	import { fmtDate } from '$lib/date';
+	import { fmtMontant, fmtNombre } from '$lib/utils';
 
 	/** Toutes les valeurs de configuration, liées : le composant écrit les siennes. */
 	export let valeurs: Record<string, string>;
 	export let cles: UsageIA['cles'];
 	/** Le compte rendu du ✨ quand il vient d'enregistrer un tarif, sinon vide. */
 	export let tarifEnregistre = '';
+	/** Où en est l'usage — appels du mois, premier essai —, lu par l'onglet. */
+	export let limites: LimitesUsageIA | undefined = undefined;
+	/** Un geste de personne l'appelle-t-il ? Sinon, pas de limite par personne. */
+	export let gesteManuel = true;
 
-	//  Le plafond est en jetons par mois, 0 = aucun.
-	$: plafondMois = Number(valeurs[cles.plafond_mois]) || 0;
+	//  0 = aucune limite.
+	$: appelsMois = Number(valeurs[cles.appels_mois]) || 0;
+	$: appelsHeure = Number(valeurs[cles.appels_heure]) || 0;
+	$: essai = limites?.premier_essai ?? null;
+	$: coutEssai = essai?.cout_usd == null ? null : Number(essai.cout_usd);
+	$: jetonsEssai = (essai?.jetons_entree ?? 0) + (essai?.jetons_sortie ?? 0);
+	//  Deux décimales liraient « 0 $ » le coût d'un appel : quatre en dessous du dollar.
+	const dollars = (v: number) => fmtMontant(v, 'USD', v < 1 ? 4 : 2);
+	//  Une ESTIMATION : un appel peut être plus long que l'essai.
+	$: estimation =
+		coutEssai !== null && appelsMois
+			? ` → ${fmtNombre(appelsMois)} appels ≈ ${dollars(coutEssai * appelsMois)} par mois (estimation)`
+			: '';
 
 	function poser(cle: string, valeur: string) {
 		valeurs = { ...valeurs, [cle]: valeur };
 	}
 </script>
 
-<SectionFormulaire titre="Coût et plafond">
+<SectionFormulaire titre="Coût et limites">
 	<div class="form-grid">
 		<label class="field">
-			Plafond mensuel
+			Appels maximum par mois
 			<input
 				type="number"
-				value={plafondMois || ''}
+				value={appelsMois || ''}
 				min="0"
-				step="10000"
-				placeholder="Aucun"
-				on:input={(e) => poser(cles.plafond_mois, e.currentTarget.value)}
+				step="1"
+				inputmode="numeric"
+				placeholder="Aucune limite"
+				on:input={(e) => poser(cles.appels_mois, e.currentTarget.value)}
 			/>
 			<span class="aide">
-				En jetons (question et réponse), du premier au dernier jour du mois. Atteint, l’usage est
-				refusé avant tout envoi — l’automatique s’arrête — et le contrôle de 6&nbsp;h le signale.
-				Vide&nbsp;: aucun plafond.
+				Les appels réussis, du premier au dernier jour du mois. Atteint, l’usage est refusé avant
+				tout envoi — l’automatique s’arrête — et le contrôle de 6&nbsp;h le signale. Vide&nbsp;:
+				aucune limite.
 			</span>
 		</label>
+		{#if gesteManuel}
+			<label class="field">
+				Appels maximum par heure et par personne
+				<input
+					type="number"
+					value={appelsHeure || ''}
+					min="0"
+					step="1"
+					inputmode="numeric"
+					placeholder="Aucune limite"
+					on:input={(e) => poser(cles.appels_heure, e.currentTarget.value)}
+				/>
+				<span class="aide">
+					Sur l’heure glissante, pour qui fait le geste&nbsp;; l’appel automatique n’y est pas
+					soumis. Vide&nbsp;: aucune limite.
+				</span>
+			</label>
+		{/if}
 		{#each PRIX as p (p.champ)}
 			<label class="field">
 				{p.libelle} ($ / million)
@@ -86,6 +129,28 @@
 			</label>
 		{/each}
 	</div>
+	{#if essai}
+		<p class="aide">
+			<strong>1er essai</strong> — {essai.modele} · effort {essai.effort}, le {fmtDate(
+				essai.le,
+			)}&nbsp;:
+			{fmtNombre(jetonsEssai)} jetons · {coutEssai === null
+				? 'renseignez les prix pour en avoir le coût'
+				: dollars(coutEssai) + estimation}.
+		</p>
+	{:else if limites}
+		<p class="aide">
+			Pas encore d’essai avec ce modèle et cet effort&nbsp;: le premier appel réussi en donnera le
+			coût. Le test de connexion ne compte pas.
+		</p>
+	{/if}
+	{#if limites}
+		<p class="aide">
+			Ce mois-ci&nbsp;: {fmtNombre(limites.appels)} appel{limites.appels > 1 ? 's' : ''}{appelsMois
+				? ` sur ${fmtNombre(appelsMois)}`
+				: ''}.
+		</p>
+	{/if}
 	{#if tarifEnregistre}
 		<p class="aide">✅ Tarif enregistré — {tarifEnregistre}</p>
 	{/if}

@@ -57,12 +57,13 @@ from app.utils.llm_fournisseurs import (
     FOURNISSEUR_DEFAUT,
     FOURNISSEURS,
     ErreurLLM,
+    RefusLimite,
     Fournisseur,
     FournisseurAnthropic,
     FournisseurAzure,
     PieceJointe,
 )
-from app.utils import llm_journal
+from app.utils import llm_journal, llm_limites
 from app.utils.llm_usages import USAGES, Usage, valeur_effort
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
@@ -84,6 +85,7 @@ __all__ = [
     "USAGES",
     "ConfigLLM",
     "ErreurLLM",
+    "RefusLimite",
     "Fournisseur",
     "FournisseurAnthropic",
     "FournisseurAzure",
@@ -290,6 +292,8 @@ async def demander(
     max_jetons: Optional[int] = None,
     fichiers: tuple[PieceJointe, ...] = (),
     exiger_actif: bool = True,
+    demandeur: Optional[int],
+    etalon: bool = True,
 ) -> Reponse:
     """Pose une question au modèle configuré pour cet USAGE et rend sa réponse.
 
@@ -297,23 +301,31 @@ async def demander(
         l'administration l'a réglé. Un appelant qui doit y AJOUTER quelque chose
         que l'administrateur ne peut pas retirer (un format de réponse) le
         compose à partir de `config_llm(session, usage).prompt` et le passe ici.
+    :param demandeur: l'utilisateur qui fait le geste, ou `None` pour un usage
+        automatique. OBLIGATOIRE, sans défaut : c'est lui que borne la limite
+        par heure et par personne, et un appelant qui l'oublierait l'éteindrait
+        sans un mot (`test_llm_limites.py` le vérifie sur le code).
+    :param etalon: `False` pour le test de connexion — une question d'un mot
+        n'est pas le premier essai d'un usage (`llm_limites`).
 
     Lève `ErreurLLM` — jamais autre chose : l'appelant est un écran, il doit
     pouvoir dire « ça n'a pas marché » sans distinguer un délai dépassé d'un
     502 du fournisseur.
 
     🔴 Chaque appel parti se JOURNALISE — jetons, durée, statut —, et un usage
-    dont le plafond mensuel est atteint est refusé AVANT l'envoi (#1383,
-    `llm_journal`). C'est ici, point d'appel unique, que le compte ne peut pas
-    être oublié : un appelant ne peut ni l'omettre, ni le faire deux fois.
+    qui a atteint sa limite d'appels du mois, ou une personne sa limite de
+    l'heure, est refusé AVANT l'envoi (`llm_limites`). C'est ici, point d'appel
+    unique, que le compte ne peut pas être oublié : un appelant ne peut ni
+    l'omettre, ni le faire deux fois.
     """
     cfg = config_llm(session, usage)
     cfg.verifier(exiger_actif=exiger_actif)
     trace = {"usage": usage, "fournisseur": cfg.fournisseur.code, "modele": cfg.modele}
-    refus = llm_journal.plafond_atteint(session, usage)
+    refus = llm_limites.refus_avant_envoi(session, usage, demandeur)
     if refus:
-        llm_journal.journaliser(session, **trace, statut=llm_journal.STATUT_PLAFOND)
-        raise ErreurLLM(refus)
+        statut, message = refus
+        llm_journal.journaliser(session, **trace, statut=statut)
+        raise RefusLimite(message)
     debut = time.monotonic()
     try:
         rep = await _appeler(
@@ -338,6 +350,8 @@ async def demander(
         jetons_sortie=rep.jetons_sortie,
         jetons_cache=rep.jetons_cache,
     )
+    if etalon:
+        llm_limites.noter_premier_essai(session, cfg, rep)
     return rep
 
 
@@ -450,47 +464,12 @@ async def _appeler(
     )
 
 
-async def tester(session: Session, usage: str) -> dict[str, Any]:
-    """Vérifie que la configuration de cet USAGE parle au modèle — le fait,
-    pas le réglage.
-
-    🔴 Un écran qui dit « configuré » parce que trois champs sont remplis ne
-    prouve rien : la clé peut être révoquée, le modèle renommé, le point d'accès
-    fermé. Ce test envoie une vraie question et attend une vraie réponse
-    (`standards/04` — vérifier le comportement, jamais l'artefact).
-
-    Un test PAR usage (17/09/2026) : c'est le modèle de l'usage qui est éprouvé,
-    et deux usages n'ont pas le même. Un test sur un modèle commun n'aurait
-    prouvé le bon fonctionnement d'aucun des deux.
-    """
-    cfg = config_llm(session, usage)
-    debut = time.monotonic()
-    reponse = await demander(
-        session,
-        usage=usage,
-        consigne="Tu réponds en un seul mot, sans ponctuation.",
-        message="Réponds exactement : opérationnel",
-        #  🔴 Plus de plafond serré ici (11/09/2026). Il valait 16 jetons — assez
-        #  pour un mot, trop peu pour un modèle qui RAISONNE avant de répondre :
-        #  il épuisait le plafond sans rien écrire, et le test déclarait en panne
-        #  une configuration parfaitement bonne. Un test qui n'éprouve pas la
-        #  configuration réelle n'éprouve rien (`standards/04` — vérifier le fait).
-        #  Le coût ne change pas : un plafond n'est pas facturé, seuls les jetons
-        #  produits le sont, et la réponse attendue fait un mot.
-        #  Le test ne demande pas l'activation : il sert à décider de l'activer.
-        exiger_actif=False,
-    )
-    return {
-        "ok": True,
-        "usage": usage,
-        "fournisseur": cfg.fournisseur.libelle,
-        "modele": cfg.modele,
-        "reponse": reponse.texte[:80],
-        "duree_ms": int((time.monotonic() - debut) * 1000),
-    }
-
-
 #  Le catalogue des modèles vit dans `llm_modeles.py` depuis le 27/09/2026 : ce
 #  module franchissait 500 lignes en recevant le journal des appels (#1383). Il
 #  reste exporté d'ici — la porte d'entrée ne change pas (voir `__all__`).
 from app.utils.llm_modeles import modeles_disponibles  # noqa: E402
+
+#  Le test de connexion vit dans `llm_connexion.py` depuis le 04/10/2026, pour
+#  la même raison : les limites d'appels (`llm_limites`) faisaient passer ce
+#  module au-dessus de 500 lignes. Même porte d'entrée.
+from app.utils.llm_connexion import tester  # noqa: E402

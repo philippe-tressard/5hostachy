@@ -1,12 +1,13 @@
-"""Ce que coûte l'assistant IA : le journal, le plafond, la consommation (#1383).
+"""Ce que coûte l'assistant IA : le journal et la consommation (#1383).
 
 L'assistant a un usage AUTOMATIQUE — les réponses du syndic par courriel, toutes
 les dix minutes — et rien ne comptait ses appels. Ces tests tiennent les trois
 promesses du lot :
 
 1. **chaque appel parti se journalise**, succès comme échec, avec ses jetons ;
-2. **un plafond atteint refuse AVANT l'envoi** — le fournisseur n'est pas
-   appelé, donc rien n'est facturé ;
+2. **une limite atteinte refuse AVANT l'envoi** — tenue depuis le 04/10/2026
+   par `test_llm_limites.py`, où les limites ont pris la place du plafond en
+   jetons ;
 3. **le coût se tait sans tarif** : `None`, jamais 0, qui se lirait « gratuit ».
 
 Et deux garde-fous de forme : le journal ne s'écrit qu'à UN endroit, et aucun
@@ -24,7 +25,7 @@ from sqlmodel import Session, select
 
 from app.models.core import ConfigSite
 from app.models.ia import AppelIA
-from app.utils import horloge, llm_journal
+from app.utils import horloge
 from app.utils.llm import ErreurLLM, demander
 from app.utils.llm_journal import (
     _cout_usd,
@@ -115,7 +116,7 @@ def test_les_jetons_se_lisent_chez_openai_et_chez_anthropic():
 
 def test_la_part_en_cache_se_lit_et_l_entree_reste_le_TOTAL():
     """OpenAI compte le cache DANS l'entrée, Anthropic À CÔTÉ : l'entrée rendue
-    est le total dans les deux cas — c'est ce que le plafond additionne."""
+    est le total dans les deux cas — c'est ce que le coût répartit."""
     openai = {
         "usage": {
             "prompt_tokens": 2000,
@@ -154,7 +155,7 @@ def test_sans_compteur_les_jetons_sont_INCONNUS_pas_nuls():
 
 def test_un_appel_reussi_est_journalise_avec_ses_jetons(monkeypatch, session_ia):
     _brancher(monkeypatch, OK)
-    rep = asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
+    rep = asyncio.run(demander(session_ia, usage=USAGE, message="contrat", demandeur=None))
     assert rep.texte == "Synthèse."
     (appel,) = _appels(session_ia)
     assert (appel.usage, appel.modele, appel.statut) == (USAGE, "gpt-4o-mini", "succes")
@@ -164,7 +165,7 @@ def test_un_appel_reussi_est_journalise_avec_ses_jetons(monkeypatch, session_ia)
 def test_un_echec_du_fournisseur_est_journalise_aussi(monkeypatch, session_ia):
     _brancher(monkeypatch, _Reponse(500))
     with pytest.raises(ErreurLLM):
-        asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
+        asyncio.run(demander(session_ia, usage=USAGE, message="contrat", demandeur=None))
     assert [a.statut for a in _appels(session_ia)] == ["erreur"]
 
 
@@ -175,53 +176,8 @@ def test_un_usage_desactive_n_est_ni_envoye_ni_journalise(monkeypatch, session_i
     ligne.valeur = "0"
     session_ia.commit()
     with pytest.raises(ErreurLLM):
-        asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
+        asyncio.run(demander(session_ia, usage=USAGE, message="contrat", demandeur=None))
     assert envoyees == [] and _appels(session_ia) == []
-
-
-#  ── 2. Le plafond refuse AVANT l'envoi ──────────────────────────────────────
-
-
-def test_un_plafond_atteint_refuse_sans_appeler_le_fournisseur(monkeypatch, session_ia):
-    envoyees = _brancher(monkeypatch, OK)
-    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_plafond_mois", valeur="1000"))
-    session_ia.add(
-        AppelIA(
-            usage=USAGE,
-            fournisseur="openai",
-            modele="gpt-4o-mini",
-            jetons_entree=900,
-            jetons_sortie=200,
-        )
-    )
-    session_ia.commit()
-    with pytest.raises(ErreurLLM, match="Plafond mensuel atteint"):
-        asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
-    assert envoyees == [], "le fournisseur a été appelé malgré le plafond"
-    assert sorted(a.statut for a in _appels(session_ia)) == ["plafond", "succes"]
-
-
-def test_le_plafond_ne_compte_que_le_mois_en_cours(monkeypatch, session_ia):
-    _brancher(monkeypatch, OK)
-    session_ia.add(ConfigSite(cle=f"llm_{USAGE}_plafond_mois", valeur="1000"))
-    session_ia.add(
-        AppelIA(
-            usage=USAGE,
-            fournisseur="openai",
-            modele="m",
-            jetons_entree=5000,
-            cree_le=llm_journal.debut_du_mois(horloge.maintenant()) - timedelta(days=1),
-        )
-    )
-    session_ia.commit()
-    asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
-
-
-def test_sans_plafond_rien_n_est_refuse(monkeypatch, session_ia):
-    _brancher(monkeypatch, OK)
-    session_ia.add(AppelIA(usage=USAGE, fournisseur="openai", modele="m", jetons_entree=10_000_000))
-    session_ia.commit()
-    asyncio.run(demander(session_ia, usage=USAGE, message="contrat"))
 
 
 #  ── 3. Le coût, et son silence ──────────────────────────────────────────────
@@ -264,7 +220,7 @@ def test_un_prix_saisi_se_lit_en_decimal(saisi, lu):
 
 
 def test_la_consommation_regroupe_par_mois_usage_et_modele(session_ia):
-    for statut in ("succes", "succes", "erreur", "plafond"):
+    for statut in ("succes", "succes", "erreur", "erreur", "plafond", "quota"):
         session_ia.add(
             AppelIA(
                 usage=USAGE,
@@ -281,7 +237,10 @@ def test_la_consommation_regroupe_par_mois_usage_et_modele(session_ia):
     donnees = consommation(session_ia)
     (mois,) = donnees["mois"]
     (ligne,) = mois["usages"]
-    assert (ligne["appels"], ligne["erreurs"], ligne["refus"]) == (4, 1, 1)
+    #  Les deux refus avant l'envoi — le mois et l'heure — se comptent ensemble.
+    #  Et DEUX échecs font 2 : la somme d'une condition, typée booléenne par
+    #  SQLAlchemy, les rendait « 1 » (04/10/2026).
+    assert (ligne["appels"], ligne["erreurs"], ligne["refus"]) == (6, 2, 2)
     assert (ligne["jetons_entree"], ligne["jetons_sortie"]) == (2000, 1000)
     #  2 000 × 15 $ + 1 000 × 60 $ par million = 0,09 $.
     assert ligne["cout_usd"] == "0.0900"
@@ -329,6 +288,6 @@ def test_le_journal_ne_s_ecrit_qu_a_un_endroit():
 
 
 def test_aucun_module_n_appelle_un_fournisseur_sans_passer_par_demander():
-    """Un appel qui contournerait `demander` ne serait ni compté ni plafonné."""
+    """Un appel qui contournerait `demander` ne serait ni compté ni limité."""
     appelants = sorted(m.rel for m in modules_app() if ".url(cfg.modele" in m.source)
     assert appelants == ["utils/llm.py"], appelants

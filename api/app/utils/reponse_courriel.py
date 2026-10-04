@@ -119,7 +119,10 @@ def mettre_en_forme(session: Session, nettoye: str, recu: str) -> Texte:
     from app.utils.llm import ErreurLLM, demander
 
     try:
-        reponse = asyncio.run(demander(session, usage=USAGE_REPONSE_COURRIEL, message=nettoye))
+        #  Automatique : personne derrière l'appel, seule la limite du mois le borne.
+        reponse = asyncio.run(
+            demander(session, usage=USAGE_REPONSE_COURRIEL, message=nettoye, demandeur=None)
+        )
     except ErreurLLM as exc:
         #  Usage coupé ou non réglé : le cas nominal tant que l'administration ne
         #  l'a pas activé. Une ligne d'information, pas une alerte.

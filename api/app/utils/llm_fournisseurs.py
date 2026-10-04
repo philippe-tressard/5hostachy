@@ -42,6 +42,13 @@ class ErreurLLM(RuntimeError):
     """
 
 
+class RefusLimite(ErreurLLM):
+    """Refusé AVANT l'envoi : la limite d'appels du mois, ou celle de l'heure
+    pour cette personne (`llm_limites`). Un appelant qui doit distinguer « pas
+    maintenant » d'un échec du fournisseur le reconnaît à son TYPE — jamais à
+    son message, qui a changé de mots le 04/10/2026."""
+
+
 @dataclass(frozen=True)
 class PieceJointe:
     """Un fichier à faire lire au modèle, décrit sans forme de transport.

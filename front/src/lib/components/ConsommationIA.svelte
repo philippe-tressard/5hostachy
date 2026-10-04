@@ -9,7 +9,7 @@
   ⚠️ Le coût est une ESTIMATION au tarif saisi dans Administration › Assistant IA,
   en DOLLARS comme les grilles des fournisseurs (30/09/2026), et il se tait sans
   tarif — un « 0 $ » se lirait « gratuit ». Les réglages
-  (prix, plafond) restent dans l'onglet de l'assistant ; cette carte ne fait que
+  (prix, limites d'appels) restent dans l'onglet de l'assistant ; cette carte ne fait que
   montrer, là où l'on vient surveiller.
 -->
 <script lang="ts">
@@ -33,8 +33,8 @@
 		return lignes.reduce((s, l) => s + Number(l.cout_usd), 0);
 	}
 	const dollars = (v: number) => fmtMontant(v, 'USD');
-	const part = (consommes: number, plafond: number) =>
-		Math.min(100, Math.round((consommes / plafond) * 100));
+	const part = (appels: number, limite: number) =>
+		Math.min(100, Math.round((appels / limite) * 100));
 
 	onMount(async () => {
 		try {
@@ -51,9 +51,10 @@
 	<SectionFormulaire titre="Consommation de l’assistant IA" icone="bar-chart-3" />
 	<p class="muted config-section-intro">
 		Chaque appel au fournisseur, compté en jetons — la question envoyée et la réponse produite. Le
-		coût est estimé au tarif saisi pour chaque usage dans <strong>Assistant IA</strong>, où se règle
-		aussi le <strong>plafond mensuel</strong>&nbsp;: atteint, l’usage est refusé avant tout envoi,
-		et le contrôle de 6&nbsp;h le signale. Aucune question ni réponse n’est conservée.
+		coût est estimé au tarif saisi pour chaque usage dans <strong>Assistant IA</strong>, où se
+		règlent aussi ses <strong>limites d’appels</strong>, par mois et par heure&nbsp;: atteintes,
+		l’appel est refusé avant tout envoi, et le contrôle de 6&nbsp;h signale la limite du mois.
+		Aucune question ni réponse n’est conservée.
 	</p>
 
 	<EtatListe
@@ -65,31 +66,31 @@
 		messageVide="Le compte commence au premier appel à l’assistant après cette mise à jour."
 	>
 		{#if donnees}
-			{@const plafonnes = donnees.plafonds.filter((p) => p.plafond > 0)}
-			{#if plafonnes.length}
-				<h4 class="sous-titre">Plafonds de {fmtMonthYear(donnees.mois_courant)}</h4>
-				<ul class="plafonds">
-					{#each plafonnes as p (p.usage)}
+			{@const limitees = donnees.limites.filter((l) => l.appels_mois > 0)}
+			{#if limitees.length}
+				<h4 class="sous-titre">Limites de {fmtMonthYear(donnees.mois_courant)}</h4>
+				<ul class="limites">
+					{#each limitees as l (l.usage)}
 						<li>
-							<span>{p.libelle}</span>
+							<span>{l.libelle}</span>
 							<span class="muted"
-								>{fmtNombre(p.consommes)} / {fmtNombre(p.plafond)} jetons ({part(
-									p.consommes,
-									p.plafond,
+								>{fmtNombre(l.appels)} / {fmtNombre(l.appels_mois)} appels ({part(
+									l.appels,
+									l.appels_mois,
 								)}&nbsp;%)</span
 							>
 							<span
 								class="jauge"
 								role="progressbar"
-								aria-label="Plafond de {p.libelle}"
+								aria-label="Limite du mois de {l.libelle}"
 								aria-valuemin="0"
 								aria-valuemax="100"
-								aria-valuenow={part(p.consommes, p.plafond)}
+								aria-valuenow={part(l.appels, l.appels_mois)}
 							>
 								<span
 									class="jauge-plein"
-									class:jauge-alerte={part(p.consommes, p.plafond) >= 80}
-									style="width:{part(p.consommes, p.plafond)}%"
+									class:jauge-alerte={part(l.appels, l.appels_mois) >= 80}
+									style="width:{part(l.appels, l.appels_mois)}%"
 								></span>
 							</span>
 						</li>
@@ -122,7 +123,7 @@
 								</span>
 								{#if l.erreurs}<span class="badge badge-red">{l.erreurs} en échec</span>{/if}
 								{#if l.refus}<span class="badge badge-orange"
-										>{l.refus} refusé{l.refus > 1 ? 's' : ''} au plafond</span
+										>{l.refus} refusé{l.refus > 1 ? 's' : ''} à la limite</span
 									>{/if}
 							</li>
 						{/each}
@@ -155,19 +156,19 @@
 		font-size: var(--fs-sm);
 	}
 	.mois + .mois,
-	.plafonds + .mois {
+	.limites + .mois {
 		margin-top: 1rem;
 		padding-top: 1rem;
 		border-top: 1px solid var(--color-border);
 	}
-	.plafonds,
+	.limites,
 	.lignes {
 		margin: 0;
 		padding: 0;
 		list-style: none;
 		font-size: var(--fs-md);
 	}
-	.plafonds li,
+	.limites li,
 	.lignes li {
 		display: flex;
 		flex-wrap: wrap;
