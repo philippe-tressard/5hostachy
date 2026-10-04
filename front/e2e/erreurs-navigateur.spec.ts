@@ -63,6 +63,38 @@ test('une exception se signale par son nom, sans ce qui est entre guillemets ni 
 	expect(erreurs(recus)[0].detail).toBe('TypeError: Lecture de … impossible au rang #');
 });
 
+test('une erreur d’un script étranger ne s’impute pas au site', async ({ page }) => {
+	//  03/10/2026 : `t().filter is not a function`, du code ES5 qu'aucun fichier
+	//  servi ne contient (`erreurDuSite`, `$lib/telemetry`). Trois provenances
+	//  étrangères, puis une erreur du site : seule la dernière se compte — sans
+	//  elle, un filtre qui tairait TOUT passerait ce test.
+	await simulerApi(page);
+	const recus = await lotsEnvoyes(page);
+	await page.goto('/sondages');
+	await attendreHydratation(page);
+
+	await page.evaluate(() => {
+		const poster = (erreur: unknown, filename?: string) =>
+			window.dispatchEvent(
+				new ErrorEvent('error', { error: erreur, message: String(erreur), filename }),
+			);
+		poster(new TypeError('extension masquée'), 'webkit-masked-url://hidden/');
+		poster(new TypeError('script de l’arête'), `${location.origin}/cdn-cgi/scripts/x.js`);
+		//  Une `Error` d'un AUTRE contexte JavaScript — le `object:` du relevé.
+		const cadre = document.createElement('iframe');
+		document.body.append(cadre);
+		const Etrangere = (cadre.contentWindow as unknown as { TypeError: TypeErrorConstructor })
+			.TypeError;
+		poster(new Etrangere('autre contexte'));
+		cadre.remove();
+		poster(new TypeError('erreur du site'), `${location.origin}/_app/immutable/x.js`);
+	});
+	await viderLaFile(page);
+
+	await expect.poll(() => erreurs(recus).length).toBe(1);
+	expect(erreurs(recus)[0].detail).toBe('TypeError: erreur du site');
+});
+
 test('l’administrateur lit les erreurs dans l’onglet Télémétrie, sans défilement horizontal', async ({
 	page,
 }) => {
