@@ -3,7 +3,7 @@
  *
  *  Rien ne comptait les appels à l'assistant, dont un usage automatique. Ce test
  *  rend le VRAI onglet, API simulée, et lit ce qu'un administrateur voit : la
- *  jauge du plafond, le mois avec son coût estimé, et — c'est la promesse qui
+ *  jauge de la limite d'appels du mois (04/10/2026), le mois avec son coût estimé, et — c'est la promesse qui
  *  compte — un mois sans tarif qui dit « coût non renseigné » au lieu d'un 0 €.
  */
 import { expect, MEMBRE_CS, simulerApi, test } from './aides';
@@ -23,9 +23,23 @@ const LIGNE = {
 
 const CONSOMMATION = {
 	mois_courant: '2026-09',
-	plafonds: [
-		{ usage: 'reponse_courriel', libelle: LIGNE.libelle, plafond: 1000000, consommes: 984000 },
-		{ usage: 'description', libelle: 'Rédaction d’une description', plafond: 0, consommes: 0 },
+	limites: [
+		{
+			usage: 'reponse_courriel',
+			libelle: LIGNE.libelle,
+			appels_mois: 500,
+			appels_heure: 0,
+			appels: 490,
+			premier_essai: null,
+		},
+		{
+			usage: 'description',
+			libelle: 'Rédaction d’une description',
+			appels_mois: 0,
+			appels_heure: 5,
+			appels: 12,
+			premier_essai: null,
+		},
 	],
 	mois: [
 		{ mois: '2026-09', usages: [{ ...LIGNE, jetons_cache: 512000, cout_usd: '0.2200' }] },
@@ -33,7 +47,7 @@ const CONSOMMATION = {
 	],
 };
 
-test('Maintenance : la consommation de l’assistant, son plafond et son coût', async ({ page }) => {
+test('Maintenance : la consommation de l’assistant, sa limite et son coût', async ({ page }) => {
 	await simulerApi(page, (chemin) => {
 		if (chemin === '/api/auth/me') return ADMIN;
 		if (chemin === '/api/config/llm-consommation') return CONSOMMATION;
@@ -46,8 +60,9 @@ test('Maintenance : la consommation de l’assistant, son plafond et son coût',
 	});
 	await expect(carte).toBeVisible();
 
-	//  La jauge : seul l'usage plafonné en a une, et elle passe à l'alerte à 98 %.
+	//  La jauge : seul l'usage limité au mois en a une, et elle passe à l'alerte à 98 %.
 	await expect(carte.getByRole('progressbar')).toHaveCount(1);
+	await expect(carte.getByText(/490 \/ 500 appels/)).toBeVisible();
 	await expect(carte.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '98');
 	await expect(carte.locator('.jauge-alerte')).toHaveCount(1);
 

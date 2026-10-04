@@ -33,7 +33,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { config as configApi, type UsageIA } from '$lib/api';
+	import { config as configApi, type LimitesUsageIA, type UsageIA } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import ChampSecret from '$lib/components/ChampSecret.svelte';
@@ -86,6 +86,20 @@
 	//  l'écran une page longue dès l'arrivée, alors qu'on y vient le plus souvent
 	//  pour le bloc Commun — et la page ne choisit pas ce qu'on est venu lire.
 	let usageOuvert: string | null = null;
+
+	//  Où en est chaque usage — appels du mois, premier essai (04/10/2026). Une
+	//  requête pour tous les blocs, rejouée après un enregistrement : un modèle
+	//  ou un effort changé périme le premier essai. Son échec ne bloque rien,
+	//  les blocs taisent alors la ligne.
+	let limites: Record<string, LimitesUsageIA> = {};
+	async function relireLimites() {
+		try {
+			const r = await configApi.llmConsommation();
+			limites = Object.fromEntries(r.limites.map((l) => [l.usage, l]));
+		} catch {
+			limites = {};
+		}
+	}
 	function basculerUsage(code: string, ouvert: boolean) {
 		if (ouvert) usageOuvert = code;
 		else if (usageOuvert === code) usageOuvert = null;
@@ -142,6 +156,7 @@
 	onMount(async () => {
 		try {
 			usages = await configApi.llmUsages();
+			relireLimites();
 		} catch (e: any) {
 			toast('error', e?.message ?? 'Les usages de l’assistant n’ont pas pu être lus');
 		}
@@ -177,6 +192,7 @@
 				cle = '';
 			}
 			toast('success', 'Configuration enregistrée');
+			relireLimites();
 			//  Le fournisseur ou la clé viennent peut-être de changer : le
 			//  catalogue précédent ne décrit plus ce qu'on peut appeler.
 			catalogue = { etat: 'aucun', motif: '', modeles: [] };
@@ -272,8 +288,8 @@
 	<SectionFormulaire titre="Par usage">
 		<p class="aide" style="margin-bottom:.4rem">
 			Chaque usage règle <strong>son modèle</strong>, <strong>son prompt</strong> et
-			<strong>son plafond</strong>, et se teste séparément. Tout s’enregistre avec le bouton en bas
-			de page.
+			<strong>ses limites d’appels</strong>, et se teste séparément. Tout s’enregistre avec le
+			bouton en bas de page.
 		</p>
 		{#if usages.length === 0}
 			<p class="aide">Lecture des usages…</p>
@@ -288,6 +304,8 @@
 				modeleRepere={MODELES_REPERE[cfg.fournisseur]}
 				{chargerModeles}
 				{tarifDisponible}
+				limites={limites[usage.code]}
+				{relireLimites}
 				ouvert={usageOuvert === usage.code}
 				on:basculer={(e) => basculerUsage(usage.code, e.detail)}
 			>

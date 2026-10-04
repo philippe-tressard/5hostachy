@@ -106,7 +106,7 @@ def preparer(demande: Demande) -> Demande:
     )
 
 
-async def retravailler(session: Session, demande: Demande) -> Proposition:
+async def retravailler(session: Session, demande: Demande, *, demandeur: int) -> Proposition:
     """Pose la demande au modèle de l'usage et rend sa proposition. N'enregistre RIEN."""
     d = preparer(demande)
     cfg = config_llm(session, USAGE_DESCRIPTION)
@@ -121,7 +121,13 @@ async def retravailler(session: Session, demande: Demande) -> Proposition:
         precision=d.precision,
         avec_titre=d.avec_titre,
     )
-    reponse = await demander(session, usage=USAGE_DESCRIPTION, consigne=consigne, message=message)
+    reponse = await demander(
+        session,
+        usage=USAGE_DESCRIPTION,
+        consigne=consigne,
+        message=message,
+        demandeur=demandeur,
+    )
     try:
         lu = lire_reponse(reponse.texte)
     except ReponseIllisible as exc:

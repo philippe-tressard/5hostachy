@@ -42,7 +42,7 @@ export interface LigneConsommationIA {
 	modele: string;
 	appels: number;
 	erreurs: number;
-	/** Appels refusés AVANT l'envoi : plafond mensuel atteint. */
+	/** Appels refusés AVANT l'envoi : limite du mois, ou d'une personne dans l'heure. */
 	refus: number;
 	jetons_entree: number;
 	jetons_sortie: number;
@@ -52,15 +52,41 @@ export interface LigneConsommationIA {
 	cout_usd: string | null;
 }
 
+/**  Le PREMIER ESSAI d'un usage : son premier appel réussi avec le modèle et
+ *   l'effort enregistrés — l'étalon de ce que coûte un appel (`llm_limites`).
+ *   Changer l'un ou l'autre le périme, et le serveur le tait alors. */
+export interface PremierEssaiIA {
+	modele: string;
+	/** Le libellé de l'effort (« Faible »…), ou « Par défaut du modèle ». */
+	effort: string;
+	le: string | null;
+	jetons_entree: number | null;
+	jetons_sortie: number | null;
+	jetons_cache: number | null;
+	/** En DOLLARS, au tarif saisi aujourd'hui ; `null` sans tarif. */
+	cout_usd: string | null;
+}
+
+/**  Les limites d'un usage, et où il en est ce mois-ci. 0 = aucune limite. */
+export interface LimitesUsageIA {
+	usage: string;
+	libelle: string;
+	appels_mois: number;
+	appels_heure: number;
+	/** Les appels RÉUSSIS depuis le 1er du mois — ce que la limite compte. */
+	appels: number;
+	premier_essai: PremierEssaiIA | null;
+}
+
 /**  La consommation de l'assistant IA (`GET /config/llm-consommation`). */
 export interface ConsommationIA {
 	mois: { mois: string; usages: LigneConsommationIA[] }[];
-	plafonds: { usage: string; libelle: string; plafond: number; consommes: number }[];
+	limites: LimitesUsageIA[];
 	mois_courant: string;
 }
 
 type ChampUsageIA =
-	'actif' | 'modele' | 'prompt' | 'max_jetons' | 'plafond_mois' | 'effort' | PrixIA;
+	'actif' | 'modele' | 'prompt' | 'max_jetons' | 'appels_mois' | 'appels_heure' | 'effort' | PrixIA;
 /** Les trois prix d'un usage, dans l'ordre de l'écran (`llm_usages.CHAMPS_USAGE`). */
 export type PrixIA = 'prix_entree' | 'prix_sortie' | 'prix_cache';
 
@@ -71,6 +97,8 @@ export interface UsageIA {
 	description: string;
 	prompt_defaut: string;
 	max_jetons_defaut: number;
+	/** `false` pour un usage purement automatique : aucune limite par personne. */
+	geste_manuel: boolean;
 	/** Les clés `ConfigSite` de ses réglages — prix en DOLLARS par million. */
 	cles: Record<ChampUsageIA, string>;
 	/** Les niveaux d'effort de raisonnement — la table de `llm_usages.EFFORTS`,

@@ -460,7 +460,7 @@ def collecter_problemes(session: Session) -> list[str]:
     #  en ayant modifié zéro ligne, sans erreur ni trace — et le code
     #  porte alors une version que personne ne reçoit (#850).
     problemes += controler_modeles_email(session)
-    #  Un usage de l'assistant IA refusé par son plafond mensuel depuis 24 h :
+    #  Un usage de l'assistant IA refusé par sa limite d'appels du mois depuis 24 h :
     #  l'usage automatique s'est arrêté, ou quelqu'un a buté dessus (#1383).
     problemes += problemes_ia(session)
     return problemes

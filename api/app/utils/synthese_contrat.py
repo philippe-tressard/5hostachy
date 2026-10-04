@@ -410,7 +410,7 @@ def entete_provenance(
     return entete + "</blockquote>"
 
 
-async def synthetiser(session: Session, contrat: ContratEntretien) -> str:
+async def synthetiser(session: Session, contrat: ContratEntretien, *, demandeur: int) -> str:
     """Propose la synthèse d'un contrat, précédée de sa provenance. N'enregistre RIEN.
 
     🔴 La consigne n'est PLUS `synthese_format.CONSIGNE` (17/09/2026, #984) :
@@ -425,6 +425,7 @@ async def synthetiser(session: Session, contrat: ContratEntretien) -> str:
         usage=USAGE_SYNTHESE_CONTRAT,
         message=matiere.message,
         fichiers=matiere.fichiers,
+        demandeur=demandeur,
     )
     #  L'horodatage est pris APRÈS la réponse : c'est la date de la synthèse
     #  rendue, pas celle de la demande — une requête peut durer une minute.

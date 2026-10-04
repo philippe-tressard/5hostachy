@@ -170,7 +170,7 @@ def test_l_appel_repart_sans_l_effort_quand_le_modele_le_refuse(monkeypatch, ses
             f"llm_{USAGE}_effort": "faible",
         },
     )
-    rep = asyncio.run(demander(session, usage=USAGE, message="Bonjour"))
+    rep = asyncio.run(demander(session, usage=USAGE, message="Bonjour", demandeur=None))
     assert rep.texte == "Texte."
     assert envoyes[0]["reasoning_effort"] == "low"
     assert "reasoning_effort" not in envoyes[1]

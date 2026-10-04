@@ -72,6 +72,7 @@ async def repondre(session: Session, question: str, auteur_id: Optional[int]) ->
             usage=USAGE_QUESTION_REGLEMENT,
             message=construire_message(texte.contenu, question),
             consigne=consigne_complete(cfg.prompt),
+            demandeur=auteur_id,
         )
         lu = lire_reponse(rep.texte)
     except ErreurLLM as exc:

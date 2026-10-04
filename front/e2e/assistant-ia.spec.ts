@@ -19,13 +19,15 @@ const usage = (code: string, libelle: string) => ({
 	description: '',
 	prompt_defaut: 'Consigne.',
 	max_jetons_defaut: 2000,
+	geste_manuel: code !== 'reponse_courriel',
 	cles: Object.fromEntries(
 		[
 			'actif',
 			'modele',
 			'prompt',
 			'max_jetons',
-			'plafond_mois',
+			'appels_mois',
+			'appels_heure',
 			'prix_entree',
 			'prix_sortie',
 			'prix_cache',
@@ -194,4 +196,78 @@ test('Assistant IA : l’effort de raisonnement se choisit par usage et s’enre
 	await expect.poll(() => enregistre?.llm_description_effort).toBe('faible');
 	//  L'autre usage n'a rien reçu : chacun a le sien.
 	expect(enregistre!.llm_tarif_modele_effort ?? '').toBe('');
+});
+
+test('Assistant IA : les limites se comptent en appels, et le 1er essai en chiffre le coût', async ({
+	page,
+}) => {
+	//  Demandé le 04/10/2026 : « la valeur plafond est difficile à estimer […]
+	//  base-toi plutôt sur le coût du 1er essai ». Le plafond en jetons laisse la
+	//  place à deux nombres d'appels, et le premier essai dit ce qu'ils coûtent.
+	const usages = [...USAGES, usage('reponse_courriel', 'Mise en forme des réponses par courriel')];
+	await simulerApi(page, (chemin) => {
+		if (chemin === '/api/auth/me') return ADMIN;
+		if (chemin === '/api/config/admin')
+			return { ...CONFIG, llm_description_appels_mois: '50', llm_description_appels_heure: '5' };
+		if (chemin === '/api/config/llm-usages') return usages;
+		if (chemin === '/api/config/llm-consommation')
+			return {
+				mois: [],
+				mois_courant: '2026-10',
+				limites: [
+					{
+						usage: 'description',
+						libelle: 'Rédaction d’une description',
+						appels_mois: 50,
+						appels_heure: 5,
+						appels: 12,
+						premier_essai: {
+							modele: 'modele-de-la-description',
+							effort: 'Faible',
+							le: '2026-10-02T09:30:00',
+							jetons_entree: 3000,
+							jetons_sortie: 214,
+							jetons_cache: 0,
+							cout_usd: '0.0041',
+						},
+					},
+					{
+						usage: 'reponse_courriel',
+						libelle: 'Mise en forme des réponses par courriel',
+						appels_mois: 0,
+						appels_heure: 0,
+						appels: 0,
+						premier_essai: null,
+					},
+				],
+			};
+		return undefined;
+	});
+	await page.goto('/admin?onglet=ia');
+
+	const bloc = page.locator('details.bloc-usage', { hasText: 'Rédaction d’une description' });
+	await bloc.locator('summary').click();
+	await expect(bloc.getByRole('spinbutton', { name: /^Appels maximum par mois/ })).toHaveValue(
+		'50',
+	);
+	await expect(
+		bloc.getByRole('spinbutton', { name: /^Appels maximum par heure et par personne/ }),
+	).toHaveValue('5');
+	const essai = bloc.locator('p.aide', { hasText: '1er essai' });
+	//  Le coût d'UN appel en quatre décimales — deux le liraient « 0 $ » —, et
+	//  l'estimation du mois : 50 × 0,0041 $.
+	await expect(essai).toContainText('3 214 jetons');
+	await expect(essai).toContainText(/0,0041\s\$US/);
+	await expect(essai).toContainText(/50 appels ≈ 0,205\s\$US par mois/);
+	await expect(bloc.getByText(/Ce mois-ci/)).toContainText('12 appels sur 50');
+
+	//  Un usage purement automatique n'a personne derrière lui : pas de limite horaire.
+	const auto = page.locator('details.bloc-usage', { hasText: 'Mise en forme des réponses' });
+	await auto.locator('summary').click();
+	await expect(auto.getByRole('spinbutton', { name: /^Appels maximum par mois/ })).toBeVisible();
+	await expect(auto.getByRole('spinbutton', { name: /par heure et par personne/ })).toHaveCount(0);
+	await expect(auto.getByText(/Pas encore d’essai avec ce modèle et cet effort/)).toBeVisible();
+
+	await bloc.locator('summary').click();
+	await bloc.screenshot({ path: `test-results/limites-ia-${test.info().project.name}.png` });
 });

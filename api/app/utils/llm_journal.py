@@ -1,4 +1,4 @@
-"""Ce que coûte l'assistant IA — le journal, le plafond, la consommation.
+"""Ce que coûte l'assistant IA — le journal et la consommation.
 
 ## Pourquoi (#1383, 27/09/2026)
 
@@ -11,9 +11,10 @@ qui en déclenche un autre — aurait facturé en silence jusqu'à la facture.
 
 - **le journal** : une ligne par appel parti chez le fournisseur (ou refusé par
   le plafond), écrite par `llm.demander` et par lui seul ;
-- **le plafond mensuel** de chaque usage, en jetons : atteint, l'appel est
-  refusé AVANT l'envoi — l'usage automatique s'arrête, l'usage manuel reçoit un
-  refus qui le dit ;
+- les **statuts** d'un refus avant l'envoi — les LIMITES elles-mêmes (appels
+  par mois, par heure et par personne, premier essai) vivent dans
+  `llm_limites` depuis le 04/10/2026, où elles ont remplacé un plafond mensuel
+  en jetons que personne ne savait estimer ;
 - **la consommation** par mois, usage et modèle, et son coût estimé au tarif
   que l'administrateur a saisi.
 
@@ -39,21 +40,25 @@ from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlmodel import Session, select
 
 from app.models.core import ConfigSite
 from app.models.ia import AppelIA
 from app.utils import horloge
 from app.utils.llm_usages import USAGES
-from app.utils.montants import montant_fr
 
 logger = logging.getLogger("hostachy.llm")
 
 STATUT_SUCCES = "succes"
 STATUT_ERREUR = "erreur"
-#: Refusé avant l'envoi : le plafond mensuel de l'usage est atteint.
+#: Refusé avant l'envoi : la limite d'appels du mois est atteinte. La valeur
+#: garde son nom d'origine — des lignes du journal la portent déjà.
 STATUT_PLAFOND = "plafond"
+#: Refusé avant l'envoi : la personne a atteint sa limite d'appels de l'heure.
+STATUT_QUOTA = "quota"
+#: Les refus avant l'envoi, que l'écran compte ensemble.
+STATUTS_REFUS = (STATUT_PLAFOND, STATUT_QUOTA)
 
 #: Le détail se garde treize mois : un an complet, plus le mois en cours, pour
 #: comparer un mois à celui de l'an dernier. Purgé par la maintenance.
@@ -81,7 +86,7 @@ def jetons_de(charge: Any) -> tuple[Optional[int], Optional[int], Optional[int]]
     | Anthropic | `input_tokens` + `cache_read_input_tokens` + `cache_creation_input_tokens` | `cache_read_input_tokens` |
 
     ⚠️ Anthropic compte le cache À CÔTÉ de l'entrée : l'additionner est ce qui
-    garde le plafond mensuel juste. L'écriture de cache (+25 %) n'a pas de prix
+    garde l'entrée comparable d'un fournisseur à l'autre. L'écriture de cache (+25 %) n'a pas de prix
     à elle : on n'active pas le cache chez Anthropic, elle vaut 0 aujourd'hui.
     """
     usage = charge.get("usage") if isinstance(charge, dict) else None
@@ -112,15 +117,6 @@ def debut_du_mois(maintenant: datetime) -> datetime:
     return maintenant.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-def _reglage(session: Session, cle: str) -> int:
-    """Un réglage entier de l'administration ; 0 s'il est absent ou illisible."""
-    ligne = session.exec(select(ConfigSite).where(ConfigSite.cle == cle)).first()
-    try:
-        return max(0, int((ligne.valeur if ligne else "") or 0))
-    except (TypeError, ValueError):
-        return 0
-
-
 def prix_par_million(valeur: Optional[str]) -> Optional[Decimal]:
     """PURE. Un prix saisi — en dollars par million de jetons —, ou `None`.
 
@@ -132,41 +128,6 @@ def prix_par_million(valeur: Optional[str]) -> Optional[Decimal]:
     except InvalidOperation:
         return None
     return prix if prix.is_finite() and prix > 0 else None
-
-
-def plafond_mensuel(session: Session, usage: str) -> int:
-    """Le plafond de jetons du mois pour cet usage ; 0 = aucun plafond."""
-    return _reglage(session, USAGES[usage].cle("plafond_mois"))
-
-
-def consommes_du_mois(session: Session, usage: str, maintenant: datetime) -> int:
-    """Les jetons (entrée + sortie) consommés par cet usage depuis le 1er du mois."""
-    total = session.exec(
-        select(
-            func.coalesce(func.sum(AppelIA.jetons_entree), 0)
-            + func.coalesce(func.sum(AppelIA.jetons_sortie), 0)
-        ).where(
-            AppelIA.usage == usage,
-            AppelIA.statut == STATUT_SUCCES,
-            AppelIA.cree_le >= debut_du_mois(maintenant),
-        )
-    ).one()
-    return int(total or 0)
-
-
-def plafond_atteint(session: Session, usage: str) -> Optional[str]:
-    """Le message de refus si le plafond mensuel est atteint, sinon `None`."""
-    plafond = plafond_mensuel(session, usage)
-    if not plafond:
-        return None
-    consommes = consommes_du_mois(session, usage, horloge.maintenant())
-    if consommes < plafond:
-        return None
-    return (
-        f"Plafond mensuel atteint pour « {USAGES[usage].libelle} » "
-        f"({montant_fr(consommes, devise='')} jetons sur {montant_fr(plafond, devise='')}). "
-        "À relever dans Administration › Assistant IA, ou attendre le mois prochain."
-    )
 
 
 def journaliser(
@@ -268,8 +229,10 @@ def consommation(session: Session, maintenant: Optional[datetime] = None) -> dic
             AppelIA.usage,
             AppelIA.modele,
             func.count(),
-            func.sum(AppelIA.statut == STATUT_ERREUR),
-            func.sum(AppelIA.statut == STATUT_PLAFOND),
+            #  🔴 `case`, jamais `func.sum(condition)` : SQLAlchemy type la somme
+            #  d'un booléen en BOOLÉEN, et deux échecs se lisaient « 1 » (04/10/2026).
+            func.sum(case((AppelIA.statut == STATUT_ERREUR, 1), else_=0)),
+            func.sum(case((AppelIA.statut.in_(STATUTS_REFUS), 1), else_=0)),
             func.coalesce(func.sum(AppelIA.jetons_entree), 0),
             func.coalesce(func.sum(AppelIA.jetons_sortie), 0),
             func.coalesce(func.sum(AppelIA.jetons_cache), 0),
@@ -296,27 +259,18 @@ def consommation(session: Session, maintenant: Optional[datetime] = None) -> dic
                 "cout_usd": _cout_usd(int(entree), int(sortie), int(cache), *prix),
             }
         )
-    mois_courant = maintenant.strftime("%Y-%m")
     return {
         "mois": [{"mois": m, "usages": u} for m, u in resultat.items()],
-        "plafonds": [
-            {
-                "usage": code,
-                "libelle": u.libelle,
-                "plafond": plafond_mensuel(session, code),
-                "consommes": consommes_du_mois(session, code, maintenant),
-            }
-            for code, u in USAGES.items()
-        ],
-        "mois_courant": mois_courant,
+        "mois_courant": maintenant.strftime("%Y-%m"),
     }
 
 
 def problemes_ia(session: Session) -> list[str]:
-    """Pour le contrôle de 06:00 : les usages REFUSÉS par leur plafond depuis 24 h.
+    """Pour le contrôle de 06:00 : les usages REFUSÉS par leur limite du mois depuis 24 h.
 
-    Le fait du jour, pas l'état du mois : un plafond atteint le 3 ne doit pas
-    écrire tous les matins jusqu'au 30. Ce qui alerte, c'est qu'un appel a été
+    Le fait du jour, pas l'état du mois : une limite atteinte le 3 ne doit pas
+    écrire tous les matins jusqu'au 30. Le quota d'une personne dans l'heure
+    n'alerte pas : il borne un geste, il n'arrête aucun usage. Ce qui alerte, c'est qu'un appel a été
     refusé — l'usage automatique s'est arrêté, ou quelqu'un a buté dessus.
     """
     depuis = horloge.maintenant() - timedelta(hours=24)
@@ -327,7 +281,7 @@ def problemes_ia(session: Session) -> list[str]:
     ).all()
     return [
         f"Assistant IA : « {USAGES[u].libelle if u in USAGES else u} » refusé {n} fois "
-        "depuis 24 h — plafond mensuel atteint (Administration › Assistant IA)"
+        "depuis 24 h — limite d'appels du mois atteinte (Administration › Assistant IA)"
         for u, n in refus
     ]
 

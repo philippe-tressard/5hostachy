@@ -259,7 +259,7 @@ async def proposer_synthese(
     request: Request,
     c_id: int,
     session: Session = Depends(get_session),
-    _: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_cs_or_admin),
 ):
     """Rend une synthèse PROPOSÉE. N'enregistre rien.
 
@@ -281,7 +281,7 @@ async def proposer_synthese(
             "L'assistant n'est pas configuré, ou ce contrat n'a pas de document joint.",
         )
     try:
-        return {"synthese": await synthetiser(session, contrat)}
+        return {"synthese": await synthetiser(session, contrat, demandeur=user.id)}
     except ErreurLLM as exc:
         raise HTTPException(400, str(exc))
 
