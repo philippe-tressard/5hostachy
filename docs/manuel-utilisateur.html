@@ -1179,7 +1179,7 @@
               <li><strong>Mes lots &amp; accès</strong> — vos biens, vos diagnostics, vos badges et télécommandes</li>
               <li><strong>Affaires</strong> — signaler, suivre, et lire les actualités du conseil syndical (filtre <em>Actualité</em>)&nbsp;; ce qui est daté paraît sous le filtre <em>Calendrier</em></li>
               <li><strong>Résidence</strong> — les documents de la copropriété
-                <details class="persona-detail">
+                <details class="persona-detail" name="en-savoir-plus">
                   <summary>Carnet d’entretien</summary>
                   <p>Ce qui a été entretenu, réparé et contrôlé, rangé par équipement. Il se constitue tout seul — contrats, entretiens terminés, affaires résolues du bâti, chacune sous sa catégorie (Panne, Sinistre, Étude &amp; travaux…) et, pour une intervention, «&nbsp;sous contrat n°&nbsp;…&nbsp;» ou «&nbsp;hors contrat&nbsp;» — et signale les visites en retard. Chacun y lit ce que les affaires et le kanban lui montrent, et rien de plus&nbsp;: une affaire qu’il ne peut pas ouvrir — un sinistre, une affaire confidentielle ou adressée au seul conseil — n’y figure pas. La ligne d’une affaire dont la synthèse a été validée se déplie (🧾)&nbsp;: la synthèse, ses graphiques, puis un lien vers l’affaire. Il se filtre par périmètre et par <strong>année</strong> — «&nbsp;Toutes&nbsp;» par défaut, rien n’en est jamais retiré&nbsp;: le décret n°&nbsp;2001-477 date les travaux par leur année de réalisation et ne prévoit aucune durée de conservation. Les contrats en cours restent affichés quelle que soit l’année.</p>
                 </details>
@@ -1219,7 +1219,7 @@
         <div class="chapter-icon" style="background:#f5f3ff; color:#6d28d9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:24px;height:24px"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></div>
         <div>
           <h2>Le menu, écran par écran</h2>
-          <p>Les entrées du menu de gauche, <strong>dans leur ordre et avec leurs icônes</strong>. Chaque bloc dit en quelques mots ce que l'écran contient et <strong>qui peut le voir</strong>&nbsp;; le détail se range sous <strong>En savoir plus</strong>, plié par défaut.</p>
+          <p>Les entrées du menu de gauche, <strong>dans leur ordre et avec leurs icônes</strong>. Chaque bloc dit en quelques mots ce que l'écran contient et <strong>qui peut le voir</strong>&nbsp;; le détail se range sous <strong>En savoir plus</strong>, plié par défaut — en déplier un replie celui qui était ouvert.</p>
         </div>
       </div>
 
@@ -1320,7 +1320,7 @@
           <ul class="ecran-profils">
             <li><span class="profil">Chacun</span> n’y voit que ce que son profil lui ouvre&nbsp;: un locataire, ses affaires, les pannes de son bâtiment, et les actualités et affaires qui lui sont adressées.</li>
           </ul>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Le bandeau, tout en haut</strong> — après votre prénom&nbsp;: votre <strong>lot</strong> (bâtiment, type, étage) puis vos <strong>rôles</strong>. Tant qu'aucun lot ne vous est rattaché, il affiche votre bâtiment, la mention <em>sans lot</em> et l'étage que vous avez indiqué&nbsp;— vous n'y êtes donc jamais réduit à votre seul prénom. C'est le rappel de qui vous êtes pour le site, et donc de ce que vous voyez. Votre <strong>photo</strong>, à droite, ouvre votre <strong>profil</strong>&nbsp;; sans photo, elle porte un crayon.</li>
@@ -1341,7 +1341,7 @@
             <li><span class="profil">Copropriétaire · bailleur</span> la fiche, les documents ouverts à leur profil et le carnet d’entretien.</li>
             <li data-onglet="carnet" data-reserve="proprioOuCS"><span class="profil">Locataire</span> la fiche et les documents ouverts aux locataires — pas le <strong>carnet d’entretien</strong>, réservé aux copropriétaires et au conseil syndical.</li>
           </ul>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>La fiche de la copropriété</strong> — ses informations, dont son <strong>exercice comptable</strong> (année civile, ou «&nbsp;de juillet à juin&nbsp;», réglé par l'administrateur sur la fiche&nbsp;: c'est sur lui que la synthèse d'une affaire close compare ses délais).</li>
@@ -1360,7 +1360,7 @@
             <li data-onglet="kanban" data-reserve="nonLocataire"><span class="profil">Locataire</span> ses propres affaires, les pannes de son bâtiment, les actualités et les affaires que le conseil lui adresse (en lecture seule)&nbsp;; pas l’onglet <strong>Kanban</strong>.</li>
             <li><span class="profil">Conseil syndical</span> tout — c’est lui qui fait avancer le suivi.</li>
           </ul>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Ce que lit un locataire</strong> — les autres affaires — travaux, contrats, sujets d’AG —, datées ou non, regardent les copropriétaires&nbsp;: ce qui le concerne lui parvient par une actualité. Il n’a pas l’onglet <strong>Kanban</strong>&nbsp;: le suivi des dossiers regarde les copropriétaires et le conseil.</li>
@@ -1377,7 +1377,7 @@
             <li data-onglet="location" data-reserve="bailleur"><span class="profil">Bailleur</span> en plus, l’onglet <strong>Gestion locative</strong>&nbsp;: baux, locataires, inventaire de ce qui leur est remis.</li>
             <li><span class="profil">Locataire</span> le lot qu’il loue, ses badges et télécommandes. Sans bail, il se rattache lui-même à son lot (voir «&nbsp;En savoir plus&nbsp;»).</li>
           </ul>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Locataire sans bail</strong> — quand son propriétaire n’a pas de compte, l’onglet <strong>Mes lots</strong> lui pose jusqu’à trois questions, d’après le <strong>fichier des lots du syndic</strong> et le nom de propriétaire donné à l’inscription&nbsp;: <em>Résidez-vous dans l’appartement…&nbsp;?</em>, <em>Votre location comprend-elle une cave&nbsp;?</em>, <em>…une place de parking&nbsp;?</em> Chaque «&nbsp;Oui&nbsp;» le rattache <strong>tout de suite</strong> au lot et lui remet <strong>tous</strong> ses badges — les Vigik de l’appartement, les télécommandes du parking —, puis <strong>Enregistrer</strong>&nbsp;; une cave ou un parking qu’il ne loue pas se décoche. Le gestionnaire du site en est prévenu.</li>
@@ -1402,7 +1402,7 @@
           <h3>Prestataires</h3>
           <p>Les entreprises qui interviennent dans la copropriété, leurs contrats d'entretien et le suivi des interventions. Un outil de travail du conseil syndical&nbsp;: les résidents ne le voient pas.</p>
           <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Sous contrat ou non</strong> — la catégorie d'un prestataire dit ce que fait l'entreprise, pas s'il travaille sous contrat&nbsp;: une même entreprise peut entretenir un équipement sous contrat et le dépanner hors contrat. La carte d'un prestataire qui a des contrats en cours porte la pastille <strong>📄 Sous contrat</strong> (avec leur nombre)&nbsp;; elle se déduit de ses contrats, rien n'est à cocher.</li>
@@ -1429,7 +1429,7 @@
           <h3>Communauté</h3>
           <p>L'espace entre résidents. Réservé aux résidents : ni le syndic, ni un mandataire, ni un aidant n'y ont accès.</p>
           <span class="ecran-acces ecran-acces-resident">Résidents</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>📊 Sondages</strong> — donner son avis sur une décision à venir. Un sondage se ferme à sa date d'échéance. Adresse&nbsp;: <code>/sondages</code></li>
@@ -1483,7 +1483,7 @@
           <h3>Espace Conseil syndical (CS)</h3>
           <p>Les outils du conseil&nbsp;: comptes et accès, <strong>badges &amp; télécommandes</strong>, reporting, affiches de hall, annuaire interne, et les <strong>questions au règlement de copropriété</strong>.</p>
           <span class="ecran-acces ecran-acces-cs">Conseil syndical</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps">
           <ul>
@@ -1500,7 +1500,7 @@
           <h3>Admin</h3>
           <p>Le réglage du site&nbsp;: comptes, configuration, assistant IA et maintenance. Réservé aux administrateurs — un copropriétaire n’en a pas l’usage.</p>
           <span class="ecran-acces ecran-acces-admin">Administrateur</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Deux rangées d’onglets</strong> — <strong>👥 Gestion utilisateurs</strong> (à traiter, utilisateurs, télémétrie, modèles d’e-mail, imports, audit des lots) et <strong>⚙️ Configuration</strong> (paramétrage, fiche de la copropriété, périmètres, descriptif des pages, pages légales, WhatsApp, SMTP, assistant IA, maintenance).</li>
@@ -1521,7 +1521,7 @@
           <h3>Délégations</h3>
           <p>Autoriser un proche à consulter le site à votre place, en lecture seule.</p>
           <span class="ecran-acces ecran-acces-cs-ou-aidant">CS &amp; aidants</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><ul>
             <li><strong>Ce que lit votre aidant</strong> — tant que la délégation est active, ce qui vous est adressé&nbsp;: une actualité aux copropriétaires occupants, s'il aide un occupant.</li>
@@ -1534,7 +1534,7 @@
           <h3>Mon profil</h3>
           <p>Vos informations, votre mot de passe, et le réglage de ce que vous recevez.</p>
           <span class="ecran-acces ecran-acces-tous">Tous</span>
-          <details class="ecran-detail">
+          <details class="ecran-detail" name="en-savoir-plus">
             <summary>En savoir plus</summary>
             <div class="ecran-detail-corps"><p>Accessible par <strong>votre prénom</strong>, en bas du menu — il n'a pas d'entrée propre.</p>
           <ul>
@@ -1800,6 +1800,18 @@
   }, { threshold: 0.3 });
 
   sections.forEach(s => observer.observe(s));
+
+  // Un seul « En savoir plus » déplié à la fois, comme sur le site. L'attribut
+  // `name` des <details> le fait nativement ; ceci couvre les navigateurs qui
+  // l'ignorent encore.
+  document.querySelectorAll('details[name]').forEach((d) => {
+    d.addEventListener('toggle', () => {
+      if (!d.open) return;
+      document.querySelectorAll('details[name="' + d.getAttribute('name') + '"]').forEach((autre) => {
+        if (autre !== d) autre.open = false;
+      });
+    });
+  });
 </script>
 
 </body>
