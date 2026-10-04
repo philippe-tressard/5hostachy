@@ -34,16 +34,16 @@
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { onMount } from 'svelte';
-	import { admin as adminApi, type EnvoiEmail } from '$lib/api';
+	import { admin as adminApi, type EnvoiEmail, type ModeleEmail } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmer } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
 	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
-	let emailTemplates: any[] = [];
+	let emailTemplates: ModeleEmail[] = [];
 	let emailsLoading = true;
-	let emailEdit: any | null = null;
+	let emailEdit: ModeleEmail | null = null;
 	let emailSujet = '';
 	let emailCorpsHtml = '';
 	let emailActif = true;
@@ -125,7 +125,7 @@
 		emailHistoryLoading = false;
 	}
 
-	function openEmailEdit(tpl: any) {
+	function openEmailEdit(tpl: ModeleEmail) {
 		emailEdit = tpl;
 		emailSujet = tpl.sujet ?? '';
 		emailCorpsHtml = tpl.corps_html ?? '';
@@ -138,15 +138,16 @@
 
 	async function saveEmailEdit() {
 		if (!emailEdit) return;
+		const id = emailEdit.id;
 		emailSaving = true;
 		try {
-			const updated = await adminApi.updateEmailTemplate(emailEdit.id, {
+			const updated = await adminApi.updateEmailTemplate(id, {
 				sujet: emailSujet,
 				corps_html: emailCorpsHtml,
 				actif: emailActif,
 				intention: emailIntention,
 			});
-			emailTemplates = emailTemplates.map((t) => (t.id === emailEdit.id ? updated : t));
+			emailTemplates = emailTemplates.map((t) => (t.id === id ? updated : t));
 			toast('success', 'Modèle mis à jour.');
 			emailEdit = null;
 		} catch (e: any) {
@@ -169,10 +170,11 @@
 			danger: true,
 		});
 		if (!ok) return;
+		const id = emailEdit.id;
 		emailResetOne = true;
 		try {
-			const updated = await adminApi.resetEmailTemplate(emailEdit.id);
-			emailTemplates = emailTemplates.map((t) => (t.id === emailEdit.id ? updated : t));
+			const updated = await adminApi.resetEmailTemplate(id);
+			emailTemplates = emailTemplates.map((t) => (t.id === id ? updated : t));
 			openEmailEdit(updated);
 			toast('success', 'Modèle remis par défaut.');
 		} catch (e: any) {
@@ -247,7 +249,7 @@
 				{#each emailTemplates as tpl (tpl.code)}
 					<tr>
 						<td><code style="font-size:var(--fs-sm)">{tpl.code}</code></td>
-						<td style="font-size:var(--fs-base)">{tpl.libelle ?? tpl.nom ?? '—'}</td>
+						<td style="font-size:var(--fs-base)">{tpl.libelle ?? '—'}</td>
 						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)">{tpl.sujet}</td>
 						<td>
 							{#if tpl.intention}<span class="badge badge-blue"

@@ -120,7 +120,11 @@ export const admin = {
 	//  dur juste à côté de `emailTemplates` (#801). Deux routes du même écran, une
 	//  déclarée et l'autre non : c'est ainsi qu'un client se vide de son sens.
 	emailsHistorique: () => api.get<EnvoiEmail[]>('/admin/emails/historique'),
-	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),
+	//  Rend le modèle tel que la liste le lit — variables CALCULÉES (#1682).
+	updateEmailTemplate: (
+		id: number,
+		data: Partial<Pick<ModeleEmail, 'sujet' | 'corps_html' | 'actif' | 'intention'>>,
+	) => api.patch<ModeleEmail>(`/admin/modeles-email/${id}`, data),
 	//  Un SEUL modèle remis au texte du code (#852). Il n'existait que la
 	//  remise à zéro globale : réparer un modèle cassé d'un caractère imposait
 	//  de détruire les textes choisis pour tous les autres — un remède qu'on

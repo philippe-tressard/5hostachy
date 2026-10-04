@@ -126,3 +126,52 @@ def test_tous_les_modeles_du_depot_annoncent_au_moins_une_variable():
         f"{len(EMAIL_TEMPLATES)} modèle(s) lus — la portée du relevé est cassée, "
         "et son vert ne veut rien dire (INCONNU, pas OK)."
     )
+
+
+def test_modifier_et_remettre_rendent_la_MEME_lecture_que_la_liste(session):
+    """🔴 #1682 — trois routes, une seule lecture du modèle.
+
+    La liste servait les variables CALCULÉES ; la modification et la remise à
+    zéro d'un modèle rendaient la ligne brute, donc la colonne STOCKÉE. L'écran
+    remplace sa ligne par cette réponse : après un enregistrement, l'encart des
+    variables revenait à la copie périmée — celle que #850 avait cessé de
+    servir.
+    """
+    from fastapi.encoders import jsonable_encoder
+
+    from app.models.core import ModeleEmail
+    from app.routers.admin.communications import (
+        list_modeles_email,
+        reinitialiser_un_modele_email,
+        update_modele_email,
+    )
+    from tests.aides_base import compte
+
+    admin = compte(session, role="admin")
+    modele = ModeleEmail(
+        code="compte_active",
+        libelle="Compte activé",
+        sujet="Bonjour {{ destinataire.prenom }}",
+        corps_html="<p>{{ lien }}</p>",
+        variables_disponibles='["perime"]',
+    )
+    session.add(modele)
+    session.commit()
+    session.refresh(modele)
+
+    def variables(reponse) -> list[str]:
+        return json.loads(jsonable_encoder(reponse)["variables_disponibles"])
+
+    def dans_la_liste() -> list[str]:
+        (ligne,) = list_modeles_email(session=session, _=admin)
+        return json.loads(ligne["variables_disponibles"])
+
+    modifie = update_modele_email(modele.id, {"intention": "information"}, session, admin)
+    assert variables(modifie) == dans_la_liste() == ["destinataire", "lien"], (
+        "la modification rend la colonne stockée, la liste la valeur calculée"
+    )
+
+    remis = reinitialiser_un_modele_email(modele.id, session, admin)
+    assert variables(remis) == dans_la_liste() != ["perime"], (
+        "la remise à zéro rend la colonne stockée, la liste la valeur calculée"
+    )
