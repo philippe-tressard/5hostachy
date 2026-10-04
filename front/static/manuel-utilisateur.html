@@ -1802,7 +1802,7 @@
   sections.forEach(s => observer.observe(s));
 
   // Un seul « En savoir plus » déplié à la fois, comme sur le site. L'attribut
-  // `name` des <details> le fait nativement ; ceci couvre les navigateurs qui
+  // `name` des blocs dépliables le fait nativement ; ceci couvre les navigateurs qui
   // l'ignorent encore.
   document.querySelectorAll('details[name]').forEach((d) => {
     d.addEventListener('toggle', () => {
