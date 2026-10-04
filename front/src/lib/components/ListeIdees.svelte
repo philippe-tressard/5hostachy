@@ -40,15 +40,12 @@
 	import BadgePerimetre from '$lib/components/BadgePerimetre.svelte';
 	import PastilleLecture from '$lib/components/PastilleLecture.svelte';
 	import { STATUTS_IDEE, STATUT_IDEE_LABELS } from '$lib/idees';
+	import type { Idee } from '$lib/api';
 
 	/** Les idées à rendre, déjà filtrées et triées par l'appelant. */
 	import { peutEditer } from '$lib/droits';
 
-	//  ⚠️ Pas encore `Idee[]` (#1572) : la carte lit `idee.assiste_ia`, que
-	//  `GET /idees` ne transporte pas (`idees._enrich`). Le typer ferait échouer la
-	//  vérification sur un écart RÉEL, à corriger côté serveur — pas en ajoutant au
-	//  type un champ qui n'arrive jamais.
-	export let idees: any[] = [];
+	export let idees: Idee[] = [];
 	export let currentUserId: number | undefined = undefined;
 	export let estCS = false;
 	export let estAdmin = false;
@@ -60,7 +57,7 @@
 	/**  Corriger son idée (#783). Comme sur la petite annonce, le geste est
 	 *   réservé à l'AUTEUR — le conseil syndical décide du statut, il ne réécrit
 	 *   pas la proposition de quelqu'un (`peut_editer` côté serveur). */
-	export let onModifier: (idee: any) => void;
+	export let onModifier: (idee: Idee) => void;
 	/**  L'identifiant de l'idée en cours de correction, ou `null` (#787).
 	 *
 	 *   🔴 Le formulaire s'ouvrait EN BAS DE PAGE : « c'est tout en bas, et on ne

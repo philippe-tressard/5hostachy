@@ -12,8 +12,8 @@ import { api, postFormData } from './client';
 //
 //  Ces types sont LUS dans le code serveur, route par route — jamais supposés. Le
 //  client rendait `any`, et chaque écran croyait recevoir ce qu'il lisait : la
-//  carte d'une idée affiche `assiste_ia`, que la liste des idées n'a jamais
-//  transporté. Un type honnête le montre ; un `any` le cache.
+//  carte d'une idée affiche `assiste_ia`, que la liste des idées n'a pas transporté
+//  jusqu'au #1660. Un type honnête le montre ; un `any` le cache.
 //
 //  ⚠️ Plusieurs routes n'ont pas de `response_model` : elles rendent un dict
 //  composé à la main, ou la LIGNE de la table telle quelle. Une ligne brute porte
@@ -120,10 +120,8 @@ export interface SondageCorrige {
 	options: Pick<OptionSondage, 'id' | 'libelle' | 'ordre'>[];
 }
 
-/**  Une idée — `idees._enrich`, que rendent la liste ET la correction.
- *
- *   ⚠️ Pas de `assiste_ia` : `_enrich` ne le transporte pas (le schéma `IdeeRead`
- *   n'est déclaré par aucune route). */
+/**  Une idée — `idees._enrich`, que rendent la liste ET la correction : le schéma
+ *   `IdeeRead`, lu sur le modèle (#1660). */
 export interface Idee {
 	id: number;
 	titre: string;
@@ -138,6 +136,8 @@ export interface Idee {
 	nb_votes: number;
 	mon_vote: boolean;
 	archivee: boolean;
+	/** Rédigée avec l'assistant IA — la marque que `MarqueIA` rend. */
+	assiste_ia: boolean;
 	reponses: ReponseCommunaute[];
 	nb_reponses: number;
 }

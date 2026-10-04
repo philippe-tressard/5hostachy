@@ -5,7 +5,7 @@ from app.utils import horloge
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, NaiveDatetime
 from sqlmodel import Session, select
 
 from app.auth.deps import (
@@ -34,8 +34,10 @@ from app.utils.liens import lien_element
 from app.utils.assiste_ia import (
     AssisteIACorrection,
     AssisteIAEntree,
+    AssisteIASortie,
     marquer as marquer_assiste_ia,
 )
+from app.utils.lecture import lire_objet
 from app.utils.recuperer import ou_404
 from app.utils.reponses import (
     notifier_votants_idee,
@@ -91,21 +93,28 @@ class IdeeUpdate(AssisteIACorrection):
     description: Optional[str] = None
 
 
-class IdeeRead(BaseModel):
+class IdeeRead(AssisteIASortie):
+    """Ce que `GET /idees` rend — lu SUR le modèle par `lire_objet` (#1660).
+
+    Ce schéma existait sans que rien le rende : la liste assemblait un dictionnaire
+    à la main, et `assiste_ia` n'en sortait pas.
+    """
+
     id: int
     titre: str
     description: str
     auteur_id: int
     statut: str
     perimetre_cible: list[str] = []
+    public_cible: list[str] = []
+    cree_le: NaiveDatetime
     nb_votes: int = 0
     mon_vote: bool = False
     #: Calculé par la règle du site (`utils/archivage`), jamais stocké : l'archivage
     #: automatique est une conséquence du temps, pas un état qu'on pose.
     archivee: bool = False
-
-    class Config:
-        from_attributes = True
+    reponses: list[dict] = []
+    nb_reponses: int = 0
 
 
 def _perimetre_liste(brut: Optional[str]) -> list[str]:
@@ -143,31 +152,26 @@ def _enrich(idees: list, user_id: int, session: Session) -> list[dict]:
             ).first()
         )
         reponses = _reponses_for(idee.id, session)
-        result.append(
-            {
-                "id": idee.id,
-                "titre": idee.titre,
-                "description": idee.description,
-                "auteur_id": idee.auteur_id,
-                "statut": idee.statut,
-                #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
-                #  contrat que les événements et les annonces.
-                "perimetre_cible": _perimetre_liste(idee.perimetre_cible),
-                #  Même contrat pour le public cible : une LISTE de codes, que
-                #  `$lib/destinataires.ts` lit. Vide = tous les résidents.
-                "public_cible": json.loads(idee.public_cible or "[]"),
-                "cree_le": idee.cree_le,
-                "nb_votes": nb,
-                "mon_vote": mon_vote,
-                #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
-                #  refaire la règle : la liste et les Archives trancheraient alors
-                #  séparément, et une idée apparaîtrait dans l'une sans l'autre —
-                #  c'est le bug du 17/07/2026 sur les actualités.
-                "archivee": est_archivable("idee", idee, seuil_jours=seuil_jours),
-                "reponses": reponses,
-                "nb_reponses": len(reponses),
-            }
+        lue = lire_objet(
+            IdeeRead,
+            idee,
+            #  Exposé en LISTE pour que le front n'ait rien à désérialiser — même
+            #  contrat que les événements et les annonces.
+            perimetre_cible=_perimetre_liste(idee.perimetre_cible),
+            #  Même contrat pour le public cible : une LISTE de codes, que
+            #  `$lib/destinataires.ts` lit. Vide = tous les résidents.
+            public_cible=json.loads(idee.public_cible or "[]"),
+            nb_votes=nb,
+            mon_vote=mon_vote,
+            #  Calculé côté SERVEUR et transporté (#515). L'écran ne doit pas
+            #  refaire la règle : la liste et les Archives trancheraient alors
+            #  séparément, et une idée apparaîtrait dans l'une sans l'autre —
+            #  c'est le bug du 17/07/2026 sur les actualités.
+            archivee=est_archivable("idee", idee, seuil_jours=seuil_jours),
+            reponses=reponses,
+            nb_reponses=len(reponses),
         )
+        result.append(lue.model_dump())
     return result
 
 

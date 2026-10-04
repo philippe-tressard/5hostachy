@@ -132,8 +132,10 @@ def test_les_schemas_transportent_la_marque_sur_les_neuf_circuits():
     #  Les fils lisent par `EvolutionLue`, qui n'importe rien du projet : le
     #  champ y est déclaré à la main, et ce test le garde d'accord avec le mixin.
     assert EvolutionLue.model_fields["assiste_ia"].default is False
-    #  L'idée et l'annonce rendent le modèle (ou son `model_dump`) : la colonne
-    #  du mixin sort d'elle-même.
+    #  L'annonce rend le modèle (ou son `model_dump`) : la colonne du mixin sort
+    #  d'elle-même. L'idée, non : sa liste était un dictionnaire écrit à la main et
+    #  l'oubliait (#1660) — `IdeeRead` la lit désormais sur le modèle, et
+    #  `test_idee_lecture.py` le vérifie.
 
 
 def test_chaque_table_marquee_a_son_schema_de_creation():
