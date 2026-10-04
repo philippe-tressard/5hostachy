@@ -41,13 +41,13 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import PastilleDeroulante from '$lib/components/PastilleDeroulante.svelte';
 	import { CATEGORIES_ANNONCE, TRIS_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
-	import { annonces as annoncesApi } from '$lib/api';
+	import { annonces as annoncesApi, type PetiteAnnonce } from '$lib/api';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 
 	/** La liste, tenue par la page — elle la charge avec les deux autres rubriques. */
-	export let annonces: any[] = [];
+	export let annonces: PetiteAnnonce[] = [];
 	export let chargement = false;
 	/**  Non vide = on n'a PAS pu charger. À afficher AVANT « aucune annonce » :
 	 *   annoncer une absence qu'on n'a pas constatée, c'est ce qui a fait croire
@@ -70,7 +70,7 @@
 	//  L'annonce en cours de CORRECTION. Un seul formulaire ouvert à la fois : le
 	//  `{#key}` du rendu remonte le composant à neuf quand on passe d'une annonce à
 	//  l'autre, sinon les champs garderaient les valeurs de la précédente.
-	let editAnnonce: any = null;
+	let editAnnonce: PetiteAnnonce | null = null;
 
 	$: filtrees = annonces
 		.filter((a) => !filtreType || a.type_annonce === filtreType)
@@ -87,14 +87,14 @@
 
 	/** Téléverse une photo et retourne son URL (contrat attendu par `FichiersUpload`). */
 	async function uploadPhoto(id: number, file: File): Promise<string> {
-		const res: any = await annoncesApi.uploadPhoto(id, file);
+		const res = await annoncesApi.uploadPhoto(id, file);
 		annonces = annonces.map((a) => (a.id === id ? { ...a, photos: res.photos } : a));
 		return res.url;
 	}
 
 	/** Supprime une photo et retourne la liste à jour (même contrat). */
 	async function supprimerPhoto(id: number, url: string): Promise<string[]> {
-		const res: any = await annoncesApi.deletePhoto(id, url);
+		const res = await annoncesApi.deletePhoto(id, url);
 		annonces = annonces.map((a) => (a.id === id ? { ...a, photos: res.photos } : a));
 		return res.photos;
 	}
@@ -149,15 +149,16 @@
 		}
 	}
 
-	const basculer = (a: any) => (expandedAnnonce = expandedAnnonce === a.id ? null : a.id);
-	const basculerGestion = (a: any) => (gestionPhotos = gestionPhotos === a.id ? null : a.id);
+	const basculer = (a: PetiteAnnonce) => (expandedAnnonce = expandedAnnonce === a.id ? null : a.id);
+	const basculerGestion = (a: PetiteAnnonce) =>
+		(gestionPhotos = gestionPhotos === a.id ? null : a.id);
 
 	//  🔴 La correction s'ouvre DANS la carte, à la place de son corps (#787,
 	//  06/09/2026) — la fenêtre flottante posée le 02/09 (#640) a été écartée à
 	//  l'écran : « pas de spécifique, comme le reste du site ». Conséquence
 	//  directe : le clic sur ✏️ doit DÉPLIER la carte, sinon le formulaire n'a
 	//  nulle part où apparaître. C'est ce que fait la fonction ci-dessous.
-	function modifier(a: any) {
+	function modifier(a: PetiteAnnonce) {
 		editAnnonce = editAnnonce?.id === a.id ? null : a;
 		//  🔴 DÉPLIER la carte, sinon le formulaire n'apparaît nulle part : il vit
 		//  dans le corps, et le corps n'est rendu que déplié. Le bouton ✏️ aurait
@@ -169,7 +170,7 @@
 		expandedAnnonce = editAnnonce ? a.id : null;
 	}
 
-	function appliquerModification(maj: any) {
+	function appliquerModification(maj: PetiteAnnonce) {
 		//  Rechargée pour la même raison que le changement d'état : la correction
 		//  peut porter le workflow, donc décider de l'archivage.
 		annonces = annonces.map((a) => (a.id === maj.id ? maj : a));

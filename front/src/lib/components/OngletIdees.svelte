@@ -19,6 +19,7 @@
   l'état d'une idée.
 -->
 <script lang="ts">
+	import type { Idee } from '$lib/api';
 	import FormulaireIdee from '$lib/components/FormulaireIdee.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import ListeIdees from '$lib/components/ListeIdees.svelte';
@@ -26,7 +27,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { STATUTS_IDEE } from '$lib/idees';
 
-	export let idees: any[] = [];
+	export let idees: Idee[] = [];
 	export let chargement = false;
 	/** Non vide = on n'a PAS pu charger. Distinct de « chargé et vide » (#519). */
 	export let erreur = '';
@@ -55,10 +56,10 @@
 	//  `ListeIdees` est rendu DEUX fois (courantes et Archives), l'y mettre en
 	//  aurait monté deux exemplaires sur la même idée. Même construction que
 	//  `OngletAnnonces`, qui a rencontré le problème le 02/09.
-	let editIdee: any = null;
-	const modifier = (i: any) => (editIdee = editIdee?.id === i.id ? null : i);
+	let editIdee: Idee | null = null;
+	const modifier = (i: Idee) => (editIdee = editIdee?.id === i.id ? null : i);
 
-	function appliquerModification(maj: any) {
+	function appliquerModification(maj: Idee) {
 		idees = idees.map((i) => (i.id === maj.id ? maj : i));
 		editIdee = null;
 	}

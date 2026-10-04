@@ -32,6 +32,7 @@
   `$lib/annonces.ts` : la carte le rend, l'onglet en fait ses filtres.
 -->
 <script lang="ts">
+	import type { PetiteAnnonce } from '$lib/api';
 	import BadgeNouveau from '$lib/components/BadgeNouveau.svelte';
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import { nomAffiche } from '$lib/noms';
@@ -58,7 +59,7 @@
 		typeAnnonceLabel,
 	} from '$lib/annonces';
 
-	export let annonce: any;
+	export let annonce: PetiteAnnonce;
 	/** L'annonce est-elle dépliée ? */
 	export let expanded = false;
 	/**  Vrai quand la page affiche un formulaire À LA PLACE du contenu (#787).
