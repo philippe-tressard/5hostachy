@@ -128,6 +128,15 @@
 		}
 	});
 
+	/**  Le locataire vient de dire ce qu'il loue : ses lots ont changé. */
+	async function relireLots() {
+		try {
+			lots = await lotsApi.mesList();
+		} catch (e: any) {
+			toast('error', messageErreur(e, 'Impossible de relire vos lots'));
+		}
+	}
+
 	/**  Les baux que CE compte gère : les siens (copropriétaire), tous (conseil),
 	 *   aucun sinon. Écrit une fois — le chargement et l'affectation automatique
 	 *   des accès le recopiaient (#779). */
@@ -261,7 +270,7 @@
 			</div>
 		{:else if $isLocataire}
 			<!-- ── Vue locataire : lot loué via bail, et ses lots en propre ── -->
-			<LotsLocataire bail={monBailData} {lots} />
+			<LotsLocataire bail={monBailData} {lots} onRattache={relireLots} />
 		{:else if $isBailleur}
 			<!-- ── Vue bailleur : lots possédés + locataires ── -->
 			<LotsBailleur

@@ -15,13 +15,31 @@
 <script lang="ts">
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 	import CaracteristiquesLot from '$lib/components/CaracteristiquesLot.svelte';
+	import QuestionsLocation from '$lib/components/QuestionsLocation.svelte';
+	import type { MonLot } from '$lib/api';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import { nomAffiche } from '$lib/noms';
 
 	/** Le bail du locataire (`bailleur.monBail()`), ou `null` s'il n'en a pas. */
 	export let bail: any = null;
-	/** Les lots qu'il possède en propre, s'il en a. */
-	export let lots: any[] = [];
+	/** Ses lots : ceux qu'il LOUE (`type_lien` locataire) et ceux qu'il possède. */
+	export let lots: MonLot[] = [];
+	/** Appelé quand il vient de dire ce qu'il loue : la page relit ses lots. */
+	export let onRattache: () => void = () => {};
+
+	//  Sans bail, un lot loué se lit sur son lien (04/10/2026) : le locataire
+	//  l'a déclaré lui-même, d'après le fichier des lots (`QuestionsLocation`).
+	$: loues = lots.filter((l) => l.type_lien === 'locataire');
+	//  Une seule carte de lot pour les deux listes ; celle des lots loués se tait
+	//  quand un bail les montre déjà.
+	$: sections = [
+		{ titre: '🏠 Lots loués', lots: bail ? [] : loues, enPropre: false },
+		{
+			titre: '🏢 Lots en propriété',
+			lots: lots.filter((l) => l.type_lien !== 'locataire'),
+			enPropre: true,
+		},
+	].filter((s) => s.lots.length > 0);
 </script>
 
 {#if bail}
@@ -59,19 +77,15 @@
 			</div>
 		{/if}
 	</div>
-{:else}
-	<div class="empty-state">
-		<h3>Aucun bail actif</h3>
-		<p>
-			Votre propriétaire doit vous rattacher depuis la section <strong>Gestion locative</strong> de son
-			espace.
-		</p>
-	</div>
+{:else if loues.length === 0}
+	<QuestionsLocation {onRattache} />
 {/if}
 
-{#if lots.length > 0}
-	<div class="lots-section-label lots-en-propre">🏢 Lots en propriété ({lots.length})</div>
-	{#each lots as lot (lot.id)}
+{#each sections as section (section.titre)}
+	<div class="lots-section-label" class:lots-en-propre={section.enPropre}>
+		{section.titre} ({section.lots.length})
+	</div>
+	{#each section.lots as lot (lot.id)}
 		<div class="card largeur-saisie carte-lot">
 			<h2 class="carte-lot-titre">{lot.batiment_nom ?? '—'} / {lot.numero}</h2>
 			<CaracteristiquesLot
@@ -82,7 +96,7 @@
 			/>
 		</div>
 	{/each}
-{/if}
+{/each}
 
 <style>
 	.carte-lot {

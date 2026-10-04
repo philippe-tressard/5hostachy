@@ -98,10 +98,14 @@ def _par_adresse(session: Session) -> Callable[[object], int | None]:
     return trouver
 
 
-def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int | None]:
-    """Télécommande : le nom du fichier → un copropriétaire du fichier des lots → son lot."""
-    natures = {lot.id: valeur(lot.type) for lot in session.exec(select(Lot)).all()}
-    numeros = {lot.id: lot.numero for lot in session.exec(select(Lot)).all()}
+def lots_du_nom(session: Session) -> Callable[[str | None], set[int]]:
+    """Un nom → TOUS les lots du copropriétaire qu'il désigne au fichier des lots.
+
+    Ensemble vide si le nom ne désigne personne, ou plusieurs copropriétaires.
+    Sert la télécommande (son premier parking, ci-dessous) et le locataire qui
+    nomme son propriétaire (`utils/rattachement_locataire`) : deux règles pour
+    « ce nom est-il ce copropriétaire ? » divergeraient au premier homonyme.
+    """
     lots_de: dict[str, set[int]] = defaultdict(set)
     mots_de: dict[str, set[str]] = {}
     famille_de: dict[str, str] = {}
@@ -115,16 +119,11 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
         nom_de.setdefault(copro, _cle_de_nom(li.nom_coproprietaire))
         lots_de[copro].add(li.lot_id)
 
-    def premier(lots: set[int]) -> int | None:
-        """Le premier parking par numéro, à défaut le premier lot."""
-        ordre = sorted(lots, key=lambda i: (natures.get(i) != nature, _cle_numero(numeros.get(i))))
-        return ordre[0] if ordre else None
-
-    def trouver(imp) -> int | None:
-        mots = _mots(imp.nom_proprietaire)
+    def trouver(nom: str | None) -> set[int]:
+        mots = _mots(nom)
         if not mots:
-            return None
-        famille = _famille(imp.nom_proprietaire)
+            return set()
+        famille = _famille(nom)
         #  Du plus sûr au plus large ; le premier palier qui désigne UN
         #  copropriétaire l'emporte, un palier ambigu arrête la recherche.
         paliers = (
@@ -140,10 +139,27 @@ def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int
             #  sous 408944 et 408946 se lisait comme deux personnes, et rien ne se
             #  rattachait. Des homonymes aux prénoms différents restent ambigus.
             if candidats and len({nom_de[c] for c in candidats}) == 1:
-                return premier(set().union(*(lots_de[c] for c in candidats)))
+                return set().union(*(lots_de[c] for c in candidats))
             if candidats:
-                return None
-        return None
+                return set()
+        return set()
+
+    return trouver
+
+
+def _par_coproprietaire(session: Session, nature: str) -> Callable[[object], int | None]:
+    """Télécommande : le nom du fichier → un copropriétaire du fichier des lots → son lot."""
+    natures = {lot.id: valeur(lot.type) for lot in session.exec(select(Lot)).all()}
+    numeros = {lot.id: lot.numero for lot in session.exec(select(Lot)).all()}
+    lots_de = lots_du_nom(session)
+
+    def premier(lots: set[int]) -> int | None:
+        """Le premier parking par numéro, à défaut le premier lot."""
+        ordre = sorted(lots, key=lambda i: (natures.get(i) != nature, _cle_numero(numeros.get(i))))
+        return ordre[0] if ordre else None
+
+    def trouver(imp) -> int | None:
+        return premier(lots_de(imp.nom_proprietaire))
 
     return trouver
 
@@ -189,4 +205,4 @@ def trouveur_de_lot(type_acces, session: Session) -> Callable[[object], bool]:
     return etape
 
 
-__all__ = ["trouveur_de_lot"]
+__all__ = ["lots_du_nom", "trouveur_de_lot"]

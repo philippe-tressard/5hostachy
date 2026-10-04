@@ -28,7 +28,7 @@ from app.utils.recuperer import ou_404
 from pydantic import BaseModel
 
 from .commun import BailCreateMulti, BailOut, BailTerminer, BailUpdate
-from app.utils.acces_bail import rendre_au_bailleur
+from app.utils.acces_bail import adopter_declares, rendre_au_bailleur
 from app.auth.appartenance import exiger_bail_du_bailleur, exiger_lot_du_bailleur
 
 router = APIRouter()
@@ -147,6 +147,9 @@ def creer_bail_multi(
         )
         session.add(bail)
         created.append(bail)
+    session.flush()
+    for bail in created:
+        adopter_declares(session, bail)
     session.commit()
     for b in created:
         session.refresh(b)

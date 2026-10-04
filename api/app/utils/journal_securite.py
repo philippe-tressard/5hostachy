@@ -61,6 +61,11 @@ _NIVEAUX: dict[str, int] = {
     "jeton_rejoue": logging.WARNING,
     #  Un locataire lié à un lot par le seul nom (#1136) : il en porte les badges.
     "rattachement_auto": logging.WARNING,
+    #  Un locataire qui se déclare lui-même sur les lots de son propriétaire,
+    #  lus au fichier du syndic : il en reçoit les badges (04/10/2026). Et la
+    #  déclaration d'un lot qui ne lui était pas proposé — requête forgée.
+    "rattachement_declare": logging.WARNING,
+    "rattachement_hors_proposition": logging.WARNING,
     #  Un bail demandé sur un lot dont on n'est pas copropriétaire (#1535) :
     #  l'écran ne le propose pas, la requête a donc été forgée.
     "bail_hors_de_ses_lots": logging.WARNING,

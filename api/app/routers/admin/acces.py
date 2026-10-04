@@ -17,6 +17,7 @@ from app.models.core import (
     CommandeAcces,
     Lot,
     StatutCommande,
+    TypeLien,
     UserLot,
     Utilisateur,
 )
@@ -270,6 +271,13 @@ def supprimer_user_lot(
     ul = ou_404(session, UserLot, user_lot_id, "Association user-lot")
     uid_supprime = ul.user_id
     lot_id_supprime = ul.lot_id
+    #  Un locataire qui s'était déclaré sur ce lot rend les badges qu'il s'était
+    #  remis : défaire le lien sans eux laisserait le badge « chez le locataire »
+    #  d'un lot qui n'en a plus (`utils/rattachement_locataire`).
+    if valeur(ul.type_lien) == TypeLien.locataire.value:
+        from app.utils.rattachement_locataire import rendre_acces_declares
+
+        rendre_acces_declares(session, uid_supprime, lot_id_supprime)
     session.delete(ul)
     # Retirer ce user de l'utilisateurs_json de tout import lié à ce lot
     from app.models.core import LotImport

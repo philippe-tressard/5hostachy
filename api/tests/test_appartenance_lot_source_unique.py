@@ -285,7 +285,7 @@ def test_aucune_exception_ne_survit_a_son_motif():
 NOMS_DE_LOT = {"lot_id", "lot_ids"}
 
 #: Les questions d'appartenance — appelées par la route elle-même.
-QUESTIONS = {"est_rattache_au_lot", "exiger_lot_du_bailleur"}
+QUESTIONS = {"est_rattache_au_lot", "exiger_lot_du_bailleur", "exiger_lots_proposes_au_locataire"}
 
 #: Les routes qui reçoivent un lot SANS poser la question, et pourquoi. Nommées
 #: une par une, vérifiées dans les deux sens comme `EXCEPTIONS`.
