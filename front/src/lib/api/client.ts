@@ -176,6 +176,25 @@ async function echecApi(
 	return new ApiError(res.status, rawDetail, undefined, cheminNu(path));
 }
 
+/**
+ * 🔴 **Une lecture qui tombe pendant un redémarrage de l'API se rejoue UNE fois** (#1662).
+ *
+ * Relevé en production le 03/10/2026 : un `GET /tickets` reçu pendant la recréation
+ * du conteneur de l'API rendait 503, et le résident lisait « Service momentanément
+ * indisponible » deux secondes avant que tout réponde.
+ *
+ * 502 (Caddy sans amont), 503 (l'API qui s'arrête ou démarre) et 504 sont
+ * TRANSITOIRES par nature. Une lecture est idempotente : la rejouer ne coûte rien.
+ * Jamais une écriture — un POST rejoué pourrait s'exécuter deux fois, et le
+ * résident ne le verrait pas. `relance-lecture.spec.ts` tient les deux sens.
+ *
+ * Une seule relance, pas une boucle : une panne qui dure doit se voir, et se
+ * compter (`signalerErreur`, dans `echecApi`) — seule la réponse FINALE est comptée,
+ * puisqu'une panne rattrapée n'a pas été vue.
+ */
+const CODES_TRANSITOIRES = [502, 503, 504];
+const DELAI_RELANCE_MS = 2000;
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const headers: Record<string, string> = {};
 	if (body) headers['Content-Type'] = 'application/json';
@@ -187,7 +206,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 		credentials: 'include',
 	};
 
-	const res = await envoyerAvecRenouvellement(() => fetch(`${BASE}${path}`, opts), path);
+	const envoyer = () => envoyerAvecRenouvellement(() => fetch(`${BASE}${path}`, opts), path);
+	let res = await envoyer();
+	if (method === 'GET' && CODES_TRANSITOIRES.includes(res.status)) {
+		await new Promise((fin) => setTimeout(fin, DELAI_RELANCE_MS));
+		res = await envoyer();
+	}
 	if (!res.ok) throw await echecApi(res, method, path, 'Erreur serveur');
 
 	if (res.status === 204) return undefined as T;
