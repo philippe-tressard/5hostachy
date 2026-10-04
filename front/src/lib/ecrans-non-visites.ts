@@ -67,7 +67,7 @@ function sansPictogramme(libelle: string): string {
 
 /**
  * Les écrans de la table, dédoublonnés par route. La page passe avant ses onglets,
- * et le premier nom rencontré fait foi (`/admin?onglet=x` se replie sur `/admin`).
+ * et le premier nom rencontré fait foi (un onglet de l'administration se replie sur `/admin`).
  *
  * @param idsReservees les pages que seul un rôle ouvre (`pages-roles.ts`).
  */
@@ -89,7 +89,7 @@ export function ecransDeclares(
 			poser(o.route, libelle, reserve);
 			//  Un sous-onglet n'a pas de libellé dans la table : son dernier segment d'adresse le nomme.
 			for (const s of o.sous ?? [])
-				poser(s.route, `${libelle} › ${s.route.split('/').pop()}`, reserve);
+				poser(s.route, `${libelle} › ${s.route.slice(s.route.lastIndexOf('/') + 1)}`, reserve);
 		}
 	}
 	return [...vus.values()];

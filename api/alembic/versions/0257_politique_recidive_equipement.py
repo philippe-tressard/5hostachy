@@ -35,7 +35,7 @@ def _passage(clause: str) -> str:
     return f"les personnes désignées par leur rôle{clause}, sont transmis pour en rédiger un bilan"
 
 
-def _remplacer(sens: int) -> None:
+def _poser_la_clause(sens: int) -> None:
     from app.seed.contenus_legaux import SYNTHESE_RECIDIVE
     from app.utils.textes_livres import remplacer_passage
 
@@ -49,8 +49,8 @@ def _remplacer(sens: int) -> None:
 
 
 def upgrade() -> None:
-    _remplacer(+1)
+    _poser_la_clause(+1)
 
 
 def downgrade() -> None:
-    _remplacer(-1)
+    _poser_la_clause(-1)
