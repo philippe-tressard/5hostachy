@@ -125,9 +125,9 @@ export interface Notation {
 /**  La synthèse d'un prestataire pour le reporting — `GET /prestataires/synthese/{id}`,
  *   un dict composé à la main : la fiche, ses contrats ACTIFS et ses avis.
  *
- *   ⚠️ Les contrats y sont relus par `ContratRead.model_validate` SANS
- *   `poser_echeance` : `date_fin`, `reconduit`, `echu`, `archivee` et
- *   `synthese_disponible` y gardent leur valeur par défaut, pas la vraie. */
+ *   Les contrats sont lus par `lire_contrats`, comme ceux de la liste : `date_fin`,
+ *   `reconduit`, `echu`, `archivee` et `synthese_disponible` y sont calculés. Ils
+ *   gardaient leur valeur par défaut jusqu'à #1687. */
 export interface SynthesePrestataire extends Prestataire {
 	contrats: ContratEntretien[];
 	notations: Omit<Notation, 'prestataire_id' | 'auteur_id'>[];
