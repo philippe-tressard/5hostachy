@@ -33,14 +33,12 @@
  *  `id` imbriqué (`options: { id: number }[]`) n'est pas le champ du type, et
  *  une regex l'aurait confondu.
  *
- *  ## Le client lui-même : un plafond de `any` par module (#1572)
+ *  ## Le client lui-même : aucun `any` (#1572)
  *
- *  Le client rendait `any` et chaque écran retypait l'entité : le contrôle
- *  ci-dessus n'attrapait que la conséquence. `no-explicit-any` est coupé dans
- *  ESLint (la dette est trop grande pour l'allumer d'un coup) ; ce plafond par
- *  fichier de `src/lib/api/` le remplace. Il échoue DANS LES DEUX SENS : un
- *  `any` de plus, ou un `any` de moins sans que le plafond baisse — sinon la
- *  place libérée se reprend en silence. La carte des plafonds : #1571.
+ *  Le client rendait `any` et chaque écran retypait l'entité. Il en est à zéro
+ *  depuis v2.105.0 : c'est ESLint qui le tient (`no-explicit-any` en ERREUR sur
+ *  `src/lib/api/`, `eslint.config.js`) — le plafond par module qui le suivait
+ *  jusque-là n'a plus rien à compter, et un compteur à zéro serait muet.
  *
  *  Lancer : node scripts/check-types-locaux.mjs [--selftest]
  */
@@ -55,15 +53,6 @@ const DETTE = {
 	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
 };
-
-/**
- *  Les `any` du client, par module de `src/lib/api/` — à FAIRE BAISSER, jamais monter
- *  (#1572, carte #1571). Un module typé retire sa ligne.
- */
-const PLAFOND_ANY_CLIENT = {
-};
-
-const RACINE_CLIENT = 'src/lib/api';
 
 /** Un `id` qui n'est pas celui d'une entité de l'API. */
 const LEGITIMES = {
@@ -100,33 +89,8 @@ export function typesAvecId(source, chemin = 'x.svelte') {
 	return trouves;
 }
 
-/** Le nombre de `any` (mot-clé de type) d'une source TypeScript : l'arbre, pas le texte. PUR. */
-export function compterAny(source) {
-	const sf = ts.createSourceFile('x.ts', source, ts.ScriptTarget.Latest, true);
-	let n = 0;
-	const visiter = (x) => {
-		if (x.kind === ts.SyntaxKind.AnyKeyword) n++;
-		ts.forEachChild(x, visiter);
-	};
-	visiter(sf);
-	return n;
-}
-
 if (process.argv.includes('--selftest')) {
 	let ko = 0;
-	const tAny = (libelle, attendu, src) => {
-		const r = compterAny(src);
-		console.log(`${r === attendu ? 'PASS' : 'FAIL'}  ${libelle} → ${r}`);
-		if (r !== attendu) ko = 1;
-	};
-	tAny('un retour any[]', 1, "const l = () => api.get<any[]>('/x');");
-	tAny('trois any', 3, 'let a: any; let b = c as any; type T = { d: any };');
-	tAny(
-		'le mot « any » dans un commentaire ou une chaîne ne compte pas',
-		0,
-		"// any\nconst s = 'any';",
-	);
-	tAny('unknown n’est pas any', 0, 'const f = (d: unknown) => d;');
 	const t = (libelle, attendu, src, chemin) => {
 		const r = typesAvecId(src, chemin).join(',');
 		console.log(`${r === attendu ? 'PASS' : 'FAIL'}  ${libelle} → [${r}]`);
@@ -190,53 +154,6 @@ for (const chemin of tous) {
 	}
 }
 
-//  ── Les `any` du client (#1572) ─────────────────────────────────────────────────
-const modulesClient = readdirSync(RACINE_CLIENT).filter((f) => f.endsWith('.ts'));
-//  Cas zéro : le client a changé de place, ou le compteur ne voit plus rien.
-if (modulesClient.length < 8) {
-	console.error(
-		`✗ Cas zéro : ${modulesClient.length} module(s) dans ${RACINE_CLIENT}, au moins 8 attendus.`,
-	);
-	process.exit(1);
-}
-const compteClient = Object.fromEntries(
-	modulesClient.map((f) => [f, compterAny(readFileSync(join(RACINE_CLIENT, f), 'utf8'))]),
-);
-const totalAny = Object.values(compteClient).reduce((a, b) => a + b, 0);
-if (totalAny === 0) {
-	console.error('✗ Cas zéro : aucun `any` relevé dans le client — le compteur est muet.');
-	process.exit(1);
-}
-const anyEnHausse = [];
-const anyEnBaisse = [];
-for (const [f, n] of Object.entries(compteClient)) {
-	const plafond = PLAFOND_ANY_CLIENT[f] ?? 0;
-	if (n > plafond) anyEnHausse.push(`${f} : ${n} any, plafond ${plafond}`);
-	else if (n < plafond) anyEnBaisse.push(`${f} : ${n} any, plafond ${plafond} → écrire ${n}`);
-}
-for (const f of Object.keys(PLAFOND_ANY_CLIENT))
-	if (!(f in compteClient)) anyEnBaisse.push(`${f} : le module n'existe plus → retirer la ligne`);
-if (anyEnHausse.length) {
-	console.error(
-		`\n✗ ${anyEnHausse.length} module(s) du client rendent plus de any que leur plafond :\n`,
-	);
-	for (const l of anyEnHausse) console.error(`   ${l}`);
-	console.error(
-		'\n  Typer le retour (interface dans le module du domaine, ou `$lib/api/types.ts`)' +
-			"\n  au lieu de rendre `any` : chaque écran retypait sinon l'entité à sa façon (#1572).\n",
-	);
-	process.exit(1);
-}
-if (anyEnBaisse.length) {
-	console.error(`\n✗ ${anyEnBaisse.length} plafond(s) de any à baisser :\n`);
-	for (const l of anyEnBaisse) console.error(`   ${l}`);
-	console.error(
-		'\n  Le client est mieux typé : écrire la nouvelle valeur dans `PLAFOND_ANY_CLIENT`,' +
-			'\n  sinon la place libérée se reprend en silence.\n',
-	);
-	process.exit(1);
-}
-
 const perimees = [...Object.keys(DETTE), ...Object.keys(LEGITIMES)].filter((c) => !vus.has(c));
 
 if (nouveaux.length) {
@@ -262,6 +179,5 @@ if (perimees.length) {
 
 console.log(
 	`✓ Types locaux : aucun type d'entité nouveau dans les écrans — ` +
-		`${Object.keys(DETTE).length} en dette (#1044), ${Object.keys(LEGITIMES).length} légitimes. ` +
-		`Client : ${totalAny} any sous plafond (#1572).`,
+		`${Object.keys(DETTE).length} en dette (#1044), ${Object.keys(LEGITIMES).length} légitimes.`,
 );

@@ -544,8 +544,8 @@ importe les gestes du transport.
 - [ ] …et il **rend le type** de ce que le serveur renvoie, déclaré à côté de lui —
       jamais `any` qu'un écran retype. Un type d'entité (champ `id`) déclaré dans un
       écran est refusé (`npm run lint:types-locaux`, #1044 ; l'existant y est déclaré), et
-      le même contrôle tient un **plafond de `any` par module du client**
-      (`PLAFOND_ANY_CLIENT`, #1572 : il échoue dans les deux sens ; la valeur se lit là)
+      le client ne rend **aucun `any`** : ESLint `no-explicit-any` en erreur sur
+      `src/lib/api/` (`eslint.config.js`, #1572 — 119 → 0 en v2.105.0)
 - [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
       24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
       exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur
