@@ -125,7 +125,14 @@ def corps_du_manuel(html: str) -> str:
         corps,
         flags=re.S | re.I,
     )
-    corps = re.sub(r"<details([^>]*)>", r"<div\1>", corps, flags=re.I)
+    #  Le `name` d'un `<details>` le range dans un accordéon (un seul déplié à la
+    #  fois, à l'écran) : il n'a pas de sens sur un `<div>`, et tout est déplié ici.
+    corps = re.sub(
+        r"<details([^>]*)>",
+        lambda m: "<div" + re.sub(r'\s+name="[^"]*"', "", m.group(1)) + ">",
+        corps,
+        flags=re.I,
+    )
     corps = re.sub(r"</details>", "</div>", corps, flags=re.I)
     #  🔴 « UN LOGICIEL LIBRE » NE FIGURE PAS DEUX FOIS (05/09/2026).
     #
