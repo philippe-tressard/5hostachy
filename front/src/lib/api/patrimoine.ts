@@ -11,7 +11,7 @@
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, buildQuery, postFormData, BASE } from './client';
 import { uploadExcel, type CompteImportTableur } from './documents';
-import type { SyntheseAffaire } from './synthese';
+import type { ExerciceLu, ResumeAffaires, SyntheseAffaire } from './synthese';
 import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
 
 //  ── Ce que le serveur RENVOIE (#1572) ───────────────────────────────────────────
@@ -211,6 +211,29 @@ export interface Carnet {
 	total: number;
 }
 
+/**  Un intervenant et la durée moyenne de son étape « Chez le prestataire ». */
+export interface PrestataireLent {
+	prestataire_id: number;
+	nom: string;
+	jours: number;
+	nombre: number;
+}
+
+/**  Les moyennes d'une catégorie d'affaire du carnet sur l'exercice. */
+export interface CategorieBilan extends ResumeAffaires {
+	categorie: string;
+	prestataires: PrestataireLent[];
+}
+
+/**  Le bilan d'un exercice (#1645) — `routers/carnet.BilanCarnet`. `fin` est le
+ *   DERNIER jour de l'exercice, inclus. */
+export interface BilanCarnet {
+	exercice: ExerciceLu & { debut: string; fin: string };
+	exercices: ExerciceLu[];
+	categories: CategorieBilan[];
+	nombre: number;
+}
+
 /**  Le carnet d'entretien — réservé aux copropriétaires, au CS et à l'admin
  *   (décret n° 2001-477, arbitré le 10/09/2026). Le droit est tenu par
  *   `require_proprietaire` côté serveur ; l'écran ne fait que s'y conformer. */
@@ -222,6 +245,11 @@ export const carnet = {
 		api.get<Carnet>(
 			`/carnet-entretien${perimetre ? `?perimetre=${encodeURIComponent(perimetre)}` : ''}`,
 		),
+	/**  Le bilan d'un exercice — RÉSERVÉ au conseil syndical (`require_cs_or_admin`,
+	 *   arbitré le 04/10/2026). `exercice` est l'année où il commence ; absent,
+	 *   l'exercice en cours. */
+	metriques: (exercice?: number | null) =>
+		api.get<BilanCarnet>(`/carnet-entretien/metriques${exercice ? `?exercice=${exercice}` : ''}`),
 };
 
 export const copropriete = {

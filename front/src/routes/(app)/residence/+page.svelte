@@ -28,6 +28,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import SectionRegles from '$lib/components/SectionRegles.svelte';
 	import CarnetEntretien from '$lib/components/CarnetEntretien.svelte';
+	import BilanCarnet from '$lib/components/BilanCarnet.svelte';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
 	import RubriqueDocuments from '$lib/components/RubriqueDocuments.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
@@ -208,6 +209,12 @@
 <!--  Le carnet est une VUE de la résidence, pas un écran à part : il partage
       l'en-tête, la barre d'onglets et l'adresse de cette page. -->
 {#if onglet === 'carnet'}
+	<!--  📊 Le bilan de l'exercice (#1645) : le conseil syndical seul, replié à
+	      l'arrivée. À côté du carnet et non dedans — le carnet est la lecture de
+	      tous les copropriétaires, le bilan celle du conseil. -->
+	{#if $isCS}
+		<BilanCarnet />
+	{/if}
 	<CarnetEntretien />
 {:else if onglet === 'fiche' && loading}
 	<EtatListe chargement />

@@ -15,21 +15,81 @@ exactement cela (propriétaire **ou** conseil syndical **ou** admin). Réécrire
 condition dans ce fichier en aurait fait une seconde version, libre de diverger au
 premier durcissement — c'est `standards/03` §1, et c'est la dérive que
 `_require_bailleur` avait produite sur dix-sept endpoints.
+
+## Le bilan de l'exercice : le conseil syndical seul (#1645)
+
+`GET /carnet-entretien/metriques` — les moyennes des affaires du carnet closes
+sur un exercice comptable. Arbitré le 04/10/2026 : un argument chiffré pour
+l'assemblée générale, que le conseil prépare — `require_cs_or_admin`, et non le
+droit du carnet. Le calcul vit dans `utils/synthese_affaire/agregats`.
 """
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.auth.deps import require_proprietaire
+from app.auth.deps import require_cs_or_admin, require_proprietaire
 from app.database import get_session
 from app.models.core import Utilisateur
+from app.schemas_synthese import ExerciceLu, ResumeAffaires
 from app.utils.carnet_entretien import construire_carnet
+from app.utils.synthese_affaire.agregats import bilan_carnet
 
 router = APIRouter(prefix="/carnet-entretien", tags=["carnet-entretien"])
+
+
+class ExerciceBorne(ExerciceLu):
+    """L'exercice affiché, avec son premier et son DERNIER jour (inclus)."""
+
+    debut: date
+    fin: date
+
+
+class PrestataireLent(BaseModel):
+    """Un intervenant et la durée moyenne de l'étape « Chez le prestataire »."""
+
+    prestataire_id: int
+    nom: str
+    jours: float
+    nombre: int
+
+
+class CategorieBilan(ResumeAffaires):
+    """Les moyennes d'une catégorie d'affaire du carnet sur l'exercice."""
+
+    categorie: str
+    prestataires: list[PrestataireLent] = []
+
+
+class BilanCarnet(BaseModel):
+    """Le bilan d'un exercice : ses catégories, et les exercices qu'on peut choisir."""
+
+    exercice: ExerciceBorne
+    exercices: list[ExerciceLu]
+    categories: list[CategorieBilan]
+    nombre: int
+
+
+@router.get("/metriques", response_model=BilanCarnet)
+def lire_bilan(
+    exercice: Optional[int] = Query(default=None, ge=2000, le=2100),
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Le bilan d'un exercice — `exercice` est l'année où il commence ; absent, l'en-cours.
+
+    Toutes les affaires du carnet closes sur l'exercice (résolues ou annulées),
+    mesurées comme leur synthèse : durées en jours ouvrés, moyennes par étape du
+    kanban, relances au syndic, intervenants les plus lents. Le conseil voit
+    toutes les affaires (`ticket_visible` lui ouvre tout) : aucun filtre de
+    lecture à rejouer ici.
+    """
+    return bilan_carnet(session, exercice)
 
 
 @router.get("")
