@@ -180,14 +180,51 @@ feat(b) : deux"
   t "build échoué : images en arrière"     FAIL    verdict_images_standby abc1234 def4567
   t "marqueur absent : rien de prouvé"     INCONNU verdict_images_standby abc1234 ""
   t "code du standby non mesuré"           INCONNU verdict_images_standby "" abc1234
-  #  Le point 12, par SERVICE (04/10/2026) : une MEP du seul front laissait le
-  #  conteneur de l'API antérieur au dernier commit, et le point rendait FAIL.
-  t "conteneur recréé après son commit"    OK      verdict_image_service 2026-10-04T12:05:21+02:00 2026-10-04T12:00:27+02:00
-  t "commit du service non reconstruit"    FAIL    verdict_image_service 2026-10-04T10:51:43+02:00 2026-10-04T12:00:27+02:00
-  t "fuseaux différents, même instant"     OK      verdict_image_service 2026-10-04T10:00:27Z 2026-10-04T12:00:27+02:00
-  t "aucun commit pour ce répertoire"      INCONNU verdict_image_service 2026-10-04T10:51:43+02:00 ""
-  t "conteneur absent"                     INCONNU verdict_image_service "" 2026-10-04T12:00:27+02:00
-  t "date illisible"                       INCONNU verdict_image_service hier 2026-10-04T12:00:27+02:00
+  #  Le point 12 juge le CONTENU servi (#1675) : 1) les images étiquetées
+  #  sont-elles bâties sur un code qui contient le dernier commit du service
+  #  (`inclus`, lu au marqueur `.images-construites`) ? 2) le conteneur
+  #  tourne-t-il sur le manifeste de l'image étiquetée ? Arguments : inclus,
+  #  manifeste du conteneur, manifeste de l'image étiquetée.
+  #  🔴 Le cas du 04/10 : `FROM caddy:2.11` commité, image bâtie depuis le
+  #  cache (MÊME manifeste), conteneur non recréé — et à juste titre. La
+  #  règle par date rendait FAIL et bloquait la MEP suivante.
+  t "Caddy du 04/10 : commit sans effet sur l'image" OK   verdict_image_service oui sha256:80973cea sha256:80973cea
+  #  whatsapp du 04/10 : index d'image différent (attestation de build), même
+  #  manifeste — le conteneur sert bien l'image étiquetée.
+  t "même manifeste, autre index : servi"  OK          verdict_image_service oui sha256:7b6475c0 sha256:7b6475c0
+  t "conteneur ≠ image étiquetée"          NON_RECREE  verdict_image_service oui sha256:aaaa1111 sha256:bbbb2222
+  t "images bâties sans le commit"         PERIMEE     verdict_image_service non sha256:aaaa1111 sha256:aaaa1111
+  #  Les deux à la fois : recréer ne suffirait pas, le build d'abord.
+  t "périmée ET non recréée : le build"    PERIMEE     verdict_image_service non sha256:aaaa1111 sha256:bbbb2222
+  #  Le fait mesuré se dit même quand l'autre mesure manque.
+  t "marqueur illisible, conteneur ≠"      NON_RECREE  verdict_image_service - sha256:aaaa1111 sha256:bbbb2222
+  t "marqueur illisible, même manifeste"   INCONNU     verdict_image_service - sha256:aaaa1111 sha256:aaaa1111
+  t "conteneur absent"                     INCONNU     verdict_image_service oui - sha256:aaaa1111
+  t "image étiquetée illisible"            INCONNU     verdict_image_service oui sha256:aaaa1111 -
+  t "aucune mesure"                        INCONNU     verdict_image_service "" "" ""
+  #  La COLLECTE du point 12, exécutée sur un docker et un git simulés : la
+  #  forme `--platform` du démon à magasin containerd, et l'ordre des champs
+  #  que la boucle du pré-check lit. Un dépôt jetable tient lieu de /opt/5hostachy.
+  _r12=$(mktemp -d 2>/dev/null)
+  if [ -n "$_r12" ]; then
+    echo b9cd7457 > "$_r12/.images-construites"
+    _c12() { bash -c "$(declare -f collecte_images_servies)
+      docker() { case \"\$*\" in
+        *ImageManifestDescriptor.Digest*) [ \"\$2\" = hostachy_caddy ] && echo sha256:conteneur-caddy || echo sha256:m-\$2 ;;
+        *Platform*) echo linux/arm64 ;;
+        *Config.Image*) echo img-\$2 ;;
+        'image inspect --platform linux/arm64 '*) echo sha256:m-\${5#img-} ;;
+        *) return 1 ;; esac; }
+      git() { case \"\$1\" in log) echo ce5cba6a ;; merge-base) [ \"\$4\" = b9cd7457 ] ;; esac; }
+      eval \"\$(collecte_images_servies '$_r12')\"" | grep "^$1 "; }
+    t "collecte : service, inclus, manifestes, commit, marqueur"       "api oui sha256:m-hostachy_api sha256:m-hostachy_api ce5cba6a b9cd7457" _c12 api
+    t "collecte : le conteneur Caddy sur un autre manifeste"       "caddy oui sha256:conteneur-caddy sha256:m-hostachy_caddy ce5cba6a b9cd7457" _c12 caddy
+    rm -f "$_r12/.images-construites"
+    t "collecte : marqueur absent → inclus inconnu (-)"       "front - sha256:m-hostachy_front sha256:m-hostachy_front ce5cba6a -" _c12 front
+    rm -rf "$_r12"
+  else
+    echo "SKIP  collecte du point 12 : pas de répertoire temporaire"
+  fi
   t "parité non mesurable"               INCONNU verdict_parite "" def456
   t "battement récent"                   OK      verdict_age_min 5 20
   t "battement manquant"                 FAIL    verdict_age_min 90 20
