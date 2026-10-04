@@ -617,6 +617,12 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   deux sens** — un clone ajouté, ou un retiré sans baisser `PLAFOND_CLONES`. Les
   six qui restent sont des déclarations que le langage force à répéter (blocs
   d'imports, signatures), nommées dans l'en-tête du script.
+- 🔒 **La CI se rejoue à l'identique** (#1584) : tout `pip install` s'épingle
+  (`test_ci_installations_epinglees.py`) et chaque `uses:` s'écrit par **SHA** avec
+  sa version en commentaire (`test_ci_actions_epinglees.py` — Dependabot suit les
+  deux). Un workflow se mesure comme du code (500 lignes) ; `ci.yml` seul est admis
+  au-dessus, par une **exception nominative** de `scripts-ci-modularite.sh`
+  (`EXCEPTIONS_PLAFOND`, #1547) qui échoue quand elle ne sert plus.
 - Lancer en local (deps requises) : `cd api && pytest tests/ -q`.
 
 ### Scripts d'infra — job CI `test-scripts` (depuis le 30/07/2026)

@@ -15,8 +15,8 @@ installe. Une exception se NOMME dans `EXCEPTIONS` avec sa raison, et une except
 qui ne sert plus fait échouer le test : une liste qu'on ne nettoie pas finit par
 tout autoriser.
 
-CE QU'IL NE LIT PAS : les `uses:` (tags d'actions) ni la protection de branche —
-décisions à part, hors de ce garde-fou.
+CE QU'IL NE LIT PAS : les `uses:` — `test_ci_actions_epinglees.py` (#1584) — ni la
+protection de branche, qui se règle chez GitHub et non dans le dépôt.
 """
 
 import re
