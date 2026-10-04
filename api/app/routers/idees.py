@@ -24,6 +24,7 @@ from app.models.core import (
 from app.utils.archivage import est_archivable, seuil_archivage_jours
 from app.utils.communaute import exiger_acces
 from app.utils.perimetres import parse_json_perimetres, perimetre_cible_json
+from app.auth.appartenance import exiger_cible_visible
 from app.utils.visibility import idee_visible
 from app.routers.reponses_communaute import (
     enregistrer_routes_reponses,
@@ -221,13 +222,11 @@ def voter(
 ):
     exiger_acces(user)
     exiger_non_externe(user, "voter")
-    idee = session.get(Idee, idee_id)
     #  🔒 Voir ET voter suivent la même règle : sans ce contrôle, un résident hors
     #  du public visé pesait sur une idée qui ne lui était pas adressée, en
     #  appelant l'endpoint directement — la liste ne la lui montrait déjà plus.
     #  404 et non 403 : « interdit » confirmerait l'existence de l'idée.
-    if not idee or not idee_visible(idee, user):
-        raise HTTPException(404, "Idée introuvable")
+    exiger_cible_visible(session, Idee, idee_id, "Idée", user, idee_visible)
 
     existant = session.exec(
         select(VoteIdee).where(VoteIdee.idee_id == idee_id, VoteIdee.user_id == user.id)
@@ -261,11 +260,9 @@ def update_idee(
     et redéposer — ce qui perd les votes et les réponses déjà reçus.
     """
     exiger_acces(user)
-    idee = session.get(Idee, idee_id)
     #  404 et non 403 quand elle n'est pas visible : « interdit » confirmerait son
     #  existence. L'auteur, lui, voit toujours la sienne (`cible_visible`).
-    if not idee or not idee_visible(idee, user):
-        raise HTTPException(404, "Idée introuvable")
+    idee = exiger_cible_visible(session, Idee, idee_id, "Idée", user, idee_visible)
     #  🔒 `peut_editer` — l'auteur ou un admin, du module central. **Pas le
     #  conseil syndical** : il décide du STATUT d'une idée, il ne réécrit pas la
     #  proposition de quelqu'un. C'est exactement la règle du sondage, et c'est la

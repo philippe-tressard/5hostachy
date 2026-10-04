@@ -33,7 +33,7 @@ import json
 from app.utils import horloge
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -50,6 +50,7 @@ from app.utils.apercu_diffusion import (
 from app.utils.copie_auteur import adresse_copie
 from app.utils.perimetres import perimetre_cible_json
 from app.utils.photos import photos_internes
+from app.utils.recuperer import ou_404
 
 from .annonces_hall_courriels import (
     contexte_annonce_hall,
@@ -132,8 +133,7 @@ def apercu_diffusion_annonce(
     if brouillon.ticket_id is not None:
         from app.models.core import Ticket
 
-        if not session.get(Ticket, brouillon.ticket_id):
-            raise HTTPException(404, "Actualité introuvable")
+        ou_404(session, Ticket, brouillon.ticket_id, "Actualité")
 
     annonce = _annonce_previsionnelle(brouillon, user)
     canaux: list[ApercuCanal] = []

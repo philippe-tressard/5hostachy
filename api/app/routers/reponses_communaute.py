@@ -47,6 +47,7 @@ from app.auth.deps import exiger_non_externe, get_current_user, peut_commenter
 from app.database import get_session
 from app.models.core import ReponseCommunaute, Utilisateur
 from app.utils.communaute import exiger_acces
+from app.utils.recuperer import ou_404
 from app.utils.reponses import (
     auteur_meta,
     enrich_reponse,
@@ -187,9 +188,13 @@ def enregistrer_routes_reponses(
         """Supprimer une réponse : son auteur, ou un CS/admin."""
         exiger_acces(user)
         exiger_cible_visible(session, modele, cible_id, libelle, user, visible_de)
-        rep = session.get(ReponseCommunaute, rep_id)
-        if not rep or rep.rubrique != rubrique or rep.cible_id != cible_id:
-            raise HTTPException(404, "Réponse introuvable")
+        rep = ou_404(
+            session,
+            ReponseCommunaute,
+            rep_id,
+            "Réponse",
+            sous={"rubrique": rubrique, "cible_id": cible_id},
+        )
         if not peut_commenter(rep, user):
             raise HTTPException(403, "Vous ne pouvez supprimer que vos propres réponses")
         session.delete(rep)

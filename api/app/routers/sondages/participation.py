@@ -148,9 +148,9 @@ def supprimer_commentaire(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    c = session.get(CommentaireSondage, commentaire_id)
-    if not c or c.sondage_id != sondage_id:
-        raise HTTPException(404, "Commentaire introuvable")
+    c = ou_404(
+        session, CommentaireSondage, commentaire_id, "Commentaire", sous={"sondage_id": sondage_id}
+    )
     #  L'auteur, ou un modérateur — règle du module central.
     if not peut_commenter(c, user):
         raise HTTPException(403, "Non autorisé")
