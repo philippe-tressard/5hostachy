@@ -5,7 +5,7 @@
 	import CarteContact, { type Medaillon } from '$lib/components/CarteContact.svelte';
 	import QRCode from '$lib/components/QRCode.svelte';
 	import { onMount } from 'svelte';
-	import { annuaire as annuaireApi } from '$lib/api';
+	import { annuaire as annuaireApi, type Annuaire, type MembreAnnuaireCS } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateLong as formatDate } from '$lib/date';
@@ -21,7 +21,7 @@
 	//  étaient recopiés à l'identique sur les deux rendus d'un membre du CS
 	//  (groupé par bâtiment, et sans groupe). Une règle d'affichage qui s'écrit
 	//  deux fois finit par ne plus dire la même chose des deux côtés.
-	function medaillonsCs(m: MembreCS): Medaillon[] {
+	function medaillonsCs(m: MembreAnnuaireCS): Medaillon[] {
 		const med: Medaillon[] = [];
 		if (m.est_gestionnaire_site)
 			med.push({
@@ -40,49 +40,22 @@
 			: [];
 	}
 
-	interface MembreCS {
-		id: number;
-		genre: string;
-		prenom: string;
-		nom: string;
-		batiment_nom: string | null;
-		etage: number | null;
-		est_gestionnaire_site: boolean;
-		est_president: boolean;
-		photo_url: string | null;
-	}
-	interface MembreSyndic {
-		id: number;
-		genre: string;
-		prenom: string;
-		nom: string;
-		fonction: string | null;
-		email: string | null;
-		telephone: string | null;
-		est_principal: boolean;
-		photo_url: string | null;
-	}
-	interface AnnuaireData {
-		cs: { ag_annee: number | null; ag_date: string | null; membres: MembreCS[] };
-		syndic: {
-			nom_syndic: string;
-			adresse: string;
-			site_web: string | null;
-			membres: MembreSyndic[];
-		};
-		whatsapp_url: string | null;
-	}
-
-	let data: AnnuaireData = {
+	let data: Annuaire = {
 		cs: { ag_annee: null, ag_date: null, membres: [] },
-		syndic: { nom_syndic: '', adresse: '', site_web: null, membres: [] },
+		syndic: {
+			nom_syndic: '',
+			nom_syndic_source: 'aucune',
+			adresse: '',
+			site_web: null,
+			membres: [],
+		},
 		whatsapp_url: null,
 	};
 	let loading = true;
 
 	onMount(async () => {
 		try {
-			data = (await annuaireApi.get()) as AnnuaireData;
+			data = await annuaireApi.get();
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -104,7 +77,7 @@
 	});
 
 	$: batimentsCS = (() => {
-		const groups = new Map<string, MembreCS[]>();
+		const groups = new Map<string, MembreAnnuaireCS[]>();
 		for (const m of data.cs.membres) {
 			const key = m.batiment_nom ?? '';
 			if (!groups.has(key)) groups.set(key, []);

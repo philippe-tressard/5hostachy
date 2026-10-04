@@ -54,8 +54,7 @@ const RACINES = ['src/routes', 'src/lib/components'];
 const DETTE = {
 	'lib/components/RechercheLocataire.svelte::Compte': '#1044',
 	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
-	'routes/(app)/annuaire/+page.svelte::MembreCS': '#1044',
-	'routes/(app)/annuaire/+page.svelte::MembreSyndic': '#1044',
+	'routes/(app)/espace-cs/+page.svelte::PendingAcces': '#1044',
 	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
 };
 
@@ -65,7 +64,7 @@ const DETTE = {
  */
 const PLAFOND_ANY_CLIENT = {
 	'acces.ts': 21,
-	'index.ts': 10,
+	'administration.ts': 41,
 	'patrimoine.ts': 25,
 	'prestataires.ts': 17,
 	'telemetrie.ts': 1,

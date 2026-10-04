@@ -42,6 +42,108 @@ export * from './synthese';
 export * from './reglement';
 export * from './assistant';
 
+//  ── Ce que le serveur RENVOIE (#1572) ───────────────────────────────────────────
+//
+//  Lus dans le code serveur, route par route — jamais supposés (même motif que
+//  `communaute.ts`). Les dates arrivent en chaîne ISO sans fuseau (UTC naïf).
+
+/**  Une demande de modification de profil, telle que `POST /auth/me/demande-modification`
+ *   la rend : la LIGNE `demande_modification_profil`, sans `response_model`. */
+export interface MaDemandeProfilCreee {
+	id: number;
+	utilisateur_id: number;
+	/** La valeur de `StatutUtilisateur` souhaitée, ou `null`. */
+	statut_souhaite: string | null;
+	batiment_id_souhaite: number | null;
+	motif: string | null;
+	statut_demande: 'en_attente' | 'approuvee' | 'rejetee';
+	motif_refus: string | null;
+	traite_par_id: number | null;
+	cree_le: string;
+	traite_le: string | null;
+}
+
+/**  Une de MES demandes — `GET /auth/me/demandes-modification` : la même ligne,
+ *   plus le libellé du bâtiment souhaité (`auth_profil.mes_demandes_modif`).
+ *
+ *   ⚠️ La création ne le rend PAS : une demande qu'on vient de déposer n'a pas
+ *   de `batiment_nom_souhaite` tant que la liste n'est pas relue. */
+export interface MaDemandeProfil extends MaDemandeProfilCreee {
+	batiment_nom_souhaite: string | null;
+}
+
+/**  Le compte rendu de la déclaration d'arrivée (`admin/arrivants._declencher_accueil_arrivant`). */
+export interface CompteRenduArrivee {
+	ok: boolean;
+	notifications_envoyees: number;
+	email_syndic: boolean;
+	/** Le NUMÉRO du ticket de suivi, `null` quand il existait déjà. */
+	ticket_suivi: string | null;
+	annonce_publiee: boolean;
+	/** Les consignes sont sorties de l'application (arrivant ET conseil servis). */
+	consignes_transmises: boolean;
+}
+
+/**  Une entrée de la FAQ — `FaqItemRead` (`routers/faq.py`). */
+export interface EntreeFaq {
+	id: number;
+	categorie: string;
+	question: string;
+	reponse: string;
+	ordre: number;
+	/** Toujours vrai dans `list` ; `listAll` (CS/admin) rend aussi les inactives. */
+	actif: boolean;
+	cree_le: string;
+	mis_a_jour_le: string;
+}
+
+/**  Un membre du conseil syndical dans l'annuaire — `utils/annuaire.membres_du_conseil`.
+ *
+ *   Monté de l'écran `annuaire` (#1044), qui le déclarait sous le nom `MembreCS`
+ *   pendant que le client rendait `any`. ⚠️ L'administration (`/admin/annuaire/cs`)
+ *   rend la même chose avec `ordre` et `user_id` en plus (`pour_administration`). */
+export interface MembreAnnuaireCS {
+	id: number;
+	genre: string;
+	prenom: string;
+	nom: string;
+	batiment_id: number | null;
+	/** Le NUMÉRO du bâtiment (« A »), pas son libellé. */
+	batiment_nom: string | null;
+	etage: number | null;
+	est_gestionnaire_site: boolean;
+	est_president: boolean;
+	photo_url: string | null;
+}
+
+/**  Un interlocuteur du syndic — `utils/annuaire.membres_du_syndic`. Même histoire
+ *   que `MembreAnnuaireCS`. */
+export interface MembreAnnuaireSyndic {
+	id: number;
+	genre: string;
+	prenom: string;
+	nom: string;
+	fonction: string | null;
+	email: string | null;
+	telephone: string | null;
+	est_principal: boolean;
+	photo_url: string | null;
+}
+
+/**  L'annuaire des résidents — `GET /admin/annuaire` (`routers/admin/annuaire.py`). */
+export interface Annuaire {
+	cs: { ag_annee: number | null; ag_date: string | null; membres: MembreAnnuaireCS[] };
+	syndic: {
+		/** Celui du contrat désigné, sinon la saisie ; `""` si ni l'un ni l'autre. */
+		nom_syndic: string;
+		nom_syndic_source: 'contrat' | 'saisie' | 'aucune';
+		adresse: string;
+		site_web: string | null;
+		membres: MembreAnnuaireSyndic[];
+	};
+	whatsapp_url: string | null;
+}
+
 export const auth = {
 	me: () => api.get<User>('/auth/me'),
 	login: (email: string, password: string) => api.post<User>('/auth/login', { email, password }),
@@ -68,13 +170,14 @@ export const auth = {
 		),
 	renvoyerVerification: (email: string) => api.post('/auth/renvoyer-verification', { email }),
 	batiments: () => api.get<{ id: number; numero: string }[]>('/auth/batiments'),
-	mesDemandes: () => api.get<any[]>('/auth/me/demandes-modification'),
-	demanderModification: (data: unknown) => api.post<any>('/auth/me/demande-modification', data),
+	mesDemandes: () => api.get<MaDemandeProfil[]>('/auth/me/demandes-modification'),
+	demanderModification: (data: unknown) =>
+		api.post<MaDemandeProfilCreee>('/auth/me/demande-modification', data),
 	declarerNouvelArrivant: (data: {
 		batiment?: string | null;
 		ancien_resident?: string | null;
 		ancien_resident_inconnu?: boolean;
-	}) => api.post<any>('/admin/me/accueil-arrivant', data),
+	}) => api.post<CompteRenduArrivee>('/admin/me/accueil-arrivant', data),
 	/** Les évènements (30 jours) ET les mois de présence (12 mois) : tout ce que le serveur tient. */
 	exportTelemetrie: () =>
 		api.get<{ evenements: unknown[]; mois_de_presence: string[] }>('/auth/me/telemetrie'),
@@ -250,14 +353,17 @@ export const flux = {
 // ── Upload fichiers ─────────────────────────────────────────────────────────
 
 export const faq = {
-	list: () => api.get<any[]>('/faq'),
-	listAll: () => api.get<any[]>('/faq/all'),
+	list: () => api.get<EntreeFaq[]>('/faq'),
+	listAll: () => api.get<EntreeFaq[]>('/faq/all'),
 	categories: () => api.get<string[]>('/faq/categories'),
-	create: (data: unknown) => api.post<any>('/faq', data),
-	update: (id: number, data: unknown) => api.patch<any>(`/faq/${id}`, data),
+	create: (data: unknown) => api.post<EntreeFaq>('/faq', data),
+	update: (id: number, data: unknown) => api.patch<EntreeFaq>(`/faq/${id}`, data),
 	reorder: (data: { id: number; ordre: number }[]) => api.patch<void>('/faq/reorder', data),
 	renameCategory: (old_name: string, new_name: string) =>
-		api.patch<any>('/faq/categories/rename', { old_name, new_name }),
+		api.patch<{ count: number; new_name: string }>('/faq/categories/rename', {
+			old_name,
+			new_name,
+		}),
 	delete: (id: number) => api.delete(`/faq/${id}`),
 };
 
@@ -268,16 +374,7 @@ export const manuel = {
 };
 
 export const annuaire = {
-	get: () =>
-		api.get<{
-			cs: { ag_annee: number | null; ag_date: string | null; membres: any[] };
-			syndic: {
-				nom_syndic: string;
-				nom_syndic_source?: 'contrat' | 'saisie' | 'aucune';
-				adresse: string;
-				membres: any[];
-			};
-		}>('/admin/annuaire'),
+	get: () => api.get<Annuaire>('/admin/annuaire'),
 };
 
 export const annoncesHall = {
