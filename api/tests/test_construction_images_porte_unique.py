@@ -11,6 +11,10 @@ La porte est `construire_images` (`scripts/lib/lib-parite.sh`) : elle lit le
 commit du dépôt au moment du build, l'exporte, puis construit. Ce test refuse
 tout `docker compose … build` (ou `up --build`) écrit ailleurs, et toute
 seconde écriture de `GIT_HASH=$(git rev-parse …)`.
+
+Même règle pour le DÉMARRAGE (#1697) : l'étiquette `git.hash` du front se lit au
+`up`, pas au build. Cinq `docker compose up -d` tournaient sans `GIT_HASH` et
+étiquetaient le front « dev » ; ils passent par `demarrer_conteneurs`.
 """
 
 from __future__ import annotations
@@ -30,6 +34,34 @@ BUILD = re.compile(
     r"""(?:\s+-f\s+\S+)?\s+(?:build\b|up\b[^#\n]*--build\b)"""
 )
 HASH = re.compile(r"\bGIT_HASH=\$\(\s*git\s+rev-parse")
+#: Un démarrage en position de commande (même forme que BUILD, sans `--build`).
+UP = re.compile(
+    r"""(?:^|&&|\|\||;|\bif\b|!|\bthen\b|["'(])\s*docker\s+compose"""
+    r"""(?:\s+-f\s+\S+)?\s+up\b"""
+)
+
+#: Scripts qui écrivent un `up` eux-mêmes, parce qu'ils exportent le commit DANS
+#: LEUR PROPRE SHELL avant : (marque à trouver dans le code, raison). Une entrée
+#: dont le script n'écrit plus de `up`, ou ne porte plus la marque, échoue.
+EXPORTEURS = {
+    "scripts/exploitation/auto-deploy.sh": (
+        "exporter_git_hash",
+        "exporte GIT_HASH en tête de déploiement, avant tout `up`",
+    ),
+    "scripts/exploitation/MaJ-Hostachy.sh": (
+        "construire_images",
+        "`construire_images` exporte GIT_HASH dans ce shell, avant ses `up`",
+    ),
+}
+
+#: Lignes qui NOMMENT un `up` à un humain (message, consigne d'alerte) sans le
+#: lancer : `{script: nombre de lignes}`. Elles ne lancent rien ; le compte exact
+#: fait échouer l'entrée qui cesse de servir.
+MESSAGES = {
+    "scripts/exploitation/bascule.sh": 1,  # « vérifier manuellement : … docker compose up -d »
+    "scripts/lib/lib-mises-a-jour.sh": 1,  # consigne du contrôle C30
+    "scripts/lib/lib-precheck-infra.sh": 1,  # consigne du point 18
+}
 
 
 def _code(texte: str) -> list[tuple[int, str]]:
@@ -101,3 +133,45 @@ def test_le_motif_voit_les_quatre_builds_d_avant():
         "docker builder prune -f",
     ]
     assert not any(BUILD.search(ligne) for ligne in innocentes)
+
+
+def test_un_seul_demarrage_dans_les_scripts():
+    """#1697 : un `up` hors de la porte est un front étiqueté « dev »."""
+    racine = racine_depot()
+    par_script: dict[str, list[str]] = {}
+    for chemin in scripts_shell_versionnes():
+        rel = chemin.relative_to(racine).as_posix()
+        for n, ligne in _code(chemin.read_text(encoding="utf-8", errors="replace")):
+            if UP.search(ligne):
+                par_script.setdefault(rel, []).append(f"{rel}:{n}")
+    assert PORTE in par_script and len(par_script[PORTE]) == 1, (
+        f"cas zéro : la porte doit démarrer, une fois — {par_script.get(PORTE)}"
+    )
+    hors_porte = {
+        rel: lignes
+        for rel, lignes in par_script.items()
+        if rel != PORTE and rel not in EXPORTEURS and len(lignes) != MESSAGES.get(rel, 0)
+    }
+    assert hors_porte == {}, (
+        "un `docker compose up` écrit hors de `demarrer_conteneurs` (lib-parite.sh) : "
+        f"le front serait étiqueté « dev » — {hors_porte}"
+    )
+    for rel, (marque, raison) in EXPORTEURS.items():
+        assert rel in par_script, f"exception qui ne sert plus (aucun `up`) : {rel} — {raison}"
+        code = "\n".join(ligne for _, ligne in _code((racine / rel).read_text(encoding="utf-8")))
+        assert marque in code, f"{rel} ne porte plus `{marque}` : {raison}"
+    for rel, n in MESSAGES.items():
+        assert len(par_script.get(rel, [])) == n, f"message déclaré qui ne sert plus : {rel}"
+
+
+def test_les_cinq_demarrages_d_avant_passent_par_la_porte():
+    """Cas zéro : les `up -d` fautifs de #1697 sont vus par le motif."""
+    fautives = [
+        "  if docker compose up -d; then",  # rollback de bascule.sh
+        "docker compose up -d >> /dev/null 2>&1 && log ok",  # health-watch.sh
+        '  ( cd "$REPO" && docker compose up -d >/dev/null 2>&1 ) && log ok',  # boot-role-guard
+        '        || (cd "$REPO" && docker compose up -d api >/dev/null 2>&1) || true',  # maintenance
+        "run \"$SSH_CMD p@$PEER_IP 'cd /opt/5hostachy && env_role_appliquer .env actif && docker compose up -d'\"",
+    ]
+    assert all(UP.search(ligne) for ligne in fautives)
+    assert not UP.search("  demarrer_conteneurs api")
