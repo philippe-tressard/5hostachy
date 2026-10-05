@@ -261,6 +261,12 @@ COLLECT="$COLLECT$COLLECT_PORTS"
 . "$(dirname "${BASH_SOURCE[0]}")/lib-fichiers-parasites.sh"
 COLLECT="$COLLECT$(collecte_env_copies "$REPO")$(collecte_db_volume)"
 
+# C36 (#1588) : le journal d acces de Caddy (fichier du volume `caddy_logs`,
+# anonyme) est-il ecrit, et combien d erreurs serveur en 24 h ? Mesure et
+# decision vivent ensemble, dans `lib-journal-acces.sh`.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-journal-acces.sh"
+COLLECT="$COLLECT$COLLECT_ACCES"
+
 # C35 (#1648) : la pile de bureau est-elle revenue ? Paquets de la liste proscrite
 # (ecrite UNE fois, dans `lib-paquets-proscrits.sh`, que `alleger-noeud.sh`
 # relit), cible systemd par defaut, APT::Install-Recommends. Mesure et decision

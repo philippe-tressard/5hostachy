@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  lib-conformite.sh — les contrôles de CONFORMITÉ de `check-reliability.sh`
-#                      (C20 à C25, C30, C32 à C35)
+#                      (C20 à C25, C30, C32 à C36)
 #
 #  Extrait le 20/08/2026, au fil de l'eau : `check-reliability.sh` a dépassé son
 #  plafond en recevant C23 (les en-têtes de sécurité réellement servis), et le
@@ -22,6 +22,8 @@
 #         (C33 et C34 : `lib-fichiers-parasites.sh`)
 #    C35  la pile de bureau retirée des nœuds est-elle revenue ?
 #         (`lib-paquets-proscrits.sh`)
+#    C36  le journal d'accès de Caddy est-il écrit, et que dit-il des erreurs 500 ?
+#         (`lib-journal-acces.sh`)
 #
 #  Les contrôles restés dans `check-reliability.sh` posent l'autre question :
 #  *le service fonctionne-t-il ?* — la base, le rôle actif, le tunnel, la
@@ -218,4 +220,9 @@ conformite_verdicts() {
   #  réinstallation depuis l'image la ramène sans que personne le décide. Liste,
   #  mesure et constats : `lib-paquets-proscrits.sh`.
   paquets_proscrits_verdicts
+
+  # ── C36. Le journal d'accès de Caddy, sur l'ACTIF (#1588) ────────────────────
+  #  Il disparaissait à chaque déploiement ; il est désormais un fichier du volume
+  #  `caddy_logs`. Mesure, seuil et constats : `lib-journal-acces.sh`.
+  acces_caddy_verdicts
 }

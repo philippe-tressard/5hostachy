@@ -30,6 +30,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy # journal d'accès anonyme, survit aux déploiements (#1588)
       - uploads:/srv/uploads:ro
     depends_on:
       - front
@@ -124,6 +125,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  caddy_logs:
   app_data:
   uploads:
   backups:

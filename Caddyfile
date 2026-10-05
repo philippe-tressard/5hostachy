@@ -242,9 +242,41 @@
 		reverse_proxy front:3000
 	}
 
-	# Logs
-	log {
-		output stdout
-		format console
+	#  ── Journal d'accès : il SURVIT aux déploiements, et il est ANONYME (#1588) ──
+	#
+	#  Il était écrit sur la sortie standard du conteneur, que `docker compose up -d`
+	#  recrée à chaque déploiement : 70 lignes au moment de l'audit du 02/10/2026,
+	#  donc aucun 5xx de la veille n'était observable. Il va dans un fichier du
+	#  volume `caddy_logs`, roulé par taille et par âge — au plus 7 jours.
+	#
+	#  🔴 Aucune donnée personnelle n'y entre (même arbitrage que #1300, uvicorn) :
+	#  ni l'adresse du visiteur, ni les en-têtes (cookie de session, agent), ni la
+	#  chaîne de requête (`?token=…` d'un lien à usage unique). Il reste la date, la
+	#  méthode, le chemin, le statut, la durée et la taille — de quoi mesurer les 5xx
+	#  et les routes lentes, rien de plus. Un journal qui porterait des adresses
+	#  imposerait de déclarer sa durée dans la politique de confidentialité.
+	#  🔒 api/tests/test_journal_acces_caddy.py
+	#
+	#  ⚠️ Un seul `log` par site : un second est ignoré sans un mot (éprouvé sur Caddy
+	#  2.11 — la sortie standard restait vide). L'ancien journal sur stdout, qui
+	#  portait les adresses, n'existe donc plus.
+	log journal {
+		output file /var/log/caddy/access.log {
+			roll_size 10mb
+			roll_keep 5
+			roll_keep_for 168h
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				request>uri regexp \?.* ""
+			}
+		}
 	}
 }

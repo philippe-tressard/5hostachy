@@ -106,6 +106,7 @@ services:
   api:        # FastAPI (python:3.12-slim)
 volumes:
   caddy_data:
+  caddy_logs: # journal d'accès anonyme de Caddy, 7 jours (#1588)
   app_data:   # contient app.db + backups
 ```
 

@@ -708,7 +708,7 @@ Chaque nœud relève désormais, **par paquet**, depuis quand il attend
 Collecte et décision : `scripts/lib/lib-apt.sh` (`--selftest`). Messages : la
 boucle par nœud de `lib-mises-a-jour.sh`.
 
-## Ce que C30 et C32 à C35 ajoutent (02/10/2026, #1591 #1592 #1593 #1609 #1610 #1648)
+## Ce que C30 et C32 à C36 ajoutent (02/10/2026, #1591 #1592 #1593 #1609 #1610 #1648 #1588)
 
 Tous **en lecture seule et en WARN** (jamais FAIL, donc jamais d'e-mail immédiat :
 le digest quotidien). Chaque constat nomme son nœud ; la décision est une fonction
@@ -722,10 +722,31 @@ pure à `--selftest`, la mesure vit dans un module de `scripts/lib/`.
 | C33 | copie de `.env*` laissée à côté de `.env` et `.env.example` à la racine du dépôt déployé | `lib-fichiers-parasites.sh` |
 | C34 | fichier `*.db*` autre que `app.db{,-wal,-shm}` dans le volume de données, par un **listage de répertoire** (jamais d'ouverture de la base : règle d'or) | `lib-fichiers-parasites.sh` |
 | C35 | la **pile de bureau est revenue** : paquet de la liste proscrite installé (avec ce qui l'a tiré), cible systemd redevenue `graphical.target`, `APT::Install-Recommends` ≠ 0. La liste s'écrit **une fois** (`PAQUETS_PROSCRITS`) et `scripts/exploitation/alleger-noeud.sh` la source — jamais recopiée. Retour causé par une mise à jour, un paquet recommandé ou une réinstallation depuis l'image (`docs/restauration-complete.md`, étape 15) | `lib-paquets-proscrits.sh` |
+| C36 | le **journal d'accès de Caddy** est-il écrit (dernière ligne < 1 h) et combien d'erreurs **500/504** en 24 h ? Les 502/503 sont comptés à part : ce sont les redémarrages d'un déploiement. **Sur l'actif seulement** | `lib-journal-acces.sh` |
 
 Ces contrôles **signalent**, ils ne corrigent rien : supprimer une copie de base ou
 de `.env` sur un nœud, fermer `rpcbind`, mettre à jour docker restent des gestes
 root de Philippe, le standby d'abord.
+
+### Le journal d'accès de Caddy (#1588, 05/10/2026)
+
+Avant ce jour, les accès HTTP s'écrivaient sur la sortie standard du conteneur
+`hostachy_caddy`, que `docker compose up -d` recrée à chaque déploiement : aucun
+5xx de la veille n'était observable. Ils vont dans un **fichier du volume
+`caddy_logs`** (`/var/log/caddy/access.log`, JSON), roulé par taille (10 Mo × 5) et
+par âge (7 jours). Il est **anonyme** : ni adresse, ni en-têtes, ni chaîne de
+requête (`?token=…`) — même arbitrage que #1300 pour uvicorn, et c'est ce qui
+dispense de déclarer sa durée dans la politique de confidentialité.
+🔒 `api/tests/test_journal_acces_caddy.py`. Il n'est **pas répliqué** par la
+bascule : chaque nœud garde les jours où il a été actif.
+
+```bash
+# les erreurs serveur inattendues, avec chemin et heure (nœud actif)
+docker exec hostachy_caddy grep -E '"status":(500|504)' /var/log/caddy/access.log
+```
+
+⚠️ Il n'y a **plus** de journal d'accès sur la sortie standard : un second `log` par
+site est ignoré par Caddy (éprouvé en 2.11), et l'ancien portait les adresses.
 
 ## Monitoring APScheduler (tourne dans le conteneur API)
 
