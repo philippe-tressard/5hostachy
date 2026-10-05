@@ -29,7 +29,6 @@ from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.courriel_ingestion import ACCEPTE, IGNORE, REFUSE, RELANCE
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
-from tests.aides_base import moteur_memoire
 from tests.aides_courriel import _AUTH_OK, _entetes_reponse, scene  # noqa: F401 — fixture
 from tests.aides_purge import purger_ligne
 
@@ -179,34 +178,3 @@ def test_le_journal_se_PURGE_a_duree_bornee():
     finally:
         with Session(engine) as session:
             _purger(session, adresse)
-
-
-def test_l_administration_lit_le_journal_le_plus_recent_d_abord():
-    from fastapi.testclient import TestClient
-
-    from app.auth.deps import require_admin
-    from app.database import get_session
-    from app.main import app
-
-    moteur = moteur_memoire(partage=True)
-    maintenant = horloge.maintenant()
-    with Session(moteur) as session:
-        for age, decision in ((2, ACCEPTE), (1, IGNORE)):
-            session.add(
-                CourrielReleve(
-                    releve_le=maintenant - timedelta(minutes=age),
-                    expediteur="a@exemple.test",
-                    decision=decision,
-                    motif="essai",
-                )
-            )
-        session.commit()
-        app.dependency_overrides[get_session] = lambda: session
-        app.dependency_overrides[require_admin] = lambda: None
-        try:
-            reponse = TestClient(app).get("/config/releves-courriel")
-        finally:
-            app.dependency_overrides.pop(get_session, None)
-            app.dependency_overrides.pop(require_admin, None)
-    assert reponse.status_code == 200, reponse.text
-    assert [ligne["decision"] for ligne in reponse.json()] == [IGNORE, ACCEPTE]

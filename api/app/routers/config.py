@@ -3,7 +3,6 @@ Configuration du site — paramètres admin persistants en base de données.
 Remplace le localStorage pour permettre la synchronisation multi-appareils.
 """
 
-from datetime import datetime
 from typing import Dict
 from app.utils import horloge
 
@@ -464,35 +463,3 @@ def imap_test(
             )
         ),
     }
-
-
-class CourrielReleveRead(BaseModel):
-    """Une ligne du journal des relèves — propre à cet écran, donc déclarée ici."""
-
-    id: int
-    releve_le: datetime
-    envoye_le: datetime | None = None
-    expediteur: str
-    objet: str
-    decision: str
-    motif: str
-    ticket_id: int | None = None
-    affaire: str | None = None
-
-    class Config:
-        from_attributes = True
-
-
-@router.get("/releves-courriel", response_model=list[CourrielReleveRead])
-def releves_courriel(
-    user: Utilisateur = Depends(require_admin),
-    session: Session = Depends(get_session),
-):
-    """Ce que la relève a fait des derniers messages, et pourquoi (#1447).
-
-    Admin seulement, comme le reste de la réception : la ligne porte l'adresse
-    de l'expéditeur. Les IGNORE y figurent — c'est eux qui étaient muets.
-    """
-    from app.utils.courriel_journal import derniers_releves
-
-    return [CourrielReleveRead.model_validate(r) for r in derniers_releves(session)]

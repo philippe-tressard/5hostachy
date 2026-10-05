@@ -1,15 +1,22 @@
 <!--
-  Le journal des messages relevés dans la boîte des réponses (#1447).
+  Espace CS › Courriels — ce que la relève a fait de chaque message reçu à
+  l'adresse des affaires, et pourquoi (#1447, ouvert au conseil le 05/10/2026).
 
-  🔴 Le 28/09/2026, un message a été ignoré sans qu'on puisse dire pourquoi :
-  la relève ne gardait que des totaux, dans un journal de conteneur effacé à
-  chaque MEP. Chaque verdict a désormais sa ligne — y compris « ignoré », qui
-  était muet par construction —, et elle se lit ici, sous le réglage qui la
-  produit. Jamais le texte du message : il est dans l'affaire ou dans la boîte.
+  🔴 Un transfert du conseil a été refusé parce que son objet portait `TK-E000066`
+  pour `TK-E00066`. Le refus était juste, sa trace n'était lisible que de
+  l'administrateur (Paramétrage › SMTP), et la notification — « Transfert non
+  versé » — renvoyait vers la liste des affaires. Le journal est ici, à la
+  portée de ceux qui transfèrent, avec une pliure par message.
+
+  Jamais le texte du message : il est dans l'affaire ou dans la boîte de
+  réception. L'adresse de l'expéditeur n'est lue en entier que par
+  l'administrateur — le serveur ne l'envoie pas au conseil.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { config as configApi, type CourrielReleve } from '$lib/api';
+	import { fmtDatetimeShort } from '$lib/date';
+	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import JournalVerdicts, {
 		type EntreeJournal,
@@ -27,6 +34,7 @@
 	};
 
 	let releves: CourrielReleve[] = [];
+	let limite = 0;
 	let chargement = true;
 	let erreur = '';
 
@@ -34,9 +42,11 @@
 		chargement = true;
 		erreur = '';
 		try {
-			releves = await configApi.relevesCourriel();
-		} catch (e: any) {
-			erreur = e?.message ?? 'Chargement impossible';
+			const journal = await configApi.relevesCourriel();
+			releves = journal.messages;
+			limite = journal.limite;
+		} catch (e) {
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			chargement = false;
 		}
@@ -45,7 +55,9 @@
 	$: entrees = releves.map((r): EntreeJournal => ({
 		cle: r.id,
 		titre: r.objet || '(sans objet)',
-		sousTitre: r.expediteur,
+		sousTitre: r.envoye_le
+			? `${r.expediteur} · envoyé le ${fmtDatetimeShort(r.envoye_le)}`
+			: r.expediteur,
 		verdict: VERDICTS[r.decision]?.libelle ?? r.decision,
 		ton: VERDICTS[r.decision]?.ton ?? 'neutre',
 		date: r.releve_le,
@@ -61,10 +73,16 @@
 {#if chargement || erreur}
 	<EtatListe {chargement} {erreur} compact />
 {:else}
+	<p class="aide largeur-saisie">
+		Les {limite} derniers messages reçus à l'adresse des affaires, du plus récent au plus ancien.
+		Un message refusé n'est pas perdu : corrigez ce que le motif indique (le plus souvent le numéro
+		d'affaire dans l'objet), puis transférez-le de nouveau.
+	</p>
 	<JournalVerdicts
 		{entrees}
+		pliable
 		recharger={charger}
 		vide="Aucun message relevé pour l’instant."
-		libelleRecharger="Rafraîchir le journal des relèves"
+		libelleRecharger="Rafraîchir la liste des courriels"
 	/>
 {/if}

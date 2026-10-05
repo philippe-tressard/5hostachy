@@ -75,6 +75,16 @@ export const PAGES_ROLES: PageDef[] = [
 				descriptif:
 					"Posez la question d'un résident sur le règlement de copropriété (« ai-je le droit de… ? ») : l'assistant répond en juriste, d'après le texte chargé ici, avec les extraits et les pages qui justifient sa réponse. Une réponse relue peut rejoindre la FAQ.",
 			},
+			{
+				//  Né le 05/10/2026 d'un transfert refusé (numéro d'affaire mal tapé)
+				//  que seul l'administrateur pouvait relire : chaque message reçu à
+				//  l'adresse des affaires, avec ce que le site en a fait et pourquoi.
+				id: 'courriels',
+				route: '/espace-cs/courriels',
+				label: '\u{1F4E8} Courriels affaires',
+				descriptif:
+					"Ce que le site a fait de chaque message reçu à l'adresse des affaires — réponses du syndic, fils transférés par le conseil : ajouté à une affaire, refusé ou ignoré, et pourquoi. Un message refusé se corrige puis se transfère de nouveau.",
+			},
 		],
 	},
 	{

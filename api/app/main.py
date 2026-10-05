@@ -128,6 +128,7 @@ from app.routers import (
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
+from app.routers import courriels_affaires
 from app.routers import partage
 from app.routers import assistant, config_llm, reglement
 from app.config import get_settings
@@ -433,6 +434,7 @@ app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)
 app.include_router(annonces_hall.router)
+app.include_router(courriels_affaires.router)
 app.include_router(manuel.router)
 app.include_router(copropriete.router)
 #  Les bâtiments et les lots — extraits le 22/09/2026 (modularité, rang 1). Même

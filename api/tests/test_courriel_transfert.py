@@ -184,6 +184,20 @@ def test_un_repere_inconnu_est_refuse_et_rien_n_est_cree(monde):
     assert any("TK-000000 n'existe pas" in n.corps for n in _notifs(session, cs))
 
 
+def test_un_numero_mal_tape_propose_le_bon_et_renvoie_a_l_onglet_Courriels(monde):
+    """05/10/2026 : `TK-E000066` pour `TK-E00066`. Refusé — avec le numéro voisin
+    dans le motif, jamais rattaché de soi-même, et l'alerte mène à l'onglet."""
+    session, ticket, syndic, cs, objet = monde
+    faute = ticket.numero[:-1] + "0" + ticket.numero[-1:]  # un zéro de trop
+    sujet = f"TR: RE: {objet} {faute}"
+    assert _transferer(session, cs, objet, _fil(syndic.email, objet), sujet=sujet) == REFUSE
+    assert _evolutions(session, ticket) == [], "jamais de rattachement automatique"
+    refus = [n for n in _notifs(session, cs) if f"{faute} n'existe pas" in n.corps]
+    assert refus, "le conseil est prévenu"
+    assert f"vouliez-vous {ticket.numero} ?" in refus[0].corps
+    assert refus[0].lien == "/espace-cs/courriels"
+
+
 def test_une_affaire_CLOSE_designee_ne_recoit_rien_et_on_le_dit(monde):
     session, ticket, syndic, cs, objet = monde
     ticket.statut = StatutTicket.résolu

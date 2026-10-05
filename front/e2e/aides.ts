@@ -169,8 +169,8 @@ const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
 	'/api/admin/maintenance/sante': { taches: [], anomalies_recentes: [] },
 	//  `ConsommationIA`.
 	'/api/config/llm-consommation': { mois: [], limites: [], mois_courant: '' },
-	//  `CourrielReleve[]` — le chemin contient « config », d'où l'objet vide.
-	'/api/config/releves-courriel': [],
+	//  `JournalCourriels` : Espace CS › Courriels (#1447).
+	'/api/courriels-affaires': { limite: 20, messages: [] },
 	//  `PropositionsLocation` : « Mes lots » d'un locataire lit ses trois listes.
 	'/api/lots/ma-location/propositions': {
 		proprietaire: null,

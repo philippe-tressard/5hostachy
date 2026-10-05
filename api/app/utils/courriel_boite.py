@@ -46,7 +46,7 @@ from app.utils import horloge
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.utils.liens import lien_ticket
+from app.utils.liens import LIEN_COURRIELS_AFFAIRES, lien_ticket
 from app.auth.deps import peut_commenter
 from app.models.core import ConfigSite, Ticket, Utilisateur
 from app.models.tickets import STATUTS_TICKET_CLOS
@@ -155,7 +155,7 @@ def _prevenir_le_cs(session: Session, ticket: Ticket | None, verdict) -> None:
                 f"mais il n'a pas été ajouté au fil : {verdict.motif}. "
                 "Le message reste consultable dans la boîte de réception."
             ),
-            lien=lien_ticket(ticket.id) if ticket else "/tickets",
+            lien=lien_ticket(ticket.id) if ticket else LIEN_COURRIELS_AFFAIRES,
         )
 
 

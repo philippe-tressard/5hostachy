@@ -88,7 +88,8 @@ from app.utils.courriel_ingestion import (
     REFUSE,
     examiner,
 )
-from app.utils.liens import lien_ticket
+from app.utils.courriel_numero import aide_au_numero
+from app.utils.liens import LIEN_COURRIELS_AFFAIRES, lien_ticket
 from app.utils.noms import nom_affiche
 from app.utils.reponse_courriel import (
     contenu_de_la_suite,
@@ -189,7 +190,14 @@ def decider_transfert(session, entetes, corps, recu_le, plancher, authentificati
                 select(Ticket).where(func.lower(Ticket.numero) == numero.lower())
             ).first()
             if designe is None:
-                return _refuser(session, qui, None, f"l'affaire {numero} n'existe pas")
+                #  Un numéro à une faute de frappe d'une affaire existante : on le DIT
+                #  (`courriel_numero`), on ne rattache jamais de soi-même.
+                return _refuser(
+                    session,
+                    qui,
+                    None,
+                    f"l'affaire {numero} n'existe pas{aide_au_numero(session, numero)}",
+                )
     return verser(session, transfert, sujet, qui, designe, creer=True)
 
 
@@ -470,7 +478,7 @@ def _prevenir(session: Session, qui: Utilisateur, ticket: Ticket | None, titre: 
         type="ticket_update",
         titre=titre,
         corps=corps,
-        lien=lien_ticket(ticket.id) if ticket else "/tickets",
+        lien=lien_ticket(ticket.id) if ticket else LIEN_COURRIELS_AFFAIRES,
     )
 
 

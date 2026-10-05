@@ -22,7 +22,6 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
 	import SectionReceptionReponses from '$lib/components/SectionReceptionReponses.svelte';
-	import JournalReleves from '$lib/components/JournalReleves.svelte';
 	import ChampSecret from '$lib/components/ChampSecret.svelte';
 
 	/** Signature ajoutée en bas de chaque e-mail — appartient à `siteConfig`. */
@@ -298,9 +297,15 @@
 		on:enregistre={relire}
 	/>
 
-	<!--  Ce que la relève a fait de chaque message, et pourquoi (#1447). -->
-	<SectionFormulaire icone="clipboard-list" titre="Messages relevés (50 derniers)">
-		<JournalReleves />
+	<!--  Ce que la relève a fait de chaque message, et pourquoi (#1447) : depuis le
+	      05/10/2026 le journal se lit dans Espace CS › Courriels, où le conseil qui
+	      transfère les messages le voit — il était réservé à cet écran-ci. -->
+	<SectionFormulaire icone="clipboard-list" titre="Messages relevés">
+		<p class="aide largeur-saisie">
+			Ce que la relève a fait de chaque message — ajouté à une affaire, refusé ou ignoré, et
+			pourquoi — se lit dans <a href="/espace-cs/courriels">Espace CS › Courriels</a>. Le nombre de
+			messages affichés se règle ci-dessus.
+		</p>
 	</SectionFormulaire>
 
 	<SectionFormulaire icone="message-square-text" titre="Signature des e-mails">

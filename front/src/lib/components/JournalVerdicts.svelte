@@ -9,6 +9,13 @@
 
   Le verdict est une pastille `.badge-*` de la charte — son contraste est
   mesuré par `lint:charte-valeurs` — et non plus une teinte écrite en ligne.
+
+  `pliable` (05/10/2026, Espace CS › Courriels) : chaque ligne devient une
+  pliure — objet, verdict et date en tête ; l'expéditeur, le motif et le lien
+  dessous. C'est un `<details>` natif : le clavier, le lecteur d'écran et
+  « un seul ouvert à la fois » (`unSeulDetailsOuvert`, posé par le layout) sont
+  déjà là. Le même balisage sert les deux formes — une seule écriture des
+  pastilles et du corps, jamais une seconde liste.
 -->
 <script context="module" lang="ts">
 	export type TonVerdict = 'succes' | 'info' | 'attention' | 'danger' | 'neutre';
@@ -42,6 +49,8 @@
 	export let recharger: () => unknown = () => {};
 	/** Ce que le bouton de rafraîchissement annonce aux lecteurs d'écran. */
 	export let libelleRecharger = 'Rafraîchir';
+	/** Une pliure par ligne : seul le titre, le verdict et la date restent visibles. */
+	export let pliable = false;
 </script>
 
 <div class="largeur-saisie">
@@ -57,26 +66,30 @@
 	{:else}
 		<ul class="jv-liste">
 			{#each entrees as e (e.cle)}
-				<li class="jv-ligne">
-					<div class="jv-tete">
-						<span class="jv-titre">{e.titre}</span>
-						<span class="jv-meta">
-							<span
-								class="badge"
-								class:badge-green={e.ton === 'succes'}
-								class:badge-blue={e.ton === 'info'}
-								class:badge-orange={e.ton === 'attention'}
-								class:badge-red={e.ton === 'danger'}
-								class:badge-gray={e.ton === 'neutre'}>{e.verdict}</span
-							>
-							{#if e.date}<time class="jv-date" datetime={e.date}>{fmtDatetimeShort(e.date)}</time
-								>{/if}
-						</span>
-					</div>
-					{#if e.sousTitre}<p class="jv-sous-titre">{e.sousTitre}</p>{/if}
-					<p class="jv-texte">{e.texte}</p>
-					{#if e.alerte}<p class="jv-alerte">&#x26A0;&#xFE0F; {e.alerte}</p>{/if}
-					{#if e.lien}<a class="jv-lien" href={e.lien.href}>{e.lien.libelle}</a>{/if}
+				<li>
+					<svelte:element this={pliable ? 'details' : 'div'} class="jv-ligne">
+						<svelte:element this={pliable ? 'summary' : 'div'} class="jv-tete">
+							<span class="jv-titre">{e.titre}</span>
+							<span class="jv-meta">
+								<span
+									class="badge"
+									class:badge-green={e.ton === 'succes'}
+									class:badge-blue={e.ton === 'info'}
+									class:badge-orange={e.ton === 'attention'}
+									class:badge-red={e.ton === 'danger'}
+									class:badge-gray={e.ton === 'neutre'}>{e.verdict}</span
+								>
+								{#if e.date}<time class="jv-date" datetime={e.date}
+										>{fmtDatetimeShort(e.date)}</time
+									>{/if}
+								{#if pliable}<span class="jv-chevron" aria-hidden="true">&#x203A;</span>{/if}
+							</span>
+						</svelte:element>
+						{#if e.sousTitre}<p class="jv-sous-titre">{e.sousTitre}</p>{/if}
+						<p class="jv-texte">{e.texte}</p>
+						{#if e.alerte}<p class="jv-alerte">&#x26A0;&#xFE0F; {e.alerte}</p>{/if}
+						{#if e.lien}<a class="jv-lien" href={e.lien.href}>{e.lien.libelle}</a>{/if}
+					</svelte:element>
 				</li>
 			{/each}
 		</ul>
@@ -123,6 +136,36 @@
 		align-items: center;
 		gap: 0.25rem 0.5rem;
 		margin-bottom: 0.25rem;
+	}
+	/*  Une pliure : la tête est le bouton. Plus de marque native — le chevron
+	    dit « ça se déplie », et il se retourne à l'ouverture. */
+	summary.jv-tete {
+		cursor: pointer;
+		list-style: none;
+		margin-bottom: 0;
+	}
+	summary.jv-tete::-webkit-details-marker {
+		display: none;
+	}
+	/*  `[open]` est posé par le navigateur sur un élément dont la balise se choisit
+	    à l'exécution (`svelte:element`) : Svelte ne peut pas le voir, d'où le
+	    `:global` — borné à CETTE liste. */
+	.jv-liste :global(.jv-ligne[open]) > :global(.jv-tete) {
+		margin-bottom: 0.25rem;
+	}
+	.jv-chevron {
+		display: inline-block;
+		color: var(--color-text-muted);
+		transition: transform var(--duree-geste) var(--ease-out);
+	}
+	.jv-liste :global(.jv-ligne[open]) :global(.jv-chevron) {
+		transform: rotate(90deg);
+	}
+	/*  Au doigt, la tête fait 44 px (standards/11 §10). */
+	@media (pointer: coarse) {
+		summary.jv-tete {
+			min-height: 2.75rem;
+		}
 	}
 	.jv-titre {
 		font-weight: 600;
