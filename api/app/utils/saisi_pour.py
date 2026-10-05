@@ -57,6 +57,8 @@ from pydantic import BaseModel
 
 from sqlmodel import Field, Session, SQLModel
 
+from app.utils.corrections_texte import saisi_pour as saisi_pour_texte
+
 
 #: Les trois champs, nommés une fois — les parcourir plutôt que les énumérer.
 CHAMPS = ("saisi_pour_user_id", "saisi_pour_nom", "saisi_pour_email")
@@ -95,12 +97,29 @@ def valeurs(body, *, autorise: bool) -> dict:
     return {c: (getattr(body, c, None) if autorise else None) for c in CHAMPS}
 
 
-def corriger(objet, body, envoye) -> list[str]:
+def nom_saisi(session: Session, objet) -> Optional[str]:
+    """La personne NOMMÉE par « Saisi pour », ou `None` si l'objet est à son auteur.
+
+    Distinct de `proprietaire()` : celui-ci retombe sur l'auteur, et une
+    correction doit pouvoir dire « de nouveau au nom de son auteur » plutôt que
+    de nommer l'auteur comme s'il venait d'être désigné.
+    """
+    # Import différé — le même cycle que `noms_derives` (modèles ⇄ ce module).
+    from app.utils.copie_auteur import proprietaire
+
+    if not (getattr(objet, "saisi_pour_user_id", None) or getattr(objet, "saisi_pour_nom", None)):
+        return None
+    return proprietaire(session, objet)[0]
+
+
+def corriger(objet, body, envoye, session: Session) -> list[str]:
     """Applique une CORRECTION, et dit s'il y a lieu de l'annoncer.
 
     :param envoye: `lambda body, champ: …` — le prédicat de l'appelant qui dit
         si un champ figure dans la charge utile reçue. Il reste chez lui : la
         façon de lire `model_fields_set` dépend du schéma, pas de cette notion.
+    :param session: pour NOMMER la personne : la ligne d'historique dit pour qui,
+        pas seulement qu'il y a eu un changement.
     :returns: la liste des évolutions à tracer — vide si rien n'a changé.
 
     🔴 Les deux règles de l'en-tête sont ICI, et nulle part ailleurs : la
@@ -110,9 +129,12 @@ def corriger(objet, body, envoye) -> list[str]:
         return []
     avant = tuple(getattr(objet, c) for c in CHAMPS)
     apres = tuple(getattr(body, c, None) for c in CHAMPS)
+    if avant == apres:
+        return []
+    nom_avant = nom_saisi(session, objet)
     for champ, valeur in zip(CHAMPS, apres):
         setattr(objet, champ, valeur)
-    return ["Saisi pour modifié"] if avant != apres else []
+    return [saisi_pour_texte(nom_avant, nom_saisi(session, objet))]
 
 
 def noms_derives(session: Session, objet) -> tuple[Optional[str], Optional[str]]:

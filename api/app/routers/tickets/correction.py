@@ -17,9 +17,21 @@ sans monter une requête.
 
 import json
 
+from sqlmodel import Session
+
 from app.models.core import Ticket
 from app.schemas import TicketUpdate
 from app.utils.categories_ticket import libelle_categorie
+from app.utils.corrections_texte import (
+    DOCUMENTS,
+    PHOTOS,
+    modification,
+    modification_date,
+    modification_texte_riche,
+    pieces,
+)
+from app.utils.perimetres.libelles import perimetre_label_liste
+from app.utils.roles_libelles import libelle_role
 from app.utils.photos import photos_internes, photos_json
 from app.utils.assiste_ia import marquer as marquer_assiste_ia
 from app.utils.saisi_pour import corriger as corriger_saisi_pour
@@ -40,6 +52,11 @@ def _liste_json(brut: str | None) -> list:
     except (TypeError, ValueError):
         return []
     return valeur if isinstance(valeur, list) else []
+
+
+def _publics(roles: list) -> str:
+    """Le public visé, lisible : « Copropriétaires, Locataires » — vide si tout le monde."""
+    return ", ".join(libelle_role(r) for r in roles)
 
 
 def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = False) -> list[str]:
@@ -65,10 +82,12 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     """
     changes: list[str] = []
     if body.titre is not None and body.titre != ticket.titre:
-        changes.append(f"Titre : {ticket.titre} → {body.titre}")
+        changes.append(modification("du titre", ticket.titre, body.titre))
         ticket.titre = body.titre
     if body.description is not None and body.description != ticket.description:
-        changes.append("Description modifiée")
+        changes.append(
+            modification_texte_riche("de la description", ticket.description, body.description)
+        )
         ticket.description = body.description
     #  La marque « assistant IA » ne s'écrit que dans un sens, et ne s'annonce
     #  pas : ce n'est pas une correction, c'est la provenance de celle-ci.
@@ -76,7 +95,11 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     if body.categorie is not None and body.categorie != ticket.categorie:
         #  Les LIBELLÉS, pas les valeurs : l'historique se lit (#1350).
         changes.append(
-            f"Catégorie : {libelle_categorie(ticket.categorie)} → {libelle_categorie(body.categorie)}"
+            modification(
+                "de la catégorie",
+                libelle_categorie(ticket.categorie),
+                libelle_categorie(body.categorie),
+            )
         )
         ticket.categorie = body.categorie
     if body.perimetre_cible is not None:
@@ -85,7 +108,13 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
         #  périmètre, et l'ordre dépend de celui des clics — l'annoncer comme une
         #  modification serait faux.
         if set(body.perimetre_cible) != set(_liste_json(ticket.perimetre_cible)):
-            changes.append("Périmètre modifié")
+            changes.append(
+                modification(
+                    "du périmètre",
+                    perimetre_label_liste(_liste_json(ticket.perimetre_cible)),
+                    perimetre_label_liste(body.perimetre_cible),
+                )
+            )
         ticket.perimetre_cible = json.dumps(body.perimetre_cible)
     if body.fichiers_urls is not None:
         #  On compare ce qui sera RÉELLEMENT stocké : `photos_internes()` écarte
@@ -94,8 +123,7 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
         #  ⚠️ Ici l'ordre COMPTE — les pièces jointes s'affichent dans l'ordre
         #  donné, et le réordonner est une modification visible.
         retenus = photos_internes(body.fichiers_urls)
-        if retenus != _liste_json(ticket.fichiers_urls):
-            changes.append("Pièces jointes modifiées")
+        changes.extend(pieces(DOCUMENTS, _liste_json(ticket.fichiers_urls), retenus))
         ticket.fichiers_urls = photos_json(retenus)
     #  Les PHOTOS se corrigent comme les documents depuis le 18/08/2026 : la
     #  dette `api` que la déclaration citait (#431) est soldée. Deux sections
@@ -103,8 +131,7 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
     #  nulle part.
     if body.photos_urls is not None:
         retenues = photos_internes(body.photos_urls)
-        if retenues != _liste_json(ticket.photos_urls):
-            changes.append("Photos modifiées")
+        changes.extend(pieces(PHOTOS, _liste_json(ticket.photos_urls), retenues))
         ticket.photos_urls = photos_json(retenues)
     #  Ce que porte une actualité (#1091) : le public visé, l'Accès. Ils
     #  décident qui LIT — le conseil seul, comme à la création (`crud.py`) :
@@ -115,16 +142,28 @@ def _appliquer_contenu(body: TicketUpdate, ticket: Ticket, *, est_cs: bool = Fal
         and _envoye(body, "public_cible")
         and (body.public_cible or None) != (_liste_json(ticket.public_cible) or None)
     ):
-        changes.append("Public visé modifié")
+        changes.append(
+            modification(
+                "du public visé",
+                _publics(_liste_json(ticket.public_cible)),
+                _publics(body.public_cible or []),
+            )
+        )
         ticket.public_cible = json.dumps(body.public_cible) if body.public_cible else None
     if (
         est_cs
         and body.reserve_perimetre is not None
         and body.reserve_perimetre != ticket.reserve_perimetre
     ):
-        changes.append("Accès modifié")
+        changes.append(
+            "Réservé au périmètre : " + ("activé" if body.reserve_perimetre else "désactivé")
+        )
         ticket.reserve_perimetre = body.reserve_perimetre
     return changes
+
+
+#: Les deux dates de la section « Quand », nommées comme à l'écran.
+_CIBLES_QUAND = {"debut": "de la date de début", "fin": "de la date de fin"}
 
 
 def _appliquer_quand(body: TicketUpdate, ticket: Ticket) -> list[str]:
@@ -140,9 +179,12 @@ def _appliquer_quand(body: TicketUpdate, ticket: Ticket) -> list[str]:
     quand = [
         c for c in ("debut", "fin") if _envoye(body, c) and getattr(body, c) != getattr(ticket, c)
     ]
+    changes = [
+        modification_date(_CIBLES_QUAND[c], getattr(ticket, c), getattr(body, c)) for c in quand
+    ]
     for c in quand:
         setattr(ticket, c, getattr(body, c))
-    return ["Quand modifié"] if quand else []
+    return changes
 
 
 def _envoye(body: TicketUpdate, champ: str) -> bool:
@@ -157,7 +199,7 @@ def _envoye(body: TicketUpdate, champ: str) -> bool:
     return champ in body.model_fields_set
 
 
-def _appliquer_relations(body: TicketUpdate, ticket: Ticket) -> list[str]:
+def _appliquer_relations(body: TicketUpdate, ticket: Ticket, session: Session) -> list[str]:
     """Champs relationnels et destinataires — réservés au CS/admin."""
     changes: list[str] = []
     if body.lot_id is not None:
@@ -177,7 +219,7 @@ def _appliquer_relations(body: TicketUpdate, ticket: Ticket) -> list[str]:
     #
     #  ⚠️ `_envoye` reste chez l'appelant : lire `model_fields_set` dépend du
     #  schéma, pas de la notion.
-    changes.extend(corriger_saisi_pour(ticket, body, _envoye))
+    changes.extend(corriger_saisi_pour(ticket, body, _envoye, session))
     if body.non_relancable is not None:
         ticket.non_relancable = body.non_relancable
     if body.non_relancable_motif is not None:

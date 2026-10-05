@@ -47,7 +47,7 @@ PREFIXE_CORRECTION = "Correction : "
 #: La reconnaissance doit donc accepter la famille, pas la seule chaîne exacte.
 PREFIXE_CORRECTION_AUTEUR = "Correction auteur : "
 
-_MARQUES = (PREFIXE_CORRECTION, PREFIXE_CORRECTION_AUTEUR)
+MARQUES = (PREFIXE_CORRECTION, PREFIXE_CORRECTION_AUTEUR)
 
 #: Ce qui sépare deux champs corrigés dans la même entrée.
 SEPARATEUR_CORRECTION = " ; "
@@ -72,7 +72,7 @@ def est_correction(entree: Any) -> bool:
     if getattr(entree, "nouveau_statut", None) or getattr(entree, "ancien_statut", None):
         return False
     contenu = getattr(entree, "contenu", None) or ""
-    return contenu.startswith(_MARQUES)
+    return contenu.startswith(MARQUES)
 
 
 def _selftest() -> None:

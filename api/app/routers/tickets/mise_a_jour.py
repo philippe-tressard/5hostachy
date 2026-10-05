@@ -302,7 +302,7 @@ def update_ticket(
     if extra_fields:
         if not is_cs_admin:
             raise HTTPException(403, "Seul le CS ou un administrateur peut modifier ces champs")
-        changes += _appliquer_relations(body, ticket)
+        changes += _appliquer_relations(body, ticket, session)
 
     ticket.mis_a_jour_le = horloge.maintenant()
 
