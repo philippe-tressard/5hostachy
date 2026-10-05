@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { onMount } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type LienCompteLot } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
@@ -11,7 +11,7 @@
 
 	$: _siteNom = $siteNomStore;
 
-	let rows: any[] = [];
+	let rows: LienCompteLot[] = [];
 	let loading = true;
 	let filtre = '';
 	let deletingUserId: number | null = null;

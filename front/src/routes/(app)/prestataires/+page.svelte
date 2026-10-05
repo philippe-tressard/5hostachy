@@ -12,7 +12,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { tenter } from '$lib/erreurs';
-	import { prestataires as prestApi } from '$lib/api';
+	import {
+		prestataires as prestApi,
+		type ContratEntretien,
+		type Notation,
+		type Prestataire,
+	} from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { trackTabView } from '$lib/telemetry';
@@ -29,9 +34,9 @@
 	$: _pc = getPageConfig($configStore, 'prestataires', defautsDePage('prestataires'));
 	$: _siteNom = $siteNomStore;
 
-	let prestataires: any[] = [];
-	let contrats: any[] = [];
-	let notations: any[] = [];
+	let prestataires: Prestataire[] = [];
+	let contrats: ContratEntretien[] = [];
+	let notations: Notation[] = [];
 	let loading = true;
 
 	// ── Onglets (3) ────────────────────────────────────────────────

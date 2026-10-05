@@ -109,6 +109,18 @@ def _variables_du_modele(modele: ModeleEmail) -> str:
         return modele.variables_disponibles or "[]"
 
 
+def _modele_lu(modele: ModeleEmail) -> dict:
+    """Un modèle tel que l'écran le LIT — la ligne, variables CALCULÉES.
+
+    🔴 Écrit une fois pour les trois routes qui rendent un modèle (#1682). Seule
+    la liste calculait les variables : la modification et la remise à zéro
+    rendaient la ligne brute, donc la colonne stockée — et l'écran, qui remplace
+    sa ligne par la réponse, réaffichait après chaque enregistrement la copie
+    périmée que `_variables_du_modele` a cessé de servir (#850).
+    """
+    return {**modele.model_dump(), "variables_disponibles": _variables_du_modele(modele)}
+
+
 @router.get("/modeles-email")
 def list_modeles_email(
     session: Session = Depends(get_session),
@@ -121,7 +133,7 @@ def list_modeles_email(
     plus cesse de mentir sans qu'il faille la supprimer partout.
     """
     modeles = session.exec(select(ModeleEmail).order_by(ModeleEmail.code)).all()
-    return [{**m.model_dump(), "variables_disponibles": _variables_du_modele(m)} for m in modeles]
+    return [_modele_lu(m) for m in modeles]
 
 
 @router.patch("/modeles-email/{modele_id}")
@@ -196,7 +208,7 @@ def update_modele_email(
     session.add(modele)
     session.commit()
     session.refresh(modele)
-    return modele
+    return _modele_lu(modele)
 
 
 def _remettre_par_defaut(session: Session, modele: ModeleEmail, par_id: int) -> bool:
@@ -247,7 +259,7 @@ def reinitialiser_un_modele_email(
         )
     session.commit()
     session.refresh(modele)
-    return modele
+    return _modele_lu(modele)
 
 
 @router.post("/modeles-email/reinitialiser")

@@ -10,7 +10,8 @@
 		try {
 			const user = await auth.me();
 			setUser(user);
-			goto('/tableau-de-bord');
+			//  L'étiquette d'une notification suit (#1634) : `(app)` la lit à l'arrivée.
+			goto(`/tableau-de-bord${window.location.search}`);
 		} catch {
 			goto(CHEMIN_CONNEXION);
 		}

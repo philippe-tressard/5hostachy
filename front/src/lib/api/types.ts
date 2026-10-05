@@ -46,6 +46,8 @@ export interface User {
 	delegations_aidant?: { delegation_id: number; mandant_id: number; mandant_nom: string }[];
 	cree_le: string;
 	derniere_connexion?: string | null;
+	/** L'avertissement avant purge pour inactivité (#1580) ; la reconnexion l'efface. */
+	purge_avertie_le?: string | null;
 }
 
 /**
@@ -341,17 +343,6 @@ export interface SourceAffiche {
 	titre: string;
 	date: string;
 	epingle: boolean;
-}
-
-export interface Document {
-	id: number;
-	titre: string;
-	fichier_nom: string;
-	taille_octets?: number;
-	mime_type: string;
-	categorie_id: number;
-	perimetre: string;
-	publie_le: string;
 }
 
 export interface Notification {

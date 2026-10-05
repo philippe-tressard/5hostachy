@@ -597,6 +597,17 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	text-align: right;
 	font-variant-numeric: tabular-nums;
 }
+/*  La LÉGENDE d'un tableau — son titre, au-dessus, en petites capitales de
+    section : « Intervenants les plus lents », « Par exercice comptable »
+    (04/10/2026, #1645 #1646 — deux composants, une règle). */
+.table-legende {
+	caption-side: top;
+	text-align: left;
+	padding: 0 0 0.35rem;
+	font-size: var(--fs-sm);
+	font-weight: 600;
+	color: var(--color-text-muted);
+}
 @media (hover: hover) and (pointer: fine) {
 	.table tbody tr:hover {
 		background: var(--color-bg);

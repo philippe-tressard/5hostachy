@@ -144,10 +144,36 @@ EXIGENCES = [
         ("réception des courriels",),
     ),
     (
+        #  #1634 : le canal de la notification, joint à la vue rattachée au compte.
+        "la notification qui amène sur le site",
+        ("utils/arrivees_notification.py", "def etiqueter_lien"),
+        ("notification qui vous amène",),
+    ),
+    (
+        #  #1633 : comptés sans compte, mais dans le navigateur de chacun.
+        "les ouvertures et envois des formulaires",
+        ("utils/gestes_formulaire.py", "def enregistrer_ouverture"),
+        ("formulaires ouverts et envoyés",),
+    ),
+    (
+        #  #1629 : un jour par compte, pour dire qui ne vient plus.
+        "le jour de la dernière visite d'un compte",
+        ("models/telemetrie.py", "class DerniereVisite"),
+        ("jour de votre dernière visite",),
+    ),
+    (
         #  #1580 : l'identifiant du compte dans chaque ligne du journal de sécurité.
         "le journal de sécurité",
         ("utils/journal_securite.py", "def journaliser_securite"),
         ("journal de sécurité",),
+    ),
+    (
+        #  #1580 : « durée de la relation + 2 ans » sans purge était une durée
+        #  fictive (`standards/14` §1). La durée des comptes est liée à la
+        #  fonction qui l'applique : si elle disparaît, la phrase doit partir.
+        "la durée de conservation des comptes, appliquée par la purge des inactifs",
+        ("utils/purge_comptes/tache.py", "def purger_comptes_inactifs"),
+        ("sans connexion",),
     ),
 ]
 
@@ -313,3 +339,25 @@ def test_le_nombre_de_services_tiers_annonce_est_celui_de_la_liste():
     assert liste.count("<li>") == annonce, (
         f"la politique annonce {annonce} fonctions tierces et en liste {liste.count('<li>')}"
     )
+
+
+def test_la_duree_annoncee_des_comptes_est_celle_que_la_purge_applique():
+    """🔴 #1580 : la politique annonçait une durée qu'aucun code n'appliquait.
+
+    La phrase se compose des constantes de la purge (`utils/purge_comptes/regles`) :
+    ce test vérifie qu'elle les répète, que l'ancienne phrase est partie, et que
+    le gabarit la sert.
+    """
+    from app.seed.contenus_legaux import (
+        CONSERVATION_COMPTES,
+        CONSERVATION_COMPTES_ANCIEN,
+        DEFAULT_LEGAL,
+    )
+    from app.utils.purge_comptes.regles import DELAI_AVANT_SUPPRESSION_JOURS, INACTIVITE_ANS
+
+    politique = DEFAULT_LEGAL["politique_confidentialite"]
+    assert f"{INACTIVITE_ANS} ans sans connexion" in CONSERVATION_COMPTES
+    assert f"{DELAI_AVANT_SUPPRESSION_JOURS} jours" in CONSERVATION_COMPTES
+    assert CONSERVATION_COMPTES in politique
+    assert CONSERVATION_COMPTES_ANCIEN not in politique
+    assert "durée de la relation" not in politique

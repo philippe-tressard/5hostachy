@@ -11,18 +11,52 @@
 import { api, BASE, buildQuery } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
 import type { FiltreGestionnaire, PorteeTelemetrie, TableauTelemetrie } from './telemetrie';
+import type { User } from './types';
+import type {
+	AccueilArrivantResultat,
+	Accuse,
+	AutoMatchRelance,
+	BailSansLocataire,
+	CommandeAccesEnAttente,
+	CompositionConseil,
+	CompteEnAttenteEnrichi,
+	CompteTraite,
+	ConfigSauvegarde,
+	Delegation,
+	DemandeProfil,
+	EnvoiEmail,
+	EssaiImap,
+	EssaiSmtp,
+	EssaiWhatsApp,
+	ExecutionMaintenance,
+	ExecutionSauvegarde,
+	ExecutionTache,
+	ExecutionTelemetrie,
+	InfoSyndicAdmin,
+	LancementTache,
+	LienCompteLot,
+	ModeleEmail,
+	ReleveReclassement,
+	SanteMaintenance,
+	StatutWhatsApp,
+	UtilisateurAdmin,
+} from './types-administration';
+
+//  Les types de ce que ces routes RENDENT vivent à côté (#1572) : réexportés ici,
+//  ils parviennent à `index.ts`, donc à tout `from '$lib/api'`.
+export type * from './types-administration';
 
 export const annuaireAdmin = {
-	getCS: () => api.get<any>('/admin/annuaire/cs'),
-	putCS: (data: unknown) => api.put<any>('/admin/annuaire/cs', data),
-	getSyndic: () => api.get<any>('/admin/annuaire/syndic'),
-	putSyndic: (data: unknown) => api.put<any>('/admin/annuaire/syndic', data),
+	getCS: () => api.get<CompositionConseil>('/admin/annuaire/cs'),
+	putCS: (data: unknown) => api.put<Accuse>('/admin/annuaire/cs', data),
+	getSyndic: () => api.get<InfoSyndicAdmin>('/admin/annuaire/syndic'),
+	putSyndic: (data: unknown) => api.put<Accuse>('/admin/annuaire/syndic', data),
 };
 
 export const delegations = {
-	list: () => api.get<any[]>('/delegations'),
+	list: () => api.get<Delegation[]>('/delegations'),
 	create: (data: { mandant_id: number; aidant_id: number; motif?: string; date_fin?: string }) =>
-		api.post<any>('/delegations', data),
+		api.post<Delegation>('/delegations', data),
 	//  🔴 `update` A ÉTÉ RETIRÉE le 13/09/2026, avec son endpoint
 	//  `PATCH /delegations/{id}` (#934). La question posée était « corriger le
 	//  motif ou la date de fin d'une délégation existante est-il un besoin
@@ -38,8 +72,8 @@ export const delegations = {
 	//  L'historique git le rend en une commande le jour où le besoin se
 	//  manifeste — et ce jour-là il faudra aussi décider QUI a le droit de
 	//  corriger, ce que la version retirée ne tranchait pas.
-	accepter: (id: number) => api.post<any>(`/delegations/${id}/accepter`),
-	revoquer: (id: number) => api.post<any>(`/delegations/${id}/revoquer`),
+	accepter: (id: number) => api.post<Delegation>(`/delegations/${id}/accepter`),
+	revoquer: (id: number) => api.post<Delegation>(`/delegations/${id}/revoquer`),
 	//  🔴 `mesMandants` A ÉTÉ RETIRÉE (#801) : le front lit
 	//  `$currentUser.delegations_aidant`, qui arrive avec l'utilisateur — c'est
 	//  ce que `Nav.svelte` emploie pour montrer l'entrée « Délégations » à un
@@ -49,7 +83,7 @@ export const delegations = {
 
 export const admin = {
 	// Comptes
-	comptesEnAttente: () => api.get<any[]>('/admin/comptes-en-attente'),
+	comptesEnAttente: () => api.get<User[]>('/admin/comptes-en-attente'),
 	//  🔴 `pendingAccounts` A ÉTÉ SUPPRIMÉE ICI le 06/09/2026 (#801) : même route,
 	//  même corps, même retour que `comptesEnAttente` juste au-dessus — un doublon
 	//  exact, à une ligne d'écart, dans un fichier qu'on relit rarement en entier.
@@ -57,21 +91,23 @@ export const admin = {
 	//  qu'elle n'était ni un manque ni une avance, mais une COPIE. Elle était aussi
 	//  la seule des deux dont le nom fût en anglais.
 	traiterCompte: (id: number, data: { action: string; motif?: string }) =>
-		//  🔴 `<any>` EXPLICITE, et c'est le fond du sujet : sans argument de type,
+		//  🔴 Le retour est TYPÉ, et c'est le fond du sujet : sans argument de type,
 		//  `api.post` rend `{}`, et l'écran qui lit `res.auto_match.…` ne compile
 		//  pas. C'est exactement ce qui l'avait fait réécrire l'appel en dur avec
 		//  son propre `<any>` — une méthode trop pauvre ne fait pas contourner un
-		//  peu, elle fait recopier la route en entier (#801).
-		api.post<any>(`/admin/comptes/${id}/traiter`, data),
+		//  peu, elle fait recopier la route en entier (#801). Le `<any>` posé alors
+		//  ici est devenu `CompteTraite`, lu dans `traiter_compte` (#1572).
+		api.post<CompteTraite>(`/admin/comptes/${id}/traiter`, data),
 	// Commandes accès
-	commandesAccesEnAttente: () => api.get<any[]>('/admin/commandes-acces'),
+	commandesAccesEnAttente: () => api.get<CommandeAccesEnAttente[]>('/admin/commandes-acces'),
 	traiterCommandeAcces: (
 		id: number,
 		data: { action: string; motif_refus?: string; codes?: string[] },
 	) => api.post(`/admin/commandes-acces/${id}/traiter`, data),
 	// Sauvegardes
-	backupConfig: () => api.get<any>('/admin/sauvegardes/config'),
-	updateBackupConfig: (data: unknown) => api.put<any>('/admin/sauvegardes/config', data),
+	backupConfig: () => api.get<ConfigSauvegarde | null>('/admin/sauvegardes/config'),
+	updateBackupConfig: (data: unknown) =>
+		api.put<ConfigSauvegarde>('/admin/sauvegardes/config', data),
 	//  Rejoue MAINTENANT les contrôles du job de 06:00, et rend leurs verdicts
 	//  (#852). Aucun e-mail n'est envoyé : quelqu'un est devant l'écran.
 	relancerControleSante: () =>
@@ -79,20 +115,25 @@ export const admin = {
 			'/admin/controle-sante',
 		),
 	// Modèles e-mail
-	emailTemplates: () => api.get<any[]>('/admin/modeles-email'),
+	emailTemplates: () => api.get<ModeleEmail[]>('/admin/modeles-email'),
 	//  L'historique des envois — il manquait au client, et l'écran l'appelait en
 	//  dur juste à côté de `emailTemplates` (#801). Deux routes du même écran, une
 	//  déclarée et l'autre non : c'est ainsi qu'un client se vide de son sens.
-	emailsHistorique: () => api.get<any[]>('/admin/emails/historique'),
-	updateEmailTemplate: (id: number, data: unknown) => api.patch(`/admin/modeles-email/${id}`, data),
+	emailsHistorique: () => api.get<EnvoiEmail[]>('/admin/emails/historique'),
+	//  Rend le modèle tel que la liste le lit — variables CALCULÉES (#1682).
+	updateEmailTemplate: (
+		id: number,
+		data: Partial<Pick<ModeleEmail, 'sujet' | 'corps_html' | 'actif' | 'intention'>>,
+	) => api.patch<ModeleEmail>(`/admin/modeles-email/${id}`, data),
 	//  Un SEUL modèle remis au texte du code (#852). Il n'existait que la
 	//  remise à zéro globale : réparer un modèle cassé d'un caractère imposait
 	//  de détruire les textes choisis pour tous les autres — un remède qu'on
 	//  n'applique pas, et le défaut restait donc en place.
-	resetEmailTemplate: (id: number) => api.post<any>(`/admin/modeles-email/${id}/reinitialiser`),
+	resetEmailTemplate: (id: number) =>
+		api.post<ModeleEmail>(`/admin/modeles-email/${id}/reinitialiser`),
 	resetEmailTemplates: () => api.post<{ message: string }>('/admin/modeles-email/reinitialiser'),
 	// Utilisateurs & rôles
-	utilisateurs: () => api.get<any[]>('/admin/utilisateurs'),
+	utilisateurs: () => api.get<UtilisateurAdmin[]>('/admin/utilisateurs'),
 	//  🔴 Les deux rendent l'utilisateur MIS À JOUR, et le type le dit depuis le
 	//  06/09/2026 (#801). Sans argument de type, `api.post` rend `{}` : l'écran
 	//  qui fait `{ ...u, ...updated }` ne compilait pas, et il a donc réécrit
@@ -105,11 +146,11 @@ export const admin = {
 	//  de la « compatibilité ascendante » — avec rien, aucun appelant nulle part.
 	//  Le produit a des rôles MULTIPLES ; ces deux gestes-ci sont les vrais.
 	ajouterRole: (id: number, role: string) =>
-		api.post<any>(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
+		api.post<User>(`/admin/utilisateurs/${id}/ajouter-role`, { role }),
 	retirerRole: (id: number, role: string) =>
-		api.post<any>(`/admin/utilisateurs/${id}/retirer-role`, { role }),
+		api.post<User>(`/admin/utilisateurs/${id}/retirer-role`, { role }),
 	// Demandes de modification de profil
-	demandesProfil: () => api.get<any[]>('/admin/demandes-profil'),
+	demandesProfil: () => api.get<DemandeProfil[]>('/admin/demandes-profil'),
 	//  ⚠️ `motif_refus` accepte `null` et pas seulement `undefined` : l'écran
 	//  envoie `refusDemande[id] || null`, donc un null EXPLICITE. Resserrer le
 	//  type aurait obligé l'écran à changer ce qu'il transmet — le client suit le
@@ -124,7 +165,7 @@ export const admin = {
 	//  ⚠️ Le relevé reste (`bauxSansLocataire`, plus bas) : c'est lui qui
 	//  surveille, et c'est ce qui permettra de rouvrir sur un fait.
 	// Audit associations user-lot
-	auditUserLots: () => api.get<any[]>('/admin/audit/user-lots'),
+	auditUserLots: () => api.get<LienCompteLot[]>('/admin/audit/user-lots'),
 	/**
 	 *  Les baux en cours dont AUCUN compte locataire n'est rattaché (#808).
 	 *
@@ -136,7 +177,7 @@ export const admin = {
 	 *  de l'écran : la recalculer côté client en ferait une seconde règle, et deux
 	 *  vues du même relevé pourraient ranger le même bail dans deux cases.
 	 */
-	bauxSansLocataire: () => api.get<any[]>('/admin/audit/baux-sans-locataire'),
+	bauxSansLocataire: () => api.get<BailSansLocataire[]>('/admin/audit/baux-sans-locataire'),
 	/**
 	 *  Les tickets dont la catégorie pourrait être plus juste — PROPOSITION SEULE.
 	 *
@@ -148,7 +189,7 @@ export const admin = {
 	 *  même raison que ci-dessus : les recalculer ici en ferait une seconde
 	 *  règle, et deux vues du même relevé proposeraient deux catégories.
 	 */
-	reclassementTickets: () => api.get<any>('/admin/audit/reclassement-tickets'),
+	reclassementTickets: () => api.get<ReleveReclassement>('/admin/audit/reclassement-tickets'),
 	supprimerUserLot: (id: number) => api.delete(`/admin/user-lots/${id}`),
 	// Télémétrie
 	//  🔴 `scope` a été AJOUTÉ ici plutôt que dans l'écran (#801) : `OngletTelemetrie`
@@ -169,7 +210,7 @@ export const admin = {
 	//  précisément le cas à signaler. Ici les deux tables de routes ont rejoint
 	//  ce module (#801), et l'appelant réel est `TachesPlanifiees`.
 	telemetryAgreger: () => api.post('/admin/telemetry/agreger'),
-	telemetryHistorique: () => api.get<any[]>('/admin/telemetry/historique'), //  @sans-appelant-direct idem
+	telemetryHistorique: () => api.get<ExecutionTelemetrie[]>('/admin/telemetry/historique'), //  @sans-appelant-direct idem
 
 	//  ── Gestes sur un utilisateur — ajoutés le 06/09/2026 (#801) ───────────────
 	//
@@ -178,9 +219,10 @@ export const admin = {
 	//  écrans, une route, aucun lien entre eux : le jour où elle change, l'un des
 	//  deux suit et l'autre part en 404 sans que rien ne lève.
 	modifierUtilisateur: (id: number, data: unknown) =>
-		api.patch<any>(`/admin/utilisateurs/${id}`, data),
+		api.patch<User>(`/admin/utilisateurs/${id}`, data),
 	supprimerUtilisateur: (id: number) => api.delete(`/admin/utilisateurs/${id}`),
-	autoMatchUtilisateur: (id: number) => api.post<any>(`/admin/utilisateurs/${id}/auto-match`),
+	autoMatchUtilisateur: (id: number) =>
+		api.post<AutoMatchRelance>(`/admin/utilisateurs/${id}/auto-match`),
 	/**
 	 *  Les actions d'accueil d'un nouvel arrivant — bienvenue, consignes,
 	 *  demandes au syndic et au CS.
@@ -194,17 +236,18 @@ export const admin = {
 	accueilArrivant: (
 		id: number,
 		data: { batiment?: string | null; ancien_resident?: string | null },
-	) => api.post<any>(`/admin/utilisateurs/${id}/accueil-arrivant`, data),
+	) => api.post<AccueilArrivantResultat>(`/admin/utilisateurs/${id}/accueil-arrivant`, data),
 	/**  L'adresse de la fiche des consignes (PDF), pour un lien — seul
 	 *   `LienConsignes` la rend (#1578 ; `lint:lien-consignes`). */
 	ficheArrivantUrl: (): string => `${BASE}/admin/fiche-arrivant`,
 	banCommunaute: (id: number, data: unknown) =>
-		api.patch<any>(`/admin/utilisateurs/${id}/ban-communaute`, data),
+		api.patch<User>(`/admin/utilisateurs/${id}/ban-communaute`, data),
 	//  ⚠️ Route DISTINCTE de `comptesEnAttente` : `/enrichis` rend les mêmes
 	//  comptes avec le rapprochement de lots déjà calculé. Deux endpoints, deux
 	//  méthodes — les confondre sous un drapeau donnerait une méthode dont le
 	//  retour change de forme selon l'argument.
-	comptesEnAttenteEnrichis: () => api.get<any[]>('/admin/comptes-en-attente/enrichis'),
+	comptesEnAttenteEnrichis: () =>
+		api.get<CompteEnAttenteEnrichi[]>('/admin/comptes-en-attente/enrichis'),
 
 	//  ── Intégrité de la base (`IntegriteReferentielle`) ────────────────────────
 	clesEtrangeres: () => api.get<ReleveOrphelins>('/admin/db/cles-etrangeres'),
@@ -225,7 +268,7 @@ export const admin = {
 		api.post<{ supprimees: number; deliees: number }>('/admin/db/purger-orphelins?confirmer=true'),
 
 	/** L'état des tâches planifiées — lu par `TachesPlanifiees`. */
-	santeMaintenance: () => api.get<any>('/admin/maintenance/sante'),
+	santeMaintenance: () => api.get<SanteMaintenance>('/admin/maintenance/sante'),
 
 	/**
 	 *  L'historique d'une tâche planifiée.
@@ -243,13 +286,13 @@ export const admin = {
 	 *  relever — elle ne ressemble plus à un appel.
 	 */
 	historiqueTache: (tache: string, limite = 10) => {
-		const propre: Record<string, () => Promise<any[]>> = {
-			backup: () => api.get<any[]>('/admin/sauvegardes/historique'),
-			telemetrie: () => api.get<any[]>('/admin/telemetry/historique'),
+		const propre: Record<string, () => Promise<ExecutionTache[]>> = {
+			backup: () => api.get<ExecutionSauvegarde[]>('/admin/sauvegardes/historique'),
+			telemetrie: () => api.get<ExecutionTelemetrie[]>('/admin/telemetry/historique'),
 		};
 		return (
 			propre[tache]?.() ??
-			api.get<any[]>(
+			api.get<ExecutionMaintenance[]>(
 				`/admin/maintenance/historique${buildQuery({ tache, limite: String(limite) })}`,
 			)
 		);
@@ -279,9 +322,9 @@ export const admin = {
 	 *  Rend `null` pour une tâche qui ne se lance pas à la main — l'écran ne
 	 *  montre alors aucun bouton.
 	 */
-	lancerTache: (tache: string): Promise<any> | null => {
+	lancerTache: (tache: string): Promise<LancementTache> | null => {
 		const route = ROUTES_LANCEMENT[tache];
-		return route ? api.post<any>(route) : null;
+		return route ? api.post<LancementTache>(route) : null;
 	},
 	/**
 	 *  « Cette tâche se lance-t-elle à la main ? » — l'écran y conditionne son
@@ -363,8 +406,8 @@ export const config = {
 	//  qui la valident — et non un objet `whatsapp` de plus : un objet par écran
 	//  redonnerait le découpage que le client existe pour éviter.
 	admin: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config/admin'),
-	testerSmtp: (email: string) => api.post<any>('/config/smtp-test', { email }),
-	testerImap: () => api.post<any>('/config/imap-test', {}),
+	testerSmtp: (email: string) => api.post<EssaiSmtp>('/config/smtp-test', { email }),
+	testerImap: () => api.post<EssaiImap>('/config/imap-test', {}),
 	/**  Ce que la relève a fait des derniers messages, et pourquoi (#1447). */
 	relevesCourriel: (): Promise<CourrielReleve[]> =>
 		api.get<CourrielReleve[]>('/config/releves-courriel'),
@@ -397,7 +440,7 @@ export const config = {
 			modeles: { id: string; libelle: string }[];
 		}>('/config/llm-modeles'),
 
-	whatsappStatut: () => api.get<any>('/config/whatsapp-status'),
+	whatsappStatut: () => api.get<StatutWhatsApp>('/config/whatsapp-status'),
 	/**  L'image du QR code d'appairage, pour un `<img>`. `horodatage` change
 	 *   l'adresse à chaque rafraîchissement : sans lui, le navigateur
 	 *   resservirait le QR expiré de son cache (#1578). */
@@ -405,8 +448,9 @@ export const config = {
 	whatsappJournaux: () => api.get<JournalEnvoiWhatsApp[]>('/config/whatsapp-logs'),
 	whatsappPlanifies: () => api.get<MessagePlanifieWhatsApp[]>('/config/whatsapp-scheduled'),
 	modifierWhatsappPlanifie: (id: number, data: unknown) =>
-		api.put<any>(`/config/whatsapp-scheduled/${id}`, data),
-	testerWhatsapp: (message: string) => api.post<any>('/config/whatsapp-test', { message }),
+		api.put<Accuse>(`/config/whatsapp-scheduled/${id}`, data),
+	testerWhatsapp: (message: string) =>
+		api.post<EssaiWhatsApp>('/config/whatsapp-test', { message }),
 };
 
 /**

@@ -12,7 +12,7 @@
 	//  la table des libellés vivait dans `prestataires/+page.svelte` et qu'il n'y
 	//  avait pas accès. Une table qui vit dans UN écran, les autres s'en passent.
 	import { equipLabel, typePrestataireLabel } from '$lib/prestataires';
-	import { prestataires as prestApi } from '$lib/api';
+	import { prestataires as prestApi, type SynthesePrestataire } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDate } from '$lib/date';
 	import NoteEtoiles from '$lib/components/NoteEtoiles.svelte';
@@ -21,7 +21,7 @@
 
 	export let reportPrestataires: ReportPrestataire[] = [];
 
-	let reportPrestSynth: any = null;
+	let reportPrestSynth: SynthesePrestataire | null = null;
 	let reportPrestSynthLoading = false;
 
 	async function loadPrestSynthese(prestId: number) {

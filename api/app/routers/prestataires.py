@@ -229,6 +229,16 @@ def lister_contrats(session: Session, archivees: bool) -> list[ContratRead]:
         for c in session.exec(select(ContratEntretien)).all()
         if est_archivable("contrat", c) == archivees
     ]
+    return lire_contrats(session, contrats)
+
+
+def lire_contrats(session: Session, contrats: list[ContratEntretien]) -> list[ContratRead]:
+    """La lecture d'un contrat, ce qui s'en DÉDUIT compris : échéance, archivage, ✨.
+
+    La liste et la synthèse d'un prestataire passent par elle : la synthèse les
+    relisait par `ContratRead.model_validate` seul, et `date_fin`, `reconduit`,
+    `echu`… y gardaient leur valeur par défaut (#1687, classe de #1563).
+    """
     #  ⚠️ La configuration de l'assistant se lit UNE fois, pas par contrat : elle
     #  est la même pour tous, et la relire à chaque ligne ferait autant d'allers
     #  en base que de contrats pour une réponse identique.
@@ -245,7 +255,7 @@ def lister_contrats(session: Session, archivees: bool) -> list[ContratRead]:
     lus = []
     for c in contrats:
         lu = poser_echeance(ContratRead.model_validate(c), c)
-        lu.archivee = archivees
+        lu.archivee = est_archivable("contrat", c)
         lu.synthese_disponible = assistant_pret and (
             not cfg.envoi_document or bool(documents_du_contrat(session, c))
         )
@@ -467,7 +477,7 @@ def get_prestataire_synthese(
     prest_data = _prest_to_read(p).model_dump()
     return {
         **prest_data,
-        "contrats": [ContratRead.model_validate(c).model_dump() for c in contrats],
+        "contrats": [lu.model_dump() for lu in lire_contrats(session, contrats)],
         "notations": notations_read,
         "note_moyenne": note_moy,
         "nb_notations": len(notations),

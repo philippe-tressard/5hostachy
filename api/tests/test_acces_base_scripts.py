@@ -194,6 +194,17 @@ INTERDITS_SANS_EXCEPTION = (
         "tiers — lire la taille du fichier depuis l'hôte (`rapport_taille_fichier`), "
         "le reste par une route in-process",
     ),
+    #  Aucune migration relancée dans le conteneur en marche (#1683, 04/10/2026).
+    #  `auto-deploy.sh` le faisait à CHAQUE déploiement, après `up -d` — ce test
+    #  le citait comme geste « permis », parce que le motif Python ne le voyait
+    #  pas. `api/start.sh` migre déjà avant uvicorn, sous `set -e` : la relance
+    #  n'apportait rien, sinon un process tiers sur la base vivante.
+    (
+        re.compile(r"docker\s+(?:compose\s+)?exec\b[^\n#]*\balembic\b"),
+        scripts_shell_versionnes,
+        "Alembic lancé dans le conteneur de l'API en marche — `start.sh` migre au "
+        "démarrage ; la révision appliquée se lit dans les journaux de l'API",
+    ),
     #  Aucune sauvegarde côté hôte : retirée de `setup-rpi5.sh` le 04/08/2026, où
     #  elle avait survécu à la haute disponibilité parce que personne n'avait
     #  relu ce fichier depuis mars 2026. ⚠️ Ce contrôle ne visait QUE ce script
@@ -240,8 +251,27 @@ def test_motif_python_dans_le_conteneur_voit_et_ne_voit_que_lui():
     )
     permis = (
         "docker exec hostachy_api curl -sf http://localhost:8000/health",
-        "docker exec hostachy_api sh -lc 'cd /app && alembic upgrade head'",
+        "docker exec hostachy_api date",
         "docker stop hostachy_api",
+    )
+    for ligne in refuses:
+        assert motif.search(ligne), f"le motif devrait refuser : {ligne}"
+    for ligne in permis:
+        assert not motif.search(ligne), f"le motif refuse à tort : {ligne}"
+
+
+def test_motif_alembic_dans_le_conteneur_voit_et_ne_voit_que_lui():
+    """Cas zéro du motif « Alembic dans le conteneur » (#1683) — la ligne réelle
+    d'`auto-deploy.sh` a disparu avec le correctif : le témoin la garde ici."""
+    motif = next(m for m, _portee, msg in INTERDITS_SANS_EXCEPTION if "Alembic lancé" in msg)
+    refuses = (
+        "docker exec hostachy_api sh -lc 'cd /app && alembic upgrade head' 2>/dev/null || true",
+        "docker exec hostachy_api alembic current",
+        "docker compose exec api alembic upgrade head",
+    )
+    permis = (
+        "docker compose logs api 2>&1 | grep -i alembic",
+        "alembic upgrade head",
     )
     for ligne in refuses:
         assert motif.search(ligne), f"le motif devrait refuser : {ligne}"

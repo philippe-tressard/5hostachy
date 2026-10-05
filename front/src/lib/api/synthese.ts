@@ -67,6 +67,39 @@ export interface MetriquesSynthese {
 	recidive?: RecidiveSynthese | null;
 }
 
+/** Une étape du kanban dans un ENSEMBLE d'affaires : sa durée moyenne (jours
+ *  ouvrés) et combien d'affaires y sont passées — `schemas_synthese.EtapeMoyenne`. */
+export interface EtapeMoyenne {
+	statut: string;
+	jours: number;
+	nombre: number;
+}
+
+/** Les moyennes d'un ensemble d'affaires closes (#1645, #1646) —
+ *  `schemas_synthese.ResumeAffaires`, calculées par `utils/synthese_affaire/agregats`.
+ *  Une moyenne `null` : rien ne se mesurait — l'écran dit « — », jamais « 0 j ». */
+export interface ResumeAffaires {
+	nombre: number;
+	annulees: number;
+	duree_totale: number | null;
+	etapes: EtapeMoyenne[];
+	/** Le TOTAL des relances au syndic. */
+	relances: number;
+	relances_par_affaire: number | null;
+	/** Délai moyen de réaction du syndic après la dernière relance… */
+	reaction_relance: number | null;
+	/** …et le nombre d'affaires où il se mesure. */
+	reactions: number;
+	premiere_reponse_syndic: number | null;
+	suites: number | null;
+}
+
+/** Un exercice comptable : l'année où il commence, et son nom (« 2025-2026 »). */
+export interface ExerciceLu {
+	annee: number;
+	libelle: string;
+}
+
 /** `SyntheseLue` — la synthèse telle que la fiche et le carnet la lisent. */
 export interface SyntheseAffaire {
 	id: number;

@@ -29,3 +29,80 @@ http_code() {  # $1 = URL, $2 = timeout (défaut 10) → code HTTP ou 000
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-10}" "$1" 2>/dev/null)
   echo "${code:-000}"
 }
+
+# ── Attendre un 200, et JAMAIS sans fin (#1662) ──────────────────────────────
+#
+#  La boucle « sonder toutes les N s jusqu'au 200 » était écrite trois fois
+#  (`maintenance.sh`, `MaJ-Hostachy.sh`, `bascule.sh`) quand `auto-deploy.sh` en
+#  a eu besoin : elle s'écrit ici, et les deux premières y passent. `bascule.sh`
+#  garde la sienne — elle sonde le pair par SSH, sous le piège de rollback.
+#
+#  Décision PURE : $1 = code obtenu, $2 = secondes écoulées, $3 = délai maximal
+#  → prete | attendre | depassee. Un délai ou un écoulé illisible renonce : un
+#  déploiement ne doit jamais rester suspendu à une sonde (le pire cas devient
+#  « une mesure, puis on continue », jamais « on attend toujours »).
+verdict_attente_200() {
+  [ "${1:-}" = 200 ] && { echo prete; return; }
+  case "${2:-}" in ''|*[!0-9]*) echo depassee; return ;; esac
+  case "${3:-}" in ''|*[!0-9]*) echo depassee; return ;; esac
+  [ "$2" -lt "$3" ] && echo attendre || echo depassee
+}
+
+#  $1 = délai maximal (s), $2 = pas entre deux mesures (s), $3… = la commande
+#  qui écrit un code HTTP (ex. `http_code http://localhost/api/health 3`).
+#  Écrit « prete|depassee <secondes> <dernier code> » ; rend 0 si prête, 1 sinon.
+attendre_200() {
+  local max=$1 pas=$2 debut=$SECONDS code v
+  shift 2
+  while :; do
+    code=$("$@" 2>/dev/null) || true
+    code=${code:-000}
+    v=$(verdict_attente_200 "$code" "$((SECONDS - debut))" "$max")
+    case "$v" in
+      prete)    echo "prete $((SECONDS - debut)) $code"; return 0 ;;
+      depassee) echo "depassee $((SECONDS - debut)) $code"; return 1 ;;
+    esac
+    sleep "$pas"
+  done
+}
+
+# ── Auto-test (aucun réseau : la sonde est simulée) ──────────────────────────
+#  `source lib-sonde.sh` depuis un script lancé avec `--selftest` verrait ses
+#  propres arguments : la garde sur BASH_SOURCE l'empêche (`lib-parite.sh`, #511).
+if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
+  st=0
+  #  Une sonde simulée qui rend, à chaque appel, le code suivant de $CODES
+  #  (le dernier se répète) — l'état vit dans un fichier, la sonde étant
+  #  appelée dans une sous-coque.
+  _F=$(mktemp); trap 'rm -f "$_F"' EXIT
+  sonde_simulee() {
+    local n; n=$(cat "$_F" 2>/dev/null || echo 0); echo $((n + 1)) > "$_F"
+    local -a c; read -r -a c <<< "$CODES"
+    [ "$n" -ge "${#c[@]}" ] && n=$(( ${#c[@]} - 1 ))
+    echo "${c[$n]}"
+  }
+  t() { local libelle=$1 attendu=$2 r; CODES=$3; echo 0 > "$_F"; shift 3
+        r=$(timeout 15 bash -c "$(declare -f attendre_200 verdict_attente_200 sonde_simulee); _F=$_F CODES='$CODES' attendre_200 $*" 2>/dev/null | cut -d' ' -f1)
+        if [ "$r" = "$attendu" ]; then echo "PASS  $libelle → $r"
+        else echo "FAIL  $libelle  attendu=$attendu obtenu=${r:-rien}"; st=1; fi; }
+  #  Décision pure : un 200 prête, l'échéance dépassée renonce, sinon on attend.
+  v() { local libelle=$1 attendu=$2 r; shift 2; r=$(verdict_attente_200 "$@")
+        if [ "$r" = "$attendu" ]; then echo "PASS  $libelle → $r"
+        else echo "FAIL  $libelle  attendu=$attendu obtenu=${r:-rien}"; st=1; fi; }
+  v "200 : prête"                              prete    200 0 120
+  v "200 à l'échéance : prête quand même"      prete    200 130 120
+  v "503 dans le délai : on attend"            attendre 503 10 120
+  v "000 au-delà du délai : on renonce"        depassee 000 121 120
+  #  🔴 Un délai illisible ne doit JAMAIS faire attendre sans fin (#1662) :
+  #  il vaut zéro — une seule mesure, puis on renonce.
+  v "délai vide : on renonce"                  depassee 000 0 ""
+  v "délai illisible : on renonce"             depassee 503 0 "x"
+  v "écoulé illisible : on renonce"            depassee 503 "?" 120
+  #  La boucle, sur une sonde simulée (pas de 0 s : le test ne dort pas).
+  t "prête au premier appel"                   prete    "200"             120 0 sonde_simulee
+  t "redémarrage : 000, 502, 503 puis 200"     prete    "000 502 503 200" 120 0 sonde_simulee
+  t "jamais prête : bornée, elle renonce"      depassee "000"             1   0 sonde_simulee
+  t "délai illisible : bornée quand même"      depassee "503"             x   0 sonde_simulee
+  [ $st -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
+  exit $st
+fi

@@ -31,6 +31,7 @@ from app.models.core import (
     TelemetryEvent,
     TelemetryMonthly,
 )
+from app.models.telemetrie import DerniereVisite
 from app.utils import horloge, telemetry_aggregation
 from app.utils.telemetrie_tableau import non_distingue_jusqu_au
 from tests.aides_base import compte, moteur_memoire
@@ -155,3 +156,18 @@ def test_le_mois_termine_se_batit_depuis_le_journalier_en_deux_series(jeu):
             ("__total__", True, 2),
             ("__total__", False, 6),
         }
+
+
+def test_le_jour_de_la_derniere_visite_se_note_et_se_purge(jeu):
+    """#1629 : chaque compte venu garde le DERNIER jour agrégé ; au-delà de 12 mois, il part."""
+    moteur, ids = jeu
+    with Session(moteur) as s:
+        vieux = compte(s, prefixe="vieux").id
+        s.add(DerniereVisite(user_id=vieux, jour="2025-09-15"))
+        s.commit()
+    rapport = telemetry_aggregation.run_telemetry_aggregation()
+    assert rapport["dernieres_visites_purgees"] == 1
+    with Session(moteur) as s:
+        visites = {d.user_id: d.jour for d in s.exec(select(DerniereVisite)).all()}
+    #  Aujourd'hui n'est jamais agrégé : la visite du 01/10 de A se lit dans les évènements.
+    assert visites == {ids["g"]: "2026-09-30", ids["a"]: "2026-09-30", ids["b"]: "2026-09-29"}

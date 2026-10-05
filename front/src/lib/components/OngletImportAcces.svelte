@@ -20,7 +20,7 @@
 <script lang="ts">
 	import { nombreOuNull } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { acces as accesApi, admin as adminApi } from '$lib/api';
+	import { acces as accesApi, admin as adminApi, type LotPourBadge } from '$lib/api';
 	import { nomAffiche } from '$lib/noms';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
@@ -45,7 +45,7 @@
 
 	let imports: any[] = [];
 	let stats: any = null;
-	let lots: any[] = [];
+	let lots: LotPourBadge[] = [];
 	let chargement = true;
 	let erreur = '';
 	let filtre = '';

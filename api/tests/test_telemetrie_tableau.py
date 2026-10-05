@@ -242,3 +242,20 @@ def test_une_reagregation_en_attente_se_rejoue_sans_attendre_02h(monkeypatch):
             s.commit()
             assert reagregation_en_attente(s) is False
             assert derniere_agregation_ou_rejeu(s) == MAINTENANT.replace(hour=11)
+
+
+@pytest.mark.parametrize("scope", ["jour", "mois", "annee", "total"])
+def test_le_retour_des_comptes_suit_toute_vue(admin_http, scope):
+    """#1629 : dormants et arrivants sont à seuils fixes — rendus quelle que soit la vue."""
+    d = admin_http.get(f"/telemetry/dashboard?scope={scope}").json()
+    assert [s["seuil"] for s in d["retour"]["dormants"]] == [60, 90]
+    assert d["retour"]["arrivants"]["fenetre_jours"] == 7
+    assert isinstance(d["retour"]["liste_dormants"], list)
+
+
+def test_le_retour_des_comptes_est_reserve_a_l_administrateur():
+    """La liste nominative des dormants passe par le tableau de bord : `require_admin`."""
+    with base_http() as moteur:
+        for role in (RoleUtilisateur.conseil_syndical, RoleUtilisateur.résident):
+            http, _ = client_http(moteur, role)
+            assert http.get("/telemetry/dashboard?scope=jour").status_code == 403

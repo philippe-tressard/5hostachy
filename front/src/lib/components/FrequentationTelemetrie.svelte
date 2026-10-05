@@ -215,7 +215,7 @@
 												class:tl-bulle-droite={b.aDroite}
 												class:tl-bulle-dedans={b.haut}
 											>
-												{b.date} · {kpi.jour_pointe.uniques} utilisateurs
+												{b.date} · {kpi.jour_pointe?.uniques} utilisateurs
 											</span>
 											<span aria-hidden="true">🏆</span>
 										</div>

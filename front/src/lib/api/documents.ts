@@ -1,7 +1,34 @@
 //  Documents, fichiers et téléversements : trois clients qui manipulent la
 //  même notion et vivaient à 400 lignes d'écart.
 import { api, BASE, postFormData } from './client';
-import type { Document } from './types';
+
+/**  Un document — `DocumentRead` (`routers/documents_schemas.py`), que rendent la
+ *   liste, le dépôt et la correction. Complété le 04/10/2026 (#1572) — il n'en portait
+ *   que huit champs sur dix-sept — et venu de `types.ts` à côté de son client. */
+export interface Document {
+	id: number;
+	titre: string;
+	/** Vide plutôt qu'absent : le serveur rend `""` (#852). */
+	description: string;
+	fichier_nom: string;
+	taille_octets: number | null;
+	mime_type: string;
+	categorie_id: number | null;
+	contrat_id: number | null;
+	ticket_id: number | null;
+	evenement_id: number | null;
+	/** Le droit de lecture (`résidence`, `bâtiment`…). */
+	perimetre: string;
+	batiment_id: number | null;
+	publie_le: string;
+	annee: number | null;
+	/** Date ISO `AAAA-MM-JJ`. */
+	date_ag: string | null;
+	batiments_ids_json: string | null;
+	/** De quoi PARLE le document, en codes de périmètre — descriptif, jamais un
+	 *  droit ; `null` quand le ciblage est absent ou illisible. */
+	perimetre_cible: string[] | null;
+}
 
 /**
  *  Les entités auxquelles un document peut se rattacher. **Quatre, et l'API en
@@ -118,11 +145,11 @@ export const documents = {
 	 *  serveur — *une ligne `document` porte toujours un rattachement* — se lit
 	 *  ainsi côté client, au lieu d'être redécouvert à chaque appel.
 	 */
-	uploadPour: (cible: CibleDocument, id: number, titre: string, file: File): Promise<any> =>
-		postFormData('/documents', { titre, [CHAMP_RATTACHEMENT[cible]]: String(id), file }),
+	uploadPour: (cible: CibleDocument, id: number, titre: string, file: File) =>
+		postFormData<Document>('/documents', { titre, [CHAMP_RATTACHEMENT[cible]]: String(id), file }),
 	//  Les `Document` d'une affaire — ceux des anciennes publications, que la
 	//  0210 lui a rattachés (#1091). Une affaire récente porte les siens en URLs.
-	listByTicket: (ticketId: number) => api.get<any[]>(`/documents?ticket_id=${ticketId}`),
+	listByTicket: (ticketId: number) => api.get<Document[]>(`/documents?ticket_id=${ticketId}`),
 	downloadUrl: (docId: number) => `${BASE}/documents/${docId}/télécharger`,
 	delete: (id: number) => api.delete(`/documents/${id}`),
 };
@@ -143,7 +170,22 @@ async function uploadFile(path: string, file: File): Promise<{ url: string }> {
 	return postFormData(path, { file });
 }
 
-export function uploadExcel<T = any>(path: string, file: File, remplacer = false): Promise<T> {
+/**  Le compte rendu commun aux trois imports de tableur (lots, Vigik, télécommandes)
+ *   — le `stats` des `importer_depuis_bytes` de `utils/import_*.py`. Chaque import
+ *   peut y ajouter le sien (`ResultatImportLots`). */
+export interface CompteImportTableur {
+	importes: number;
+	ignores: number;
+	doublons: number;
+	/** Une phrase par ligne refusée (« Ligne 12 — bâtiment inconnu… »). */
+	erreurs: string[];
+}
+
+export function uploadExcel<T = CompteImportTableur>(
+	path: string,
+	file: File,
+	remplacer = false,
+): Promise<T> {
 	//  Le libellé reste distinct : un import de tableur qui échoue ne se raconte pas
 	//  comme un téléversement de pièce jointe. C'est la SEULE des cinq divergences
 	//  de libellé qui portait un sens ; les quatre autres disaient la même chose.

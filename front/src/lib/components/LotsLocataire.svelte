@@ -16,12 +16,12 @@
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 	import CaracteristiquesLot from '$lib/components/CaracteristiquesLot.svelte';
 	import QuestionsLocation from '$lib/components/QuestionsLocation.svelte';
-	import type { MonLot } from '$lib/api';
+	import type { BailLocataire, MonLot } from '$lib/api';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import { nomAffiche } from '$lib/noms';
 
 	/** Le bail du locataire (`bailleur.monBail()`), ou `null` s'il n'en a pas. */
-	export let bail: any = null;
+	export let bail: BailLocataire | null = null;
 	/** Ses lots : ceux qu'il LOUE (`type_lien` locataire) et ceux qu'il possède. */
 	export let lots: MonLot[] = [];
 	/** Appelé quand il vient de dire ce qu'il loue : la page relit ses lots. */

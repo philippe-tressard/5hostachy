@@ -17,6 +17,9 @@
 		copropriete as coproprieteApi,
 		documents as documentsApi,
 		diagnostics as diagnosticsApi,
+		type Batiment,
+		type Copropriete,
+		type DiagnosticType,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -25,6 +28,7 @@
 	import BarreOnglets from '$lib/components/BarreOnglets.svelte';
 	import SectionRegles from '$lib/components/SectionRegles.svelte';
 	import CarnetEntretien from '$lib/components/CarnetEntretien.svelte';
+	import BilanCarnet from '$lib/components/BilanCarnet.svelte';
 	import FicheResidence from '$lib/components/FicheResidence.svelte';
 	import RubriqueDocuments from '$lib/components/RubriqueDocuments.svelte';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
@@ -41,8 +45,8 @@
 	$: _siteNom = $siteNomStore;
 
 	// ── State ──────────────────────────────────────────────────────────────────
-	let copropriete: any = null;
-	let batiments: any[] = [];
+	let copropriete: Copropriete | null = null;
+	let batiments: Batiment[] = [];
 	let plans: any[] = [];
 	let reglements: any[] = [];
 	let crAg: any[] = [];
@@ -73,7 +77,7 @@
 	//  trois fois, et la copie du plan liait son périmètre à celle de l'AG (#470).
 
 	// Diagnostics réglementaires
-	let diagnosticTypes: any[] = [];
+	let diagnosticTypes: DiagnosticType[] = [];
 	//  ⚠️ L'état du dépôt et de la correction d'un rapport vit dans
 	//  `SectionDiagnostics` : il n'a d'objet que là où il est employé.
 
@@ -205,6 +209,12 @@
 <!--  Le carnet est une VUE de la résidence, pas un écran à part : il partage
       l'en-tête, la barre d'onglets et l'adresse de cette page. -->
 {#if onglet === 'carnet'}
+	<!--  📊 Le bilan de l'exercice (#1645) : le conseil syndical seul, replié à
+	      l'arrivée. À côté du carnet et non dedans — le carnet est la lecture de
+	      tous les copropriétaires, le bilan celle du conseil. -->
+	{#if $isCS}
+		<BilanCarnet />
+	{/if}
 	<CarnetEntretien />
 {:else if onglet === 'fiche' && loading}
 	<EtatListe chargement />

@@ -6,6 +6,8 @@ Le gabarit commun (`email._wrap_email`) enveloppe ces contenus : pas de
 `<html>` ni de `<body>` ici, seulement le corps riche.
 """
 
+from app.seed.emails.fragments import BONJOUR, GRIS, bouton, titre
+
 MODELES = [
     (
         "reinitialisation_mdp",
@@ -81,5 +83,30 @@ MODELES = [
         '<p style="margin:0 0 12px">Votre demande de création de compte sur <strong>{{ residence.nom }}</strong> n’a pas pu être acceptée.</p>'
         '<p style="margin:0;color:#5A6070">Si vous pensez qu’il s’agit d’une erreur, n’hésitez pas à contacter le conseil syndical.</p>',
         True,
+    ),
+    (
+        #  L'avertissement avant la purge d'un compte inactif (#1580). Il dit QUAND,
+        #  et ce qu'il suffit de faire : se connecter. Aucun lien à usage unique —
+        #  la page de connexion, rien d'autre : un lien ouvert par un antivirus de
+        #  messagerie ne doit rien déclencher (`standards/03` §5 bis).
+        #  Non désactivable : sans lui, la purge ne supprime rien (aucun
+        #  avertissement daté), et la durée annoncée redeviendrait fictive.
+        "compte_inactif_avertissement",
+        "Compte inactif — suppression prochaine",
+        "Votre compte sera supprimé faute d’utilisation — {{ residence.nom }}",
+        titre("Votre compte va être supprimé")
+        + BONJOUR
+        + '<p style="margin:0 0 12px">Votre compte sur <strong>{{ residence.nom }}</strong> '
+        "n’a pas été utilisé depuis le {{ derniere_activite }}.</p>"
+        '<p style="margin:0 0 12px">Comme l’annonce la politique de confidentialité du site, '
+        "un compte resté deux ans sans connexion est supprimé, avec les données qui lui sont "
+        "rattachées. Le vôtre le sera <strong>à partir du {{ date_suppression }}</strong>.</p>"
+        '<p style="margin:0 0 24px">Pour le conserver, <strong>il suffit de vous connecter</strong> '
+        "avant cette date : la suppression est alors annulée.</p>"
+        + bouton("{{ app.url }}/auth/connexion", "Me connecter", marge="0 0 16px")
+        + f'<p style="margin:0;font-size:13px;color:{GRIS}">Mot de passe oublié ? La page de '
+        "connexion permet d’en choisir un nouveau. Si vous ne souhaitez plus utiliser ce compte, "
+        "vous n’avez rien à faire.</p>",
+        False,
     ),
 ]

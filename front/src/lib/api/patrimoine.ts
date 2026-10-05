@@ -10,9 +10,163 @@
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, buildQuery, postFormData, BASE } from './client';
-import { uploadExcel } from './documents';
-import type { SyntheseAffaire } from './synthese';
+import { uploadExcel, type CompteImportTableur } from './documents';
+import type { ExerciceLu, ResumeAffaires, SyntheseAffaire } from './synthese';
 import type { Perimetre as PerimetreDTO } from '$lib/perimetres';
+
+//  ── Ce que le serveur RENVOIE (#1572) ───────────────────────────────────────────
+//
+//  Lus dans le code serveur, route par route — jamais supposés (même motif que
+//  `communaute.ts`). Les dates arrivent en chaîne ISO (`AAAA-MM-JJ` pour une
+//  `date`, sans fuseau pour un instant).
+
+/**  La fiche de la copropriété — `CoproprieteRead` (`routers/copropriete.py`), que
+ *   rendent la lecture et la correction. Les champs `assurance_*` et `syndic_*`
+ *   suivent le contrat désigné quand il y en a un ; `*_reconduit` et `*_echu`
+ *   sont DÉDUITS par le serveur, jamais saisis. */
+export interface Copropriete {
+	id: number;
+	nom: string;
+	adresse: string;
+	annee_construction: number | null;
+	nb_lots_total: number | null;
+	nb_lots_principaux: number | null;
+	numero_immatriculation: string | null;
+	mois_debut_exercice: number | null;
+	assurance_compagnie: string | null;
+	assurance_numero_police: string | null;
+	assurance_echeance: string | null;
+	assurance_contrat_id: number | null;
+	assurance_telephone: string | null;
+	assurance_email: string | null;
+	assurance_debut: string | null;
+	assurance_document_id: number | null;
+	assurance_reconduit: boolean;
+	assurance_echu: boolean;
+	syndic_contrat_id: number | null;
+	syndic_cabinet: string | null;
+	syndic_telephone: string | null;
+	syndic_email: string | null;
+	syndic_numero_mandat: string | null;
+	syndic_debut: string | null;
+	syndic_echeance: string | null;
+	syndic_document_id: number | null;
+	syndic_reconduit: boolean;
+	syndic_echu: boolean;
+	syndic_interlocuteur: string | null;
+	syndic_interlocuteur_email: string | null;
+	photo_url: string | null;
+	nb_parkings_communs: number;
+}
+
+/**  Un bâtiment de la résidence — `BatimentRead` (`routers/copropriete.py`). */
+export interface Batiment {
+	id: number;
+	/** « A », « B »… — le NUMÉRO, pas le libellé « Bât. A ». */
+	numero: string;
+	nb_etages: number;
+	specificites: string | null;
+	nb_appartements: number;
+	nb_caves: number;
+	nb_parkings: number;
+	nb_locaux_commerciaux: number;
+}
+
+/** L'état d'une ligne de l'import des lots — `StatutLotImport` (`models/lot_import.py`). */
+export type StatutLigneImportLot =
+	'en_attente' | 'utilisateur_lie' | 'lot_lie' | 'resolu' | 'ignore';
+
+/**  Une ligne de l'import des lots — `lots_imports._imp_row` : la ligne du classeur,
+ *   son lot et ses occupants résolus. La liste ET la correction la rendent. */
+export interface LigneImportLot {
+	id: number;
+	/** `null` pour un parking. */
+	batiment_id: number | null;
+	/** Le libellé du bâtiment, son identifiant s'il a disparu, « P » pour un parking. */
+	batiment_nom: string;
+	numero: string;
+	/** Le type tel que le classeur l'écrit (`AP`, `T2`, `CA`, `PS`…). */
+	type_raw: string;
+	etage_raw: string | null;
+	no_coproprietaire: string | null;
+	nom_coproprietaire: string | null;
+	statut: StatutLigneImportLot;
+	lot_id: number | null;
+	lot_label: string | null;
+	utilisateurs: {
+		user_id: number | null;
+		/** `propriétaire` ou `locataire`. */
+		type_lien: string;
+		utilisateur: { id: number; prenom: string; nom: string } | null;
+	}[];
+	notes_admin: string | null;
+	importe_le: string | null;
+	resolu_le: string | null;
+}
+
+/** Les compteurs de l'import des lots — `lots_imports.stats_imports`. */
+export interface StatsImportLots {
+	total: number;
+	en_attente: number;
+	utilisateur_lie: number;
+	lot_lie: number;
+	resolu: number;
+	ignore: number;
+	/** Les lignes qui portent au moins un occupant. */
+	avec_user: number;
+}
+
+/**  La résolution automatique des copropriétaires — `resolution_lots.resoudre_imports`. */
+export interface ResolutionImportLots {
+	resolus: number;
+	sans_occupant: number;
+	hors_perimetre: number;
+	/** Une phrase par lot en échec. */
+	erreurs: string[];
+}
+
+/**  Une règle de vie de la résidence, telle que la LISTE la rend
+ *   (`routers/regles_residence.list_regles`, un dict composé à la main). */
+export interface RegleResidence {
+	id: number;
+	titre: string;
+	/** Texte riche (HTML), `""` par défaut. */
+	contenu: string;
+	ordre: number;
+	cree_par_id: number;
+	cree_le: string | null;
+	modifie_le: string | null;
+}
+
+/**  Ce que rendent la création et la correction d'une règle : quatre champs
+ *   seulement, ni auteur ni dates. */
+export type RegleResidenceEcrite = Pick<RegleResidence, 'id' | 'titre' | 'contenu' | 'ordre'>;
+
+/**  Un rapport de diagnostic — `RapportRead` (`routers/diagnostics.py`). */
+export interface RapportDiagnostic {
+	id: number;
+	diagnostic_type_id: number;
+	titre: string;
+	date_rapport: string | null;
+	fichier_nom: string;
+	taille_octets: number | null;
+	mime_type: string;
+	synthese: string | null;
+	publie_le: string;
+}
+
+/**  Un diagnostic réglementaire et ses rapports, le plus récent d'abord —
+ *   `DiagnosticTypeRead` (`routers/diagnostics.py`). */
+export interface DiagnosticType {
+	id: number;
+	code: string;
+	nom: string;
+	texte_legislatif: string;
+	frequence: string | null;
+	ordre: number;
+	non_applicable: boolean;
+	rapports: RapportDiagnostic[];
+}
 
 /**  Un contrat proposable comme référence de la fiche de copropriété.
  *
@@ -57,6 +211,29 @@ export interface Carnet {
 	total: number;
 }
 
+/**  Un intervenant et la durée moyenne de son étape « Chez le prestataire ». */
+export interface PrestataireLent {
+	prestataire_id: number;
+	nom: string;
+	jours: number;
+	nombre: number;
+}
+
+/**  Les moyennes d'une catégorie d'affaire du carnet sur l'exercice. */
+export interface CategorieBilan extends ResumeAffaires {
+	categorie: string;
+	prestataires: PrestataireLent[];
+}
+
+/**  Le bilan d'un exercice (#1645) — `routers/carnet.BilanCarnet`. `fin` est le
+ *   DERNIER jour de l'exercice, inclus. */
+export interface BilanCarnet {
+	exercice: ExerciceLu & { debut: string; fin: string };
+	exercices: ExerciceLu[];
+	categories: CategorieBilan[];
+	nombre: number;
+}
+
 /**  Le carnet d'entretien — réservé aux copropriétaires, au CS et à l'admin
  *   (décret n° 2001-477, arbitré le 10/09/2026). Le droit est tenu par
  *   `require_proprietaire` côté serveur ; l'écran ne fait que s'y conformer. */
@@ -68,12 +245,17 @@ export const carnet = {
 		api.get<Carnet>(
 			`/carnet-entretien${perimetre ? `?perimetre=${encodeURIComponent(perimetre)}` : ''}`,
 		),
+	/**  Le bilan d'un exercice — RÉSERVÉ au conseil syndical (`require_cs_or_admin`,
+	 *   arbitré le 04/10/2026). `exercice` est l'année où il commence ; absent,
+	 *   l'exercice en cours. */
+	metriques: (exercice?: number | null) =>
+		api.get<BilanCarnet>(`/carnet-entretien/metriques${exercice ? `?exercice=${exercice}` : ''}`),
 };
 
 export const copropriete = {
-	get: () => api.get<any>('/copropriete'),
-	update: (data: unknown) => api.patch<any>('/copropriete', data),
-	batiments: () => api.get<any[]>('/copropriete/batiments'),
+	get: () => api.get<Copropriete>('/copropriete'),
+	update: (data: unknown) => api.patch<Copropriete>('/copropriete', data),
+	batiments: () => api.get<Batiment[]>('/copropriete/batiments'),
 	/**  Les contrats parmi lesquels la fiche DÉSIGNE sa référence.
 	 *
 	 *   `section` vaut `'assurance'` ou `'syndic'` — le serveur la valide contre
@@ -117,6 +299,17 @@ export interface PropositionsLocation {
 	parking: LotPropose[];
 }
 
+/**  Le compte rendu de l'import des lots — `upload_import_lots` (`routers/lots_imports.py`) :
+ *   celui du tableur, puis celui de la résolution automatique (`resoudre_imports`),
+ *   ses clés préfixées par `auto_`. L'écran lisait d'anciens noms de compteurs
+ *   (`auto_skipped_…`) que le serveur ne rendait plus (#1685). */
+export interface ResultatImportLots extends CompteImportTableur {
+	auto_resolus: number;
+	auto_sans_occupant: number;
+	auto_hors_perimetre: number;
+	auto_erreurs: string[];
+}
+
 export const lots = {
 	mesList: () => api.get<MonLot[]>('/lots/mes-lots'),
 	//  Le locataire dit ce qu'il loue, d'après le fichier des lots du syndic
@@ -131,17 +324,19 @@ export const lots = {
 	//  L'étage d'UN de mes lots, depuis le profil (#835). Le seul champ du
 	//  patrimoine qu'un occupant écrit lui-même : arbitré le 09/09/2026, c'est
 	//  lui qui sait à quel étage il vit.
-	majEtage: (id: number, etage: number | null) => api.patch<any>(`/lots/${id}/etage`, { etage }),
+	majEtage: (id: number, etage: number | null) => api.patch<MonLot>(`/lots/${id}/etage`, { etage }),
 	// Admin — tous les lots
-	tous: () => api.get<any[]>('/lots/admin/tous'),
+	//  `LotRead` aussi : `type_lien` y vaut `null`, le lot n'est celui de personne ici.
+	tous: () => api.get<MonLot[]>('/lots/admin/tous'),
 	// Admin — import staging
 	uploadImport: (file: File, remplacer = false) =>
-		uploadExcel('/lots/admin/imports/upload', file, remplacer),
+		uploadExcel<ResultatImportLots>('/lots/admin/imports/upload', file, remplacer),
 	listImports: (statut?: string, tri?: string) =>
-		api.get<any[]>(`/lots/admin/imports${buildQuery({ statut, tri })}`),
-	statsImports: () => api.get<any>('/lots/admin/imports/stats'),
-	autoMatchImports: () => api.post<any>('/lots/admin/imports/auto-match', {}),
-	autoResoudreImports: () => api.post<any>('/lots/admin/imports/auto-resoudre', {}),
+		api.get<LigneImportLot[]>(`/lots/admin/imports${buildQuery({ statut, tri })}`),
+	statsImports: () => api.get<StatsImportLots>('/lots/admin/imports/stats'),
+	autoMatchImports: () => api.post<{ matches: number }>('/lots/admin/imports/auto-match', {}),
+	autoResoudreImports: () =>
+		api.post<ResolutionImportLots>('/lots/admin/imports/auto-resoudre', {}),
 	patchImport: (
 		id: number,
 		data: {
@@ -149,135 +344,13 @@ export const lots = {
 			utilisateurs?: { user_id: number; type_lien: string }[];
 			notes_admin?: string | null;
 		},
-	) => api.patch<any>(`/lots/admin/imports/${id}`, data),
-	resoudreImport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/resoudre`, {}),
-	ignorerimport: (id: number) => api.post<any>(`/lots/admin/imports/${id}/ignorer`, {}),
-};
-
-/**
- *  Un objet remis au locataire — clé, badge, télécommande. C'est la ligne de
- *  l'inventaire d'un bail.
- *
- *  ⚠️ Le type vit ICI et non dans l'écran qui l'affiche (#806) : c'est une
- *  réponse d'API, et il était déclaré à l'identique dans `mon-lot` et dans le
- *  composant qui rend le tableau. Même raison que `ReleveOrphelins` (#801).
- */
-export interface ObjetRemis {
-	id: number;
-	bail_id: number;
-	type: string;
-	libelle: string;
-	quantite: number;
-	reference: string | null;
-	statut: string;
-	remis_le: string | null;
-	rendu_le: string | null;
-	notes: string | null;
-	cree_le: string;
-}
-
-/**
- *  Un bail, tel que le rend l'API (`BailOut`, `routers/bailleur/commun.py`).
- *
- *  ⚠️ Il était déclaré dans l'écran `mon-lot` (#1044) pendant que le client
- *  rendait `any` : l'écran retypait ce que le client aurait dû dire, et il en
- *  omettait trois champs du contrat. Même raison qu'`ObjetRemis` juste au-dessus.
- */
-export interface Bail {
-	id: number;
-	lot_id: number;
-	bailleur_id: number;
-	locataire_id: number | null;
-	locataire_nom: string | null;
-	locataire_prenom: string | null;
-	locataire_email: string | null;
-	locataire_telephone: string | null;
-	date_entree: string;
-	date_sortie_prevue: string | null;
-	date_sortie_reelle: string | null;
-	statut: string;
-	notes: string | null;
-	cree_le: string;
-	mis_a_jour_le: string;
-	objets: ObjetRemis[];
-}
-
-/**
- *  Un Vigik ou une télécommande vu depuis un bail (`AccesOut`,
- *  `routers/bailleur/acces.py`) : où il est, et s'il peut être confié au
- *  locataire. Déclaré dans `ModaleAccesBail` jusqu'au #1044.
- *
- *  ⚠️ Ne pas le confondre avec `AccesAdmin` (`./acces`) : même objet, autre
- *  point de vue — l'inventaire du parc, sans la question du bail.
- */
-export interface AccesBail {
-	id: number;
-	code: string;
-	type: 'vigik' | 'telecommande';
-	lot_id: number | null;
-	lot_type: 'appartement' | 'parking' | 'cave' | string | null;
-	lot_label: string | null;
-	statut: string;
-	chez_locataire: boolean;
-	bail_id: number | null;
-	eligible_transfert: boolean;
-	recommande: boolean;
-	motif_non_eligible: string | null;
-	cree_le: string;
-}
-
-export const bailleur = {
-	mesBaux: () => api.get<Bail[]>('/bailleur/mes-baux'),
-	//  🔴 `creerBail` A ÉTÉ RETIRÉE (12/09/2026, #932), avec son endpoint.
-	//
-	//  `POST /bailleur/lots/{lot_id}/bail` était `creer-multi` **recopié pour un
-	//  seul lot** : même garde « ce lot a déjà un bail en cours », même
-	//  construction du `LocationBail`, à la boucle près. Deux copies d'un même
-	//  invariant divergent — et celle-ci n'avait aucun appelant, masquée dans le
-	//  relevé par l'homonyme `creerBailMulti`.
-	//
-	//  Créer un bail sur un lot, c'est `creerBailMulti({ lot_ids: [id], … })`.
-	creerBailMulti: (data: unknown) => api.post<Bail[]>('/bailleur/baux/creer-multi', data),
-	//  🔴 `getBail` A ÉTÉ RETIRÉE (#801) : l'écran `mon-lot` tient déjà ses baux
-	//  par `mesBaux()` / `tousBaux()` / `monBail()`, et travaille dessus. Relire
-	//  un bail seul depuis le serveur donnerait un second exemplaire du même
-	//  objet, libre de diverger de celui de la liste affichée.
-	updateBail: (id: number, data: unknown) => api.patch<Bail>(`/bailleur/baux/${id}`, data),
-	terminerBail: (id: number, data: unknown) =>
-		api.post<Bail>(`/bailleur/baux/${id}/terminer`, data),
-	//  ✅ Ces deux méthodes ont porté la déclaration « sans appelant » de #806
-	//  pendant quelques heures : rien ne les appelait, et il était donc impossible
-	//  d'enregistrer un objet remis dans l'inventaire d'un bail — ni d'en corriger
-	//  un. `InventaireBail.svelte` les appelle depuis le 06/09/2026.
-	//
-	//  ⚠️ La déclaration a été retirée le jour même, et `lint:client-appele` l'a
-	//  EXIGÉ : une tolérance qui ne sert plus finit par en couvrir une qui compte.
-	//
-	//  ⚠️ Le motif n'est pas cité littéralement ci-dessus, et c'est délibéré : le
-	//  contrôle lit les commentaires, et une citation le réactiverait. Un
-	//  garde-fou qui se déclenche sur le récit de sa propre application est un
-	//  faux positif qu'on apprend à ignorer.
-	ajouterObjet: (bail_id: number, data: unknown) =>
-		api.post<any>(`/bailleur/baux/${bail_id}/objets`, data),
-	updateObjet: (bail_id: number, obj_id: number, data: unknown) =>
-		api.patch<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}`, data),
-	retourObjet: (bail_id: number, obj_id: number, data: unknown) =>
-		api.post<any>(`/bailleur/baux/${bail_id}/objets/${obj_id}/retour`, data),
-	supprimerObjet: (bail_id: number, obj_id: number) =>
-		api.delete(`/bailleur/baux/${bail_id}/objets/${obj_id}`),
-	supprimerBail: (bail_id: number) => api.delete(`/bailleur/baux/${bail_id}`),
-	tousBaux: () => api.get<Bail[]>('/bailleur/tous-les-baux'),
-	// Recherche locataire & gestion accès
-	searchLocataire: (q: string) =>
-		api.get<any[]>(`/bailleur/search-locataire?q=${encodeURIComponent(q)}`),
-	locatairesSuggeres: () => api.get<any[]>('/bailleur/locataires-suggeres'),
-	accesBail: (bail_id: number) => api.get<AccesBail[]>(`/bailleur/baux/${bail_id}/acces`),
-	transfererAcces: (bail_id: number, data: { vigik_ids: number[]; tc_ids: number[] }) =>
-		api.post<AccesBail[]>(`/bailleur/baux/${bail_id}/transferer-acces`, data),
-	recupererAcces: (bail_id: number, data?: { vigik_ids: number[]; tc_ids: number[] }) =>
-		api.post<AccesBail[]>(`/bailleur/baux/${bail_id}/recuperer-acces`, data ?? {}),
-	mesAccesRecus: () => api.get<AccesBail[]>('/bailleur/mes-acces-recus'),
-	monBail: () => api.get<any>('/bailleur/mon-bail'),
+	) => api.patch<LigneImportLot>(`/lots/admin/imports/${id}`, data),
+	resoudreImport: (id: number) =>
+		api.post<{ ok: boolean; lot_id: number; nb_liens: number }>(
+			`/lots/admin/imports/${id}/resoudre`,
+			{},
+		),
+	ignorerimport: (id: number) => api.post<{ ok: boolean }>(`/lots/admin/imports/${id}/ignorer`, {}),
 };
 
 /**
@@ -297,22 +370,23 @@ export const perimetres = {
 };
 
 export const reglesResidence = {
-	list: () => api.get<any[]>('/regles-residence'),
-	create: (data: { titre: string; contenu?: string }) => api.post<any>('/regles-residence', data),
+	list: () => api.get<RegleResidence[]>('/regles-residence'),
+	create: (data: { titre: string; contenu?: string }) =>
+		api.post<RegleResidenceEcrite>('/regles-residence', data),
 	update: (id: number, data: { titre?: string; contenu?: string; ordre?: number }) =>
-		api.patch<any>(`/regles-residence/${id}`, data),
+		api.patch<RegleResidenceEcrite>(`/regles-residence/${id}`, data),
 	remove: (id: number) => api.delete(`/regles-residence/${id}`),
 };
 
 export const diagnostics = {
-	listTypes: () => api.get<any[]>('/diagnostics/types'),
+	listTypes: () => api.get<DiagnosticType[]>('/diagnostics/types'),
 	uploadRapport: async (
 		typeId: number,
 		titre: string,
 		dateRapport: string | undefined,
 		file: File,
-	): Promise<any> => {
-		return postFormData(`/diagnostics/types/${typeId}/rapports`, {
+	): Promise<RapportDiagnostic> => {
+		return postFormData<RapportDiagnostic>(`/diagnostics/types/${typeId}/rapports`, {
 			titre,
 			date_rapport: dateRapport,
 			file,
@@ -323,11 +397,11 @@ export const diagnostics = {
 	updateRapport: (
 		id: number,
 		data: { titre?: string; date_rapport?: string | null; synthese?: string | null },
-	) => api.patch<any>(`/diagnostics/rapports/${id}`, data),
+	) => api.patch<RapportDiagnostic>(`/diagnostics/rapports/${id}`, data),
 	deleteRapport: (id: number) => api.delete(`/diagnostics/rapports/${id}`),
 	downloadUrl: (id: number) => `${BASE}/diagnostics/rapports/${id}/télécharger`,
 	toggleNonApplicable: (typeId: number, nonApplicable: boolean) =>
-		api.patch<any>(`/diagnostics/types/${typeId}/non-applicable`, {
+		api.patch<DiagnosticType>(`/diagnostics/types/${typeId}/non-applicable`, {
 			non_applicable: nonApplicable,
 		}),
 };

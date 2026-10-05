@@ -17,7 +17,12 @@
 -->
 <script lang="ts">
 	import { fmtNombre, nombreOuNull } from '$lib/utils';
-	import { prestataires as prestApi } from '$lib/api';
+	import {
+		prestataires as prestApi,
+		type CompteurConfig,
+		type Prestataire,
+		type ReleveCompteur,
+	} from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -30,12 +35,12 @@
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'annuaire des prestataires — la page le charge déjà, on ne le recharge pas. */
-	export let prestataires: any[] = [];
+	export let prestataires: Prestataire[] = [];
 
 	// ── Consommations ─────────────────────────────────────────────
-	let compteurConfigs: any[] = [];
+	let compteurConfigs: CompteurConfig[] = [];
 	let typeCompteur = '';
-	let releves: any[] = [];
+	let releves: ReleveCompteur[] = [];
 	let releveLoading = false;
 	/**  🔴 L'action primaire d'un onglet est rendue par l'EN-TÊTE DE PAGE, pas par
 	 *   l'onglet (`ux-patterns` R1 : le squelette porte titre et action primaire).
@@ -64,7 +69,7 @@
 		: 'Nouveau relevé';
 
 	$: relevesByYear = (() => {
-		const map = new Map<number, any[]>();
+		const map = new Map<number, ReleveCompteur[]>();
 		for (const r of releves) {
 			const yr = new Date(r.date_releve).getFullYear();
 			if (!map.has(yr)) map.set(yr, []);
@@ -119,7 +124,7 @@
 		showReleveForm = false;
 	}
 
-	function startEditReleve(r: any) {
+	function startEditReleve(r: ReleveCompteur) {
 		releveForm = {
 			date_releve: r.date_releve,
 			index: r.index != null ? String(r.index) : '',
@@ -141,7 +146,7 @@
 				note: releveForm.note.trim() || null,
 				prestataire_id: currentCompteur?.prestataire_id ?? null,
 			};
-			let saved: any;
+			let saved: ReleveCompteur;
 			if (editReleveId) {
 				saved = await prestApi.updateReleve(editReleveId, payload);
 				releves = releves.map((r) => (r.id === editReleveId ? saved : r));
@@ -173,7 +178,7 @@
 		});
 	}
 
-	function fmtReleve(r: any) {
+	function fmtReleve(r: ReleveCompteur) {
 		return fmtDayMonth(r.date_releve);
 	}
 </script>

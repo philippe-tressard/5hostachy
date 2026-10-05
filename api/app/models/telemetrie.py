@@ -108,6 +108,28 @@ class PresenceMensuelle(SQLModel, table=True):
     user_id: int = Field(index=True)
 
 
+class DerniereVisite(SQLModel, table=True):
+    """Le JOUR de la dernière visite d'un compte — un seul, et rien d'autre (#1629, 04/10/2026).
+
+    « Sans visite depuis 60 jours » ne se calculait pas : les évènements, seuls à
+    porter le compte au jour près, vivent 30 jours ; la présence mensuelle ne
+    sait que le mois. `Utilisateur.derniere_connexion` ne suffit pas non plus :
+    elle ne bouge qu'à la saisie du mot de passe, et la session se renouvelle
+    seule pendant 7 jours glissants (`/auth/refresh`) — un résident qui vient
+    chaque semaine ne se reconnecte jamais, et passerait pour dormant.
+
+    Une ligne par compte, écrite par l'agrégation quotidienne depuis les
+    évènements (`utils/retour_comptes.noter_visites`), JAMAIS pour un compte qui
+    a refusé la mesure — son refus l'efface. Purgée après 12 mois d'absence,
+    exportée et effacée depuis le profil (`auth_telemetrie`). La politique de
+    confidentialité le dit (`TELEMETRIE_DERNIERE_VISITE`).
+    """
+
+    __tablename__ = "derniere_visite"
+    user_id: int = Field(primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+
+
 class ErreurNavigateur(SQLModel, table=True):
     """Une erreur vue par les résidents, COMPTÉE par jour, page et code (#1631).
 
@@ -140,6 +162,24 @@ class MesureAffichage(SQLModel, table=True):
     page: str  # identifiants masqués : /tickets/#
     indicateur: str  # chargement | navigation
     duree_ms: int
+
+
+class GesteFormulaire(SQLModel, table=True):
+    """Les ouvertures et les envois d'un formulaire, COMPTÉS par jour et par geste (#1633).
+
+    Pas un événement : un compteur, SANS `user_id` — savoir qu'un formulaire
+    décourage ne demande pas de savoir qui l'a abandonné. `geste` est un
+    IDENTIFIANT de la liste fermée du front (`$lib/gestes`), jamais un contenu.
+    Écrit et lu par `utils/gestes_formulaire`, purgé après `CONSERVATION_JOURS`
+    par l'agrégation quotidienne.
+    """
+
+    __tablename__ = "geste_formulaire"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jour: str = Field(index=True)  # YYYY-MM-DD, jour de Paris
+    geste: str  # « objet.verbe » : affaire.creer, sondage.voter…
+    ouvertures: int = 0
+    envois: int = 0
 
 
 class HistoriqueTelemetrie(SQLModel, table=True):

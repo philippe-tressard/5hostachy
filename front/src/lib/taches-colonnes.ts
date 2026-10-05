@@ -13,6 +13,7 @@
  *  `<th>` de plus que de `<td>` ne lève rien, il déplace les valeurs d'une
  *  case, et le lecteur voit une durée sous « Taille ».
  */
+import type { ExecutionTache } from '$lib/api';
 import { fmtDatetime } from '$lib/date';
 import { fmtOctets } from '$lib/utils';
 
@@ -127,6 +128,17 @@ export const COLONNES: {
 		style: 'font-size:.72rem;color:var(--color-text-muted)',
 	},
 ];
+
+/**
+ *  Le MOTIF d'un échec, quelle que soit la table qui l'a écrit (#1681).
+ *
+ *  🔴 La sauvegarde le porte dans `message_erreur`, la maintenance et
+ *  l'agrégation dans `erreur` : l'écran ne lisait que le second, et le ⚠️ ne
+ *  s'affichait jamais sous une sauvegarde échouée — celle dont on veut
+ *  justement savoir pourquoi. Normalisé ICI, sur l'union du client, une fois.
+ */
+export const motifEchec = (l: ExecutionTache): string | null =>
+	('message_erreur' in l ? l.message_erreur : l.erreur) ?? null;
 
 /** Celles qui ont quelque chose à montrer pour ce jeu de lignes. */
 export const colonnesVisibles = (lignes: any[]) =>

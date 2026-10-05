@@ -2,37 +2,24 @@
 
 Extrait de `admin.py` (2057 lignes) le 06/08/2026, sans modification de logique.
 Voir `__init__.py` pour la règle de découpage.
-"""
 
-import json
+L'effacement d'un compte n'est plus écrit ici depuis le 04/10/2026 (#1580) : la
+route l'appelle dans `utils/suppression_compte`, que la purge des comptes inactifs
+appelle aussi — une seule façon de supprimer un compte.
+"""
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
-from sqlalchemy import or_
 from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.utils.journal_securite import journaliser_securite
 from app.models.core import (
-    CommandeAcces,
-    DemandeModificationProfil,
-    HistoriqueSauvegarde,
     LocationBail,
-    LotImport,
-    Mandat,
-    Notification,
-    PasswordResetToken,
-    RefreshToken,
-    RemiseObjet,
     RoleUtilisateur,
-    StatutImport,
-    StatutLotImport,
     StatutUtilisateur,
-    TelemetryEvent,
     UserLot,
     Utilisateur,
-    VoteIdee,
-    VoteSondage,
 )
 from app.schemas import UserRead
 from app.utils.comptes import marquer_decide
@@ -40,8 +27,8 @@ from app.utils.porteurs_acces import ids_detenteurs
 from app.utils.etiquettes_compte import etiquettes
 from app.models.copropriete import Lot
 from app.utils.valeurs import valeur
-from app.utils.purge_referentielle import purger
-from app.utils.types_acces import TELECOMMANDE, TYPES_ACCES, VIGIK
+from app.utils.suppression_compte import supprimer_compte
+from app.utils.types_acces import TELECOMMANDE, VIGIK
 from app.utils.roles_libelles import libelle_role
 from app.utils import horloge
 from typing import Optional
@@ -279,127 +266,11 @@ def supprimer_utilisateur(
         raise HTTPException(400, "Vous ne pouvez pas supprimer votre propre compte.")
     ou_404(session, Utilisateur, user_id, "Utilisateur")
 
-    # 0. Télémétrie (RGPD art. 17 — droit à l'effacement)
-    for ev in session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user_id)).all():
-        session.delete(ev)
-
-    # 1. Tokens d'authentification
-    for t in session.exec(select(RefreshToken).where(RefreshToken.user_id == user_id)).all():
-        session.delete(t)
-    for t in session.exec(
-        select(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
-    ).all():
-        session.delete(t)
-
-    # 2. UserLot + nettoyage utilisateurs_json dans LotImport + reset statut
-    user_lots = session.exec(select(UserLot).where(UserLot.user_id == user_id)).all()
-    lot_ids = {ul.lot_id for ul in user_lots}
-    for ul in user_lots:
-        session.delete(ul)
-    if lot_ids:
-        for imp in session.exec(select(LotImport).where(LotImport.lot_id.in_(lot_ids))).all():  # type: ignore
-            users = json.loads(imp.utilisateurs_json or "[]")
-            nouveau = [e for e in users if e.get("user_id") != user_id]
-            if len(nouveau) != len(users):
-                imp.utilisateurs_json = json.dumps(nouveau, ensure_ascii=False)
-                if not nouveau and imp.statut != StatutLotImport.ignore:
-                    imp.statut = (
-                        StatutLotImport.lot_lie if imp.lot_id else StatutLotImport.en_attente
-                    )
-                    imp.resolu_le = None
-                session.add(imp)
-
-    # 3. Commandes d'accès
-    for c in session.exec(select(CommandeAcces).where(CommandeAcces.user_id == user_id)).all():
-        session.delete(c)
-
-    # 4. Notifications
-    for n in session.exec(
-        select(Notification).where(Notification.destinataire_id == user_id)
-    ).all():
-        session.delete(n)
-
-    # 5. Votes
-    for v in session.exec(select(VoteSondage).where(VoteSondage.user_id == user_id)).all():
-        session.delete(v)
-    for v in session.exec(select(VoteIdee).where(VoteIdee.user_id == user_id)).all():
-        session.delete(v)
-
-    # 6. Demandes modification profil
-    for d in session.exec(
-        select(DemandeModificationProfil).where(DemandeModificationProfil.utilisateur_id == user_id)
-    ).all():
-        session.delete(d)
-    for d in session.exec(
-        select(DemandeModificationProfil).where(DemandeModificationProfil.traite_par_id == user_id)
-    ).all():
-        d.traite_par_id = None
-        session.add(d)
-
-    # 7. Mandats (bailleur ou mandataire)
-    for m in session.exec(
-        select(Mandat).where(or_(Mandat.bailleur_id == user_id, Mandat.mandataire_id == user_id))
-    ).all():
-        session.delete(m)
-
-    #  8. Les badges RESTENT sur leur lot (arbitrage du 23/09/2026, #1194) : la
-    #  purge délie `user_id`, désormais facultatif. Ils étaient supprimés, et
-    #  avec eux la trace d'objets physiques toujours en circulation.
-    #  9. Les lignes d'import perdent ce compte ; une ligne résolue le reste —
-    #  son badge existe toujours.
-    for type_acces in TYPES_ACCES.values():
-        modele = type_acces.modele_import
-        for ligne in session.exec(
-            select(modele).where(
-                or_(
-                    modele.user_proprietaire_id == user_id,
-                    modele.user_locataire_id == user_id,
-                )
-            )
-        ).all():
-            if ligne.user_proprietaire_id == user_id:
-                ligne.user_proprietaire_id = None
-            if ligne.user_locataire_id == user_id:
-                ligne.user_locataire_id = None
-            if ligne.statut == StatutImport.proprietaire_lie and not ligne.user_proprietaire_id:
-                ligne.statut = StatutImport.en_attente
-            session.add(ligne)
-
-    # 10. LocationBail : locataire → nullifier ; bailleur → supprimer bail + objets remis
-    for bail in session.exec(
-        select(LocationBail).where(LocationBail.locataire_id == user_id)
-    ).all():
-        bail.locataire_id = None
-        session.add(bail)
-    for bail in session.exec(select(LocationBail).where(LocationBail.bailleur_id == user_id)).all():
-        for obj in session.exec(select(RemiseObjet).where(RemiseObjet.bail_id == bail.id)).all():
-            session.delete(obj)
-        session.delete(bail)
-
-    # 11. HistoriqueSauvegarde — nullifier la référence optionnelle
-    for h in session.exec(
-        select(HistoriqueSauvegarde).where(HistoriqueSauvegarde.declenchee_par_user_id == user_id)
-    ).all():
-        h.declenchee_par_user_id = None
-        session.add(h)
-
-    #  🔴 Le reste — et « le reste » est la majorité (#546, 28/08/2026).
-    #
-    #  Les onze étapes ci-dessus portent des règles MÉTIER : remettre un statut
-    #  d'import, retirer une entrée d'un `..._json`, choisir entre délier et
-    #  supprimer un bail. Elles restent, et elles passent en premier.
-    #
-    #  Mais le modèle compte CINQUANTE-SIX références à `utilisateur`, dont
-    #  trente-sept obligatoires. Vingt-six tables n'étaient nettoyées nulle part —
-    #  publications, tickets, messages, idées, sondages, signalements… La
-    #  suppression réussissait quand même, parce que SQLite tournait avec
-    #  `foreign_keys=OFF`, et laissait en base des lignes pointant vers un compte
-    #  disparu.
-    #
-    #  ⚠️ Une liste tenue à la main ne peut pas suivre : c'est bien ce qui s'est
-    #  passé. `purger` LIT les métadonnées au lieu de les réciter.
-    session.flush()
-    purger(session, "utilisateur", user_id)
+    #  Le corps de l'effacement vit dans `utils/suppression_compte` depuis #1580 :
+    #  la purge des comptes inactifs l'appelle aussi, et une seconde écriture
+    #  divergerait au premier modèle ajouté. Ce qu'il fait des objets de la
+    #  personne — règles métier d'abord, puis `purger` — est écrit là-bas.
+    supprimer_compte(session, user_id)
     session.commit()
     #  Après l'effacement, plus rien en base ne dit qui l'a fait : cette ligne
     #  est la seule trace qui reste (#1548).

@@ -13,13 +13,14 @@
   l'onglet Site en lit aussi les gestionnaires possibles.
 -->
 <script lang="ts">
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type UtilisateurAdmin } from '$lib/api';
 	import {
 		adresseChangee,
 		annonceLienEnvoye,
 		ETIQUETTES_COMPTE,
 		formulaireCompte,
 	} from '$lib/comptes';
+	import { fmtDate } from '$lib/date';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import { badgeStatut, badgesDeRoles, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
@@ -33,7 +34,7 @@
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 
 	/** La liste des comptes — chargée par la page (l'onglet Site la lit aussi). */
-	export let utilisateurs: any[] = [];
+	export let utilisateurs: UtilisateurAdmin[] = [];
 	export let chargement = false;
 	/** Non vide = la liste n'a pas pu être lue : elle ne se dit pas vide (#1459). */
 	export let erreur = '';
@@ -259,6 +260,15 @@
 								{:else}
 									<span class="badge badge-gray">En attente</span>
 								{/if}
+								<!--  #1580 : averti de sa suppression pour inactivité ; s'efface à la reconnexion. -->
+								{#if u.purge_avertie_le}
+									<div
+										class="purge-avertie"
+										title="Supprimé trente jours après cet avertissement s'il ne se reconnecte pas"
+									>
+										⏳ Inactif, averti le {fmtDate(u.purge_avertie_le)}
+									</div>
+								{/if}
 							</td>
 							<td>
 								<div style="display:flex;gap:.3rem;flex-wrap:wrap">
@@ -457,6 +467,11 @@
 		flex-wrap: wrap;
 		gap: 0.2rem;
 		margin-top: 0.15rem;
+	}
+	.purge-avertie {
+		margin-top: 0.15rem;
+		font-size: var(--fs-xs);
+		color: var(--color-warning-texte);
 	}
 	.utag {
 		font-size: 0.6rem;

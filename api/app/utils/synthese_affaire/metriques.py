@@ -226,14 +226,25 @@ def bornes_exercice(jour: date, mois_debut: Optional[int]) -> tuple[date, date, 
     return debut, fin, libelle
 
 
+def moyenne_de(valeurs) -> Optional[float]:
+    """La moyenne des valeurs CONNUES — `None` quand il n'y en a aucune, jamais 0.
+
+    Une mesure absente (pas de réponse du syndic, pas de relance) ne compte pas
+    pour zéro : elle tirerait la moyenne vers un délai que personne n'a vécu.
+    Une règle, deux lecteurs : la comparaison d'une synthèse (ci-dessous) et les
+    moyennes d'un ensemble d'affaires (`agregats`, #1645 #1646).
+    """
+    connues = [v for v in valeurs if v is not None]
+    return sum(connues) / len(connues) if connues else None
+
+
 def moyenne(mesures: list[dict], categorie: str, exercice: str) -> Optional[dict]:
     """La moyenne des mesures de base des affaires comparables — `None` sous trois."""
     if len(mesures) < MINIMUM_COMPARABLES:
         return None
 
     def moy(cle: str) -> Optional[float]:
-        valeurs = [m[cle] for m in mesures if m.get(cle) is not None]
-        return sum(valeurs) / len(valeurs) if valeurs else None
+        return moyenne_de(m.get(cle) for m in mesures)
 
     duree, reponse = moy("duree_totale"), moy("premiere_reponse_syndic")
     return {
@@ -263,4 +274,5 @@ __all__ = [
     "debut_utc",
     "mesures_de_base",
     "moyenne",
+    "moyenne_de",
 ]

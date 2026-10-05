@@ -8,8 +8,11 @@ Rétention, par table :
   - Agrégation mensuelle (telemetry_monthly) : 10 ans, mêmes deux séries
   - Présence mensuelle (presence_mensuelle) : 12 mois — par compte et par mois,
     le seul fait « venu » ; c'est ce qui donne « Qui vient » à la vue Année (#1628)
+  - Dernière visite (derniere_visite) : un jour par compte, effacé après 12 mois
+    d'absence — c'est ce qui dit qui ne vient plus (#1629)
   - Erreurs vues dans le navigateur (erreur_navigateur) : 30 jours (#1631)
   - Durées d'affichage des écrans (mesure_affichage) : 30 jours (#1632)
+  - Ouvertures et envois des formulaires (geste_formulaire) : 30 jours (#1633)
 
 Appelé quotidiennement par le scheduler ou manuellement depuis l'admin.
 
@@ -53,9 +56,11 @@ from app.utils import horloge
 from app.utils.declenchement import AUTOMATIQUE
 from app.utils.destinataires import site_manager_user_id
 from app.utils.erreurs_navigateur import purger_erreurs
+from app.utils.gestes_formulaire import purger_gestes
 from app.utils.mesures_affichage import purger_mesures
 from app.utils.noeud import noeud_courant
 from app.utils.requete_liee import requete_liee
+from app.utils.retour_comptes import noter_visites
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +156,8 @@ def _agreger_jour(session: Session, jour_paris: datetime, gestionnaire_id: Optio
     )
     for user_id in sorted(venus - deja):
         session.add(PresenceMensuelle(mois=mois, user_id=user_id))
+    #  Et le jour de la dernière visite (#1629), sauf pour qui a refusé la mesure.
+    noter_visites(session, venus, jour_str)
     return True
 
 
@@ -276,8 +283,10 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         "daily_purges": 0,
         "monthly_purges": 0,
         "presences_purgees": 0,
+        "dernieres_visites_purgees": 0,
         "erreurs_navigateur_purgees": 0,
         "mesures_affichage_purgees": 0,
+        "gestes_purges": 0,
         "erreurs": [],
     }
 
@@ -306,7 +315,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
             rapport["erreurs"].append(f"agrégation monthly: {exc}")
             session.rollback()
 
-        # ─── 3 à 6. Purges : events 30 j, daily 12 mois, monthly 10 ans, présence 12 mois
+        # ─── 3 à 6. Purges : events 30 j, daily 12 mois, monthly 10 ans, présence et visite 12 mois
         cutoff_daily = (now_paris - timedelta(days=RETENTION_DAILY_JOURS)).strftime("%Y-%m-%d")
         _purger(
             rapport,
@@ -332,6 +341,12 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
             "DELETE FROM presence_mensuelle WHERE mois < :cutoff",
             cutoff=cutoff_daily[:7],
         )
+        _purger(
+            rapport,
+            "dernieres_visites_purgees",
+            "DELETE FROM derniere_visite WHERE jour < :cutoff",
+            cutoff=cutoff_daily,
+        )
 
         # ─── 7. Purge : erreurs vues dans le navigateur (#1631) ─────────
         try:
@@ -349,6 +364,13 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
             )
         except Exception as exc:
             rapport["erreurs"].append(f"purge mesures affichage: {exc}")
+            session.rollback()
+
+        # ─── 9. Purge : ouvertures et envois des formulaires (#1633) ────
+        try:
+            rapport["gestes_purges"] = purger_gestes(session, horloge.jour_civil(now_utc))
+        except Exception as exc:
+            rapport["erreurs"].append(f"purge gestes: {exc}")
             session.rollback()
 
     # ─── Mise à jour de l'historique ──────────────────────────────────

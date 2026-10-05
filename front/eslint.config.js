@@ -393,10 +393,9 @@ export default defineConfig(
 		files: ['**/*.{js,mjs,ts,svelte}'],
 		plugins: { '@typescript-eslint': ts.plugin },
 		rules: {
-			// `any` dans les enveloppes d'appel API et les charges utiles
-			// hétérogènes (le compte se mesure par `grep`, il ne s'écrit pas ici : il
-			// avait déjà dérivé). Le supprimer est un travail de TYPAGE, pas un
-			// réglage de linter — il a son ticket, #1572.
+			// `any` hors du client d'API : des props d'entité et des charges utiles
+			// d'écran, encore nombreuses. Le supprimer est un travail de TYPAGE, pas
+			// un réglage de linter (#1572) — le client, lui, est à zéro : bloc suivant.
 			'@typescript-eslint/no-explicit-any': 'off',
 
 			// Même raison que dans le bloc Svelte : `a ? f() : g()` employé comme
@@ -406,5 +405,14 @@ export default defineConfig(
 				{ allowTernary: true, allowShortCircuit: true },
 			],
 		},
+	},
+	// Le client d'API ne rend AUCUN `any` (#1572, v2.105.0) : il était à 119, et
+	// chaque écran retypait l'entité à sa façon. Placé après le bloc qui le coupe
+	// partout — le dernier bloc applicable gagne. Il remplace le plafond par module
+	// que tenait `check-types-locaux.mjs`, devenu muet à zéro.
+	{
+		files: ['src/lib/api/**/*.ts'],
+		plugins: { '@typescript-eslint': ts.plugin },
+		rules: { '@typescript-eslint/no-explicit-any': 'error' },
 	},
 );

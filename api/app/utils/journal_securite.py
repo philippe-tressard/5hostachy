@@ -85,6 +85,14 @@ _NIVEAUX: dict[str, int] = {
     #  chemin d'un détournement — nouvelle adresse, puis « mot de passe oublié ».
     "adresse_changement_demande": logging.WARNING,
     "adresse_changee": logging.WARNING,
+    #  La purge des comptes inactifs (#1580, `utils/purge_comptes`) : personne
+    #  n'agit, l'acteur est donc `-`. L'avertissement ouvre le délai de trente
+    #  jours ; la suppression est, après elle, la seule trace du compte ; un
+    #  compte d'administration inactif est épargné et SIGNALÉ — dormant, il est
+    #  aussi un risque.
+    "compte_purge_averti": logging.INFO,
+    "compte_purge_inactivite": logging.WARNING,
+    "compte_purge_epargne": logging.WARNING,
 }
 
 
@@ -103,8 +111,9 @@ def journaliser_securite(
     ne doit jamais casser ce qu'il observe.
 
     `acteur_id` — **qui agit**. `None` quand l'acteur n'est pas identifié, ce qui
-    est précisément le cas d'une connexion refusée : c'est la seule fois où ce
-    champ vaut `None`, et c'est une information en soi.
+    est précisément le cas d'une connexion refusée, ou quand personne n'agit : la
+    purge des comptes inactifs, que le planificateur déroule seul (#1580). Dans
+    les deux cas, c'est une information en soi.
 
     `cible_id` — **sur qui**. Identique à `acteur_id` quand on agit sur soi-même
     (changer son propre mot de passe), et c'est voulu : la ligne reste lisible

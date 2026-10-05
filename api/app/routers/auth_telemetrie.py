@@ -21,6 +21,8 @@ from sqlmodel import Session, select
 from app.auth.deps import get_current_user
 from app.database import get_session
 from app.models.core import PresenceMensuelle, TelemetryEvent, Utilisateur
+from app.models.telemetrie import DerniereVisite
+from app.utils import telemetrie_compte
 from app.utils.limiter import LIMITE_DONNEES_PERSONNELLES, LIMITE_PREFERENCE, limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -46,6 +48,8 @@ def export_telemetrie(
         .where(PresenceMensuelle.user_id == user.id)
         .order_by(PresenceMensuelle.mois.desc())  # type: ignore
     ).all()
+    #  Et le jour de la dernière visite (#1629), gardé 12 mois.
+    visite = session.get(DerniereVisite, user.id)
     return {
         "evenements": [
             {
@@ -57,6 +61,7 @@ def export_telemetrie(
             for ev in events
         ],
         "mois_de_presence": list(presences),
+        "jour_de_derniere_visite": visite.jour if visite else None,
     }
 
 
@@ -67,15 +72,12 @@ def effacer_telemetrie(
     session: Session = Depends(get_session),
     user: Utilisateur = Depends(get_current_user),
 ):
-    """Effacer ses données de télémétrie (RGPD art. 17 — droit à l'effacement)."""
-    events = session.exec(select(TelemetryEvent).where(TelemetryEvent.user_id == user.id)).all()
-    for ev in events:
-        session.delete(ev)
-    #  La présence mensuelle aussi (0254) : « l'effacement porte sur le tout ».
-    for presence in session.exec(
-        select(PresenceMensuelle).where(PresenceMensuelle.user_id == user.id)
-    ).all():
-        session.delete(presence)
+    """Effacer ses données de télémétrie (RGPD art. 17 — droit à l'effacement).
+
+    Évènements, présence mensuelle (0254) et jour de la dernière visite (#1629) :
+    « l'effacement porte sur le tout », écrit une fois dans `utils/telemetrie_compte`.
+    """
+    telemetrie_compte.effacer_telemetrie(session, user.id)
     session.commit()
 
 
@@ -94,4 +96,6 @@ def toggle_opt_out_telemetrie(
     """Activer/désactiver la collecte de télémétrie (RGPD art. 21 — droit d'opposition)."""
     user.opt_out_telemetrie = body.opt_out_telemetrie
     session.add(user)
+    if body.opt_out_telemetrie:
+        telemetrie_compte.oublier_derniere_visite(session, user.id)
     session.commit()

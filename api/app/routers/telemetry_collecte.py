@@ -27,7 +27,7 @@ base : plafond par minute ET par jour (`LIMITE_COLLECTE_AUDIENCE`), lot borné e
 nombre, champs bornés en taille — refusés en bloc (422), pas tronqués : le
 client du site n'envoie rien de tel, une charge hors norme vient d'ailleurs.
 
-## Les erreurs et les durées d'affichage passent par ici (#1631, #1632)
+## Les erreurs, les durées d'affichage et les gestes passent par ici (#1631, #1632, #1633)
 
 Même route, même plafond, même refus du profil — mais chacune dans sa table
 (`TRAITEMENTS_A_PART`), sans identifiant de compte : dans `telemetry_event`,
@@ -43,6 +43,12 @@ from app.database import get_session
 from app.models.core import TelemetryEvent, Utilisateur
 from app.utils import horloge
 from app.utils.erreurs_navigateur import ACTION_ERREUR, enregistrer_erreur
+from app.utils.gestes_formulaire import (
+    ACTION_ENVOI,
+    ACTION_OUVERTURE,
+    enregistrer_envoi,
+    enregistrer_ouverture,
+)
 from app.utils.mesures_affichage import ACTION_MESURE, enregistrer_mesure
 from app.utils.limiter import LIMITE_COLLECTE_AUDIENCE, limiter
 
@@ -53,6 +59,8 @@ router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 TRAITEMENTS_A_PART = {
     ACTION_ERREUR: enregistrer_erreur,
     ACTION_MESURE: enregistrer_mesure,
+    ACTION_OUVERTURE: enregistrer_ouverture,
+    ACTION_ENVOI: enregistrer_envoi,
 }
 
 #: Le client vide sa file toutes les 30 secondes, et dès qu'elle atteint ce

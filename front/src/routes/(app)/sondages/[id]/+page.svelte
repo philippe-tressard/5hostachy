@@ -14,6 +14,7 @@
 	import Reponses from '$lib/components/Reponses.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 	import ResultatsSondage from '$lib/components/ResultatsSondage.svelte';
 
 	let sondage: any = null;
@@ -87,6 +88,7 @@
 				commentaireVote.trim() || undefined,
 				reponseLibre.trim() || undefined,
 			);
+			aboutirGeste('sondage.voter');
 			sondage = await sondagesApi.get(sondageId);
 			commentaireVote = '';
 			reponseLibre = '';
@@ -144,6 +146,7 @@
 	}
 
 	$: peutVoter = sondage && !sondage.cloture && sondage.mon_vote === null;
+	$: if (peutVoter) ouvrirGeste('sondage.voter'); //  Le geste mesuré (#1633).
 	//  Décision prise par l'API, pas recomposée ici. Cette ligne valait
 	//  `resultats_publics || cloture || aVote` — et cinquante lignes plus bas un
 	//  second `&& sondage.resultats_publics` écrasait le tout, rendant les deux

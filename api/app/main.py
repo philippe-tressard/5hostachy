@@ -109,6 +109,7 @@ from app.routers import (
     calendrier,
     prestataires,
     prestataires_archivage,
+    prestataires_metriques,
     compteurs,
     sondages,
     idees,
@@ -270,6 +271,14 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(_syntheses, "interval", minutes=10, id="synthese_affaires")
 
+    #  La purge des comptes inactifs (#1580) : chaque jour à 04:30, après la
+    #  sauvegarde de la nuit (03:00 par défaut). Elle avertit, puis supprime trente jours plus tard ;
+    #  un passage manqué décale d'un jour, dans le sens de la conservation.
+    #  `purger_comptes_inactifs` ne lève jamais et laisse une trace à chaque passage.
+    from app.utils.purge_comptes.tache import purger_comptes_inactifs as _purge_comptes
+
+    scheduler.add_job(_purge_comptes, "cron", hour=4, minute=30, id="purge_comptes_inactifs")
+
     #  🔴 Ce qui tourne VRAIMENT est comparé à ce qui est déclaré (#1047). Un
     #  `add_job` supprimé par mégarde — refactor, fusion, condition mal placée —
     #  laissait jusqu'ici l'application démarrer normalement : la sauvegarde ne se
@@ -418,6 +427,8 @@ app.include_router(prestataires.router)
 app.include_router(compteurs.router)
 #  Le geste 📦 des prestataires et des contrats (#1538), même préfixe aussi.
 app.include_router(prestataires_archivage.router)
+#  Les métriques des affaires d'un prestataire (#1646), même préfixe.
+app.include_router(prestataires_metriques.router)
 app.include_router(sondages.router)
 app.include_router(idees.router)
 app.include_router(annonces.router)

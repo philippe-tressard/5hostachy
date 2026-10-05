@@ -14,7 +14,13 @@
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { isCS, authResolue, quandAuthResolue } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-	import { admin as adminApi, auth as authApi, lots as lotsApi } from '$lib/api';
+	import {
+		admin as adminApi,
+		auth as authApi,
+		lots as lotsApi,
+		type CommandeAccesEnAttente,
+	} from '$lib/api';
+	import { typeAccesLabel } from '$lib/types-acces';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { fmtDateShort } from '$lib/date';
@@ -35,18 +41,12 @@
 		prenom: string;
 		nom: string;
 		statut: string;
-		batiment_id: number | null;
+		//  Optionnel comme dans `User`, que le client rend (#1572) : le serveur
+		//  l'envoie toujours (`UserRead`, `null` par défaut).
+		batiment_id?: number | null;
 		cree_le: string;
 		nom_aide?: string | null;
 		prenom_aide?: string | null;
-	}
-	interface PendingAcces {
-		id: number;
-		lot: { reference: string; batiment: { nom: string } };
-		proprietaire: { prenom: string; nom: string };
-		type_acces: string;
-		quantite: number;
-		cree_le: string;
 	}
 	// -- Onglet -------------------------------------------------------------
 	//  🔴 UNE SEULE LISTE, et elle est dans la TABLE (`$lib/pages.ts`, 05/09/2026).
@@ -69,7 +69,7 @@
 	// -- Validations --------------------------------------------------------
 	let batimentsMap: Record<number, string> = {};
 	let comptesEnAttente: PendingUser[] = [];
-	let commandesEnAttente: PendingAcces[] = [];
+	let commandesEnAttente: CommandeAccesEnAttente[] = [];
 	let loading = true;
 	$: nbComptes = comptesEnAttente.length;
 	$: nbCommandes = commandesEnAttente.length;
@@ -117,6 +117,10 @@
 			]);
 			erreurReference = messagePartiel(eBat, eUsers, eLots, eImports);
 			comptesEnAttente = comptes;
+			//  🔴 Le type du CLIENT, et non un type local (#1679) : `PendingAcces`
+			//  lisait un demandeur et un lot que la route ne rendait pas, et une
+			//  commande en attente faisait tomber le rendu de l'onglet. La route
+			//  rend désormais `demandeur_nom`, `lot` et `batiment`.
 			commandesEnAttente = commandes;
 			batimentsMap = Object.fromEntries((batList as any[]).map((b) => [b.id, `Bât. ${b.numero}`]));
 			allUsers = (users as any[]).map((u) => ({
@@ -302,10 +306,10 @@
 				{#each commandesEnAttente as cmd (cmd.id)}
 					<div class="pending-row card">
 						<div class="pending-info">
-							<strong>{nomAffiche(cmd.proprietaire)}</strong>
+							<strong>{cmd.demandeur_nom}</strong>
 							<span class="text-muted-sm">
-								{cmd.lot.batiment.nom} · {cmd.lot.reference} ·
-								{cmd.type_acces.replace('_', ' ')} · {cmd.quantite}
+								{cmd.batiment ? `${cmd.batiment} · ` : ''}{cmd.lot} ·
+								{typeAccesLabel(cmd.type)} · {cmd.quantite}
 							</span>
 							<span class="text-muted-sm">{fmtDateShort(cmd.cree_le)}</span>
 						</div>

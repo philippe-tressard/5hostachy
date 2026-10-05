@@ -33,7 +33,14 @@ from tests.aides_sources import modules_app
 #: l'utilisateur ne peut pas remplacer par un autre chemin.
 #: L'avis de changement d'adresse en est (#1549) : c'est l'alerte d'un compte
 #: qu'on détourne, et un refus de notifications ne doit pas la faire taire.
-TRANSACTIONNELS = {"reinitialisation_mdp", "verification_email", "adresse_changement_avis"}
+#: L'avertissement de purge en est aussi (#1580) : un compte qui a coupé ses
+#: notifications serait sinon supprimé sans avoir été prévenu.
+TRANSACTIONNELS = {
+    "reinitialisation_mdp",
+    "verification_email",
+    "adresse_changement_avis",
+    "compte_inactif_avertissement",
+}
 
 
 def _appels_avec_code(arbre: ast.AST):

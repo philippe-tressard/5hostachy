@@ -7,7 +7,12 @@
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
 	import { currentUser, setUser } from '$lib/stores/auth';
-	import { auth as authApi, lots as lotsApi, uploads as uploadsApi } from '$lib/api';
+	import {
+		auth as authApi,
+		lots as lotsApi,
+		uploads as uploadsApi,
+		type MaDemandeProfil,
+	} from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
@@ -58,7 +63,7 @@
 	let mesLots: any[] = [];
 
 	// ── Demandes de modif profil ───────────────────────────────────────────────
-	let demandes: any[] = [];
+	let demandes: MaDemandeProfil[] = [];
 	let demandesLoading = true;
 	/** Non vide = une des trois listes du profil n'a pas pu être chargée. */
 	let erreurChargement = '';
@@ -135,7 +140,7 @@
 		batiments = bats;
 		etagesLot = Object.fromEntries(mesLots.map((l) => [l.id, l.etage ?? null]));
 
-		const [dem, eDem] = await essayer<any[]>(authApi.mesDemandes(), []);
+		const [dem, eDem] = await essayer<MaDemandeProfil[]>(authApi.mesDemandes(), []);
 		demandes = dem;
 		demandesLoading = false;
 		erreurChargement = messagePartiel(eLots, eBats, eDem);

@@ -25,6 +25,31 @@ export interface SyntheseDurees {
 	pages: (ResumeDurees & { page: string; indicateur: 'chargement' | 'navigation' })[];
 }
 
+/** Un geste mesuré (#1633) — `utils/gestes_formulaire.synthese_gestes`. `geste` est
+ *  un identifiant de `$lib/aboutissement`, qui en porte le libellé. */
+export interface GesteAbouti {
+	geste: string;
+	ouvertures: number;
+	envois: number;
+	/** `null` sans ouverture mesurée. */
+	taux: number | null;
+}
+
+/** Les arrivées par une notification (#1634) — `utils/arrivees_notification.synthese_arrivees`. */
+export interface ArriveeNotification {
+	canal: 'courriel' | 'whatsapp';
+	/** Le code du modèle d'un courriel ; `null` pour le groupe WhatsApp. */
+	modele: string | null;
+	/** Le libellé du modèle, tel qu'il est en base ; `null` s'il n'y est pas. */
+	libelle: string | null;
+	/** Vues arrivées par ce lien, anonymes comprises (renvoyées à la connexion). */
+	arrivees: number;
+	/** Comptes distincts parmi elles. */
+	comptes: number;
+	/** Messages envoyés sur la période ; `null` : inconnu. Un envoi groupé compte pour un. */
+	envois: number | null;
+}
+
 /** Une ligne de « Qui vient » : comptes venus sur comptes mesurés (#1628). */
 export interface LigneAdoption {
 	libelle: string;
@@ -87,20 +112,91 @@ export interface UtilisateurActif {
 	derniere_connexion: string | null;
 }
 
+/** Un record : le jour (ou le mois) et ses utilisateurs uniques. */
+export interface RecordTelemetrie {
+	uniques: number;
+	jour?: string;
+	mois?: string;
+}
+
 /**
- * Le tableau de bord de télémétrie. `kpi` reste libre : ses clés changent avec
- * la vue, et l'écran les lit une à une.
+ * Les nombres clés de la vue — `utils/telemetrie_tableau`. Toutes les clés sont
+ * facultatives : elles changent avec la vue, et l'écran les lit une à une.
  */
+export interface IndicateursTelemetrie {
+	vues?: number;
+	utilisateurs?: number;
+	pages?: number;
+	heure_pointe?: string | null;
+	moy_vues_utilisateur?: number | null;
+	moy_vues_jour?: number | null;
+	moy_utilisateurs_jour?: number | null;
+	moy_vues_mois?: number | null;
+	moy_vues_an?: number | null;
+	mois_actifs?: number | null;
+	annees_actives?: number | null;
+	jour_pointe?: RecordTelemetrie | null;
+	record_jour?: RecordTelemetrie | null;
+	record_mois?: RecordTelemetrie | null;
+	vues_non_attribuees?: number;
+}
+
+/** Un compte sans visite depuis le plus court des seuils (#1629) — nominatif, réservé à l'administrateur. */
+export interface CompteDormant {
+	user_id: number;
+	nom: string;
+	/** Le type de résident, libellé. */
+	type: string;
+	/** Le jour de la dernière visite connue ; `null` : aucune depuis la validation. */
+	derniere_visite: string | null;
+	jours: number;
+}
+
+/** Le retour des comptes validés sur la période (#1629). */
+export interface RetourArrivants {
+	periode: string;
+	fenetre_jours: number;
+	valides: number;
+	revenus: number;
+	jamais_revenus: number;
+	/** Fenêtre encore ouverte, pas encore venus : issue inconnue. */
+	en_attente: number;
+	/** Sur les issues connues seulement ; `null` : aucune. */
+	taux: number | null;
+}
+
+/** Comptes dormants et retour des arrivants (#1629) — `utils/retour_comptes.retour_comptes`. */
+export interface RetourComptes {
+	comptes_mesures: number;
+	/** Comptes qui ont refusé la mesure d'audience, exclus des deux calculs. */
+	refus: number;
+	dormants: { seuil: number; nombre: number }[];
+	liste_dormants: CompteDormant[];
+	arrivants: RetourArrivants;
+}
+
+/** Ce que le profil exporte de sa mesure d'audience (`GET /auth/me/telemetrie`). */
+export interface ExportTelemetrie {
+	evenements: unknown[];
+	mois_de_presence: string[];
+	jour_de_derniere_visite: string | null;
+}
+
+/** Le tableau de bord de télémétrie. */
 export interface TableauTelemetrie {
 	scope: PorteeTelemetrie;
-	kpi: Record<string, any>;
+	kpi: IndicateursTelemetrie;
 	chart: BatonTelemetrie[];
 	chart_label: string;
 	top_pages: PageTelemetrie[];
 	top_users: UtilisateurActif[];
 	erreurs: ErreurNavigateur[];
 	performance: SyntheseDurees;
+	gestes: GesteAbouti[];
+	arrivees: ArriveeNotification[];
 	/** `null` : la vue ne sait pas qui est venu (Total). */
 	adoption: Adoption | null;
+	/** Dormants et arrivants, à seuils fixes quelle que soit la vue (#1629). */
+	retour: RetourComptes;
 	filtre_gestionnaire: EtatFiltreGestionnaire;
 }

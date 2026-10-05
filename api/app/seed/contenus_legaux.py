@@ -24,6 +24,24 @@ cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie
 """
 
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
+from app.utils.purge_comptes.regles import DELAI_AVANT_SUPPRESSION_JOURS, INACTIVITE_ANS
+
+
+#: La conservation des comptes (#1580, arbitrée le 04/10/2026). L'ancienne phrase
+#: annonçait une durée qu'aucun code n'appliquait ; elle reste écrite ici pour que
+#: la migration 0263 la remplace EXACTEMENT (`utils/textes_livres`). La nouvelle
+#: se compose des constantes de la purge (`utils/purge_comptes/regles`) : la durée
+#: annoncée ne peut pas diverger de celle qui est appliquée.
+CONSERVATION_COMPTES_ANCIEN = "Données de compte actif\xa0: durée de la relation + 2 ans."
+CONSERVATION_COMPTES = (
+    "Données de compte\xa0: un compte qui permet de se connecter et reste "
+    f"<strong>{INACTIVITE_ANS}\xa0ans sans connexion</strong> reçoit un avertissement par "
+    f"courriel, puis il est <strong>supprimé {DELAI_AVANT_SUPPRESSION_JOURS}\xa0jours plus "
+    "tard</strong> avec les données qui lui sont rattachées, sauf s'il s'est reconnecté "
+    "entre-temps. Les comptes d'administration ne sont pas supprimés automatiquement\xa0; "
+    "un compte en attente de validation, refusé ou désactivé n'est supprimé que sur "
+    "décision de l'administration."
+)
 
 
 #: La conservation de l'historique des envois (#1073, 24/09/2026). Il disait
@@ -154,6 +172,29 @@ TELEMETRIE_PERFORMANCE = (
     "<strong>sans rattachement à votre compte</strong> et conservés 30\xa0jours. Elles servent "
     "à savoir quels écrans sont lents. Votre refus de la mesure d'audience les coupe aussi.</li>"
 )
+#: Les arrivées par notification (#1634) : le canal (et le modèle d'un courriel)
+#: lu dans le lien, joint à la vue de page — donc RATTACHÉ AU COMPTE comme elle.
+#: Écrite une fois : le gabarit et la migration 0262, qui l'insère juste après
+#: `TELEMETRIE_PERFORMANCE` dans le texte servi, la lisent ici.
+TELEMETRIE_ARRIVEES = (
+    "<li><strong>Notification qui vous amène\xa0:</strong> quand vous ouvrez le site depuis un "
+    "courriel ou depuis le groupe WhatsApp de la résidence, le lien porte ce canal — et, pour "
+    "un courriel, son type —, jamais votre adresse ni votre identité. Il est joint à la page "
+    "consultée, comme le reste de la mesure d'audience rattachée à votre compte, et conservé "
+    "30\xa0jours. Il sert à savoir quelles notifications font venir. Votre refus de la mesure "
+    "d'audience le coupe aussi.</li>"
+)
+#: Les gestes aboutis (#1633) : ouvertures et envois des formulaires, comptés par
+#: jour SANS rattachement au compte (`utils/gestes_formulaire`). Écrite une fois :
+#: le gabarit et la migration 0261, qui l'insère juste après
+#: `TELEMETRIE_PERFORMANCE` dans le texte servi, la lisent ici.
+TELEMETRIE_GESTES = (
+    "<li><strong>Formulaires ouverts et envoyés\xa0:</strong> pour quelques formulaires (créer "
+    "une affaire, répondre, voter, déposer un document), le nombre de fois où ils sont ouverts "
+    "puis envoyés, compté par jour <strong>sans rattachement à votre compte</strong> et sans "
+    "rien de ce que vous y saisissez, conservé 30\xa0jours. Il sert à repérer les formulaires "
+    "qui découragent. Votre refus de la mesure d'audience le coupe aussi.</li>"
+)
 #: Le journal de sécurité (#1580) : `utils/journal_securite` écrit, pour chaque geste
 #: sensible, une ligne qui porte l'IDENTIFIANT du compte — jamais l'adresse ni un
 #: secret. La politique ne le nommait pas. Sa durée n'est pas une durée choisie :
@@ -212,6 +253,16 @@ TELEMETRIE_CONSERVATION = (
     "pendant 10 ans. L'effacement demandé depuis votre profil est immédiat et porte sur "
     "le tout.</li>"
 )
+#: Le jour de la dernière visite (#1629) : `DerniereVisite`, un jour par compte,
+#: pour repérer les comptes qui ne viennent plus. Écrite une fois : le gabarit
+#: et la migration 0260, qui l'insère juste après `TELEMETRIE_CONSERVATION`
+#: dans le texte servi, la lisent ici.
+TELEMETRIE_DERNIERE_VISITE = (
+    "<li>Jour de votre dernière visite\xa0: <strong>un seul jour</strong>, ni page ni heure, "
+    "pour repérer les comptes qui ne viennent plus\xa0; effacé après <strong>12 mois</strong> "
+    "sans visite. Il n'est pas tenu si vous refusez la mesure d'audience, et l'effacement "
+    "demandé depuis votre profil l'emporte aussi.</li>"
+)
 #: La phrase du point 6 sur ce qu'un compte fait depuis son profil : il y
 #: exporte et efface sa télémétrie.
 DROITS_DEPUIS_LE_PROFIL = (
@@ -265,6 +316,8 @@ DEFAULT_LEGAL = {
         + TELEMETRIE_COLLECTE
         + TELEMETRIE_ERREURS
         + TELEMETRIE_PERFORMANCE
+        + TELEMETRIE_ARRIVEES
+        + TELEMETRIE_GESTES
         + JOURNAL_SECURITE
         + "<h2>3. Finalités et bases légales</h2><ul><li><strong>Gestion de la copropriété</strong> — base\xa0: "
         "intérêt légitime (art.\xa06-1-f).</li><li><strong>Authentification et sécurité</strong> — "
@@ -302,11 +355,12 @@ DEFAULT_LEGAL = {
         + "</li>"
         + ACHEMINEMENT_COURRIELS
         + RECEPTION_COURRIELS
-        + "</ul><h2>5. Durée de "
-        "conservation</h2><ul><li>Données de compte actif\xa0: durée de la relation + 2 "
-        "ans.</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
+        + "</ul><h2>5. Durée de conservation</h2><ul><li>"
+        + CONSERVATION_COMPTES
+        + "</li><li>Tokens de rafraîchissement\xa0: 7 jours glissants.</li><li>Sauvegardes\xa0: selon la "
         "configuration.</li></ul><ul>"
         + TELEMETRIE_CONSERVATION
+        + TELEMETRIE_DERNIERE_VISITE
         + CONSERVATION_COURRIELS
         + "</li>"
         + CONSERVATION_RELEVES

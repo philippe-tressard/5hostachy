@@ -214,7 +214,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
 | 9 | **E-mails en échec** | **INCONNU — voir ci-dessous** |
 | 10 | Parité de code entre les 2 nœuds | OK · ÉCART |
 | 11 | Auto-deploy de l'actif vivant | OK · FAIL |
-| 12 | **Image de chaque service postérieure à SON commit** (api, front, bridge, Caddy — le dernier commit qui touche son répertoire, pas le dernier du dépôt) | OK · FAIL · INCONNU |
+| 12 | **Chaque conteneur sert l'image bâtie sur SON commit** (api, front, bridge, Caddy) — deux faits par service, jamais une date : les images contiennent-elles le dernier commit de son répertoire, et le conteneur tourne-t-il sur le manifeste de l'image étiquetée ? Le détail donne la commande de recréation ; pourquoi pas l'ID d'image : `lib-images-servies.sh` (#1675) | OK · FAIL · INCONNU |
 | 13 | Canal d'alerte non muet | OK · FAIL |
 | 14 | Hygiène disque sur les **2** nœuds | OK · FAIL |
 | 17 | **Points d'entrée conformes au dépôt** (crons, unité systemd) | OK · FAIL · INCONNU |
@@ -377,7 +377,7 @@ Attendre le tick, puis :
 | P1 | Le déploiement a eu lieu **et est terminé** | `precheck-mep.sh --post-mep` (lit l'actif) | Ligne `Déployé: <hash>` avec le hash attendu — ou, actif issu d'une bascule, marqueur d'images = hash et conteneur créé après (#1474) |
 | P2 | Site debout | `curl -s -o /dev/null -w '%{http_code}' https://5hostachy.fr/api/health` | 200 |
 | P3 | Version servie = version bumpée | Voir « P3 » ci-dessous — l'ancienne commande ne pouvait **pas** fonctionner | La version de `front/package.json`, ou `INCONNU` (jamais vide) |
-| P4 | Image du service touché reconstruite | Point 12 (`--post-mep` le rejoue) : il compare déjà chaque conteneur au dernier commit de son service | Image postérieure au commit |
+| P4 | Image du service touché reconstruite | Point 12 (`--post-mep` le rejoue) : images bâties avec le commit du service, conteneur sur le manifeste de l'image étiquetée | Les deux faits vrais pour chaque service |
 | P5 | Migrations appliquées | `docker logs hostachy_api --since 10m \| grep -iE 'alembic\|revision'` | Pas d'erreur ; head atteint |
 | P6 | Aucune régression visible en logs | `docker logs hostachy_api --since 10m \| grep -cE "<MOTIF_ERREURS_API>"` — le motif se lit dans `precheck-mep.sh`, jamais recopié : il compte aussi les erreurs de bibliothèque sans niveau (#1066) | 0 |
 | P7 | **Le correctif est effectivement observable** | Vérifier le comportement corrigé sur le site réel | Le bug ne se reproduit plus |

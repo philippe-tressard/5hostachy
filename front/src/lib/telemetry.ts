@@ -56,9 +56,9 @@ export function trackEvent(page: string, action = 'view', detail?: string) {
 	if (buffer.length >= EVENEMENTS_PAR_LOT) flush();
 }
 
-/** Enregistre une vue de page. */
-export function trackPageView(path: string) {
-	trackEvent(path, 'view');
+/** Enregistre une vue de page — avec, à l'arrivée, la notification qui y a mené (#1634). */
+export function trackPageView(path: string, source?: string) {
+	trackEvent(path, 'view', source);
 }
 
 /** Enregistre une vue d'onglet (page#tab). */

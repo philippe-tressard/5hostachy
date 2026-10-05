@@ -15,6 +15,7 @@
 		trackPageView,
 		setTelemetryOptOut,
 	} from '$lib/telemetry';
+	import { lireSourceArrivee } from '$lib/arrivees';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
@@ -57,7 +58,8 @@
 
 	afterNavigate((navigation) => {
 		mesurerNavigation(navigation.type);
-		trackPageView(window.location.pathname);
+		//  Arrivée par une notification (#1634) : l'étiquette part avec la vue, puis quitte l'adresse.
+		trackPageView(window.location.pathname, lireSourceArrivee());
 	});
 
 	$: siteNom = $siteNomStore;

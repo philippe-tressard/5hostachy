@@ -52,7 +52,21 @@ TERMES_MORTS = {
     "Mon profil > Sécurité": "le bloc s'appelle « Modifier le mot de passe » (#1025)",
     "Admin → Patrimoine": "l'onglet s'appelle « Périmètres » (#1025)",
     "Signalements & tickets": "le libellé de la page est « Tickets » (pages.ts)",
+    #  #1594 (v2.93.3) : deux réponses avaient gardé le mot du modèle.
+    "commentaire de suivi": "la section s'appelle « Suivi », le geste « Ajouter une suite »",
+    "section Saisi pour": "la section s'appelle « Au nom de » ($lib/entites/types.ts) ; "
+    "« Saisi pour » est le champ",
 }
+
+
+def _motif(terme: str) -> re.Pattern[str]:
+    """Le terme, les mots séparés par des blancs OU par une balise en ligne.
+
+    La FAQ est du HTML : « section <strong>Saisi pour</strong> » se lit
+    « section Saisi pour », et un motif littéral ne l'aurait jamais vu.
+    """
+    entre = r"(?:\s|</?\w+>)+"
+    return re.compile(entre.join(map(re.escape, terme.split())), re.I)
 
 
 def _textes_servis() -> dict[str, str]:
@@ -84,7 +98,7 @@ def test_aucun_ecran_mort_n_est_cite():
     fautes = []
     for nom, texte in _textes_servis().items():
         for terme, remede in TERMES_MORTS.items():
-            for trouve in re.finditer(re.escape(terme), texte, re.I):
+            for trouve in _motif(terme).finditer(texte):
                 ligne = texte[: trouve.start()].count("\n") + 1
                 fautes.append(f"  {nom}:{ligne} — « {terme} » : {remede}")
 
@@ -94,6 +108,13 @@ def test_aucun_ecran_mort_n_est_cite():
         "Une FAQ est lue au moment où l'on ne sait pas : un nom d'écran faux y "
         "envoie chercher ce qui n'existe pas."
     )
+
+
+def test_un_terme_mort_est_vu_a_travers_une_balise():
+    """Le texte semé en v2.93.2 (#1594) : un motif littéral le laissait passer."""
+    ancien = "Le formulaire porte alors une section <strong>Saisi pour</strong>, et"
+    assert _motif("section Saisi pour").search(ancien)
+    assert not _motif("section Saisi pour").search("une section <strong>Au nom de</strong>")
 
 
 def test_la_question_du_prix_d_un_badge_existe_et_repond_a_son_lien():

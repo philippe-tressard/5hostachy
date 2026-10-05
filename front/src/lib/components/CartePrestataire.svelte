@@ -28,6 +28,8 @@
 	import { nomAffiche } from '$lib/noms';
 	import CarteModifiable from './CarteModifiable.svelte';
 	import NotationsPrestataire from './NotationsPrestataire.svelte';
+	import MetriquesPrestataire from './MetriquesPrestataire.svelte';
+	import { isCS } from '$lib/stores/auth';
 	import ChampsPrestataire from './ChampsPrestataire.svelte';
 	import PiedFormulaire from './PiedFormulaire.svelte';
 
@@ -172,6 +174,11 @@
 		      noté quoi, et donc impossible de retirer une note posée par
 		      erreur — alors que l'endpoint de suppression existait. -->
 		<NotationsPrestataire {notations} peutSupprimer={peutModifier} on:supprimee />
+		<!--  📊 Les affaires qu'il a traitées, en chiffres (#1646) — le conseil seul,
+		      comme les avis. Chargées à l'ouverture de la fiche, pas avant. -->
+		{#if $isCS}
+			<MetriquesPrestataire prestataireId={p.id} />
+		{/if}
 	</svelte:fragment>
 </CarteModifiable>
 

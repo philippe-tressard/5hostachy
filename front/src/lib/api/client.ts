@@ -266,8 +266,12 @@ export function buildQuery(params: Record<string, string | undefined | null>): s
  *
  * @param champs  les champs du formulaire ; `undefined` et `null` sont écartés,
  *                pour que l'appelant n'ait pas à écrire `if (x) form.append(…)`.
+ *
+ * Le type rendu se NOMME à l'appel (`postFormData<Document>(…)`) ou se lit dans le
+ * type de retour déclaré par l'appelant. Par défaut `unknown`, jamais `any` (#1572) :
+ * un appelant qui n'a rien dit ne peut pas lire un champ que le serveur ne rend pas.
  */
-export async function postFormData<T = any>(
+export async function postFormData<T = unknown>(
 	path: string,
 	champs: Record<string, string | Blob | undefined | null>,
 	options: { libelleErreur?: string } = {},

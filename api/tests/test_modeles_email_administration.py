@@ -37,19 +37,21 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 
+from app.models.core import ModeleEmail
 from app.routers.admin.communications import update_modele_email
 
 
-class _Modele:
-    def __init__(self, sujet: str, corps: str):
-        self.id = 1
-        self.code = "compte_active"
-        self.sujet = sujet
-        self.corps_html = corps
-        self.intention = "information"
-        self.actif = True
-        self.modifie_le = None
-        self.modifie_par_id = None
+def _Modele(sujet: str, corps: str) -> ModeleEmail:
+    """Une VRAIE ligne, non enregistrée : la réponse se lit par `model_dump`
+    (`_modele_lu`, #1682), qu'une imitation ne porterait pas."""
+    return ModeleEmail(
+        id=1,
+        code="compte_active",
+        libelle="Compte activé",
+        sujet=sujet,
+        corps_html=corps,
+        intention="information",
+    )
 
 
 class _Utilisateur:

@@ -45,7 +45,7 @@ from app.models.core import (
     StatutLotImport,
     Utilisateur,
 )
-from app.models.telemetrie import PresenceMensuelle, TelemetryEvent
+from app.models.telemetrie import DerniereVisite, PresenceMensuelle, TelemetryEvent
 from app.utils.limiter import limiter
 from tests.aides_base import compte, moteur_memoire
 
@@ -161,12 +161,16 @@ def test_telemetrie_chacun_n_exporte_et_n_efface_que_la_sienne(moteur):
         #  Et la présence mensuelle (0254) : exportée et effacée avec les évènements.
         s.add(PresenceMensuelle(mois="2026-05", user_id=moi))
         s.add(PresenceMensuelle(mois="2026-05", user_id=autre_id))
+        #  Et le jour de la dernière visite (#1629), de même.
+        s.add(DerniereVisite(user_id=moi, jour="2026-05-12"))
+        s.add(DerniereVisite(user_id=autre_id, jour="2026-05-13"))
         s.commit()
 
     export = http.get("/auth/me/telemetrie")
     assert export.status_code == 200
     assert [e["page"] for e in export.json()["evenements"]] == ["/actualites"]
     assert export.json()["mois_de_presence"] == ["2026-05"]
+    assert export.json()["jour_de_derniere_visite"] == "2026-05-12"
 
     assert http.delete("/auth/me/telemetrie").status_code == 204
     with Session(moteur) as s:
@@ -174,14 +178,21 @@ def test_telemetrie_chacun_n_exporte_et_n_efface_que_la_sienne(moteur):
         presences = s.exec(select(PresenceMensuelle)).all()
     assert [(e.user_id, e.page) for e in restants] == [(autre_id, "/tickets")]
     assert [p.user_id for p in presences] == [autre_id]
+    with Session(moteur) as s:
+        assert [d.user_id for d in s.exec(select(DerniereVisite)).all()] == [autre_id]
 
 
 def test_telemetrie_l_opposition_est_enregistree(moteur):
     http, moi = _client(moteur, RoleUtilisateur.résident)
+    with Session(moteur) as s:
+        s.add(DerniereVisite(user_id=moi, jour="2026-05-12"))
+        s.commit()
     reponse = http.patch("/auth/me/opt-out-telemetrie", json={"opt_out_telemetrie": True})
     assert reponse.status_code == 204
     with Session(moteur) as s:
         assert s.get(Utilisateur, moi).opt_out_telemetrie is True
+        #  Le refus efface le jour de la dernière visite (#1629) : il ne sert plus à rien.
+        assert s.get(DerniereVisite, moi) is None
 
 
 # ── lots_imports ────────────────────────────────────────────────────────────

@@ -36,12 +36,12 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type BailSansLocataire } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { fmtDate } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
-	let lignes: any[] = [];
+	let lignes: BailSansLocataire[] = [];
 	let chargement = true;
 	/**  Non vide = on n'a PAS pu regarder. Un relevé vide se lirait « tout est
 	 *   rattaché », ce qui serait faux et rassurant (`standards/04`). */

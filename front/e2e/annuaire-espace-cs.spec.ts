@@ -26,14 +26,22 @@ const CS = {
 	ag_annee: 2025,
 	ag_date: '2025-06-12',
 	whatsapp_url: '',
+	//  La forme RÉELLE de `membres_du_conseil(pour_administration=True)` —
+	//  identifiant compris : c'est lui qui fait réconcilier le PUT (#1680).
 	membres: [
 		{
+			id: 31,
 			genre: 'Mme',
 			prenom: 'Anne',
 			nom: 'Durand',
+			batiment_id: 2,
 			batiment_nom: '2',
 			etage: 3,
+			est_gestionnaire_site: false,
 			est_president: true,
+			photo_url: null,
+			ordre: 0,
+			user_id: null,
 		},
 	],
 };
@@ -169,4 +177,22 @@ test('l’en-tête du conseil s’enregistre avec la liste entière', async ({ p
 	expect(envois[0].corps).toMatchObject({ ag_annee: 2026 });
 	expect(envois[0].corps.membres).toHaveLength(1);
 	await expect(conseil.locator('.header-summary')).toContainText('AG 2026');
+});
+
+/*  🔴 #1680 — `charger()` recopiait chaque membre champ par champ, SANS son
+    identifiant : le PUT recevait des membres inconnus, et le serveur
+    supprimait puis recréait tout le conseil à chaque enregistrement — `cree_le`
+    remis à l'instant, et autant de « nouveau membre » au fil d'actualité.
+    La réconciliation côté serveur (`test_annuaire_cs_reconciliation.py`) ne
+    sert que si l'écran rend ce qu'il a lu. */
+test('enregistrer sans rien changer renvoie chaque membre avec son identifiant', async ({
+	page,
+}) => {
+	const envois = await ouvrir(page);
+	const conseil = section(page, 'Conseil Syndical');
+	await conseil.locator('.header-summary').getByRole('button', { name: 'Modifier' }).click();
+	await conseil.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+	await expect.poll(() => envois.length).toBe(1);
+	expect(envois[0].corps.membres).toHaveLength(1);
+	expect(envois[0].corps.membres[0]).toMatchObject({ id: 31, nom: 'Durand' });
 });

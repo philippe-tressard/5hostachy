@@ -23,17 +23,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	import { bailleur as bailApi } from '$lib/api';
+	import { bailleur as bailApi, type LocataireTrouve } from '$lib/api';
 	import { nomAffiche } from '$lib/noms';
-
-	/** Un compte trouvé par la recherche — la forme que l'API rend. */
-	interface Compte {
-		id: number;
-		nom: string;
-		prenom: string;
-		email: string;
-		actif: boolean;
-	}
 
 	/** Racine des identifiants — l'hôte la fournit, il en a déjà une. */
 	export let uid: string;
@@ -52,11 +43,11 @@
 	//  la création obligeait à taper un nom pour retrouver quelqu'un que le site
 	//  connaissait déjà. Une seule écriture, donc les deux gestes en profitent — et
 	//  c'est à la création qu'elles servent le plus.
-	let suggestions: Compte[] = [];
+	let suggestions: LocataireTrouve[] = [];
 	let suggestionsChargees = false;
 	let recherche = '';
-	let trouve: Compte | null = null;
-	let resultats: Compte[] = [];
+	let trouve: LocataireTrouve | null = null;
+	let resultats: LocataireTrouve[] = [];
 	let cherchant = false;
 	let rechercheFaite = false;
 
@@ -75,7 +66,7 @@
 		}
 	});
 
-	function selectionner(l: Compte) {
+	function selectionner(l: LocataireTrouve) {
 		trouve = l;
 		locataireId = l.id;
 		email = l.email;

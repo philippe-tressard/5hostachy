@@ -16,7 +16,12 @@
 	import { tenter } from '$lib/erreurs';
 	import { essayer } from '$lib/chargement';
 	import { basculer } from '$lib/accordeon';
-	import { prestataires as prestApi } from '$lib/api';
+	import {
+		prestataires as prestApi,
+		type ContratEntretien,
+		type Notation,
+		type Prestataire,
+	} from '$lib/api';
 	import { isCS } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import {
@@ -39,9 +44,9 @@
 	import IntertitreGroupe from '$lib/components/IntertitreGroupe.svelte';
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 
-	export let prestataires: any[] = [];
-	export let contrats: any[] = [];
-	export let notations: any[] = [];
+	export let prestataires: Prestataire[] = [];
+	export let contrats: ContratEntretien[] = [];
+	export let notations: Notation[] = [];
 	/** La boîte de création est ouverte — lue par le bouton de l'en-tête. */
 	export let creationOuverte = false;
 
@@ -55,7 +60,7 @@
 	let prestContacts = contactsDepuis();
 
 	/** Les fiches rangées — `archivee` vient du serveur (`REGLES["prestataire"]`). */
-	let archives: any[] = [];
+	let archives: Prestataire[] = [];
 
 	let filtres = filtresVides();
 	$: filteredPrests = filtrerPrestataires(prestataires, contrats, filtres);
@@ -67,7 +72,7 @@
 	//  Tous les contrats du prestataire, assurances et mandats compris : la carte
 	//  les montre. `contratsDuPrestataire` (`$lib/prestataires`) répond à une
 	//  autre question — sous quel contrat il peut INTERVENIR — et les écarte.
-	function contratsForPrest(prestId: number): any[] {
+	function contratsForPrest(prestId: number): ContratEntretien[] {
 		return contrats.filter((c) => c.prestataire_id === prestId);
 	}
 
@@ -110,7 +115,7 @@
 		resetPrestForm();
 	}
 
-	function startEditPrest(p: any) {
+	function startEditPrest(p: Prestataire) {
 		prestForm = prestataireDepuis(p);
 		prestContacts = contactsDepuis(p);
 		//  🔴 On n'ouvre PAS le formulaire de tête, et on ne fait PAS défiler : la

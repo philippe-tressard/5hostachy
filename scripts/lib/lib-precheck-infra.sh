@@ -11,34 +11,42 @@
 #  d'exploitable, et surtout aucune erreur : c'est pourquoi il ne s'exécute pas
 #  au chargement.
 #
-#  Ce qu'il porte : l'image de l'actif face à son commit (12), la vivacité du
+#  Ce qu'il porte : le contenu servi par chaque conteneur de l'actif (12), la vivacité du
 #  canal d'alerte (13), l'hygiène disque des deux nœuds (14), la conformité des
 #  points d'entrée au dépôt (17) et la parité des IMAGES du standby (18).
 # =============================================================================
 
 precheck_points_infra() {
-  # 12 — chaque conteneur a-t-il été recréé APRÈS le dernier commit qui touche
-  #      ce dont son image est faite ? Décision : `verdict_image_service`, qui dit
-  #      pourquoi la question se pose par service (04/10/2026). Le Caddyfile est
-  #      MONTÉ, pas bâti : il n'entre pas dans l'image de Caddy.
-  R12=$(sur "$ACTIF" 'cd /opt/5hostachy && for p in hostachy_api:api hostachy_front:front hostachy_whatsapp:whatsapp-bridge hostachy_caddy:Dockerfile.caddy; do printf "%s %s %s
-" "${p%%:*}" "$(docker inspect "${p%%:*}" --format "{{.Created}}" 2>/dev/null)" "$(git log -1 --format=%cI -- "${p#*:}" 2>/dev/null)"; done')
-  #  Les deux instants s'affichent dans le MÊME référentiel — celui du poste :
-  #  le `Z` de Docker (UTC) d'un côté, le `+02:00` de git de l'autre (#313).
-  horodate() { date -d "$1" '+%d/%m %H:%M' 2>/dev/null || echo "?"; }
+  # 12 — chaque conteneur sert-il le CONTENU de son service ? (#1675)
+  #      Deux faits par service, la décision et le pourquoi dans
+  #      `lib-images-servies.sh` : les images contiennent-elles le dernier
+  #      commit du service (marqueur du build réussi), et le conteneur tourne-t-il
+  #      sur le manifeste de son image étiquetée ? Ce n'est plus une date : un
+  #      commit sans effet sur l'image (Caddy, 04/10/2026) ne demande rien. Le
+  #      Caddyfile est MONTÉ, pas bâti : il n'entre pas dans l'image de Caddy.
+  R12=$(sur "$ACTIF" "$(collecte_images_servies)")
+  court() { local d=${1#sha256:}; printf '%.12s' "$d"; }   # un digest lisible
   V12=OK; D12=""
   [ -z "$R12" ] && V12=INCONNU
-  while read -r c img cmt; do
-    [ -z "$c" ] && continue
-    v=$(verdict_image_service "$img" "$cmt")
-    case "$v" in
-      FAIL)    V12=FAIL ;;
-      INCONNU) [ "$V12" = OK ] && V12=INCONNU ;;
+  while read -r svc inc cm em sc mk; do
+    [ -z "$svc" ] && continue
+    case "$(verdict_image_service "$inc" "$cm" "$em")" in
+      OK) ;;
+      PERIMEE)
+        V12=FAIL
+        D12="$D12; $svc : images bâties sur $mk, sans son commit $sc — le build de l'actif n'a pas abouti (C27, /var/log/hostachy-deploy.log)" ;;
+      NON_RECREE)
+        V12=FAIL
+        D12="$D12; $svc : le conteneur ne tourne pas sur l'image étiquetée ($(court "$cm") ≠ $(court "$em")) — recréer sur l'actif : cd /opt/5hostachy && docker compose up -d $svc"
+        [ "$svc" = caddy ] && D12="$D12 (caddy validate d'abord : coupure publique)" ;;
+      *)
+        [ "$V12" = OK ] && V12=INCONNU
+        D12="$D12; $svc : non mesuré (inclus=$inc conteneur=$(court "$cm") étiquetée=$(court "$em"))" ;;
     esac
-    [ "$v" = OK ] || D12="$D12 ${c#hostachy_}=$(horodate "$img")<$(horodate "$cmt")"
   done <<< "$R12"
-  [ -z "$D12" ] && D12=" 4 conteneurs recréés après le dernier commit de leur service"
-  rapporter 12 "$V12" "Image de chaque service postérieure à son commit" "${D12# } (heure du poste)"
+  [ -z "$D12" ] && [ "$V12" = OK ] && D12="; 4 conteneurs sur l'image étiquetée de leur service, bâtie avec son dernier commit"
+  [ -z "$R12" ] && D12="; relevé vide (actif injoignable ?)"
+  rapporter 12 "$V12" "Chaque conteneur sert l'image bâtie sur son commit" "${D12#; }"
 
   # 13 — le canal d'alerte a-t-il émis ? On croise la dernière ALERTE et le dernier
   #      ÉCHEC, tous deux horodatés. Les « Email KO » ne le sont pas : les compter

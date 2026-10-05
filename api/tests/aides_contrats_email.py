@@ -83,6 +83,9 @@ EXPECTED_VARS: dict[str, set[str]] = {
     "verification_email": {"expire_heures", "lien", "prenom"},
     #  L'avis à l'ancienne adresse d'un compte dont l'adresse va changer (#1549).
     "adresse_changement_avis": {"destinataire", "nouvelle_adresse", "par_un_administrateur"},
+    #  L'avertissement avant la purge d'un compte inactif (#1580) : la date de la
+    #  suppression et celle de la dernière activité, rendues en toutes lettres.
+    "compte_inactif_avertissement": {"destinataire", "date_suppression", "derniere_activite"},
     "annonce_hall": {"annonce", "auteur"},
     # Prévient le gestionnaire du site quand l'appariement a créé des accès
     # sans validation préalable. `resultat` porte aussi les accords en français,

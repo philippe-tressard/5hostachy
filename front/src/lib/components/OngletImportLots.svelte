@@ -28,6 +28,14 @@
 	//  lots (erreurs de ligne, imports écartés, parkings sans lot).
 	let uploading = false;
 
+	//  Ce que la résolution a laissé de côté (`resolution_lots.resoudre_imports`) ;
+	//  le téléversement en rend le compte préfixé par `auto_` (#1685).
+	function signalerEcartes(sansOccupant: number, horsPerimetre: number) {
+		if (sansOccupant) toast('info', `${sansOccupant} import(s) sans occupant — à compléter via ✏️`);
+		if (horsPerimetre)
+			toast('info', `${horsPerimetre} import(s) hors périmètre laissé(s) en attente`);
+	}
+
 	async function uploadExcel(fichier: File, remplacer: boolean) {
 		uploading = true;
 		try {
@@ -37,13 +45,7 @@
 				`Import : ${result.importes} ajoutés, ${result.doublons} doublons, ${result.ignores} ignorés${result.auto_resolus ? ` — ${result.auto_resolus} copropriétaire(s) résolu(s) automatiquement` : ''}`,
 			);
 			if (result.erreurs?.length) toast('error', result.erreurs.slice(0, 3).join('\n'));
-			if (result.auto_skipped_locataire)
-				toast(
-					'info',
-					`${result.auto_skipped_locataire} import(s) avec locataire à traiter manuellement`,
-				);
-			if (result.auto_skipped_no_lot)
-				toast('info', `${result.auto_skipped_no_lot} parking(s) sans lot — à associer via ✏️`);
+			signalerEcartes(result.auto_sans_occupant, result.auto_hors_perimetre);
 			await reload();
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur import');
@@ -76,10 +78,7 @@
 		try {
 			const r = await lotsApi.autoResoudreImports();
 			toast('success', `${r.resolus} copropriétaire(s) résolu(s) automatiquement`);
-			if (r.skipped_locataire)
-				toast('info', `${r.skipped_locataire} import(s) avec locataire laissé(s) en staging`);
-			if (r.skipped_no_lot)
-				toast('info', `${r.skipped_no_lot} parking(s) sans lot lié — à traiter manuellement`);
+			signalerEcartes(r.sans_occupant, r.hors_perimetre);
 			await reload();
 		} catch (e: any) {
 			toast('error', e.message ?? 'Erreur');

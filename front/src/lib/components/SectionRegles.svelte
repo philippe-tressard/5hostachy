@@ -21,7 +21,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { reglesResidence as reglesApi } from '$lib/api';
+	import { reglesResidence as reglesApi, type RegleResidenceEcrite } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -30,7 +30,8 @@
 	import FormulaireDocument from './FormulaireDocument.svelte';
 	import { essayer } from '$lib/chargement';
 
-	let regles: any[] = [];
+	//  Une règle qu'on vient d'ajouter n'a ni auteur ni dates (`RegleResidenceEcrite`).
+	let regles: RegleResidenceEcrite[] = [];
 	let eRegles = '';
 	let chargement = true;
 
@@ -46,7 +47,7 @@
 	});
 
 	// ── Règles & Recommandations ───────────────────────────────────────────────
-	function openRegleForm(regle?: any) {
+	function openRegleForm(regle?: RegleResidenceEcrite) {
 		if (regle) {
 			editingRegleId = regle.id;
 			regleTitre = regle.titre;

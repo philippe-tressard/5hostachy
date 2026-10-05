@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.104.7",
+	"version": "2.105.0",
 	"private": true,
 	"license": "SEE LICENSE IN LICENSE-5Hostachy.md",
 	"scripts": {

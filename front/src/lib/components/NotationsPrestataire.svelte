@@ -32,7 +32,7 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { prestataires as prestApi } from '$lib/api';
+	import { prestataires as prestApi, type Notation } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmer } from '$lib/confirmation';
@@ -40,7 +40,7 @@
 	import { etoiles, moyenneNotes } from '$lib/notations';
 
 	/** Les notations de CE prestataire, déjà filtrées par l'appelant. */
-	export let notations: any[] = [];
+	export let notations: Notation[] = [];
 	/** Vrai pour le conseil syndical et l'administration — ce que l'endpoint exige. */
 	export let peutSupprimer = false;
 	/**  `true` = le badge de moyenne (dans l'en-tête de la carte) · `false` = la
@@ -59,7 +59,7 @@
 		(a, b) => new Date(b.cree_le).getTime() - new Date(a.cree_le).getTime(),
 	);
 
-	async function supprimer(n: any) {
+	async function supprimer(n: Notation) {
 		const ok = await confirmer({
 			titre: 'Retirer cet avis',
 			message:

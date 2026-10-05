@@ -36,7 +36,11 @@
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import FormulaireDocument from '$lib/components/FormulaireDocument.svelte';
-	import { diagnostics as diagnosticsApi } from '$lib/api';
+	import {
+		diagnostics as diagnosticsApi,
+		type DiagnosticType,
+		type RapportDiagnostic,
+	} from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { titreOuNomDuFichier } from '$lib/fichiers';
 	import { confirmerPuis, SUPPRESSION } from '$lib/confirmation';
@@ -47,7 +51,7 @@
 	import { basculer } from '$lib/accordeon';
 
 	/** Les types de diagnostic et leurs rapports — chargés par la page. */
-	export let types: any[] = [];
+	export let types: DiagnosticType[] = [];
 	/** Non vide = on n'a PAS pu charger. Distinct de « chargé et vide » (#522). */
 	export let erreur = '';
 	/** Le lecteur peut-il déposer, corriger et supprimer ? (conseil syndical) */
@@ -91,7 +95,7 @@
 		const typeId = showDiagForm;
 		savingDiag = true;
 		const files = Array.from(newDiagFichiers);
-		const newRapports: any[] = [];
+		const newRapports: RapportDiagnostic[] = [];
 		await tenter(
 			async () => {
 				for (const file of files) {
@@ -116,7 +120,7 @@
 		savingDiag = false;
 	}
 
-	function startEditRapport(r: any) {
+	function startEditRapport(r: RapportDiagnostic) {
 		editingRapportId = r.id;
 		editingRapportTitre = r.titre;
 		editingRapportDate = r.date_rapport ? String(r.date_rapport).substring(0, 10) : '';
@@ -137,7 +141,7 @@
 			});
 			types = types.map((t) => ({
 				...t,
-				rapports: t.rapports.map((r: any) => (r.id === rapportId ? updated : r)),
+				rapports: t.rapports.map((r) => (r.id === rapportId ? updated : r)),
 			}));
 			editingRapportId = null;
 		}, 'Rapport mis à jour');
@@ -148,7 +152,7 @@
 		await confirmerPuis(SUPPRESSION('Ce rapport'), 'Rapport supprimé', async () => {
 			await diagnosticsApi.deleteRapport(rapportId);
 			types = types.map((t) =>
-				t.id === typeId ? { ...t, rapports: t.rapports.filter((r: any) => r.id !== rapportId) } : t,
+				t.id === typeId ? { ...t, rapports: t.rapports.filter((r) => r.id !== rapportId) } : t,
 			);
 		});
 	}

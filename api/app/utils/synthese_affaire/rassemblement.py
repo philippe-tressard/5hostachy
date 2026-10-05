@@ -121,13 +121,27 @@ def _fait(e: TicketEvolution, est_syndic: Callable[[int], bool]) -> m.Fait:
     )
 
 
+def faits_de(session: Session, ticket_id: int, est_syndic: Callable[[int], bool]) -> list[m.Fait]:
+    """Les faits mesurables d'une affaire — ce que `metriques` reçoit, et rien d'autre.
+
+    Une lecture, trois lecteurs : la synthèse de l'affaire, la moyenne de sa
+    comparaison, et les métriques d'un ensemble d'affaires (`agregats`).
+    """
+    return [_fait(e, est_syndic) for e in _evolutions(session, ticket_id)]
+
+
+def mois_debut_exercice(session: Session) -> Optional[int]:
+    """Le mois où commence l'exercice comptable — `None` : l'année civile (fiche copropriété)."""
+    copro = session.exec(select(Copropriete)).first()
+    return copro.mois_debut_exercice if copro else None
+
+
 def _comparaison(
     session: Session, ticket: Ticket, est_syndic: Callable[[int], bool]
 ) -> Optional[dict]:
     """La moyenne des autres affaires closes de même catégorie sur l'exercice."""
-    copro = session.exec(select(Copropriete)).first()
     debut, fin, libelle = m.bornes_exercice(
-        horloge.jour_civil(ticket.ferme_le), copro.mois_debut_exercice if copro else None
+        horloge.jour_civil(ticket.ferme_le), mois_debut_exercice(session)
     )
     autres = session.exec(
         select(Ticket).where(
@@ -139,9 +153,7 @@ def _comparaison(
         )
     ).all()
     mesures = [
-        m.mesures_de_base(
-            a.cree_le, a.ferme_le, [_fait(e, est_syndic) for e in _evolutions(session, a.id)]
-        )
+        m.mesures_de_base(a.cree_le, a.ferme_le, faits_de(session, a.id, est_syndic))
         for a in autres
     ]
     return m.moyenne(mesures, valeur(ticket.categorie), libelle)
@@ -150,7 +162,7 @@ def _comparaison(
 def metriques_de(session: Session, ticket: Ticket, cloture_le: datetime) -> dict:
     """Les métriques de l'affaire, calculées maintenant — ce que la production fige."""
     est_syndic = reconnaisseur_syndic(session)
-    faits = [_fait(e, est_syndic) for e in _evolutions(session, ticket.id)]
+    faits = faits_de(session, ticket.id, est_syndic)
     met = m.calculer(
         cree_le=ticket.cree_le,
         cloture_le=cloture_le,
@@ -282,4 +294,10 @@ def construire_message(
     return "\n".join([*tete, "", "Fil daté :", fil[:MAX_CARACTERES_FIL] or "(vide)"])
 
 
-__all__ = ["construire_message", "metriques_de", "reconnaisseur_syndic"]
+__all__ = [
+    "construire_message",
+    "faits_de",
+    "metriques_de",
+    "mois_debut_exercice",
+    "reconnaisseur_syndic",
+]

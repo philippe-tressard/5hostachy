@@ -69,6 +69,9 @@ class UserRead(BaseModel):
     delegations_aidant: list[dict] = []  # délégations actives où l'utilisateur est aidant
     cree_le: datetime
     derniere_connexion: Optional[datetime] = None
+    #  L'avertissement avant purge pour inactivité (#1580) : l'écran des
+    #  utilisateurs le montre, la reconnexion l'efface.
+    purge_avertie_le: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -319,3 +322,6 @@ from app.schemas_tickets import (  # noqa: E402,F401
 
 #  La synthèse d'une affaire close (#1643) — fiche de l'affaire et carnet.
 from app.schemas_synthese import SyntheseLue as SyntheseLue  # noqa: E402,F401
+from app.schemas_synthese import EtapeMoyenne as EtapeMoyenne  # noqa: E402,F401
+from app.schemas_synthese import ExerciceLu as ExerciceLu  # noqa: E402,F401
+from app.schemas_synthese import ResumeAffaires as ResumeAffaires  # noqa: E402,F401

@@ -23,7 +23,7 @@
 -->
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type CommandeAccesEnAttente } from '$lib/api';
 	import { badgeRole, badgeStatut, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { basculer } from '$lib/accordeon';
 	import { validerCompte } from '$lib/comptes';
@@ -40,7 +40,7 @@
 	export let comptesLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	export let erreurComptes = '';
-	export let commandes: any[] = [];
+	export let commandes: CommandeAccesEnAttente[] = [];
 	export let commandesLoading = true;
 	export let erreurCommandes = '';
 	export let demandesProfil: any[] = [];

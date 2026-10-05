@@ -610,6 +610,12 @@ Si le build du standby échoue, une alerte part (cooldown 6 h) : c'est l'état l
 plus trompeur, la parité **git** devenant verte alors que les **images** sont
 restées vieilles — distinction que le point 10 ne sait pas faire.
 
+**L'actif recrée l'API seule, puis le reste** (#1662, `servir_images` dans
+`auto-deploy.sh`) : il attend le 200 de `http://localhost/api/health` avant de
+recréer le front, borné par `API_PRETE_MAX_S`. Au journal, « API prête en N s »
+ou « ⚠ API sans réponse 200 … le reste est recréé quand même » — la seconde ne
+bloque jamais le déploiement, elle dit qu'il faut lire `docker logs hostachy_api`.
+
 ## Le noyau du standby se met à jour seul (#1395 — 27/09/2026)
 
 Le 27/09/2026, rpi1 tournait en 6.12.62 et rpi2 en 6.12.75 : `unattended-upgrades`
@@ -710,7 +716,7 @@ pure à `--selftest`, la mesure vit dans un module de `scripts/lib/`.
 | Contrôle | Ce qu'il dit | Module |
 |---|---|---|
 | C30, passage en cours | un passage `apt-daily-upgrade` tourne : la mesure est **différée** (ligne `ok` dite « INCONNU, revérifié au prochain passage », bornée à 2 h) — jamais un WARN sur un fait résolu vingt secondes plus tard | `lib-apt.sh`, `lib-mises-a-jour.sh` |
-| C30, paquets | hors sécurité en attente au-delà d'un seuil, paquets « retenus » (hors noyau), **parité** docker-ce, containerd.io et cloudflared entre les deux nœuds | `lib-paquets.sh` |
+| C30, paquets | hors sécurité en attente au-delà d'un seuil, paquets « retenus » (hors noyau), **parité** des paquets de `PAQUETS_PARITE` et de la valeur effective de `Unattended-Upgrade::Mail` (`apt-config dump`, #1677) entre les deux nœuds | `lib-paquets.sh` |
 | C32 | ports TCP à l'écoute sur toutes les interfaces, hors liste blanche (celle de `docker-compose.yml`, SSH, 80, 443, 8080) ; dit si le port est aussi sur l'autre nœud | `lib-ports-ecoute.sh` |
 | C33 | copie de `.env*` laissée à côté de `.env` et `.env.example` à la racine du dépôt déployé | `lib-fichiers-parasites.sh` |
 | C34 | fichier `*.db*` autre que `app.db{,-wal,-shm}` dans le volume de données, par un **listage de répertoire** (jamais d'ouverture de la base : règle d'or) | `lib-fichiers-parasites.sh` |

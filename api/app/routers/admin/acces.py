@@ -39,11 +39,29 @@ def list_commandes_acces(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
-    return session.exec(
+    """Les commandes en attente : la ligne, plus ce qui la rend LISIBLE.
+
+    🔴 Elle rendait la ligne brute (#1679), et l'espace CS lisait un
+    demandeur et un lot qu'aucun serveur n'envoyait : une commande en attente
+    y faisait tomber le rendu de l'onglet. Enrichie ICI, une fois — comme
+    `GET /admin/demandes-profil` —, pour les deux écrans qui la lisent.
+    """
+    commandes = session.exec(
         select(CommandeAcces)
         .where(CommandeAcces.statut == StatutCommande.en_attente)
         .order_by(CommandeAcces.cree_le)
     ).all()
+    result = []
+    for cmd in commandes:
+        demandeur = session.get(Utilisateur, cmd.user_id)
+        lot = session.get(Lot, cmd.lot_id)
+        bat = session.get(Batiment, lot.batiment_id) if lot and lot.batiment_id else None
+        item = cmd.model_dump()
+        item["demandeur_nom"] = nom_affiche(demandeur.prenom, demandeur.nom) if demandeur else "?"
+        item["lot"] = libelle_lot(lot) if lot else "?"
+        item["batiment"] = libelle_batiment_ou(bat, None)
+        result.append(item)
+    return result
 
 
 class CommandeAction(BaseModel):

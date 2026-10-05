@@ -184,8 +184,10 @@ Tester l'accès : `http://<RPi-IP>`
 Les migrations Alembic s'exécutent automatiquement au démarrage du conteneur API via `start.sh`. Vérifier :
 
 ```bash
-docker exec hostachy_api alembic current
-# Doit afficher la dernière révision (ex: 0093)
+docker compose logs api 2>&1 | grep -i "alembic" | tail -5
+# La dernière ligne « Running upgrade … -> NNNN » doit nommer la dernière révision
+# de api/alembic/versions. Jamais d'Alembic lancé DANS le conteneur en marche :
+# c'est un process tiers sur la base vivante (règle d'or, #1683).
 ```
 
 ---
@@ -374,7 +376,7 @@ C35 doit dire « Pas de pile de bureau ».
 | API health | `curl -s http://localhost/api/health` |
 | URL publique | `curl -s https://5hostachy.fr/api/health` |
 | Logs API | `docker compose logs api --tail=20` |
-| Alembic version | `docker exec hostachy_api alembic current` |
+| Alembic version | `docker compose logs api 2>&1 \| grep -i alembic \| tail -5` (jamais Alembic dans le conteneur en marche, #1683) |
 | Heure conteneurs | `docker exec hostachy_api date` (doit afficher CEST) |
 | UFW actif | `sudo ufw status` |
 | Fail2ban actif | `sudo systemctl status fail2ban` |

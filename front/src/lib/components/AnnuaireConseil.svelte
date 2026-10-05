@@ -16,7 +16,7 @@
 -->
 <script lang="ts">
 	import { confirmer } from '$lib/confirmation';
-	import { annuaireAdmin } from '$lib/api';
+	import { annuaireAdmin, type MembreConseilAdmin } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDateShort } from '$lib/date';
 	import { comparerParNom, nomAffiche } from '$lib/noms';
@@ -35,8 +35,10 @@
 	export let sources: SourcesRapprochement;
 
 	//  🔴 La forme DÉRIVE de `MembreBase` (civilité, prénom, NOM, inscrit lié),
-	//  qui vit dans `CarteMembre` — le composant qui la rend.
-	interface MembreCSForm extends MembreBase {
+	//  qui vit dans `CarteMembre` — le composant qui la rend. L'identifiant vient
+	//  du type du CLIENT (#1680) : absent pour un membre ajouté à l'écran, que le
+	//  serveur créera ; présent, il fait mettre à jour le membre EN PLACE.
+	interface MembreCSForm extends MembreBase, Partial<Pick<MembreConseilAdmin, 'id'>> {
 		batiment_id: number | null;
 		batiment_nom: string | null;
 		etage: number | null;
@@ -55,7 +57,13 @@
 		agAnnee = donnees.ag_annee ?? null;
 		agDate = donnees.ag_date ?? '';
 		whatsappUrl = donnees.whatsapp_url ?? '';
-		const membres = (donnees.membres ?? []).map((m: any): MembreCSForm => ({
+		//  🔴 L'IDENTIFIANT est rendu tel quel (#1680) : sans lui, `PUT
+		//  /admin/annuaire/cs` ne reconnaît personne, supprime et recrée tout le
+		//  conseil — `cree_le` remis à l'instant, et autant de « nouveau membre »
+		//  au fil. Le serveur réconcilie depuis le 31/08/2026 ; encore faut-il
+		//  lui renvoyer ce qu'il a donné.
+		const membres = (donnees.membres ?? []).map((m: MembreConseilAdmin): MembreCSForm => ({
+			id: m.id,
 			genre: m.genre ?? 'Mme',
 			prenom: m.prenom ?? '',
 			nom: m.nom ?? '',
