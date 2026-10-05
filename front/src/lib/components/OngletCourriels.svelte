@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { config as configApi, type CourrielReleve } from '$lib/api';
+	import { courriels, type CourrielReleve } from '$lib/api';
 	import { fmtDatetimeShort } from '$lib/date';
 	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -42,7 +42,7 @@
 		chargement = true;
 		erreur = '';
 		try {
-			const journal = await configApi.relevesCourriel();
+			const journal = await courriels.journal();
 			releves = journal.messages;
 			limite = journal.limite;
 		} catch (e) {
@@ -74,9 +74,9 @@
 	<EtatListe {chargement} {erreur} compact />
 {:else}
 	<p class="aide largeur-saisie">
-		Les {limite} derniers messages reçus à l'adresse des affaires, du plus récent au plus ancien.
-		Un message refusé n'est pas perdu : corrigez ce que le motif indique (le plus souvent le numéro
-		d'affaire dans l'objet), puis transférez-le de nouveau.
+		Les {limite} derniers messages reçus à l'adresse des affaires, du plus récent au plus ancien. Un message
+		refusé n'est pas perdu : corrigez ce que le motif indique (le plus souvent le numéro d'affaire dans
+		l'objet), puis transférez-le de nouveau.
 	</p>
 	<JournalVerdicts
 		{entrees}

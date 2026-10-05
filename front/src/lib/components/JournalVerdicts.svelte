@@ -79,8 +79,7 @@
 									class:badge-red={e.ton === 'danger'}
 									class:badge-gray={e.ton === 'neutre'}>{e.verdict}</span
 								>
-								{#if e.date}<time class="jv-date" datetime={e.date}
-										>{fmtDatetimeShort(e.date)}</time
+								{#if e.date}<time class="jv-date" datetime={e.date}>{fmtDatetimeShort(e.date)}</time
 									>{/if}
 								{#if pliable}<span class="jv-chevron" aria-hidden="true">&#x203A;</span>{/if}
 							</span>
