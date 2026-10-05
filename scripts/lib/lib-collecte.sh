@@ -122,9 +122,6 @@ echo "envcles=$(cut -d= -f1 $R/.env 2>/dev/null | grep -E "^[A-Za-z_][A-Za-z0-9_
 echo "deploy_dernier=$(tail -40 /var/log/hostachy-deploy.log 2>/dev/null | grep -E "^\[" | tail -1 | tr -d "\"" | cut -c1-160)"
 echo "reliability_last=$(tail -3000 /var/log/hostachy-reliability.log 2>/dev/null | grep -oE "check-reliability \([0-9-]{10} [0-9:]{8}\)" | tail -1 | tr -d "()" | cut -d" " -f2-)"
 echo "buildcache=$(docker system df --format "{{.Type}}|{{.Size}}" 2>/dev/null | grep -i "^Build Cache" | cut -d"|" -f2 | tr -d " ")"
-# Motif SANS accent volontairement : ce bloc traverse SSH, et « Hygiène » y
-# dépendrait de la locale des deux bouts. « Garde-fou » est aussi distinctif.
-echo "maint_last=$(grep "Garde-fou" '"$MAINT_LOG"' 2>/dev/null | grep -oE "^\[[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\]" | tail -1 | tr -d "[]")"
 # Date du dernier rapport de maintenance EN BASE, pour ce nœud — la seconde sonde
 # de C19. Lue par l'\''API in-process (jamais en ouvrant app.db : règle d'\''or), donc
 # elle ne répond que sur l'\''ACTIF. Sur le standby la chaîne est vide, et C19 le
@@ -240,6 +237,14 @@ COLLECT="$COLLECT$(fragment_bits_exec "$(scripts_a_mesurer "$(dirname "${BASH_SO
 # `lib-health-watch.sh` ; `healthwatch_verdicts` y est donc defini aussi.
 . "$(dirname "${BASH_SOURCE[0]}")/lib-health-watch.sh"
 COLLECT="$COLLECT$COLLECT_HW"
+
+# C17 : la date de la derniere marque de fin d hygiene de maintenance.sh. Ce
+# qu il ecrit, ce que la collecte en lit et ce que C17 en conclut vivent
+# ensemble, dans `lib-maintenance-trace.sh` ; la collecte recopiait ici un detail
+# d une etape (« Garde-fou »), que #1524 a fait disparaitre (05/10/2026).
+# Dependance de l APPELANT : $MAINT_LOG.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-maintenance-trace.sh"
+COLLECT="$COLLECT$(collecte_maintenance "$MAINT_LOG")"
 
 # C32 (#1593) : les ports TCP a l ecoute sur toutes les interfaces. La mesure,
 # la liste blanche declaree et la decision vivent ensemble, dans
