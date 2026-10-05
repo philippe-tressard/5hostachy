@@ -36,6 +36,7 @@ from app.models.prestataires import ContratEntretien, Prestataire
 from app.schemas import AffaireLieeLue, ContratDeLAffaire, TicketEvolutionRead, TicketRead
 from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.lecture import lire_objet
+from app.utils.corrections_texte import expliciter_ancienne
 from app.utils.photos import parse_photos
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
@@ -177,6 +178,10 @@ def evol_read(
         #  c'est une décision, pas un oubli.
         perimetre_cible=json.loads(e.perimetre_cible) if e.perimetre_cible else None,
         statut_avant=statut_avant,
+        #  Une ancienne correction (« Correction : Date de fin », écrite par le
+        #  calendrier avant v2.23.0) le DIT, au lieu de laisser croire que le
+        #  détail existe — `utils/corrections_texte.py`.
+        contenu=expliciter_ancienne(e.contenu),
     )
 
 

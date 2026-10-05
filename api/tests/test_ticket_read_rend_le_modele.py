@@ -133,7 +133,7 @@ def test_le_patch_ecrit_une_date_et_l_annonce():
     changes = _appliquer_quand(TicketUpdate(debut=datetime(2026, 10, 8, 9, 0)), t)
     assert t.debut == datetime(2026, 10, 8, 9, 0)
     assert t.fin == datetime(2026, 10, 1, 12, 0), "un champ absent ne se touche pas"
-    assert any("Quand" in c for c in changes), changes
+    assert changes == ["Modification de la date de début : 01/10/2026 à 09:00 → 08/10/2026 à 09:00"]
 
 
 def test_le_patch_efface_une_date_envoyee_a_null():

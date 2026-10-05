@@ -46,6 +46,7 @@ from sqlmodel import Session
 from app.models.prestataires import ContratEntretien, Prestataire, TypeEquipement
 from app.models.tickets import CategorieTicket
 from app.utils.carnet_entretien import est_du_bati
+from app.utils.corrections_texte import modification
 from app.utils.recuperer import ou_404
 from app.utils.valeurs import valeur
 
@@ -98,6 +99,24 @@ def _envoye(body: Any, champ: str) -> bool:
     return champ in getattr(body, "model_fields_set", set())
 
 
+def _nom_prestataire(session: Session, prestataire_id: int | None) -> str | None:
+    """Le nom de l'intervenant — ce que la ligne d'historique doit dire, pas son numéro."""
+    prestataire = session.get(Prestataire, prestataire_id) if prestataire_id else None
+    return prestataire.nom if prestataire else None
+
+
+def _libelle_equipement(valeur_equipement: str | None) -> str | None:
+    """`vmc_ventilation` → « vmc ventilation » : le slug, sans ses tirets bas."""
+    return valeur_equipement.replace("_", " ") if valeur_equipement else None
+
+
+def _libelle_recurrence(type_: str | None, nombre: int | None) -> str | None:
+    """`("mois", 3)` → « 3 mois » ; `("fois_par_an", 2)` → « 2 fois par an »."""
+    if not type_ or nombre is None:
+        return None
+    return f"{nombre} {type_.replace('_', ' ')}"
+
+
 def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: bool) -> list[str]:
     """Pose l'intervenant et la récurrence ; rend les lignes du journal de correction."""
     changes: list[str] = []
@@ -119,15 +138,25 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
         ):
             if body.prestataire_id is not None:
                 ou_404(session, Prestataire, body.prestataire_id, "Prestataire")
+            changes.append(
+                modification(
+                    "de l'intervenant",
+                    _nom_prestataire(session, ticket.prestataire_id),
+                    _nom_prestataire(session, body.prestataire_id),
+                )
+            )
             ticket.prestataire_id = body.prestataire_id
-            changes.append("Intervenant")
         #  Le CADRE de l'intervention (#1445) : sous contrat — lequel —, ou hors
         #  contrat (`None`). APRÈS l'intervenant, qu'il doit suivre.
         if est_cs and _envoye(body, "contrat_id") and body.contrat_id != ticket.contrat_id:
             if body.contrat_id is not None:
                 contrat_valide(session, body.contrat_id, ticket.prestataire_id)
             ticket.contrat_id = body.contrat_id
-            changes.append("Contrat" if body.contrat_id is not None else "Hors contrat")
+            changes.append(
+                "Intervention rattachée à un contrat d'entretien"
+                if body.contrat_id is not None
+                else "Intervention désormais hors contrat"
+            )
         #  Un contrat qui n'est plus celui de l'intervenant — il a changé, ou le
         #  contrat a été réattribué — ne se garde pas : il dirait « sous contrat »
         #  d'une intervention qu'aucun contrat ne cadre.
@@ -143,8 +172,14 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
         ):
             if body.equipement and body.equipement not in EQUIPEMENTS_AFFAIRE:
                 raise HTTPException(422, "Équipement inconnu")
+            changes.append(
+                modification(
+                    "de l'équipement",
+                    _libelle_equipement(ticket.equipement),
+                    _libelle_equipement(body.equipement),
+                )
+            )
             ticket.equipement = body.equipement or None
-            changes.append("Équipement")
 
     if valeur(ticket.categorie) != CategorieTicket.entretien.value:
         #  Hors Entretien : rien ne se garde, quel que soit l'auteur du geste.
@@ -171,8 +206,14 @@ def appliquer_intervenant(ticket: Any, body: Any, session: Session, *, est_cs: b
         elif type_ not in FREQUENCES or nombre < 1:
             raise HTTPException(422, "Récurrence invalide : une unité connue et un nombre positif")
         if (type_, nombre) != (ticket.frequence_type, ticket.frequence_valeur):
+            changes.append(
+                modification(
+                    "de la récurrence",
+                    _libelle_recurrence(ticket.frequence_type, ticket.frequence_valeur),
+                    _libelle_recurrence(type_, nombre),
+                )
+            )
             ticket.frequence_type, ticket.frequence_valeur = type_, nombre
-            changes.append("Récurrence")
     return changes
 
 
