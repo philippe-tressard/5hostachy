@@ -21,6 +21,7 @@ from app.utils import horloge
 from app.utils.noms import nom_affiche
 from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
+from app.utils.demandes_profil import lire_demande
 from app.utils.valeurs import valeur
 
 router = APIRouter()
@@ -43,8 +44,7 @@ def list_demandes_profil(
     result = []
     for d in demandes:
         utilisateur = session.get(Utilisateur, d.utilisateur_id)
-        bat = session.get(Batiment, d.batiment_id_souhaite) if d.batiment_id_souhaite else None
-        item = d.model_dump()
+        item = lire_demande(session, d).model_dump()
         item["utilisateur_nom"] = (
             nom_affiche(utilisateur.prenom, utilisateur.nom) if utilisateur else "?"
         )
@@ -56,7 +56,6 @@ def list_demandes_profil(
             else None,
             None,
         )
-        item["batiment_nom_souhaite"] = libelle_batiment_ou(bat, None)
         result.append(item)
     return result
 
