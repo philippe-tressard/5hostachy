@@ -36,6 +36,7 @@ from app.models.prestataires import Prestataire
 from app.models.roles import RoleUtilisateur
 from app.models.tickets import STATUTS_TICKET_CLOS
 from app.utils import horloge
+from app.utils.affaire_absorbee import ouverture_effective, pas_absorbee
 from app.utils.annonce_hall import texte_brut
 from app.utils.categories_ticket import libelle_categorie
 from app.utils.corrections import est_correction
@@ -150,10 +151,13 @@ def _comparaison(
             col(Ticket.statut).in_(STATUTS_TICKET_CLOS),
             col(Ticket.ferme_le) >= m.debut_utc(debut),
             col(Ticket.ferme_le) < m.debut_utc(fin),
+            pas_absorbee(),  # comptée dans sa principale (#1704)
         )
     ).all()
     mesures = [
-        m.mesures_de_base(a.cree_le, a.ferme_le, faits_de(session, a.id, est_syndic))
+        m.mesures_de_base(
+            ouverture_effective(session, a), a.ferme_le, faits_de(session, a.id, est_syndic)
+        )
         for a in autres
     ]
     return m.moyenne(mesures, valeur(ticket.categorie), libelle)
@@ -164,7 +168,8 @@ def metriques_de(session: Session, ticket: Ticket, cloture_le: datetime) -> dict
     est_syndic = reconnaisseur_syndic(session)
     faits = faits_de(session, ticket.id, est_syndic)
     met = m.calculer(
-        cree_le=ticket.cree_le,
+        #  Depuis la plus ancienne des affaires fusionnées (#1704).
+        cree_le=ouverture_effective(session, ticket),
         cloture_le=cloture_le,
         issue=valeur(ticket.statut),
         faits=faits,
@@ -249,9 +254,18 @@ def construire_message(
         f"Affaire {ticket.numero} — « {ticket.titre} »",
         f"Catégorie : {libelle_categorie(ticket.categorie)}"
         + (f" · équipement : {ticket.equipement.replace('_', ' ')}" if ticket.equipement else ""),
-        f"Ouverte le {date_courte(horloge.jour_civil(ticket.cree_le))}, {issue} le "
-        f"{date_courte(horloge.jour_civil(ticket.ferme_le))}.",
+        f"Ouverte le {date_courte(horloge.jour_civil(ouverture_effective(session, ticket)))}, "
+        f"{issue} le {date_courte(horloge.jour_civil(ticket.ferme_le))}.",
     ]
+    #  🔀 Le bilan couvre TOUTES les affaires fusionnées (#1704) : leurs Suites
+    #  sont dans le fil, chacune ouverte par sa description.
+    absorbees = session.exec(select(Ticket).where(Ticket.fusionnee_dans_id == ticket.id)).all()
+    if absorbees:
+        tete.append(
+            "Elle réunit les affaires fusionnées à sa clôture : "
+            + ", ".join(a.numero for a in absorbees)
+            + " — le fil daté les couvre toutes."
+        )
     if prestataire and prestataire.nom:
         tete.append(f"Intervenant : {prestataire.nom}")
     if met["reouvertures"]:

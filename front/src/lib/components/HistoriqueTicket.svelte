@@ -34,6 +34,7 @@
 -->
 <script lang="ts">
 	import { SUITE } from '$lib/gestes';
+	import MentionFusion from './MentionFusion.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import RubriqueHistorique from './RubriqueHistorique.svelte';
 	import EtatListe from './EtatListe.svelte';
@@ -136,7 +137,7 @@
 		statutLabels={STATUT_TICKET_LABELS}
 		titre={TITRE_HISTORIQUE}
 		vide="Aucune évolution enregistrée."
-		peutModifier={$isCS}
+		peutModifier={$isCS && !ticket?.fusionnee}
 		currentUserId={$currentUser?.id}
 		estAdmin={$isAdmin}
 		avecSuppression
@@ -145,7 +146,9 @@
 		on:supprimer={supprimer}
 	>
 		<svelte:fragment slot="action">
-			{#if $isCS}
+			{#if ticket?.fusionnee}
+				<MentionFusion {ticket} />
+			{:else if $isCS}
 				<button class="btn btn-outline btn-sm" on:click={() => (ouvert = !ouvert)}>
 					<!--  Le bouton et l'entrée qu'il produit lisent la MÊME table : c'est ce
 					      qui les empêche de diverger, et c'est précisément par là que

@@ -56,6 +56,7 @@
 	import { peutCommenter as peutCommenterCe, peutEditer } from '$lib/droits';
 	import FormulaireTicket from './FormulaireTicket.svelte';
 	import SuiteAffaire from './SuiteAffaire.svelte';
+	import MentionFusion from './MentionFusion.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import {
 		OPTIONS_TICKET,
@@ -124,7 +125,9 @@
 	//  ⚠️ `peutAdministrer` reste ce qu'il est pour la SUPPRESSION : effacer
 	//  définitivement n'est pas éditer, et cela reste réservé à l'admin.
 	$: peutEditerCeTicket = peutEditer(ticket, $currentUser?.id, $isAdmin);
-	$: peutSuivreCeTicket = peutCommenterCe(ticket, $currentUser?.id, $isAdmin, $isCS);
+	//  Une affaire absorbée n'a plus de Suite : son fil vit dans la principale (#1704).
+	$: peutSuivreCeTicket =
+		!ticket.fusionnee && peutCommenterCe(ticket, $currentUser?.id, $isAdmin, $isCS);
 
 	const dispatch = createEventDispatcher<{
 		basculer: void;
@@ -291,6 +294,7 @@
 						<small class="tk-meta">Créé le {fmtDate(ticket.cree_le)}</small>
 					</svelte:fragment>
 				</FicheLecture>
+				<MentionFusion {ticket} />
 
 				<!--  Défaire un transfert de courriel, comme sur la fiche (#1482) : la
 				      carte n'ouvre pas la fiche, et c'était le seul endroit du geste. -->

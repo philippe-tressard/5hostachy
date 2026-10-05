@@ -308,6 +308,7 @@ Chacun porte, en tête de fichier, le pourquoi et la règle arbitrée :
 | lire la **configuration du site** | `utils/config_site` (`config_site`, `contexte_site`) — pas un `select` sur la table dans un routeur |
 | savoir **à qui part « une copie à moi »** | `utils/copie_auteur` — l'auteur de l'objet, pas celui du message |
 | lier des affaires entre elles | `utils/affaires_liees` — un lien ne révèle rien qu'on ne puisse lire |
+| fusionner des affaires à la clôture | `utils/fusion_affaires` (le geste) ; ce que le carnet et les moyennes en lisent : `utils/affaire_absorbee` (`pas_absorbee`, `ouverture_effective`) |
 | relever une **réponse par courriel** | `utils/courriel_entrant` (le jeton) ; du MIME au texte : `utils/courriel_decodage` |
 | lire un **classeur Excel d'import** | `utils/import_xlsx` — écrit une fois pour les trois imports |
 | comparer deux **noms de personnes** | `utils/rapprochement_noms` |

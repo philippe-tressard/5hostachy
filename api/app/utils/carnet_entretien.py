@@ -63,6 +63,7 @@ from sqlmodel import Session, select
 from app.models.core import Ticket, Utilisateur
 from app.models.prestataires import ContratEntretien, Prestataire
 from app.models.tickets import CategorieTicket, StatutTicket
+from app.utils.affaire_absorbee import pas_absorbee
 from app.utils.liens import lien_element, lien_ticket
 from app.utils.perimetres import couvre, parse_json_perimetres
 from app.utils.valeurs import valeur
@@ -297,6 +298,7 @@ def _entrees_interventions(
     requete = select(Ticket).where(
         Ticket.categorie == CategorieTicket.entretien,
         Ticket.statut == StatutTicket.résolu,
+        pas_absorbee(),  # comptée dans sa principale (#1704)
     )
     entrees: list[EntreeCarnet] = []
     for ticket in session.exec(requete).all():
@@ -347,6 +349,7 @@ def _entrees_affaires(
     requete = select(Ticket).where(
         Ticket.statut == StatutTicket.résolu,
         Ticket.ferme_le.isnot(None),
+        pas_absorbee(),  # comptée dans sa principale (#1704)
     )
 
     entrees: list[EntreeCarnet] = []

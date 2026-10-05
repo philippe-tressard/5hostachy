@@ -63,6 +63,7 @@ from . import (
     crud,
     depuis_annonce,
     evolutions,
+    fusion,
     liees,
     lot,
     messages,
@@ -90,6 +91,7 @@ for _sous_router in (
     evolutions.router,
     transferts.router,  # défaire un transfert de courriel (#1482)
     synthese.router,  # la synthèse d'une affaire close (#1643)
+    fusion.router,  # les affaires liées à absorber en clôturant (#1704)
     lot.router,
 ):
     _a_prefixer.include_router(_sous_router)

@@ -48,6 +48,7 @@
 	import { nomCopie } from '$lib/saisi-pour';
 	import { isCS } from '$lib/stores/auth';
 	import { equipementDansLaSuite } from '$lib/suite-conseil';
+	import { demanderFusion } from '$lib/fusion-affaires';
 	import {
 		STATUT_TICKET_LABELS,
 		STATUT_TICKET_OPTIONS,
@@ -95,6 +96,14 @@
 			destinataire_cs: saisie.cs,
 			partager_whatsapp: saisie.whatsapp,
 		});
+
+	//  🔀 Une Suite qui CLÔT demande s'il faut absorber les affaires liées encore
+	//  ouvertes (#1704) — jamais une correction : la clôture a déjà eu lieu.
+	async function soumettre(charge: ChargeUtileEvolution) {
+		const fusionner = correction ? [] : await demanderFusion(ticket, charge.nouveau_statut);
+		if (fusionner === null) return;
+		dispatch('submit', fusionner.length ? { ...charge, fusionner } : charge);
+	}
 </script>
 
 <EvolForm
@@ -132,7 +141,7 @@
 	showEmail={$isCS && !correction}
 	{saving}
 	avantSuivi={equipementDansLaSuite(ticket, $isCS)}
-	on:submit={(e) => dispatch('submit', { ...e.detail, ...optionsVersTicket(options) })}
+	on:submit={(e) => soumettre({ ...e.detail, ...optionsVersTicket(options) })}
 	on:cancel={() => dispatch('cancel')}
 >
 	<!--  Chaque section à son rang (#1326) : Équipement, puis Quand et

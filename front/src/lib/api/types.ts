@@ -83,6 +83,13 @@ export interface AffaireLiee {
 	statut: string;
 }
 
+/**  Une affaire liée proposée à la FUSION, en clôturant (#1704) — `routers/tickets/fusion`.
+ *   `fusionnable` faux : lue par moins de monde que l'affaire qu'on clôt, et `motif` le dit. */
+export interface CandidateFusion extends AffaireLiee {
+	fusionnable: boolean;
+	motif: string | null;
+}
+
 /**  Un transfert de courriel versé dans une affaire (#1482), tel que le voit qui
  *   peut le défaire — celui qui a transféré, ou l'administrateur. */
 export interface TransfertVerse {
@@ -164,6 +171,10 @@ export interface Ticket extends PorteSaisiPourLu {
 	apercu_pieces?: string[];
 	/**  Les affaires liées, dans les deux sens — celles que le lecteur peut lire (#1342). */
 	affaires_liees?: AffaireLiee[];
+	/**  🔀 L'affaire qui l'a absorbée à sa clôture (#1704) — si le lecteur la lit. */
+	fusionnee_dans?: AffaireLiee | null;
+	/**  …et le fait, pour tous : son suivi est clos, plus de Suite (`refuser_si_absorbee`). */
+	fusionnee?: boolean;
 	/**  Le ticket a-t-il quitté la liste active pour les Archives ? Calculé par la
 	     règle du SITE (`app/utils/archivage.py`, #515) : 30 jours après « Résolu »,
 	     immédiat sur « Annulé », le délai étant réglable en administration.

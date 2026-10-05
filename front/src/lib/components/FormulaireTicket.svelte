@@ -75,6 +75,7 @@
 	import { PUBLICATION } from '$lib/entites/publication';
 	import { GLYPHE_URGENCE, motifWhatsappInterdit } from '$lib/options-publication';
 	import { confirmer } from '$lib/confirmation';
+	import { demanderFusion } from '$lib/fusion-affaires';
 	import {
 		CATEGORIE_ENTRETIEN,
 		chargeUtileAffaire,
@@ -315,11 +316,13 @@
 		//  son fil (29/09/2026) : dit avant, rien ne part sans accord.
 		const alerte = ticket && alerteCorrection(ticket, saisie);
 		if (alerte && !(await confirmer({ ...alerte, libelleConfirmer: 'Enregistrer' }))) return;
+		const fusionner = ticket ? await demanderFusion(ticket, statut) : []; // à la clôture (#1704)
+		if (fusionner === null) return;
 		loading = true;
 		try {
 			const charge = chargeUtileAffaire(saisie, contexte);
 			if (ticket) {
-				const maj = await ticketsApi.update(ticket.id, charge);
+				const maj = await ticketsApi.update(ticket.id, { ...charge, fusionner });
 				toast('success', `${actualite ? PUBLICATION.libelle : TICKET.libelle} modifiée`);
 				dispatch('modifie', maj);
 				return;

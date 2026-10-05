@@ -62,6 +62,9 @@ class TicketEvolutionCreate(AssisteIAEntree, ChampsSuiteAffaire):
     #  chose, au même endroit. `_STATUTS_ADMIS` — la liste écrite à la main qui
     #  refusait `annulé` depuis toujours — a disparu du routeur (#415).
     nouveau_statut: Optional[StatutTicket] = None
+    #  🔀 Les affaires liées à ABSORBER, quand cette Suite clôt l'affaire (#1704) :
+    #  conseil seul, règles dans `utils/fusion_affaires`. Ignoré hors clôture.
+    fusionner: Optional[List[int]] = None
     partager_whatsapp: Optional[bool] = None
     envoyer_syndic: Optional[bool] = None
     envoyer_cs: Optional[bool] = None

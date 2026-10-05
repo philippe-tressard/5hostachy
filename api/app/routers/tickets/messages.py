@@ -27,6 +27,7 @@ from .courriels import envoyer_email_externe
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.noms import contexte_personne
 from app.utils.cloche import sonner
+from app.utils.fusion_affaires import refuser_si_absorbee
 
 router = APIRouter()
 
@@ -106,6 +107,7 @@ def add_message(
     #  écrivait sur une affaire qu'il ne peut pas lire — une affaire réservée au
     #  conseil comprise — et alertait le CS en son nom (#1164, 23/09/2026).
     ticket = exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
+    refuser_si_absorbee(ticket)  # la discussion vit dans la principale (#1704)
     est_cs = est_moderateur(user)
     if body.interne and not est_cs:
         raise HTTPException(403, "Messages internes réservés au CS")

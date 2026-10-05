@@ -4,6 +4,7 @@ import type {
 	AnnonceHallInput,
 	ActualitePrefill,
 	AffaireLiee,
+	CandidateFusion,
 	AffaireVisee,
 	AnnonceHallPrefill,
 	ApercuDiffusion,
@@ -190,6 +191,8 @@ export const tickets = {
 		api.get<CorrespondanceAffaire[]>(`/tickets/recherche?q=${encodeURIComponent(q)}`),
 	/** Les affaires que je peux lier : numéro, titre, statut (#1342). */
 	choix: () => api.get<AffaireLiee[]>('/tickets/choix'),
+	//  Les affaires liées qu'une clôture peut absorber (#1704) — conseil seul.
+	candidatesFusion: (id: number) => api.get<CandidateFusion[]>(`/tickets/${id}/fusion`),
 	//  Le miroir du pré-remplissage des affiches (#832) : le CS compose souvent
 	//  l'affiche du hall d'abord, puis veut la même information en ligne. Une
 	//  actualité étant une affaire (#1091), la route vit chez les affaires.
@@ -250,6 +253,8 @@ export const tickets = {
 			envoyer_cs?: boolean;
 			/** Faux : n'avertir personne — le glissement au kanban (#1092). */
 			notifier?: boolean;
+			/** 🔀 Les affaires liées à absorber, quand cette Suite clôt (#1704). */
+			fusionner?: number[];
 			perimetre_cible?: string[];
 			/**  🔴 LES OPTIONS DE PUBLICATION, corrigées depuis un commentaire
 			 *   (05/09/2026) — comme sur une actualité : le formulaire montre le

@@ -208,6 +208,9 @@ def _decider(session, entetes, corps, recu_le, plancher, authentification):
         return IGNORE, verdict.motif, None
 
     ticket = _ticket_de(session, verdict)
+    #  🔀 Une affaire absorbée (#1704) : la réponse rejoint le fil là où il vit.
+    if ticket is not None and ticket.fusionnee_dans_id is not None:
+        ticket = session.get(Ticket, ticket.fusionnee_dans_id) or ticket
     if ticket is None:
         #  Pas un ticket : peut-être une RELANCE GROUPÉE (#703). Un envoi qui
         #  porte N dossiers n'a pas de jeton de ticket, et n'en aura jamais.
