@@ -192,6 +192,24 @@ construire_images() {
     docker compose build "$@"
 }
 
+# ── Démarrer les conteneurs : UNE porte, elle aussi (#1697) ──────────────────
+#
+# 🔴 `docker-compose.yml` pose l'étiquette `git.hash=${GIT_HASH:-dev}` du front
+# AU `up`, pas au build : un `up -d` lancé sans `GIT_HASH` étiquette le front
+# « dev » — bascule (phase 5 et rollback), failover, garde de démarrage,
+# relance de l'API par la maintenance. `MaJ-Hostachy.sh` lit cette étiquette
+# pour choisir ce qu'il reconstruit, et le `up` suivant qui l'exporte recrée le
+# front pour une étiquette seulement.
+#
+# ⚠️ Chemin de PRODUCTION critique : la porte ne bloque JAMAIS le démarrage. Un
+# commit illisible rend le front « dev » comme avant, il n'empêche pas le site de
+# revenir. Les arguments passent à `docker compose up -d` (un service, par ex.).
+# 🔒 api/tests/test_construction_images_porte_unique.py
+demarrer_conteneurs() {
+    exporter_git_hash 2>/dev/null || true
+    docker compose up -d "$@"
+}
+
 # ── Self-test (aucun effet de bord) ──────────────────────────────────────────
 #
 # 🔴 `${BASH_SOURCE[0]}` = `$0` : le bloc ne s'exécute QUE si ce fichier est
@@ -306,6 +324,23 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     attendu="compose build --quiet GIT_HASH=$(git -C "$DEPOT" rev-parse --short HEAD)"
     if [ "$vu" = "$attendu" ]; then echo "PASS  le build voit le commit du dépôt  → $vu"
     else echo "FAIL  attendu « $attendu », obtenu « $vu »"; fail=1; fi
+
+    # ── demarrer_conteneurs porte le commit, et ne bloque jamais (#1697) ─────
+    echo "== self-test lib-parite.demarrer_conteneurs =="
+    vu=$(cd "$DEPOT" && unset GIT_HASH && bash -c "source '$ICI'
+        docker() { echo \"\$* GIT_HASH=\$(printenv GIT_HASH)\"; }
+        demarrer_conteneurs api")
+    attendu="compose up -d api GIT_HASH=$(git -C "$DEPOT" rev-parse --short HEAD)"
+    if [ "$vu" = "$attendu" ]; then echo "PASS  le up voit le commit du dépôt  → $vu"
+    else echo "FAIL  attendu « $attendu », obtenu « $vu »"; fail=1; fi
+    #  Hors dépôt git : le commit est illisible, le démarrage a lieu quand même.
+    HORS=$(mktemp -d)
+    vu=$(cd "$HORS" && unset GIT_HASH && bash -euo pipefail -c "source '$ICI'
+        docker() { echo \"\$*\"; }
+        demarrer_conteneurs; echo survecu" 2>/dev/null | paste -sd'|')
+    if [ "$vu" = "compose up -d|survecu" ]; then echo "PASS  commit illisible : le up part quand même"
+    else echo "FAIL  commit illisible : attendu « compose up -d|survecu », obtenu « $vu »"; fail=1; fi
+    rmdir "$HORS" 2>/dev/null || true
     rm -rf "$DEPOT"
 
     [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
