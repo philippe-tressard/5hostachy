@@ -1,4 +1,4 @@
-fastapi==0.141.1
+fastapi==0.142.2
 uvicorn[standard]==0.54.0
 slowapi==0.1.10
 sqlmodel==0.0.47
@@ -16,7 +16,7 @@ pydantic-settings==2.15.0
 email-validator==2.3.0
 sqlalchemy==2.0.54
 alembic==1.20.0
-PyJWT==2.15.0
+PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.32
@@ -30,7 +30,7 @@ pypdf==6.19.0
 #  Jamais importé, et pourtant nécessaire : c'est lui qui lit `env_file = ".env"`
 #  pour pydantic-settings (`app/config.py`). Sans lui, le `.env` serait ignoré.
 #  `aiofiles`, qui le suivait ici, n'était ni importé ni requis par rien : retiré.
-python-dotenv==1.2.3
+python-dotenv==1.2.4
 #  Vérifier la signature DKIM d'une réponse reçue par courriel (28/09/2026) : OVH
 #  ne pose pas `Authentication-Results`, et celui qu'on trouvait dans un message
 #  avait été écrit par l'expéditeur (`utils/courriel_authenticite`). Pur Python,
