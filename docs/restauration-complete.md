@@ -151,11 +151,11 @@ gunzip -c /chemin/vers/app_YYYYMMDD_HHMMSS.db.gz \
 ```bash
 cd /opt/5hostachy
 
-# Exporter le hash Git pour le build
-export GIT_HASH=$(git rev-parse --short HEAD)
+# Build : `construire_images` exporte le hash Git, que le front affiche
+. scripts/lib/lib-parite.sh && construire_images
 
-# Build + lancement
-docker compose up --build -d
+# Lancement (dans le même shell : GIT_HASH étiquette les conteneurs)
+docker compose up -d
 
 # Vérifier les 4 conteneurs
 docker compose ps

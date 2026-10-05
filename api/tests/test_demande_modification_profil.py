@@ -23,6 +23,7 @@ from sqlmodel import Session
 from app.models.copropriete import Batiment, Copropriete
 from app.models.core import RoleUtilisateur
 from tests.aides_http import base_http, client_http
+from tests.aides_sources import modules_app
 
 
 @pytest.fixture(name="moteur")
@@ -66,3 +67,57 @@ def test_sans_batiment_souhaite_le_libelle_est_nul(moteur):
     assert "batiment_nom_souhaite" in cree.json()
     assert cree.json()["batiment_nom_souhaite"] is None
     assert http.get("/auth/me/demandes-modification").json() == [cree.json()]
+
+
+def test_la_file_d_admin_relit_la_demande_comme_le_resident(moteur):
+    """#1696 : la file du conseil porte la MÊME lecture, plus ce qui l'identifie."""
+    bat_id = _batiment(moteur)
+    resident, _ = client_http(moteur, RoleUtilisateur.résident)
+    cree = resident.post("/auth/me/demande-modification", json={"batiment_id_souhaite": bat_id})
+    assert cree.status_code == 201, cree.text
+
+    cs, _ = client_http(moteur, RoleUtilisateur.conseil_syndical)
+    file = cs.get("/admin/demandes-profil")
+    assert file.status_code == 200, file.text
+    (ligne,) = file.json()
+    assert {cle: ligne.get(cle) for cle in cree.json()} == cree.json()
+    assert {"utilisateur_nom", "utilisateur_email", "statut_actuel", "batiment_actuel"} <= set(
+        ligne
+    )
+
+
+#: Le libellé du bâtiment souhaité s'écrit dans la lecture unique — `lire_demande`.
+PORTE = "utils/demandes_profil.py"
+
+
+def _ecritures_du_libelle(source: str) -> int:
+    """`x["batiment_nom_souhaite"] = …` ou `batiment_nom_souhaite=…` en argument."""
+    import ast
+
+    n = 0
+    for noeud in ast.walk(ast.parse(source)):
+        if isinstance(noeud, ast.keyword) and noeud.arg == "batiment_nom_souhaite":
+            n += 1
+        cibles = noeud.targets if isinstance(noeud, ast.Assign) else []
+        for cible in cibles:
+            if isinstance(cible, ast.Subscript) and getattr(cible.slice, "value", None) == (
+                "batiment_nom_souhaite"
+            ):
+                n += 1
+    return n
+
+
+def test_le_libelle_ne_se_compose_qu_a_la_porte():
+    ecrits = {m.rel: _ecritures_du_libelle(m.source) for m in modules_app(minimum=100)}
+    ailleurs = {rel: n for rel, n in ecrits.items() if n and rel != PORTE}
+    assert ailleurs == {}, (
+        f"le libellé du bâtiment souhaité se compose dans `lire_demande` : {ailleurs}"
+    )
+    assert ecrits.get(PORTE) == 1
+
+
+def test_le_controle_voit_la_composition_a_la_main():
+    """Cas zéro : l'écriture d'avant #1696, dans `admin/profils.py`, est comptée."""
+    assert _ecritures_du_libelle('item["batiment_nom_souhaite"] = libelle(bat, None)') == 1
+    assert _ecritures_du_libelle("lire_objet(R, d, batiment_nom_souhaite=x)") == 1
+    assert _ecritures_du_libelle('x = item["batiment_nom_souhaite"]') == 0

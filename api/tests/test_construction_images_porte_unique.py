@@ -1,0 +1,103 @@
+"""Les images se construisent par UNE porte, et elle porte le commit (#1684).
+
+Le front grave `GIT_HASH` dans son bundle (`front/Dockerfile`, défaut `dev`).
+Quatre scripts lançaient chacun leur `docker compose build` : le déploiement
+et l'alignement d'`auto-deploy.sh` exportaient le commit, son rattrapage
+(#1131) et la synchronisation du pair par `bascule.sh` (phase 0) non — un
+front reconstruit par eux se disait « dev ». Chaque écriture était juste ou
+fausse selon que son auteur y avait pensé.
+
+La porte est `construire_images` (`scripts/lib/lib-parite.sh`) : elle lit le
+commit du dépôt au moment du build, l'exporte, puis construit. Ce test refuse
+tout `docker compose … build` (ou `up --build`) écrit ailleurs, et toute
+seconde écriture de `GIT_HASH=$(git rev-parse …)`.
+"""
+
+from __future__ import annotations
+
+import re
+
+from tests.conftest import racine_depot, scripts_shell_versionnes
+
+PORTE = "scripts/lib/lib-parite.sh"
+
+#: Un build lancé en position de COMMANDE — début de ligne, après `&&`, `;`,
+#: `||`, `if`, `!`, ou en tête d'une chaîne passée à ssh. Une mention entre
+#: accents graves dans un message (« son `docker compose build` a échoué ») n'en
+#: est pas une : elle ne construit rien.
+BUILD = re.compile(
+    r"""(?:^|&&|\|\||;|\bif\b|!|\bthen\b|["'(])\s*docker\s+compose"""
+    r"""(?:\s+-f\s+\S+)?\s+(?:build\b|up\b[^#\n]*--build\b)"""
+)
+HASH = re.compile(r"\bGIT_HASH=\$\(\s*git\s+rev-parse")
+
+
+def _code(texte: str) -> list[tuple[int, str]]:
+    """Les lignes qui ne sont pas des commentaires, numérotées."""
+    return [
+        (n, ligne)
+        for n, ligne in enumerate(texte.splitlines(), 1)
+        if not ligne.lstrip().startswith("#")
+    ]
+
+
+def _ecarts(motif: re.Pattern, fichiers) -> list[str]:
+    racine = racine_depot()
+    trouves = []
+    for chemin in fichiers:
+        rel = chemin.relative_to(racine).as_posix()
+        for n, ligne in _code(chemin.read_text(encoding="utf-8", errors="replace")):
+            if motif.search(ligne):
+                trouves.append(f"{rel}:{n}")
+    return trouves
+
+
+def test_un_seul_build_dans_les_scripts():
+    scripts = scripts_shell_versionnes()
+    assert len(scripts) > 40, "cas zéro : la portée des scripts a bougé"
+    trouves = _ecarts(BUILD, scripts)
+    hors_porte = [t for t in trouves if not t.startswith(PORTE + ":")]
+    assert hors_porte == [], (
+        "un build d'images écrit hors de `construire_images` (lib-parite.sh) : "
+        f"il bâtirait le front sans GIT_HASH — {hors_porte}"
+    )
+    assert len(trouves) == 1, f"la porte elle-même doit construire, une fois : {trouves}"
+
+
+def test_le_commit_ne_se_lit_qu_a_la_porte():
+    trouves = _ecarts(HASH, scripts_shell_versionnes())
+    assert trouves and all(t.startswith(PORTE + ":") for t in trouves), (
+        f"GIT_HASH se lit dans `exporter_git_hash` (lib-parite.sh), et nulle part ailleurs : {trouves}"
+    )
+    assert len(trouves) == 1
+
+
+def test_la_bascule_attend_l_api_en_secondes():
+    """Même lot (#1684, point 3) : la phase 5 attend par `attendre_200`.
+
+    Sa boucle comptait des TOURS (`seq 1 $HEALTH_TIMEOUT`), chacun coûtant un
+    SSH jusqu'à dix secondes : « 150 s » pouvaient durer 25 min, site coupé.
+    """
+    bascule = (racine_depot() / "scripts/exploitation/bascule.sh").read_text(encoding="utf-8")
+    code = "\n".join(ligne for _, ligne in _code(bascule))
+    assert 'attendre_200 "$HEALTH_TIMEOUT"' in code
+    assert "seq 1 $HEALTH_TIMEOUT" not in code
+
+
+def test_le_motif_voit_les_quatre_builds_d_avant():
+    """Cas zéro : les écritures fautives d'avant #1684 sont refusées."""
+    fautives = [
+        "        if docker compose build --quiet; then",  # rattrapage d'auto-deploy
+        '  if $SSH_CMD p@"$PEER_IP" "cd /opt/5hostachy && git reset --hard $H && docker compose build --quiet" ; then',
+        '    docker compose -f "$REPO/docker-compose.yml" build $SERVICES_TO_BUILD',  # MaJ-Hostachy
+        "À faire sur $SELF : cd $REPO && docker compose build",  # consigne d'alerte
+        "docker compose up --build -d",
+    ]
+    assert all(BUILD.search(ligne) for ligne in fautives)
+    #  …et ce qui n'est pas un build ne l'est pas.
+    innocentes = [
+        "son \\`docker compose build\\` a échoué.",
+        "docker compose up -d api",
+        "docker builder prune -f",
+    ]
+    assert not any(BUILD.search(ligne) for ligne in innocentes)

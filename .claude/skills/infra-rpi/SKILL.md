@@ -590,7 +590,8 @@ alors que sa base est synchronisée à chaque bascule. Un failover cette nuit-l�
 aurait servi du code v2.90.0 sur une base migrée en 0154.
 
 **Ce que fait le standby désormais** : `git reset --hard origin/main` puis
-`docker compose build`. Et rien d'autre — **aucun conteneur démarré** (ce serait
+`construire_images` (`lib-parite.sh` — la seule porte de build, qui exporte
+`GIT_HASH`, #1684). Et rien d'autre — **aucun conteneur démarré** (ce serait
 le split-brain), **aucune migration appliquée** (sa base est une copie que la
 bascule écrase ; migrer ici divergerait en silence).
 

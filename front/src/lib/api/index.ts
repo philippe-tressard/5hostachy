@@ -50,7 +50,7 @@ export * from './assistant';
 //  `communaute.ts`). Les dates arrivent en chaîne ISO sans fuseau (UTC naïf).
 
 /**  Une de MES demandes de modification de profil — `DemandeModifRead`
- *   (`auth_profil._lire_demande`) : la ligne `demande_modification_profil`, plus le
+ *   (`utils/demandes_profil.lire_demande`) : la ligne `demande_modification_profil`, plus le
  *   libellé du bâtiment souhaité. La création et la liste la rendent toutes deux
  *   ainsi ; la création l'omettait jusqu'à #1686. */
 export interface MaDemandeProfil {

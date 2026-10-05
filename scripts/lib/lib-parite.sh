@@ -173,6 +173,25 @@ marquer_images_construites() {
     printf '%s\n' "${2:-}" > "${1:-}/.images-construites" 2>/dev/null || true
 }
 
+# ── Construire les images : UNE porte, et elle porte le commit (#1684) ───────
+#
+# 🔴 Le front grave `GIT_HASH` dans son bundle (`front/Dockerfile`, défaut
+# `dev`) : un build lancé sans l'exporter sert un front qui se dit « dev ».
+# Quatre builds l'écrivaient chacun : le déploiement et l'alignement
+# d'`auto-deploy` l'exportaient, son RATTRAPAGE (#1131) et la synchronisation
+# du pair par `bascule.sh` (phase 0) ne l'exportaient pas. Le commit se lit ici,
+# dans le dépôt courant, au moment du build — jamais transmis par l'appelant.
+# Les arguments passent à `docker compose build` (`--quiet`, `--no-cache`,
+# services). 🔒 api/tests/test_construction_images_porte_unique.py
+exporter_git_hash() {
+    GIT_HASH=$(git rev-parse --short HEAD) || return 1
+    export GIT_HASH
+}
+construire_images() {
+    exporter_git_hash || return 1
+    docker compose build "$@"
+}
+
 # ── Self-test (aucun effet de bord) ──────────────────────────────────────────
 #
 # 🔴 `${BASH_SOURCE[0]}` = `$0` : le bloc ne s'exécute QUE si ce fichier est
@@ -272,6 +291,22 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
             fail=1
         fi
     done
+
+    # ── construire_images exporte le commit au build (#1684) ─────────────────
+    #  Docker simulé : il rend la valeur de GIT_HASH qu'il VOIT dans son
+    #  environnement — ce que `docker compose build` transmet au Dockerfile.
+    echo "== self-test lib-parite.construire_images =="
+    DEPOT=$(mktemp -d)
+    git -C "$DEPOT" init -q && git -C "$DEPOT" -c user.name=t -c user.email=t@example.org \
+        commit -q --allow-empty -m t
+    ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    vu=$(cd "$DEPOT" && unset GIT_HASH && bash -c "source '$ICI'
+        docker() { echo \"\$* GIT_HASH=\$(printenv GIT_HASH)\"; }
+        construire_images --quiet")
+    attendu="compose build --quiet GIT_HASH=$(git -C "$DEPOT" rev-parse --short HEAD)"
+    if [ "$vu" = "$attendu" ]; then echo "PASS  le build voit le commit du dépôt  → $vu"
+    else echo "FAIL  attendu « $attendu », obtenu « $vu »"; fail=1; fi
+    rm -rf "$DEPOT"
 
     [ $fail -eq 0 ] && echo "== TOUS OK ==" || echo "== ÉCHECS =="
     exit $fail
