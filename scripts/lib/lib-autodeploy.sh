@@ -44,7 +44,7 @@
 #
 # ⚠️ Motif SANS accent : la ligne traverse SSH depuis le peer, et « ÉCHEC »
 # dépendrait de la locale des deux bouts. « CHEC du build » est distinctif —
-# même raison que le « Garde-fou » de `lib-collecte`.
+# même raison que la marque ASCII de C17 (`lib-maintenance-trace.sh`).
 #
 # 🔴 Depuis #1587, CHAQUE sortie d'auto-deploy est datée — celle d'un fetch en
 # échec comme celle d'un `set -e` imprévu. C14 (le battement) les voit donc

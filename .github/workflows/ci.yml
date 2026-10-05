@@ -555,6 +555,9 @@ jobs:
           # C31 (#1586) : health-watch écrit son battement AVANT de décider, la
           # collecte le lit, et un silence rend FAIL sur le nœud qu'il concerne.
           bash scripts/lib/lib-health-watch.sh      --selftest
+          # C17 : maintenance.sh écrit sa marque en fin d'hygiène, la collecte la
+          # lit, et le seuil se lit en jours ET heures (faux retard du 05/10/2026).
+          bash scripts/lib/lib-maintenance-trace.sh --selftest
           # La ligne datée À L'ÉCRITURE et le contrat de sortie d'auto-deploy
           # (#1587) : chaque `exit` daté, aucun `git fetch` sans repli.
           bash scripts/lib/lib-journal.sh           --selftest
