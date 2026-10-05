@@ -55,6 +55,8 @@
 		password: '',
 		dossier: 'INBOX',
 		plancher: '2026-09-02',
+		//  Combien de messages l'onglet Espace CS › Courriels en montre (20 par défaut).
+		affiches: 20 as number | null,
 	};
 	let imapSaving = false;
 	let imapPasswordSet = false;
@@ -83,6 +85,8 @@
 				imap_username: imapConfig.username.trim(),
 				imap_dossier: imapConfig.dossier.trim() || 'INBOX',
 				imap_plancher: imapConfig.plancher,
+				//  Vide = la valeur par défaut du serveur, jamais « null » écrit en base.
+				courriels_affiches: imapConfig.affiches == null ? '' : String(imapConfig.affiches),
 			};
 			//  Le mot de passe n'est envoyé QUE s'il a été saisi : l'API renvoie un
 			//  marqueur à sa place, et le réexpédier l'écraserait par des points.
@@ -132,6 +136,7 @@
 		imapConfig.username = lues['imap_username'] ?? '';
 		imapConfig.dossier = lues['imap_dossier'] || 'INBOX';
 		imapConfig.plancher = lues['imap_plancher'] || '2026-09-02';
+		imapConfig.affiches = parseInt(lues['courriels_affiches'] ?? '') || 20;
 		imapPasswordSet = !!lues['imap_password'];
 	}
 
@@ -191,6 +196,11 @@
 				Ne rien relever avant le
 				<input type="date" bind:value={imapConfig.plancher} />
 				<span class="aide"> Évite de rejouer d'anciens messages à la première relève. </span>
+			</label>
+			<label class="field champ-court">
+				Messages affichés dans Espace CS › Courriels
+				<input type="number" bind:value={imapConfig.affiches} min="1" max="100" placeholder="20" />
+				<span class="aide">Les plus récents ; de 1 à 100.</span>
 			</label>
 		</div>
 		<div class="largeur-saisie form-actions">

@@ -11,6 +11,7 @@
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import OngletAnnoncesHall from '$lib/components/OngletAnnoncesHall.svelte';
 	import OngletReglement from '$lib/components/OngletReglement.svelte';
+	import OngletCourriels from '$lib/components/OngletCourriels.svelte';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import { isCS, authResolue, quandAuthResolue } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -341,6 +342,8 @@
 	<OngletAnnoncesHall />
 {:else if onglet === 'reglement'}
 	<OngletReglement />
+{:else if onglet === 'courriels'}
+	<OngletCourriels />
 {:else if onglet === 'annuaire'}
 	<LienConsignes />
 

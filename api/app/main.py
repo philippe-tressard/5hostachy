@@ -128,6 +128,7 @@ from app.routers import (
 )
 from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
+from app.routers import courriels_affaires
 from app.routers import partage
 from app.routers import assistant, config_llm, reglement
 from app.config import get_settings
@@ -429,11 +430,9 @@ app.include_router(compteurs.router)
 app.include_router(prestataires_archivage.router)
 #  Les métriques des affaires d'un prestataire (#1646), même préfixe.
 app.include_router(prestataires_metriques.router)
-app.include_router(sondages.router)
-app.include_router(idees.router)
-app.include_router(annonces.router)
-app.include_router(annonces_hall.router)
-app.include_router(manuel.router)
+#  Les routeurs sans particularité de montage : un `include_router` chacun.
+for _routeur in (sondages, idees, annonces, annonces_hall, courriels_affaires, manuel):
+    app.include_router(_routeur.router)
 app.include_router(copropriete.router)
 #  Les bâtiments et les lots — extraits le 22/09/2026 (modularité, rang 1). Même
 #  préfixe `/copropriete`, donc mêmes URL publiques (cf. son en-tête).

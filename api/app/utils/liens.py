@@ -194,6 +194,12 @@ def lien_sondage(sondage_id: int | None = None) -> str:
     return f"/sondages/{sondage_id}" if sondage_id else "/sondages"
 
 
+#: L'onglet « Courriels » d'Espace CS : ce que la relève a fait de chaque message
+#: reçu à l'adresse des affaires. Une alerte qui n'a pas d'affaire à nommer — un
+#: transfert refusé, un numéro inconnu — y renvoie (05/10/2026).
+LIEN_COURRIELS_AFFAIRES = "/espace-cs/courriels"
+
+
 def lien_ticket(ticket_id: int, message_id: int | None = None) -> str:
     """URL d'un ticket, éventuellement ancrée sur un message précis.
 

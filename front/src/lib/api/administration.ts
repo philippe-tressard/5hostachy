@@ -357,20 +357,6 @@ export interface MessagePlanifieWhatsApp {
 	mis_a_jour_le: string | null;
 }
 
-/**  Un message relevé dans la boîte des réponses (`GET /config/releves-courriel`).
- *   Jamais son texte : le journal dit ce qu'on a DÉCIDÉ (#1447). */
-export interface CourrielReleve {
-	id: number;
-	releve_le: string;
-	envoye_le: string | null;
-	expediteur: string;
-	objet: string;
-	decision: 'accepte' | 'relance' | 'refuse' | 'ignore';
-	motif: string;
-	ticket_id: number | null;
-	affaire: string | null;
-}
-
 /**  Un envoi WhatsApp journalisé (`GET /config/whatsapp-logs`). */
 export interface JournalEnvoiWhatsApp {
 	id: number;
@@ -408,9 +394,6 @@ export const config = {
 	admin: (): Promise<Record<string, string>> => api.get<Record<string, string>>('/config/admin'),
 	testerSmtp: (email: string) => api.post<EssaiSmtp>('/config/smtp-test', { email }),
 	testerImap: () => api.post<EssaiImap>('/config/imap-test', {}),
-	/**  Ce que la relève a fait des derniers messages, et pourquoi (#1447). */
-	relevesCourriel: (): Promise<CourrielReleve[]> =>
-		api.get<CourrielReleve[]>('/config/releves-courriel'),
 	/**  Interroge VRAIMENT le modèle configuré (`utils/llm.tester`). Trois champs
 	 *   remplis ne prouvent rien : une clé se révoque, un modèle se renomme. */
 	llmTest: (usage: string) =>
