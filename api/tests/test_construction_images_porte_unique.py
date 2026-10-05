@@ -158,7 +158,7 @@ def test_un_seul_demarrage_dans_les_scripts():
     )
     for rel, (marque, raison) in EXPORTEURS.items():
         assert rel in par_script, f"exception qui ne sert plus (aucun `up`) : {rel} — {raison}"
-        code = "\n".join(l for _, l in _code((racine / rel).read_text(encoding="utf-8")))
+        code = "\n".join(ligne for _, ligne in _code((racine / rel).read_text(encoding="utf-8")))
         assert marque in code, f"{rel} ne porte plus `{marque}` : {raison}"
     for rel, n in MESSAGES.items():
         assert len(par_script.get(rel, [])) == n, f"message déclaré qui ne sert plus : {rel}"
@@ -169,8 +169,8 @@ def test_les_cinq_demarrages_d_avant_passent_par_la_porte():
     fautives = [
         "  if docker compose up -d; then",  # rollback de bascule.sh
         "docker compose up -d >> /dev/null 2>&1 && log ok",  # health-watch.sh
-        "  ( cd \"$REPO\" && docker compose up -d >/dev/null 2>&1 ) && log ok",  # boot-role-guard
-        "        || (cd \"$REPO\" && docker compose up -d api >/dev/null 2>&1) || true",  # maintenance
+        '  ( cd "$REPO" && docker compose up -d >/dev/null 2>&1 ) && log ok',  # boot-role-guard
+        '        || (cd "$REPO" && docker compose up -d api >/dev/null 2>&1) || true',  # maintenance
         "run \"$SSH_CMD p@$PEER_IP 'cd /opt/5hostachy && env_role_appliquer .env actif && docker compose up -d'\"",
     ]
     assert all(UP.search(ligne) for ligne in fautives)

@@ -660,10 +660,17 @@ jobs:
             for p in $(grep -oE '/var/log/[A-Za-z0-9_.*-]+' "$f" | sort -u); do
               case "$p" in
                 /var/log/hostachy-*.log) ;;
+                #  Le journal d'accès VIT DANS le conteneur Caddy (#1588) : Caddy le
+                #  roule lui-même (`roll_size`, `roll_keep`, `roll_keep_for` du
+                #  Caddyfile) — maintenance.sh n'y touche pas, et ne le doit pas.
+                #  Déclarée : l'exception échoue plus bas si le script cesse de la citer.
+                /var/log/caddy) ;;
                 *) echo "::error file=$f::$p hors du motif /var/log/hostachy-*.log — maintenance.sh ne le rotera jamais"; st=1 ;;
               esac
             done
           done
+          grep -q '/var/log/caddy' scripts/lib/lib-journal-acces.sh \
+            || { echo "::error file=.github/workflows/ci.yml::l'exception /var/log/caddy ne sert plus (lib-journal-acces.sh ne la cite plus) — la retirer"; st=1; }
           grep -q 'for LOGFILE in /var/log/hostachy-\*\.log' scripts/exploitation/maintenance.sh \
             || { echo "::error file=scripts/exploitation/maintenance.sh::la rotation doit itérer sur le GLOB /var/log/hostachy-*.log (une liste nominative laisse filer tout log ajouté ensuite)"; st=1; }
           for f in $(git ls-files -- '*.sh'); do
