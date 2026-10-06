@@ -386,6 +386,7 @@ def add_evolution(
                     _parole_pour_le_groupe(ticket, body),
                     site_url=base_site(wa_config.get("site_url")),
                     suite_enregistree=True,
+                    fichiers_urls=body.fichiers_urls,
                 )
                 diffuser(
                     background_tasks,
@@ -394,6 +395,7 @@ def add_evolution(
                     suite.contenu,
                     urgente=suite.urgente,
                     perimetre_cible=ticket.perimetre_cible,
+                    image_url=suite.photo,
                     lien=suite.lien,
                 )
 

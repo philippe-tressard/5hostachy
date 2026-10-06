@@ -35,6 +35,7 @@ from app.models.core import Ticket, TicketEvolution
 from app.utils.categories_ticket import ticket_urgent
 from app.utils.liens import lien_ticket
 from app.utils.nature_affaire import est_actualite
+from app.utils.photos import premiere_image
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,9 @@ class MessageSuite:
     contenu: str
     lien: str
     urgente: bool
+    #  La première image jointe à la Suite : elle accompagne le message, comme celle
+    #  d'une création (les photos d'une Suite voyagent dans `fichiers_urls`).
+    photo: str | None = None
 
 
 def _paroles_precedentes(session: Session, ticket: Ticket, *, suite_enregistree: bool) -> int:
@@ -69,6 +73,7 @@ def message_suite(
     *,
     site_url: str,
     suite_enregistree: bool,
+    fichiers_urls: list[str] | None = None,
 ) -> MessageSuite:
     """Ce que le groupe reçoit pour une Suite : son message, et où lire le reste.
 
@@ -87,4 +92,5 @@ def message_suite(
         #  La règle de la création, pour les deux natures : la Suite d'une
         #  affaire partait sans l'urgence que son aperçu annonçait.
         urgente=ticket_urgent(ticket),
+        photo=premiere_image(fichiers_urls),
     )
