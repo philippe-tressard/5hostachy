@@ -244,11 +244,17 @@
 				<span class="evol-icon">{evolutionIcone(evol.type)}</span>
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
-						<span class="evol-meta"
-							>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
-								· {evol.auteur_nom}{/if}</span
-						>
-						<MarqueIA assiste={evol.assiste_ia} />
+						<!--  🔴 La marque ✨ est COLLÉE au nom, dans le même groupe que la méta
+						      (signalé à l'écran le 06/10/2026) : enfant direct de la ligne en
+						      `space-between`, elle se répartissait au milieu, entre le nom et
+						      les icônes de droite. -->
+						<span class="evol-qui">
+							<span class="evol-meta"
+								>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
+									· {evol.auteur_nom}{/if}</span
+							>
+							<MarqueIA assiste={evol.assiste_ia} />
+						</span>
 						<!--  🔴 LES DEUX ICÔNES DANS UN MÊME GROUPE, cadré à droite
 						      (18/08/2026, signalé à l'écran). Elles étaient enfants directs
 						      d'une ligne en `space-between` : à DEUX enfants — la méta et le
@@ -419,6 +425,13 @@
 		display: flex;
 		gap: 0.3rem;
 		flex-shrink: 0;
+	}
+	/*  La méta et la marque IA : un seul enfant de la ligne, donc la marque suit le nom. */
+	.evol-qui {
+		display: flex;
+		align-items: baseline;
+		gap: 0.3rem;
+		min-width: 0;
 	}
 	.evol-meta {
 		font-size: var(--fs-xs);

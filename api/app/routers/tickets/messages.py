@@ -117,15 +117,23 @@ def add_message(
         interne=body.interne,
         fichiers_urls=photos_json(body.fichiers_urls),
     )
-    # Auto-log évolution "réponse"
+    #  Auto-log évolution "réponse".
+    #
+    #  🔴 Elle porte le TEXTE et les pièces du message public (05/10/2026). Elle
+    #  naissait vide : la fiche montre le message dans son fil de bulles, mais la
+    #  carte de LISTE ne rend que l'Historique — une réponse de résident y
+    #  apparaissait comme un en-tête sans corps, alors que le courriel envoyé au
+    #  conseil, lui, la citait. Un message interne reste réduit à son mot : le
+    #  texte d'une note ne s'écrit pas dans un fil que d'autres lisent.
     session.add(
         TicketEvolution(
             ticket_id=ticket_id,
             type="reponse",
-            contenu="Message interne" if body.interne else None,
+            contenu="Message interne" if body.interne else body.contenu,
             auteur_id=user.id,
             cree_le=horloge.maintenant(),
             assiste_ia=body.assiste_ia,
+            fichiers_urls="[]" if body.interne else photos_json(body.fichiers_urls),
         )
     )
     ticket.mis_a_jour_le = horloge.maintenant()
