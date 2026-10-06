@@ -40,6 +40,9 @@ export interface User {
 	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
 	batiment_nom?: string | null; // "Bât. A"
+	/** Pour un aidant ou mandataire : le copropriétaire aidé, saisi à l'inscription (`UserRead`). */
+	nom_aide?: string | null;
+	prenom_aide?: string | null;
 	/** L'étage où la personne HABITE — distinct de `Lot.etage`, qui décrit un bien. */
 	etage?: number | null;
 	last_seen_actualites?: string | null;
@@ -282,7 +285,8 @@ export interface TicketEvolution {
 	/** Le texte reçu, quand l'assistant a mis en forme une réponse par courriel (#1322). */
 	contenu_origine?: string | null;
 	ticket_id: number;
-	type: 'commentaire' | 'etat' | 'reponse';
+	/** `synthese` : la Suite porteuse d'une synthèse d'affaire close (`models/synthese.py`). */
+	type: 'commentaire' | 'etat' | 'reponse' | 'synthese';
 	contenu?: string;
 	ancien_statut?: string;
 	nouveau_statut?: string;
