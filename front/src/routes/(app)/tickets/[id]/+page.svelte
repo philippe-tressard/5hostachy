@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { estAbsent, messageErreur } from '$lib/erreurs';
+	import { demanderFusion } from '$lib/fusion-affaires';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { isCS, isAdmin } from '$lib/stores/auth';
@@ -175,9 +176,12 @@
 	//  une **correction**, et la transition passe par l'endpoint qui la trace
 	//  vraiment : date, auteur, courriel à l'auteur du ticket.
 	async function updateStatus(s: string) {
+		//  Clore demande s'il faut absorber les affaires liées ouvertes (#1704).
+		const fusionner = await demanderFusion(ticket, s);
+		if (fusionner === null) return;
 		updatingStatus = true;
 		try {
-			await ticketsApi.addEvolution(ticketId, { type: 'etat', nouveau_statut: s });
+			await ticketsApi.addEvolution(ticketId, { type: 'etat', nouveau_statut: s, fusionner });
 			ticket = await ticketsApi.get(ticketId);
 			await loadEvolutions();
 			toast('success', 'Statut mis à jour');
@@ -282,7 +286,8 @@
 							>
 						{/if}
 					</div>
-					{#if $isCS}
+					<!--  Une affaire absorbée n'a plus d'état à changer (#1704). -->
+					{#if $isCS && !ticket.fusionnee}
 						<div class="status-actions">
 							<span class="status-label">Changer le statut :</span>
 							<div class="status-boutons">

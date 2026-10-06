@@ -82,7 +82,11 @@
 		{/if}
 	{/each}
 
-	{#if !repondreOuvert}
+	<!--  Absorbée (#1704) : la discussion se poursuit dans la principale, et
+	      l'Historique, juste dessous, le dit — une seule fois. -->
+	{#if ticket.fusionnee}
+		<!-- rien à répondre ici -->
+	{:else if !repondreOuvert}
 		<div class="card carte-repondre">
 			<button type="button" class="btn btn-outline" on:click={() => (repondreOuvert = true)}>
 				{clos ? '↩️ Rouvrir la discussion' : '💬 Répondre'}

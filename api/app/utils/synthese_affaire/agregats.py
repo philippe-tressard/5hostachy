@@ -46,6 +46,7 @@ from app.models.core import Ticket
 from app.models.prestataires import Prestataire
 from app.models.tickets import STATUTS_TICKET_CLOS, StatutTicket
 from app.utils import horloge
+from app.utils.affaire_absorbee import ouverture_effective, pas_absorbee
 from app.utils.carnet_entretien import contribue_au_carnet
 from app.utils.jours_ouvres import au_demi_jour
 from app.utils.synthese_affaire import metriques as m
@@ -111,6 +112,7 @@ def affaires_closes(session: Session, *conditions) -> list[Ticket]:
             .where(
                 col(Ticket.statut).in_(STATUTS_TICKET_CLOS),
                 col(Ticket.ferme_le).isnot(None),
+                pas_absorbee(),  # comptée dans sa principale (#1704)
                 *conditions,
             )
             .order_by(col(Ticket.ferme_le))
@@ -125,7 +127,7 @@ def mesurer(session: Session, tickets: list[Ticket]) -> list[Mesure]:
     mesures = []
     for t in tickets:
         met = m.calculer(
-            cree_le=t.cree_le,
+            cree_le=ouverture_effective(session, t),
             cloture_le=t.ferme_le,
             issue=valeur(t.statut),
             faits=faits_de(session, t.id, est_syndic),

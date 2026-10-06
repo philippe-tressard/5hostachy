@@ -110,6 +110,8 @@ export interface ChargeUtileEvolution {
 	fichiers_urls?: string[];
 	/** Les affaires à LIER — une Suite ajoute, elle ne retire rien (#1342). */
 	affaires_liees?: number[];
+	/** 🔀 Les affaires à ABSORBER en clôturant (#1704) — posé par `SuiteAffaire`, jamais par `EvolForm`. */
+	fusionner?: number[];
 	email_externe?: string;
 	partager_whatsapp?: boolean;
 	envoyer_syndic?: boolean;

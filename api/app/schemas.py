@@ -190,6 +190,10 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     apercu_pieces: ListeJson = []
     #  Les affaires liées que CE lecteur peut lire (#1342) — dérivé, jamais saisi.
     affaires_liees: List[AffaireLieeLue] = []
+    #  🔀 L'affaire qui l'a absorbée (#1704) — rendue seulement si CE lecteur la lit.
+    fusionnee_dans: Optional[AffaireLieeLue] = None
+    #  …et le FAIT, pour tous : son suivi est clos, l'écran n'offre plus de Suite.
+    fusionnee: bool = False
     destinataire_syndic: bool = False
     destinataire_cs: bool = False
     envoyer_auteur: bool = False
@@ -269,6 +273,8 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     #  donnait, quelle qu'elle soit. #415 décrivait ce chemin comme « validé par
     #  le type » : il ne l'est que depuis cette ligne.
     statut: Optional[StatutTicket] = None
+    #  🔀 Les affaires liées à absorber quand ce `statut` clôt l'affaire (#1704).
+    fusionner: Optional[List[int]] = None
     priorite: Optional[str] = None
     titre: Optional[str] = None
     description: Optional[str] = None

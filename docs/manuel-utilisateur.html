@@ -1040,7 +1040,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 2.42 · Octobre 2026</span>
+      <span class="topbar-badge">Version 2.43 · Octobre 2026</span>
     </div>
   </header>
 
@@ -1683,6 +1683,17 @@
         </ul>
         <div class="callout info"><strong>ℹ️ Ce qui ne se double pas, et ce qui n’entre pas</strong><p>Renvoyer un fil déjà versé n’ajoute rien&nbsp;: un message déjà dans l’affaire — versé par un transfert ou recopié à la main — est reconnu et sauté. Votre note de transfert n’entre pas dans le fil, ni les courriels du site cités en bas. Si l’auteur ou la date d’un message ne se lit pas, <strong>rien</strong> n’est versé, et la notification le dit&nbsp;: un fil à moitié recopié serait faux. Seul un membre du conseil syndical crée une affaire ainsi, depuis une messagerie qui signe ses envois (iCloud, Gmail, Orange…). Une affaire close ne reçoit plus rien.</p></div>
       </div>
+      <div class="card" id="fusion-affaires">
+        <h3>Fusionner les affaires liées à la clôture</h3>
+        <p>Deux signalements décrivent souvent un seul problème&nbsp;: la fuite au 3<sup>e</sup> et la tache au plafond du 2<sup>e</sup>. Quand le <strong>conseil syndical</strong> clôt une affaire — résolue ou annulée, par une suite, par les boutons <em>Changer le statut</em>, en la glissant au kanban ou en la corrigeant — et qu’elle a des <strong>affaires liées encore ouvertes</strong>, le site demande s’il faut les fusionner.</p>
+        <ul class="steps">
+          <li class="step"><span class="step-num" style="background:var(--c-ticket)">1</span><div class="step-content"><strong>Choisir</strong><p>La boîte <em>Fusionner les affaires liées&nbsp;?</em> liste les affaires liées ouvertes, <strong>aucune cochée</strong>. Ne cochez que celles qui portent le <strong>même besoin sur le même périmètre</strong>&nbsp;: c’est à vous d’en juger. <em>Clore sans fusionner</em> clôt l’affaire seule&nbsp;; <em>Annuler</em> renonce à la clôture.</p></div></li>
+          <li class="step"><span class="step-num" style="background:var(--c-ticket)">2</span><div class="step-content"><strong>Ce que fait la fusion</strong><p>L’affaire qu’on clôt <strong>absorbe</strong> les autres&nbsp;: leurs suites, messages, documents et courriels rejoignent son fil, chacun <strong>à sa date</strong> et marqué «&nbsp;↪&nbsp;Venue de TK-…&nbsp;». La description de chaque affaire absorbée devient la suite <em>Ouverture de TK-…</em>, datée de sa création et signée de son auteur&nbsp;; ses changements d’état y sont racontés, sans devenir ceux de l’affaire principale. Les affaires absorbées sont <strong>closes en même temps</strong>, dans le même état, et la suite de clôture dit «&nbsp;🔀&nbsp;Fusion&nbsp;: TK-…&nbsp;». Leurs auteurs en sont prévenus, une fois chacun.</p></div></li>
+          <li class="step"><span class="step-num" style="background:var(--c-ticket)">3</span><div class="step-content"><strong>Le bilan couvre tout</strong><p>La <a href="#synthese-affaire">synthèse de clôture</a> de l’affaire principale lit le fil fusionné&nbsp;: elle couvre toutes les affaires, et sa durée court depuis la <strong>plus ancienne</strong> d’entre elles. Le carnet d’entretien et ses moyennes ne comptent que l’affaire principale.</p></div></li>
+        </ul>
+        <div class="callout warning"><strong>⚠️ Une fusion ne se défait pas</strong><p>Une affaire absorbée garde son numéro, mais son suivi est terminé&nbsp;: sa fiche porte «&nbsp;🔀&nbsp;Fusionnée dans TK-…&nbsp;», n’accepte plus ni suite ni réponse, et une réponse par courriel à son sujet rejoint l’affaire principale.</p></div>
+        <div class="callout info"><strong>ℹ️ Pourquoi une affaire est grisée</strong><p>Une affaire liée <strong>lue par moins de monde</strong> que celle qu’on clôt — confidentielle, ou réservée à un bâtiment — est montrée grisée, avec sa raison&nbsp;: la fusionner rendrait ses suites lisibles à des personnes qui ne pouvaient pas les lire. L’inverse est permis.</p></div>
+      </div>
       <div class="card" id="synthese-affaire">
         <h3>La synthèse d’une affaire close</h3>
         <p>Quand une affaire du <strong>carnet d’entretien</strong> — une catégorie du bâti&nbsp;: <em>Panne</em>, <em>Espaces verts</em>, <em>Sinistre</em>, <em>Étude &amp; travaux</em>, <em>Entretien</em>, que son équipement soit désigné ou non — est résolue ou annulée, une <strong>synthèse</strong> s’ajoute à son fil une demi-heure plus tard, le temps d’y écrire la suite de clôture. Elle se présente comme une suite 🧾 <em>Synthèse de l’affaire</em>&nbsp;: cinq graphiques, puis le texte.</p>
@@ -1781,7 +1792,7 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 5Hostachy — Manuel utilisateur v2.42
+    <span>© 2026 5Hostachy — Manuel utilisateur v2.43
 </span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>

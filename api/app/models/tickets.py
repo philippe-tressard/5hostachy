@@ -323,6 +323,10 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     public_cible: Optional[str] = None
     reserve_perimetre: bool = False
     archive_manuel: bool = False
+    #  🔀 L'affaire qui l'a ABSORBÉE à sa clôture (#1704, migration 0265) : son
+    #  fil s'y poursuit, elle sort du carnet. Sans clé étrangère, comme ses
+    #  voisines ajoutées par migration. Règles : `utils/fusion_affaires`.
+    fusionnee_dans_id: Optional[int] = None
 
     auteur: Optional["Utilisateur"] = Relationship(
         back_populates="tickets", sa_relationship_kwargs={"foreign_keys": "[Ticket.auteur_id]"}

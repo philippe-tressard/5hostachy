@@ -68,6 +68,11 @@ export const EXCEPTIONS = {
 	//  vient bien avant l'action, la même main que partout ailleurs.
 	'lib/components/Saisie.svelte':
 		'saisie impérative : le verbe nomme le geste (« Signaler »), il ne peut pas être générique',
+	//  🔀 Même famille encore (05/10/2026, #1704) : la question posée À LA CLÔTURE.
+	//  Son verbe nomme le geste — « Clore sans fusionner », « Clore et fusionner (n) » —
+	//  et rien n'y est « enregistré » : la boîte répond à l'appelant, qui clôt.
+	'lib/components/DialogueFusion.svelte':
+		'question à la clôture : le verbe nomme le geste (« Clore et fusionner »), il ne peut pas être générique',
 	//  ── Hors périmètre par la RÈGLE elle-même (§9 quinquies bis) ────────────
 	//  Ce ne sont pas des créations d'objet, et leur verbe métier est le bon.
 	'lib/components/FormulaireCreation.svelte':

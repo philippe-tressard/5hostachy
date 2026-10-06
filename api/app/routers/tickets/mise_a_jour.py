@@ -18,6 +18,7 @@ dit la docstring du paquet.
 """
 
 from app.utils.affaires_liees import poser_liens
+from app.utils.fusion_affaires import fusionner, prevenir_auteurs, refuser_si_absorbee
 from app.utils import horloge
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -203,6 +204,7 @@ def update_ticket(
                 403, "Seul le CS ou un administrateur peut modifier le statut ou la priorité"
             )
         if body.statut is not None:
+            refuser_si_absorbee(ticket)  # son suivi vit dans la principale (#1704)
             ticket.statut = body.statut
             if body.statut in STATUTS_TICKET_CLOS:
                 ticket.ferme_le = horloge.maintenant()
@@ -369,6 +371,12 @@ def update_ticket(
             )
         )
 
+    #  🔀 Une correction qui CLÔT peut absorber des affaires liées (#1704) —
+    #  sans courriel, comme toute correction : la cloche seule.
+    absorbees = []
+    if body.fusionner and etat_a_change and valeur(ticket.statut) in STATUTS_TICKET_CLOS:
+        absorbees = fusionner(session, ticket, body.fusionner, user, None)
+
     # Notification auteur (in-app) — sauf si c'est l'auteur lui-même qui modifie
     #  Une actualité se corrige entre membres du conseil : l'auteur n'en est pas
     #  « prévenu » comme d'une affaire qui avance.
@@ -401,6 +409,9 @@ def update_ticket(
     #  reste attaché à la vraie transition, dans `evolutions.py::_notifier_auteur`.
     session.commit()
     session.refresh(ticket)
+    prevenir_auteurs(
+        session, background_tasks, absorbees, user, courriel=False, deja={ticket.auteur_id}
+    )
 
     #  Une ACTUALITÉ diffuse par son module (#1091) : les canaux cochés à
     #  l'instant, plus ceux que la réserve du conseil retenait si elle vient

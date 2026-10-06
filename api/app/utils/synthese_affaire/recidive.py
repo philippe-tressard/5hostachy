@@ -38,6 +38,7 @@ from sqlmodel import Session, col, select
 
 from app.models.core import Ticket
 from app.models.tickets import StatutTicket
+from app.utils.affaire_absorbee import pas_absorbee
 from app.utils.perimetres import parse_json_perimetres
 
 #: Le nombre d'AUTRES affaires à partir duquel on parle de récidive.
@@ -78,6 +79,7 @@ def recidive_de(session: Session, ticket: Ticket, cloture_le: datetime) -> Optio
             col(Ticket.statut).in_([StatutTicket.résolu.value]),
             col(Ticket.ferme_le) >= il_y_a_mois(cloture_le, FENETRE_MOIS),
             col(Ticket.ferme_le) <= cloture_le,
+            pas_absorbee(),  # comptée dans sa principale (#1704)
         )
         .order_by(col(Ticket.ferme_le).desc())
     ).all()

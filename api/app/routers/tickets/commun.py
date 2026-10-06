@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 
 from app.auth.deps import est_moderateur
 from app.utils.affaires_liees import liees_lisibles
+from app.utils.fusion_affaires import principale_lue
 from app.utils.nature_affaire import natures
 from app.utils.batiments import libelle_batiment_ou
 from app.models.core import (
@@ -289,6 +290,8 @@ def ticket_read(
             AffaireLieeLue(**lue)
             for lue in liees_lisibles(session, ticket.id, lecteur, index=index, tickets=tickets)
         ],
+        fusionnee_dans=principale_lue(session, ticket, lecteur),
+        fusionnee=ticket.fusionnee_dans_id is not None,
         saisi_pour_affichage=saisi_pour_affichage,
         proprietaire_nom=proprietaire_nom,
         #  ⚠️ `seuil_archivage_jours` interroge la configuration, et l'on est ici

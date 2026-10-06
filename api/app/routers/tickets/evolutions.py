@@ -18,6 +18,7 @@ from app.auth.deps import (
 )
 from app.database import get_session
 from app.models.core import (
+    STATUTS_TICKET_CLOS,
     Ticket,
     TicketEvolution,
     Utilisateur,
@@ -51,6 +52,7 @@ from .notifier_auteur import _notifier_auteur
 from .suite_groupe import message_suite
 from app.utils.liens import base_site
 from app.utils.affaires_liees import ajouter_liens
+from app.utils.fusion_affaires import fusionner, prevenir_auteurs, refuser_si_absorbee
 
 router = APIRouter()
 
@@ -113,6 +115,7 @@ def update_evolution(
         evol.fichiers_urls = photos_json(body.fichiers_urls)
     marquer_assiste_ia(evol, body)
     ticket = ou_404(session, Ticket, ticket_id, "Ticket")
+    refuser_si_absorbee(ticket)  # corriger la Suite de fusion la rouvrirait (#1704)
     if body.perimetre_cible is not None:
         #  🔴 CORRIGER, pas raturer. La règle et son pourquoi vivent dans
         #  `app/utils/perimetre_fil.py` — elle a son `--selftest`.
@@ -248,6 +251,7 @@ def add_evolution(
     #  Avant, l'AUTEUR de la demande ne pouvait pas commenter sa propre demande.
     if not peut_commenter(ticket, user):
         raise HTTPException(403, "Accès refusé")
+    refuser_si_absorbee(ticket)  # son fil vit dans la principale (#1704)
     #  La liste vit dans `utils/evolutions` : créer, corriger et effacer
     #  posent la même question, et elle était écrite quatre fois (#779).
     if body.type not in TYPES_SAISIS:
@@ -298,6 +302,10 @@ def add_evolution(
 
     if body.type == "etat":
         appliquer_statut(session, ticket, evol, body.nouveau_statut, horloge.maintenant())
+    #  🔀 Une Suite qui CLÔT peut absorber des affaires liées (#1704).
+    absorbees = []
+    if body.fusionner and valeur(ticket.statut) in STATUTS_TICKET_CLOS and body.type == "etat":
+        absorbees = fusionner(session, ticket, body.fusionner, user, evol)
 
     if ticket.auteur_id != user.id and body.notifier:
         _notifier_auteur(
@@ -314,6 +322,11 @@ def add_evolution(
         ajouter_liens(session, ticket, body.affaires_liees, user)
     session.commit()
     session.refresh(evol)
+    #  Leurs auteurs, une fois chacun — l'auteur de la principale l'est déjà.
+    prevenu = ticket.auteur_id if ticket.auteur_id != user.id and body.notifier else None
+    prevenir_auteurs(
+        session, background_tasks, absorbees, user, courriel=body.notifier, deja={prevenu}
+    )
 
     #  Une ACTUALITÉ diffuse sa Suite par son module (#1091) — une parole vide
     #  ne part nulle part, comme l'ancienne publication.

@@ -35,6 +35,7 @@
 	import { relire } from '$lib/utils';
 	import { tickets as ticketsApi, type Ticket } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
+	import { demanderFusion } from '$lib/fusion-affaires';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { createEventDispatcher } from 'svelte';
 	import InitPrestataires from '$lib/components/InitPrestataires.svelte';
@@ -63,13 +64,17 @@
 		saisie = null;
 		const statut = STATUT_PAR_COLONNE[colonne];
 		if (!t || !statut || statut === t.statut) return;
+		//  Glisser en « Résolu » clôt : la fusion se demande ici aussi (#1704).
+		const fusionner = await demanderFusion(t, statut);
+		if (fusionner === null) return;
 		try {
 			await ticketsApi.addEvolution(t.id, {
 				type: 'etat',
 				nouveau_statut: statut,
 				notifier: false,
+				fusionner,
 			});
-			dispatch('deplace', { id: t.id, statut });
+			for (const id of [t.id, ...fusionner]) dispatch('deplace', { id, statut });
 		} catch (e) {
 			toast('error', messageErreur(e));
 		}

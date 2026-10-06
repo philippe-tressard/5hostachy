@@ -81,11 +81,13 @@ class Resultat:
 
 
 def peut_etre_produite(ticket: Ticket) -> bool:
-    """Close et du carnet — la condition commune à la file et au bouton."""
+    """Close, du carnet, et non absorbée — la condition commune à la file et au
+    bouton. Une absorbée est couverte par la synthèse de sa principale (#1704)."""
     return (
         valeur(ticket.statut) in STATUTS_TICKET_CLOS
         and bool(ticket.ferme_le)
         and (contribue_au_carnet(ticket))
+        and ticket.fusionnee_dans_id is None
     )
 
 
