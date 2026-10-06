@@ -10,8 +10,10 @@
     2. le texte : synthèse, difficultés, amélioration suggérée.
 
   En BROUILLON, seuls le conseil et l'administration la voient — le serveur ne
-  l'envoie à personne d'autre — avec un bandeau, et quatre gestes : Modifier ·
-  Relancer · Recommencer · Valider. Les métriques ne s'éditent pas.
+  l'envoie à personne d'autre — avec un bandeau, et cinq gestes : Modifier ·
+  Relancer · Recommencer · Valider · Supprimer. Validée, elle garde Modifier et
+  Supprimer (07/10/2026, demandé à l'écran : une synthèse validée ne se
+  corrigeait ni ne s'effaçait). Les métriques ne s'éditent pas.
 
   Il sert la fiche de l'affaire (dans le fil) ET le carnet d'entretien (partie
   pliée de la ligne, en lecture) : une entité, un rendu.
@@ -125,11 +127,31 @@
 		if (ok) await proposer(() => syntheses.recommencer(synthese.ticket_id));
 	}
 
+	async function supprimer() {
+		const ok = await confirmer({
+			titre: 'Supprimer la synthèse',
+			message:
+				"La synthèse et son entrée de l'historique sont retirées, y compris du carnet d'entretien. Vous pourrez en produire une nouvelle.",
+			libelleConfirmer: 'Supprimer',
+		});
+		if (!ok) return;
+		enCours = true;
+		try {
+			await syntheses.supprimer(synthese.ticket_id);
+			dispatch('change', synthese);
+			toast('success', 'Synthèse supprimée');
+		} catch (e) {
+			toast('error', messageErreur(e));
+		} finally {
+			enCours = false;
+		}
+	}
+
 	async function valider() {
 		const ok = await confirmer({
 			titre: 'Valider la synthèse',
 			message:
-				"Validée, la synthèse est lue par tous ceux qui lisent l'affaire, et versée au carnet d'entretien. Elle ne se modifie plus.",
+				"Validée, la synthèse est lue par tous ceux qui lisent l'affaire, et versée au carnet d'entretien. Le conseil peut encore la corriger ou la supprimer.",
 			libelleConfirmer: 'Valider',
 		});
 		if (ok) await geste(() => syntheses.valider(synthese.ticket_id), 'Synthèse validée');
@@ -279,9 +301,11 @@
 		</p>
 	{/if}
 
-	{#if gestes && brouillon}
+	{#if gestes}
 		<!--  Le mode se lit sur l'icône qui a ouvert le formulaire (`aria-pressed`,
-		      ux-patterns §13 bis) : la rangée reste, les autres gestes attendent. -->
+		      ux-patterns §13 bis) : la rangée reste, les autres gestes attendent.
+		      Relancer, Recommencer et Valider sont ceux d'un BROUILLON ; Modifier et
+		      Supprimer valent à tout état — la corbeille en dernier, irréversible. -->
 		<div class="gestes">
 			<button
 				type="button"
@@ -292,24 +316,34 @@
 				disabled={enCours || !!proposition}
 				on:click={ouvrirEdition}>✏️</button
 			>
+			{#if brouillon}
+				<button
+					type="button"
+					class="btn btn-outline btn-sm"
+					disabled={enCours || edition || !!proposition}
+					on:click={relancer}>✨ Relancer</button
+				>
+				<button
+					type="button"
+					class="btn btn-outline btn-sm"
+					disabled={enCours || edition || !!proposition}
+					on:click={recommencer}>↺ Recommencer</button
+				>
+				<button
+					type="button"
+					class="btn btn-primary btn-sm"
+					disabled={enCours || edition || vide || !!proposition}
+					title={vide ? 'Rédigez la synthèse avant de la valider' : undefined}
+					on:click={valider}>✅ Valider</button
+				>
+			{/if}
 			<button
 				type="button"
-				class="btn btn-outline btn-sm"
+				class="btn-icon-danger"
+				aria-label="Supprimer la synthèse"
+				title="Supprimer la synthèse"
 				disabled={enCours || edition || !!proposition}
-				on:click={relancer}>✨ Relancer</button
-			>
-			<button
-				type="button"
-				class="btn btn-outline btn-sm"
-				disabled={enCours || edition || !!proposition}
-				on:click={recommencer}>↺ Recommencer</button
-			>
-			<button
-				type="button"
-				class="btn btn-primary btn-sm"
-				disabled={enCours || edition || vide || !!proposition}
-				title={vide ? 'Rédigez la synthèse avant de la valider' : undefined}
-				on:click={valider}>✅ Valider</button
+				on:click={supprimer}>🗑️</button
 			>
 		</div>
 	{/if}

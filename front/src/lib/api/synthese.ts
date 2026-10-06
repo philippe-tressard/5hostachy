@@ -165,4 +165,5 @@ export const syntheses = {
 	valider: (ticketId: number) => api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/valider`),
 	produire: (ticketId: number) =>
 		api.post<SyntheseAffaire>(`/tickets/${ticketId}/synthese/produire`),
+	supprimer: (ticketId: number) => api.delete(`/tickets/${ticketId}/synthese`),
 };

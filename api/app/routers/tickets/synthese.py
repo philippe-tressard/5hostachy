@@ -3,7 +3,8 @@
 | Route | Qui | Ce qu'elle fait |
 |---|---|---|
 | `GET …/synthese` | qui lit l'affaire | la synthèse lisible (brouillon : conseil seul), et si l'on peut en produire une |
-| `PATCH …/synthese` | conseil, admin | « Modifier » les trois textes d'un brouillon — les métriques ne s'éditent pas |
+| `PATCH …/synthese` | conseil, admin | « Modifier » les trois textes, brouillon ou validée — les métriques ne s'éditent pas |
+| `DELETE …/synthese` | conseil, admin | « Supprimer » la synthèse et sa Suite, brouillon ou validée — « Produire » reste offert |
 | `POST …/synthese/relancer` | conseil, admin | PROPOSE une rédaction, avec un complément au prompt |
 | `POST …/synthese/recommencer` | conseil, admin | PROPOSE une rédaction, sans complément |
 | `POST …/propositions/{id}/appliquer` | conseil, admin | la rédaction proposée remplace le texte |
@@ -25,9 +26,10 @@ from sqlmodel import Session, select
 from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import est_moderateur, get_current_user
 from app.database import get_session
-from app.models.core import Ticket, Utilisateur
+from app.models.core import Ticket, TicketEvolution, Utilisateur
 from app.models.synthese import (
     A_PRODUIRE,
+    ANNULEE,
     BROUILLON,
     VALIDEE,
     SyntheseAffaire,
@@ -61,13 +63,21 @@ def _exiger_conseil(user: Utilisateur) -> None:
         raise HTTPException(403, "Réservé au conseil syndical et à l'administration")
 
 
-def _brouillon(session: Session, ticket: Ticket) -> SyntheseAffaire:
-    """La synthèse en brouillon de l'affaire — seule forme qui se modifie."""
+def _courante(session: Session, ticket: Ticket) -> SyntheseAffaire:
+    """La synthèse affichée de l'affaire — brouillon ou validée."""
     synthese = synthese_courante(session, ticket.id)
     if synthese is None:
         raise HTTPException(409, "Cette affaire n'a pas de synthèse à modifier")
+    return synthese
+
+
+def _brouillon(session: Session, ticket: Ticket) -> SyntheseAffaire:
+    """La synthèse en brouillon — seule forme que l'assistant relance et que l'on valide.
+
+    Le texte, lui, se corrige et la synthèse se supprime à tout état (`_courante`)."""
+    synthese = _courante(session, ticket)
     if synthese.statut != BROUILLON:
-        raise HTTPException(409, "Cette synthèse est validée : elle ne se modifie plus")
+        raise HTTPException(409, "Cette synthèse est validée : elle n'est plus à relire")
     return synthese
 
 
@@ -113,16 +123,47 @@ def modifier_synthese(
     user: Utilisateur = Depends(get_current_user),
 ):
     _exiger_conseil(user)
-    synthese = _brouillon(
+    synthese = _courante(
         session, exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
     )
-    for champ, texte in body.model_dump(exclude_unset=True).items():
-        setattr(synthese, champ, (texte or "").strip())
+    corrections = {c: (v or "").strip() for c, v in body.model_dump(exclude_unset=True).items()}
+    #  Une synthèse validée est lue de tous et versée au carnet : elle ne se vide pas.
+    if synthese.statut == VALIDEE and not corrections.get("synthese", synthese.synthese):
+        raise HTTPException(422, "La synthèse validée ne peut pas être vide : supprimez-la plutôt")
+    for champ, texte in corrections.items():
+        setattr(synthese, champ, texte)
     synthese.mis_a_jour_le = horloge.maintenant()
     session.add(synthese)
     session.commit()
     session.refresh(synthese)
     return synthese_lue(session, synthese, conseil=True)
+
+
+@router.delete("/{ticket_id}/synthese", status_code=204)
+def supprimer_synthese(
+    ticket_id: int,
+    session: Session = Depends(get_session),
+    user: Utilisateur = Depends(get_current_user),
+):
+    """Retire la synthèse affichée et sa Suite du fil.
+
+    La ligne reste, `annulee` — « gardée, plus affichée », comme une synthèse
+    remplacée : elle ne bloque pas une nouvelle production (`STATUTS_VIVANTS`),
+    et « Produire la synthèse » redevient offert au conseil."""
+    _exiger_conseil(user)
+    synthese = _courante(
+        session, exiger_objet_autorise(session, Ticket, ticket_id, "Ticket", user, ticket_visible)
+    )
+    evolution = (
+        session.get(TicketEvolution, synthese.evolution_id) if synthese.evolution_id else None
+    )
+    if evolution is not None:
+        session.delete(evolution)
+    synthese.evolution_id = None
+    synthese.statut = ANNULEE
+    synthese.mis_a_jour_le = horloge.maintenant()
+    session.add(synthese)
+    session.commit()
 
 
 async def _proposer(session: Session, synthese: SyntheseAffaire, user, complement):
