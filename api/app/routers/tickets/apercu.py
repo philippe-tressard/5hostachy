@@ -61,8 +61,7 @@ from app.utils.apercu_diffusion import (
     apercu_email,
     apercu_whatsapp,
 )
-from app.utils.fichiers import est_image
-from app.utils.photos import photos_internes, photos_json
+from app.utils.photos import photos_internes, photos_json, premiere_image
 
 from .actualite import contexte_actualite
 from .courriels import contexte_ticket_syndic, destinataires_syndic_cs
@@ -270,12 +269,13 @@ def apercu_diffusion(
                 brouillon.commentaire,
                 site_url=base_site((config_diffusion(session) or {}).get("site_url")),
                 suite_enregistree=False,
+                fichiers_urls=brouillon.fichiers_urls,
             )
-            titre, contenu, photo, lien = suite.titre, suite.contenu, None, suite.lien
+            titre, contenu, photo, lien = suite.titre, suite.contenu, suite.photo, suite.lien
         else:
             titre = ticket.titre if actualite else f"🎫 {ticket.titre}"
             contenu, lien = ticket.description, None
-            photo = next((u for u in photos_internes(brouillon.photos_urls) if est_image(u)), None)
+            photo = premiere_image(brouillon.photos_urls)
         canaux.append(
             apercu_whatsapp(
                 session,

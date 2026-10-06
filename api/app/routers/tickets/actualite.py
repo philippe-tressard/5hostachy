@@ -188,6 +188,7 @@ def _partager_sur_le_groupe(
     background_tasks: BackgroundTasks,
     *,
     commentaire: Optional[str] = None,
+    fichiers_urls: Optional[list[str]] = None,
 ) -> None:
     from app.utils.diffusion import config_diffusion, diffuser
 
@@ -213,8 +214,9 @@ def _partager_sur_le_groupe(
             commentaire,
             site_url=site,
             suite_enregistree=True,
+            fichiers_urls=fichiers_urls,
         )
-        titre, contenu, photo, lien = suite.titre, suite.contenu, None, suite.lien
+        titre, contenu, photo, lien = suite.titre, suite.contenu, suite.photo, suite.lien
     diffuser(
         background_tasks,
         config,
@@ -363,7 +365,13 @@ def diffuser_actualite(
     if reservee_au_conseil(ticket):
         return
     if whatsapp:
-        _partager_sur_le_groupe(session, ticket, background_tasks, commentaire=commentaire)
+        _partager_sur_le_groupe(
+            session,
+            ticket,
+            background_tasks,
+            commentaire=commentaire,
+            fichiers_urls=fichiers_urls,
+        )
     if syndic or cs or auteur:
         _ecrire_au_syndic_et_au_cs(
             session,

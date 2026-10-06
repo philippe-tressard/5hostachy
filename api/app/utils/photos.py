@@ -9,6 +9,8 @@ de données, mais rien n'oblige à dupliquer la logique par-dessus.
 import json
 from typing import Optional
 
+from app.utils.fichiers import est_image
+
 
 def parse_photos(raw: Optional[str]) -> list[str]:
     """Tableau JSON stocké → liste d'URLs.
@@ -49,6 +51,16 @@ def premiere_photo(raw: Optional[str]) -> Optional[str]:
     """
     urls = parse_photos(raw)
     return urls[0] if urls else None
+
+
+def premiere_image(urls: Optional[list[str]]) -> Optional[str]:
+    """Première IMAGE interne d'une liste d'URLs mêlant photos et documents, ou None.
+
+    Une Suite ne connaît qu'une liste `fichiers_urls` : les photos y sont mêlées
+    aux PDF, et le canal mono-image (WhatsApp) ne prend qu'une image. Les
+    documents joints ne partent pas — d'où le filtre sur le type.
+    """
+    return next((u for u in photos_internes(urls or []) if est_image(u)), None)
 
 
 def photos_json(urls: Optional[list]) -> str:
