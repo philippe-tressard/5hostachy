@@ -100,6 +100,11 @@ def _cs(moteur):
     return client_http(moteur, RoleUtilisateur.conseil_syndical)[0]
 
 
+def _admin(moteur):
+    """Seule l'administration charge le texte : les tests qui en ont besoin passent par elle."""
+    return client_http(moteur, RoleUtilisateur.admin)[0]
+
+
 def _charger(http, contenu: str = TEXTE, nom: str = "rcp.md"):
     return http.post("/reglement/textes", json={"nom_fichier": nom, "contenu": contenu})
 
@@ -126,7 +131,7 @@ def test_un_texte_qui_n_est_pas_un_reglement_est_refuse(contenu, nom, code):
 
 
 def test_recharger_le_texte_en_vigueur_ne_cree_pas_de_version(moteur):
-    http = _cs(moteur)
+    http = _admin(moteur)
     premier = _charger(http).json()
     assert _charger(http, TEXTE, "copie.md").json()["id"] == premier["id"]
     assert http.get("/reglement").json()["nb_versions"] == 1
@@ -149,6 +154,16 @@ def test_seuls_le_conseil_et_l_administration_passent(moteur, assistant, role):
     assert assistant.messages == []
 
 
+def test_charger_le_texte_est_reserve_a_l_administration(moteur, assistant):
+    """Le conseil lit, interroge et publie ; il ne remplace pas le texte que l'assistant lit."""
+    cs = _cs(moteur)
+    assert _charger(cs).status_code == 403
+    assert cs.get("/reglement").json()["texte"] is None
+    admin = _admin(moteur)
+    assert _charger(admin).status_code == 200
+    assert cs.get("/reglement").json()["texte"] is not None
+
+
 def test_sans_texte_la_question_ne_part_pas(moteur, assistant):
     reponse = _cs(moteur).post("/reglement/questions", json={"question": "Puis-je ?"})
     assert reponse.status_code == 400
@@ -159,7 +174,7 @@ def test_sans_texte_la_question_ne_part_pas(moteur, assistant):
 
 
 def test_le_reglement_part_en_tete_et_la_question_a_la_fin(moteur, assistant):
-    http = _cs(moteur)
+    http = _admin(moteur)
     _charger(http)
     assert (
         http.post("/reglement/questions", json={"question": "Puis-je exercer ?"}).status_code == 201
@@ -172,7 +187,7 @@ def test_le_reglement_part_en_tete_et_la_question_a_la_fin(moteur, assistant):
 
 
 def test_chaque_extrait_est_verifie_et_situe_par_le_code(moteur, assistant):
-    http = _cs(moteur)
+    http = _admin(moteur)
     _charger(http)
     q = http.post("/reglement/questions", json={"question": "Puis-je exercer ?"}).json()
     assert q["verdict"] == "sous_conditions"
@@ -187,7 +202,7 @@ def test_chaque_extrait_est_verifie_et_situe_par_le_code(moteur, assistant):
 
 
 def test_une_reponse_garde_la_version_qu_elle_a_lue(moteur, assistant):
-    http = _cs(moteur)
+    http = _admin(moteur)
     _charger(http)
     http.post("/reglement/questions", json={"question": "Puis-je exercer ?"})
     _charger(http, TEXTE + "\nVersion corrigée.")
@@ -220,7 +235,7 @@ def test_un_verdict_inconnu_devient_incertain_et_une_reponse_vide_est_refusee():
 
 
 def test_une_reponse_relue_se_publie_une_fois_dans_la_faq(moteur, assistant):
-    http = _cs(moteur)
+    http = _admin(moteur)
     _charger(http)
     q = http.post("/reglement/questions", json={"question": "Puis-je exercer ?"}).json()
     corps = {

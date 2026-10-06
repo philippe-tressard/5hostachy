@@ -1,10 +1,11 @@
 """Questions au règlement de copropriété — Espace CS › Règlement (03/10/2026).
 
-Le conseil syndical y charge le texte de travail du règlement (Markdown), pose
-la question d'un résident, relit l'historique et publie une réponse relue dans
-la FAQ. Tout est réservé au conseil syndical et à l'administration : l'appel est
-facturé, et la réponse est un avis à relayer après relecture, pas un texte que
-le résident lirait seul (`standards/03` §1 — l'écran masque, le serveur refuse).
+L'administration y charge le texte de travail du règlement (Markdown) ; le conseil
+syndical pose la question d'un résident, relit l'historique et publie une réponse
+relue dans la FAQ. Tout est réservé au conseil syndical et à l'administration :
+l'appel est facturé, et la réponse est un avis à relayer après relecture, pas un
+texte que le résident lirait seul (`standards/03` §1 — l'écran masque, le serveur
+refuse).
 
 La logique vit dans `utils/question_reglement/` ; ce routeur ne fait que la servir.
 """
@@ -19,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlmodel import Session, col, func, select
 
-from app.auth.deps import require_cs_or_admin
+from app.auth.deps import require_admin, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Utilisateur
 from app.models.reglement import QuestionReglement, TexteReglement
@@ -182,10 +183,12 @@ def lister_questions(
 def charger_texte(
     body: TexteCharge,
     session: Session = Depends(get_session),
-    user: Utilisateur = Depends(require_cs_or_admin),
+    user: Utilisateur = Depends(require_admin),
 ):
-    """Charge une version du texte. Le même contenu que la version en vigueur
-    ne crée rien : elle est rendue telle quelle."""
+    """Charge une version du texte — geste de l'administration seule : le texte
+    est ce que l'assistant lit pour TOUTES les questions du conseil, et chaque
+    version en plus est une base à relire. Le même contenu que la version en
+    vigueur ne crée rien : elle est rendue telle quelle."""
     version, _ = charger(session, body.contenu, body.nom_fichier, user.id)
     return _lire_texte(session, version)
 

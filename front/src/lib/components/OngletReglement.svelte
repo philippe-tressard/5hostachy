@@ -34,6 +34,7 @@
 	import { categorieSaisie, saisieFaqVide, type SaisieFaq } from '$lib/faq';
 	import { richEmpty } from '$lib/publications';
 	import { ACCEPT_TEXTE_REGLEMENT } from '$lib/reglement';
+	import { isAdmin } from '$lib/stores/auth';
 	import { fmtNombre } from '$lib/utils';
 
 	let etat: EtatReglement | null = null;
@@ -166,26 +167,30 @@
 				</p>
 			{:else}
 				<p class="aide">
-					Aucun texte n'est chargé : chargez le règlement pour pouvoir l'interroger.
+					{$isAdmin
+						? "Aucun texte n'est chargé : chargez le règlement pour pouvoir l'interroger."
+						: "Aucun texte n'est chargé : l'administration doit charger le règlement avant qu'on puisse l'interroger."}
 				</p>
 			{/if}
-			<FichiersUpload
-				differe
-				bind:fichiers
-				max={1}
-				accept={ACCEPT_TEXTE_REGLEMENT}
-				types="Markdown (.md)"
-				label="Choisir le fichier"
-				titre={etat.texte
-					? 'Charger une nouvelle version (Markdown)'
-					: 'Charger le texte (Markdown)'}
-			/>
-			{#if fichiers.length}
-				<div class="form-actions">
-					<button class="btn btn-primary" disabled={chargementTexte} on:click={chargerTexte}
-						>{chargementTexte ? 'Chargement…' : 'Charger ce texte'}</button
-					>
-				</div>
+			{#if $isAdmin}
+				<FichiersUpload
+					differe
+					bind:fichiers
+					max={1}
+					accept={ACCEPT_TEXTE_REGLEMENT}
+					types="Markdown (.md)"
+					label="Choisir le fichier"
+					titre={etat.texte
+						? 'Charger une nouvelle version (Markdown)'
+						: 'Charger le texte (Markdown)'}
+				/>
+				{#if fichiers.length}
+					<div class="form-actions">
+						<button class="btn btn-primary" disabled={chargementTexte} on:click={chargerTexte}
+							>{chargementTexte ? 'Chargement…' : 'Charger ce texte'}</button
+						>
+					</div>
+				{/if}
 			{/if}
 			<p class="aide">
 				Le texte reste dans l'application : il n'est ni publié, ni versé au dépôt du code. Les
