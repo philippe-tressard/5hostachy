@@ -244,11 +244,15 @@
 				<span class="evol-icon">{evolutionIcone(evol.type)}</span>
 				<div class="evol-body">
 					<div class="evol-ligne-meta">
-						<span class="evol-meta"
-							>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
-								· {evol.auteur_nom}{/if}</span
-						>
-						<MarqueIA assiste={evol.assiste_ia} />
+						<!--  🔴 La marque ✨ est COLLÉE au nom (06/10/2026) : enfant direct de la
+						      ligne en `space-between`, elle se répartissait au milieu. -->
+						<span class="evol-qui">
+							<span class="evol-meta"
+								>{fmtDatetime(evol.cree_le)}{#if evol.auteur_nom}
+									· {evol.auteur_nom}{/if}</span
+							>
+							<MarqueIA assiste={evol.assiste_ia} />
+						</span>
 						<!--  🔴 LES DEUX ICÔNES DANS UN MÊME GROUPE, cadré à droite
 						      (18/08/2026, signalé à l'écran). Elles étaient enfants directs
 						      d'une ligne en `space-between` : à DEUX enfants — la méta et le
@@ -320,23 +324,13 @@
 							<div class="evol-content rich-content">{@html safeDescription(evol.contenu)}</div>
 						{/if}
 						<MessageOrigine texte={evol.contenu_origine} />
-						<!--  🔴 GRAND FORMAT, et c'est un REVIREMENT (18/08/2026).
-						      `ux-patterns` §11 rangeait les fils d'évolutions du côté
-						      « vignette », avec un argument juste : elle signale la photo
-						      sans casser le rythme de lecture d'une liste qu'on survole.
-
-						      L'écran l'a réfuté, capture à l'appui : un fil d'Historique
-						      ne s'atteint qu'en DÉPLIANT une carte. Quand on l'a sous les
-						      yeux, on a déjà demandé à voir — et sur un événement de
-						      calendrier, les photos du suivi sont TOUT le contenu (« voici
-						      les anomalies relevées »), réduites à trois timbres-poste de
-						      72 px là où le même dossier, s'il avait été un ticket, les
-						      montrait en grand avec son compteur « 1 / 3 ».
-
-						      La règle de §11 ne change pas, sa lecture si : le critère est
-						      « survole-t-on, ou a-t-on demandé à voir ? », et un fil déplié
-						      est du second côté. `compact` reste — il ne concerne que la
-						      typographie des liens de documents. -->
+						<!--  🔴 GRAND FORMAT, et c'est un REVIREMENT (18/08/2026) : `ux-patterns`
+						      §11 rangeait les fils du côté « vignette » (on survole une liste).
+						      Capture à l'appui : un fil d'Historique ne s'atteint qu'en DÉPLIANT
+						      une carte — on a donc déjà demandé à voir, et sur un événement de
+						      calendrier les photos du suivi sont TOUT le contenu. Le critère de
+						      §11 ne change pas (« survole-t-on, ou a-t-on demandé à voir ? »),
+						      sa lecture si. `compact` reste : typographie des liens seulement. -->
 						{#if evol.fichiers_urls?.length}
 							<div class="evol-pj">
 								<PiecesJointes urls={evol.fichiers_urls} format="grand" compact />
@@ -419,6 +413,13 @@
 		display: flex;
 		gap: 0.3rem;
 		flex-shrink: 0;
+	}
+	/*  La méta et la marque IA : un seul enfant de la ligne, donc la marque suit le nom. */
+	.evol-qui {
+		display: flex;
+		align-items: baseline;
+		gap: 0.3rem;
+		min-width: 0;
 	}
 	.evol-meta {
 		font-size: var(--fs-xs);
