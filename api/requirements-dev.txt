@@ -7,7 +7,7 @@
 pytest==9.1.1
 #  Tire des clés RSA pour signer de vrais messages dans `test_courriel_authenticite`.
 #  Déjà dans l'image par `fastapi-mail` ; épinglé ici parce que les tests l'importent.
-cryptography==50.0.1
+cryptography==50.0.2
 #  Pose un sceau ARC (`dkim.arc_sign`) dans `test_courriel_authenticite` : la
 #  VÉRIFICATION n'en a pas besoin, d'où son absence de l'image. Apache 2.0.
 authres==1.2.0
