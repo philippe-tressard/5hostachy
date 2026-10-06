@@ -77,4 +77,5 @@ export const reglement = {
 	poser: (question: string) => api.post<QuestionReglement>('/reglement/questions', { question }),
 	publierDansLaFaq: (id: number, corps: PublicationFaq) =>
 		api.post<QuestionReglement>(`/reglement/questions/${id}/faq`, corps),
+	supprimerQuestion: (id: number) => api.delete(`/reglement/questions/${id}`),
 };

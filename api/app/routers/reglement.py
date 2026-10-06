@@ -230,3 +230,19 @@ def publier_dans_la_faq(
     session.commit()
     session.refresh(q)
     return _lire_questions(session, [q])[0]
+
+
+@router.delete("/questions/{question_id}", status_code=204)
+def supprimer_question(
+    question_id: int,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_admin),
+):
+    """Efface une question et sa réponse — geste de l'administration seule.
+
+    L'historique évite de repayer une question déjà posée : on n'y touche que
+    pour retirer une réponse fausse ou une question qui n'aurait pas dû être
+    posée. L'entrée de FAQ née de la réponse, elle, reste : c'est un contenu
+    publié, qui se retire depuis la FAQ."""
+    session.delete(ou_404(session, QuestionReglement, question_id, "Question"))
+    session.commit()

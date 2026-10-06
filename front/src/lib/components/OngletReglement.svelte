@@ -28,6 +28,7 @@
 		type QuestionReglement,
 	} from '$lib/api';
 	import { basculer } from '$lib/accordeon';
+	import { confirmer } from '$lib/confirmation';
 	import { fmtDatetime } from '$lib/date';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { messageErreur } from '$lib/erreurs';
@@ -102,6 +103,30 @@
 			toast('error', messageErreur(e));
 		} finally {
 			envoi = false;
+		}
+	}
+
+	async function supprimerQuestion(q: QuestionReglement) {
+		const dansLaFaq = q.faq_item_id
+			? " L'entrée de FAQ publiée à partir de cette réponse reste, et se retire depuis la FAQ."
+			: '';
+		if (
+			!(await confirmer({
+				titre: `Supprimer la question « ${q.question} » ?`,
+				message: `La question et sa réponse sont effacées de l'historique, et une nouvelle question identique sera refacturée.${dansLaFaq}`,
+				libelleConfirmer: 'Supprimer',
+				danger: true,
+			}))
+		)
+			return;
+		try {
+			await reglementApi.supprimerQuestion(q.id);
+			questions = questions.filter((x) => x.id !== q.id);
+			if (ouvert === q.id) ouvert = null;
+			if (publication === q.id) publication = null;
+			toast('success', 'Question supprimée.');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -248,6 +273,7 @@
 					ouvert = basculer(ouvert, q.id);
 				}}
 				on:publier={() => ouvrirPublication(q)}
+				on:supprimer={() => supprimerQuestion(q)}
 			>
 				<FormulaireFaq
 					slot="formulaire"

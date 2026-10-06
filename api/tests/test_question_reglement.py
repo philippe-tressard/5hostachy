@@ -164,6 +164,18 @@ def test_charger_le_texte_est_reserve_a_l_administration(moteur, assistant):
     assert cs.get("/reglement").json()["texte"] is not None
 
 
+def test_seule_l_administration_supprime_une_question(moteur, assistant):
+    admin = _admin(moteur)
+    _charger(admin)
+    cs = _cs(moteur)
+    identifiant = admin.post("/reglement/questions", json={"question": "Puis-je ?"}).json()["id"]
+    assert cs.delete(f"/reglement/questions/{identifiant}").status_code == 403
+    assert len(cs.get("/reglement/questions").json()) == 1
+    assert admin.delete(f"/reglement/questions/{identifiant}").status_code == 204
+    assert cs.get("/reglement/questions").json() == []
+    assert admin.delete(f"/reglement/questions/{identifiant}").status_code == 404
+
+
 def test_sans_texte_la_question_ne_part_pas(moteur, assistant):
     reponse = _cs(moteur).post("/reglement/questions", json={"question": "Puis-je ?"})
     assert reponse.status_code == 400
