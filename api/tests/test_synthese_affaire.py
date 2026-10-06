@@ -246,6 +246,35 @@ def test_un_brouillon_est_invisible_d_un_lecteur_ordinaire(session, envois, assi
     assert construire_carnet(session, lecteur=cs)[0]["synthese"]["statut"] == VALIDEE
 
 
+def test_une_synthese_validee_se_corrige_et_se_supprime(session, envois, assistant):
+    resident, cs = _personnes(session)
+    ticket = _close(session, resident)
+    demande = _produite(session, ticket)
+    routes.valider_synthese(ticket.id, session=session, user=cs)
+
+    lue = routes.modifier_synthese(
+        ticket.id, SyntheseModification(synthese="<p>Corrigé</p>"), session=session, user=cs
+    )
+    assert lue.statut == VALIDEE and lue.synthese == "<p>Corrigé</p>"
+    with pytest.raises(HTTPException) as vide:
+        routes.modifier_synthese(
+            ticket.id, SyntheseModification(synthese=""), session=session, user=cs
+        )
+    assert vide.value.status_code == 422
+    with pytest.raises(HTTPException) as refus:
+        routes.supprimer_synthese(ticket.id, session=session, user=resident)
+    assert refus.value.status_code == 403
+
+    evol_id = demande.evolution_id
+    routes.supprimer_synthese(ticket.id, session=session, user=cs)
+    session.refresh(demande)
+    assert demande.statut == ANNULEE and demande.evolution_id is None
+    assert session.get(TicketEvolution, evol_id) is None
+    etat = routes.lire_synthese(ticket.id, session=session, user=cs)
+    assert etat.synthese is None and etat.produisible
+    assert not construire_carnet(session, lecteur=cs)[0]["synthese"]
+
+
 def test_une_nouvelle_cloture_remplace_la_synthese_validee(session, envois, assistant):
     resident, cs = _personnes(session)
     ticket = _close(session, resident)
