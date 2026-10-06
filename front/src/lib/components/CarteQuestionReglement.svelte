@@ -25,6 +25,7 @@
 	import type { QuestionReglement } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
+	import { isAdmin } from '$lib/stores/auth';
 
 	export let q: QuestionReglement;
 	/** La carte est-elle dépliée ? L'état vit dans l'onglet : une seule ouverte. */
@@ -32,7 +33,7 @@
 	/** La boîte « Publier dans la FAQ » est-elle ouverte sur cette carte ? */
 	export let publication = false;
 
-	const dispatch = createEventDispatcher<{ basculer: void; publier: void }>();
+	const dispatch = createEventDispatcher<{ basculer: void; publier: void; supprimer: void }>();
 
 	$: verifies = q.extraits.filter((e) => e.verifie).length;
 </script>
@@ -61,6 +62,14 @@
 					title="Publier dans la FAQ"
 					aria-pressed={publication}
 					on:click|stopPropagation={() => dispatch('publier')}>📚</button
+				>
+			{/if}
+			{#if $isAdmin}
+				<button
+					class="btn-icon-danger"
+					aria-label="Supprimer la question"
+					title="Supprimer la question et sa réponse"
+					on:click|stopPropagation={() => dispatch('supprimer')}>🗑️</button
 				>
 			{/if}
 		</svelte:fragment>

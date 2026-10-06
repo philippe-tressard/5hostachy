@@ -21,11 +21,12 @@ Charger un texte corrigé crée une ligne : chaque question garde `texte_id`, la
 version qu'elle a lue. Une réponse ancienne se relit donc contre le texte qui
 l'a fondée, pas contre celui d'aujourd'hui.
 
-## Ni `actif` ni suppression
+## Ni `actif`, et la suppression est à l'administration seule
 
-Rien ne quitte les listes : l'historique des questions est ce qui évite de
-repayer une question déjà posée. Une ligne fausse se corrige en reposant la
-question, pas en effaçant la trace (`utils/archivage`, aucune règle à déclarer).
+Rien ne quitte les listes d'elle-même : l'historique des questions est ce qui
+évite de repayer une question déjà posée. Seul l'administrateur efface une
+question (`DELETE /reglement/questions/{id}`) — une réponse fausse, une question
+qui n'aurait pas dû être posée —, et l'entrée de FAQ qu'elle a pu produire reste.
 """
 
 from __future__ import annotations

@@ -28,12 +28,14 @@
 		type QuestionReglement,
 	} from '$lib/api';
 	import { basculer } from '$lib/accordeon';
+	import { confirmer } from '$lib/confirmation';
 	import { fmtDatetime } from '$lib/date';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
 	import { messageErreur } from '$lib/erreurs';
 	import { categorieSaisie, saisieFaqVide, type SaisieFaq } from '$lib/faq';
 	import { richEmpty } from '$lib/publications';
 	import { ACCEPT_TEXTE_REGLEMENT } from '$lib/reglement';
+	import { isAdmin } from '$lib/stores/auth';
 	import { fmtNombre } from '$lib/utils';
 
 	let etat: EtatReglement | null = null;
@@ -104,6 +106,30 @@
 		}
 	}
 
+	async function supprimerQuestion(q: QuestionReglement) {
+		const dansLaFaq = q.faq_item_id
+			? " L'entrée de FAQ publiée à partir de cette réponse reste, et se retire depuis la FAQ."
+			: '';
+		if (
+			!(await confirmer({
+				titre: `Supprimer la question « ${q.question} » ?`,
+				message: `La question et sa réponse sont effacées de l'historique, et une nouvelle question identique sera refacturée.${dansLaFaq}`,
+				libelleConfirmer: 'Supprimer',
+				danger: true,
+			}))
+		)
+			return;
+		try {
+			await reglementApi.supprimerQuestion(q.id);
+			questions = questions.filter((x) => x.id !== q.id);
+			if (ouvert === q.id) ouvert = null;
+			if (publication === q.id) publication = null;
+			toast('success', 'Question supprimée.');
+		} catch (e) {
+			toast('error', messageErreur(e));
+		}
+	}
+
 	async function ouvrirPublication(q: QuestionReglement) {
 		if (publication === q.id) {
 			publication = null;
@@ -166,26 +192,30 @@
 				</p>
 			{:else}
 				<p class="aide">
-					Aucun texte n'est chargé : chargez le règlement pour pouvoir l'interroger.
+					{$isAdmin
+						? "Aucun texte n'est chargé : chargez le règlement pour pouvoir l'interroger."
+						: "Aucun texte n'est chargé : l'administration doit charger le règlement avant qu'on puisse l'interroger."}
 				</p>
 			{/if}
-			<FichiersUpload
-				differe
-				bind:fichiers
-				max={1}
-				accept={ACCEPT_TEXTE_REGLEMENT}
-				types="Markdown (.md)"
-				label="Choisir le fichier"
-				titre={etat.texte
-					? 'Charger une nouvelle version (Markdown)'
-					: 'Charger le texte (Markdown)'}
-			/>
-			{#if fichiers.length}
-				<div class="form-actions">
-					<button class="btn btn-primary" disabled={chargementTexte} on:click={chargerTexte}
-						>{chargementTexte ? 'Chargement…' : 'Charger ce texte'}</button
-					>
-				</div>
+			{#if $isAdmin}
+				<FichiersUpload
+					differe
+					bind:fichiers
+					max={1}
+					accept={ACCEPT_TEXTE_REGLEMENT}
+					types="Markdown (.md)"
+					label="Choisir le fichier"
+					titre={etat.texte
+						? 'Charger une nouvelle version (Markdown)'
+						: 'Charger le texte (Markdown)'}
+				/>
+				{#if fichiers.length}
+					<div class="form-actions">
+						<button class="btn btn-primary" disabled={chargementTexte} on:click={chargerTexte}
+							>{chargementTexte ? 'Chargement…' : 'Charger ce texte'}</button
+						>
+					</div>
+				{/if}
 			{/if}
 			<p class="aide">
 				Le texte reste dans l'application : il n'est ni publié, ni versé au dépôt du code. Les
@@ -243,6 +273,7 @@
 					ouvert = basculer(ouvert, q.id);
 				}}
 				on:publier={() => ouvrirPublication(q)}
+				on:supprimer={() => supprimerQuestion(q)}
 			>
 				<FormulaireFaq
 					slot="formulaire"
