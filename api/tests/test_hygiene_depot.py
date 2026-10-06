@@ -177,3 +177,64 @@ def test_aucune_adresse_de_test_sur_un_fournisseur_reel():
         f"adresse(s) sur un fournisseur réel dans les tests : {trouvees}. "
         "Une boîte peut exister derrière : écrire `…@exemple.test`."
     )
+
+
+#: Exception assumée (#1581, arbitrage de Philippe du 06/10/2026, `security-audit` §8) :
+#: l'identifiant SSH d'exploitation et les IP du LAN restent dans le dépôt PUBLIC — LAN
+#: non routable, accès par clé. Elle n'est pas un oubli : elle est CIRCONSCRITE.
+_IDENTIFIANTS_EXPLOITATION = re.compile(r"ptressard|192\.168\.1\.22[23]")
+#: Les seuls endroits où ils vivent : l'exploitation, jamais l'application.
+ZONES_EXPLOITATION = ("scripts/", "infra/", "docs/", ".claude/")
+FICHIERS_RACINE_EXPLOITATION = ("CLAUDE.md", "boot-role-guard.sh")
+#: Nombre de fichiers suivis qui les portent. Échoue dans les deux sens : un de plus
+#: est une propagation à relire, un de moins est une valeur à baisser.
+FICHIERS_EXPLOITATION_ATTENDUS = 39
+
+
+def _fichiers_avec_identifiants_exploitation() -> list[str]:
+    chemins = []
+    for _, chemin in _index():
+        if chemin == CE_FICHIER:
+            continue
+        contenu = (RACINE / chemin).read_text(encoding="utf-8", errors="replace")
+        if _IDENTIFIANTS_EXPLOITATION.search(contenu):
+            chemins.append(chemin)
+    return chemins
+
+
+def test_la_sonde_des_identifiants_d_exploitation_distingue_le_reel_du_neutre():
+    assert _IDENTIFIANTS_EXPLOITATION.search("ssh ptressard@192.168.1.222")
+    assert _IDENTIFIANTS_EXPLOITATION.search("ip 192.168.1.223")
+    assert not _IDENTIFIANTS_EXPLOITATION.search("philippe-tressard, 192.168.1.50")
+    assert not _IDENTIFIANTS_EXPLOITATION.search("")  # cas zéro
+
+
+def test_identifiant_ssh_et_ip_du_lan_restent_dans_l_exploitation():
+    trouves = _fichiers_avec_identifiants_exploitation()
+    #  Cas zéro : un balayage qui ne trouve rien ne prouve pas l'absence.
+    assert trouves, "cas zéro : aucun fichier d'exploitation ne porte l'identifiant — sonde morte"
+    hors = [
+        c
+        for c in trouves
+        if not c.startswith(ZONES_EXPLOITATION) and c not in FICHIERS_RACINE_EXPLOITATION
+    ]
+    assert not hors, (
+        f"L'identifiant SSH ou une IP du LAN sort de l'exploitation : {hors}. "
+        "L'exception de #1581 ne couvre que scripts/, infra/, docs/, .claude/ "
+        "(`security-audit` §8) — pas l'application."
+    )
+    assert len(trouves) == FICHIERS_EXPLOITATION_ATTENDUS, (
+        f"{len(trouves)} fichier(s) portent l'identifiant (attendu "
+        f"{FICHIERS_EXPLOITATION_ATTENDUS}) : relire l'ajout, ou baisser la valeur "
+        "si un fichier a été nettoyé."
+    )
+
+
+def test_l_exception_est_declaree_dans_la_skill_de_securite():
+    skill = (RACINE / ".claude" / "skills" / "security-audit" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Exception assumée : l'identifiant SSH d'exploitation" in skill, (
+        "l'exception de #1581 n'est plus déclarée dans security-audit §8 — "
+        "une exception non écrite est un oubli qui ressemble à une décision"
+    )
