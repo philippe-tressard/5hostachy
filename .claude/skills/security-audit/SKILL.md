@@ -290,6 +290,30 @@ l'historique git la garde (`standards/14`). Trente-trois fichiers en portaient l
 - Historique : arbitré le 01/10/2026 — accepté tel quel, non réécrit (GitHub
   garde les références des PR ; une réécriture serait incomplète).
 
+#### Exception assumée : l'identifiant SSH d'exploitation et les IP du LAN (#1581)
+
+Arbitré par Philippe le **06/10/2026** (option « garder »), après l'audit du
+02/10/2026 : l'identifiant SSH des nœuds et leurs adresses `192.168.1.x`
+figurent dans les scripts, crontabs, sudoers et documents d'exploitation d'un dépôt
+PUBLIC. Ce n'est **pas** un oubli, c'est une décision :
+
+- une adresse du LAN (RFC 1918) n'est pas routable depuis Internet, et l'accès SSH
+  se fait par clé ed25519 — pas de mot de passe à deviner ;
+- les sortir du dépôt toucherait crontabs, sudoers et une quarantaine de scripts
+  (un lot d'infrastructure entier, avec le risque d'un nœud qui ne se reconnaît
+  plus), pour un gain de sécurité que la clé et le non-routage rendent faible.
+
+⚠️ **Ce que la décision suppose, et que le poste ne peut pas vérifier** : le port
+22 des nœuds n'est ouvert nulle part sur la box. Si un jour il l'est (redirection,
+accès distant), l'exception **se rouvre** et ces identifiants se sortent du dépôt.
+
+🔒 `api/tests/test_hygiene_depot.py` l'enferme : l'identifiant et les IP restent
+dans `scripts/`, `infra/`, `docs/`, `.claude/` et deux fichiers de la racine —
+**jamais** dans `api/app`, `front/src`, le bridge ni un test — et le nombre de
+fichiers qui les portent est **fixé** : il échoue dans les deux sens (un fichier de
+plus, ou un retiré sans baisser la valeur). Un nouvel identifiant d'infrastructure
+s'écrit dans les scripts d'exploitation, pas dans l'application.
+
 ### 9. Dépendances vulnérables (A06:2021)
 
 ```powershell

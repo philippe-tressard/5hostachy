@@ -429,6 +429,9 @@ importe les gestes du transport.
   les tests, les **migrations** et les **documents** — ces deux-là depuis
   #1544, une docstring de migration nommait deux employées du syndic ; ce qu'il
   ne voit pas : `.claude/skills/security-audit` §8.
+  **Exception assumée** (arbitrage du 06/10/2026, #1581) : l'identifiant SSH
+  d'exploitation et les IP du LAN restent dans les scripts, crontabs et documents —
+  jamais dans l'application ; 🔒 `test_hygiene_depot.py` l'enferme. Même skill, §8.
 
 ---
 
