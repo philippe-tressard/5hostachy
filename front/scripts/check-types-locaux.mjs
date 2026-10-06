@@ -21,13 +21,16 @@
  *  Le type va dans `$lib/api/types.ts` ou dans le module du domaine
  *  (`$lib/api/bailleur.ts` pour un bail), et le CLIENT le rend.
  *
- *  ## Ce qui est déclaré, et pourquoi deux listes
+ *  ## Ce qui est déclaré
  *
- *  - `DETTE` : les types d'entité encore dans un écran, à monter au fil de
- *    l'eau (#1044). La liste ne peut que DÉCROÎTRE : une entrée qui ne sert
- *    plus fait échouer le contrôle, comme un plafond périmé.
  *  - `LEGITIMES` : un `id` qui n'est pas celui d'une entité rendue par l'API —
- *    un objet d'interface, un état de formulaire. Chacun dit pourquoi.
+ *    un objet d'interface, un état de formulaire. Chacun dit pourquoi, et une
+ *    entrée qui ne sert plus fait échouer le contrôle.
+ *
+ *  Il n'y a plus de dette : la liste `DETTE` (#1044) est tombée à zéro le
+ *  06/10/2026 (#1571), et un plafond à zéro ne compte plus rien — il ne ferait
+ *  que laisser la place d'en réintroduire un. Un type d'entité neuf dans un
+ *  écran est refusé, sans échappatoire autre que `LEGITIMES`.
  *
  *  ⚠️ Le relevé lit l'ARBRE syntaxique (parseur TypeScript), pas le texte : un
  *  `id` imbriqué (`options: { id: number }[]`) n'est pas le champ du type, et
@@ -47,12 +50,6 @@ import { join, sep } from 'node:path';
 import ts from 'typescript';
 
 const RACINES = ['src/routes', 'src/lib/components'];
-
-/** Types d'entité encore déclarés dans un écran — à monter (#1044). */
-const DETTE = {
-	'lib/components/RubriqueHistorique.svelte::Entree': '#1044',
-	'routes/(app)/espace-cs/+page.svelte::PendingUser': '#1044',
-};
 
 /** Un `id` qui n'est pas celui d'une entité de l'API. */
 const LEGITIMES = {
@@ -150,11 +147,11 @@ for (const chemin of tous) {
 	for (const nom of typesAvecId(readFileSync(chemin, 'utf8'), chemin)) {
 		const cle = `${rel}::${nom}`;
 		vus.add(cle);
-		if (!(cle in DETTE) && !(cle in LEGITIMES)) nouveaux.push(cle);
+		if (!(cle in LEGITIMES)) nouveaux.push(cle);
 	}
 }
 
-const perimees = [...Object.keys(DETTE), ...Object.keys(LEGITIMES)].filter((c) => !vus.has(c));
+const perimees = Object.keys(LEGITIMES).filter((c) => !vus.has(c));
 
 if (nouveaux.length) {
 	console.error(`\n✗ ${nouveaux.length} type(s) d'entité déclaré(s) dans un écran :\n`);
@@ -179,5 +176,5 @@ if (perimees.length) {
 
 console.log(
 	`✓ Types locaux : aucun type d'entité nouveau dans les écrans — ` +
-		`${Object.keys(DETTE).length} en dette (#1044), ${Object.keys(LEGITIMES).length} légitimes.`,
+		`${Object.keys(LEGITIMES).length} légitimes.`,
 );

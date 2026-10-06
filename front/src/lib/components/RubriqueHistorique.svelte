@@ -44,6 +44,7 @@
 	import MarqueIA from '$lib/components/MarqueIA.svelte';
 	import MessageOrigine from '$lib/components/MessageOrigine.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import type { TicketEvolution } from '$lib/api/types';
 	import PiecesJointes from './PiecesJointes.svelte';
 	import { safeDescription } from '$lib/sanitize';
 	import { fmtDatetime } from '$lib/date';
@@ -51,28 +52,7 @@
 	import { evolutionIcone } from '$lib/evolutions';
 	import { peutEditer } from '$lib/droits';
 
-	/**  Une entrée du fil. Volontairement structurel et non `TicketEvolution` :
-	     les actualités ont leur propre type d'évolution, et cette rubrique doit
-	     pouvoir les recevoir sans que le composant connaisse une seule entité. */
-	interface Entree {
-		id: number;
-		type: string;
-		contenu?: string;
-		ancien_statut?: string;
-		nouveau_statut?: string;
-		auteur_id?: number;
-		auteur_nom?: string;
-		/** « Rédigé avec l'assistant IA » (#985). */
-		assiste_ia?: boolean;
-		/** Le texte reçu, quand l'assistant a mis en forme une réponse par courriel (#1322). */
-		contenu_origine?: string | null;
-		cree_le: string;
-		fichiers_urls?: string[];
-		/** Le périmètre que cette entrée déclare, quand elle en déclare un (#497). */
-		perimetre_cible?: string[];
-	}
-
-	export let evolutions: Entree[] = [];
+	export let evolutions: TicketEvolution[] = [];
 	/** Libellés du workflow — `STATUT_TICKET_LABELS` et rien d'autre (#415). */
 	export let statutLabels: Record<string, string> = {};
 	/** En-tête de la rubrique. Vide : le fil s'insère dans un bloc déjà nommé. */
@@ -175,11 +155,11 @@
 	 *   et RIEN ne permettait de les retirer — pas même à l'admin. Un fil est une
 	 *   mémoire ; une mémoire qui garde des faits inventés vaut moins qu'une mémoire
 	 *   trouée. */
-	function peutEffacer(evol: Entree): boolean {
+	function peutEffacer(evol: TicketEvolution): boolean {
 		return avecSuppression && estAdmin && TYPES_EFFACABLES.includes(evol.type);
 	}
 
-	function peutCorriger(evol: Entree): boolean {
+	function peutCorriger(evol: TicketEvolution): boolean {
 		if (!peutModifier || !TYPES_CORRIGEABLES.includes(evol.type)) return false;
 		//  `peutEditer` porte les trois cas — l'admin, l'auteur, et le « saisi pour ».
 		//  Cette fonction les réécrivait à la ligne près, moins le dernier : deux

@@ -4,6 +4,7 @@
 	import AnnuaireConseil from '$lib/components/AnnuaireConseil.svelte';
 	import AnnuaireSyndic from '$lib/components/AnnuaireSyndic.svelte';
 	import type { Inscrit, LigneImport, LotRapproche } from '$lib/annuaire-rapprochement';
+	import type { User } from '$lib/api/types';
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
 	import { validerCompte } from '$lib/comptes';
@@ -37,18 +38,6 @@
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
 
-	interface PendingUser {
-		id: number;
-		prenom: string;
-		nom: string;
-		statut: string;
-		//  Optionnel comme dans `User`, que le client rend (#1572) : le serveur
-		//  l'envoie toujours (`UserRead`, `null` par défaut).
-		batiment_id?: number | null;
-		cree_le: string;
-		nom_aide?: string | null;
-		prenom_aide?: string | null;
-	}
 	// -- Onglet -------------------------------------------------------------
 	//  🔴 UNE SEULE LISTE, et elle est dans la TABLE (`$lib/pages.ts`, 05/09/2026).
 	//  Elle a d'abord été écrite deux fois dans ce fichier (04/09), puis une fois
@@ -69,7 +58,7 @@
 
 	// -- Validations --------------------------------------------------------
 	let batimentsMap: Record<number, string> = {};
-	let comptesEnAttente: PendingUser[] = [];
+	let comptesEnAttente: User[] = [];
 	let commandesEnAttente: CommandeAccesEnAttente[] = [];
 	let loading = true;
 	$: nbComptes = comptesEnAttente.length;
@@ -143,13 +132,13 @@
 
 	// -- Validations handlers -----------------------------------------------
 	// Validation + Nouvel Arrivant
-	let cvModal: PendingUser | null = null;
+	let cvModal: User | null = null;
 	let cvNewArrivant = false;
 	let cvBatiment = '';
 	let cvAncienResident = '';
 	let cvSubmitting = false;
 
-	function openCSValidation(user: PendingUser) {
+	function openCSValidation(user: User) {
 		cvModal = user;
 		cvNewArrivant = false;
 		cvBatiment = user.batiment_id ? (batimentsMap[user.batiment_id] ?? '') : '';
