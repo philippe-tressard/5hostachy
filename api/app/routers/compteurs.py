@@ -26,7 +26,7 @@ from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import CompteurConfig, ReleveCompteur, Utilisateur
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement, nom_lisible
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import fichier_ou_404, ou_404
 
 #  Même préfixe que `prestataires.py` : les deux routeurs servent le même écran.
 logger = logging.getLogger(__name__)
@@ -255,9 +255,7 @@ def _servir_fichier_prive(nom: str, noms_autorises: set[str], libelle: str) -> F
     """
     if nom not in noms_autorises:
         raise HTTPException(404, f"{libelle} introuvable")
-    chemin = os.path.join(REPERTOIRE_PRIVE, nom)
-    if not os.path.isfile(chemin):
-        raise HTTPException(404, "Fichier introuvable sur le serveur")
+    chemin = fichier_ou_404(os.path.join(REPERTOIRE_PRIVE, nom))
     return FileResponse(chemin, filename=nom_lisible(nom))
 
 

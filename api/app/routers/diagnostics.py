@@ -6,7 +6,7 @@ from datetime import datetime, date as dateclass
 from app.utils import horloge
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -16,7 +16,7 @@ from app.database import get_session
 from app.models.core import DiagnosticRapport, DiagnosticType, Utilisateur
 from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 from app.utils.lecture import lire_objet
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import fichier_ou_404, ou_404
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +211,8 @@ def download_rapport(
     _: Utilisateur = Depends(get_current_user),
 ):
     rapport = ou_404(session, DiagnosticRapport, rapport_id, "Rapport")
-    if not os.path.exists(rapport.fichier_chemin):
-        raise HTTPException(404, "Fichier introuvable sur le serveur")
     return FileResponse(
-        rapport.fichier_chemin, filename=rapport.fichier_nom, media_type=rapport.mime_type
+        fichier_ou_404(rapport.fichier_chemin),
+        filename=rapport.fichier_nom,
+        media_type=rapport.mime_type,
     )

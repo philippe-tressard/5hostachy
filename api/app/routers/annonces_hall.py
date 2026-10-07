@@ -76,7 +76,7 @@ UPLOADS_ROOT = os.path.realpath(get_settings().uploads_dir)
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
 #  modularité) : ce qui DÉCLARE part, ce qui DÉCIDE reste.
 from app.utils.liens import base_site, nom_site
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import fichier_ou_404, ou_404
 from app.routers.annonces_hall_schemas import (  # noqa: E402
     AnnonceHallArchive,
     AnnonceHallBase,
@@ -409,10 +409,8 @@ def download_pdf(
     _: Utilisateur = Depends(require_cs_or_admin),
 ):
     annonce = ou_404(session, AnnonceHall, annonce_id, "Annonce")
-    if not annonce.pdf_chemin or not os.path.isfile(annonce.pdf_chemin):
-        raise HTTPException(404, "PDF introuvable sur le serveur")
     return FileResponse(
-        annonce.pdf_chemin,
+        fichier_ou_404(annonce.pdf_chemin, "PDF"),
         media_type="application/pdf",
         filename=annonce.pdf_nom or f"annonce-{annonce_id}.pdf",
     )
