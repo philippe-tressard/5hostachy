@@ -351,7 +351,7 @@ async def _envoyer_modele(
         return False
 
 
-def _envoi_actif(session: Session) -> bool:
+def envoi_actif(session: Session) -> bool:
     """L'envoi est-il actif ? La configuration prime sur le réglage.
 
     Écrit une fois : `smtp_enabled` absent de la base signifie « pas encore
@@ -412,7 +412,7 @@ async def send_email(
                 _log_email(session, code, to, "ignore", erreur="preference de batiment")
                 return False
 
-        if not _envoi_actif(session):
+        if not envoi_actif(session):
             return False
 
         return await _envoyer_modele(
@@ -464,7 +464,7 @@ async def send_email_group(
     """
     session, close_session = _session_ou_neuve(session)
     try:
-        if not _envoi_actif(session):
+        if not envoi_actif(session):
             return
 
         to_emails = [

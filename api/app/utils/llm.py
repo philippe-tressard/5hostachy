@@ -65,6 +65,7 @@ from app.utils.llm_fournisseurs import (
 )
 from app.utils import llm_journal, llm_limites
 from app.utils.llm_usages import USAGES, Usage, valeur_effort
+from app.utils.services import SERVICE_IA, service_actif
 
 #: 🔴 Ce module reste **la porte d'entrée unique**, même depuis que les
 #: fournisseurs vivent à côté (11/09/2026). Les appelants — routers, synthèse de
@@ -73,7 +74,6 @@ from app.utils.llm_usages import USAGES, Usage, valeur_effort
 #: contrat. C'est ce que déclare ce `__all__`, et c'est pourquoi les noms
 #: réexportés y figurent.
 __all__ = [
-    "CLE_ACTIF",
     "CLE_API",
     "CLE_BASE_URL",
     "CLE_DELAI",
@@ -151,7 +151,8 @@ def _charge(reponse: Any) -> dict[str, Any]:
 #: qu'une clé existe (03/09/2026 — `smtp_password` avait voyagé en clair dans la
 #: réponse HTTP alors que l'écran ne l'affichait pas ; la protection était dans
 #: le rendu, c'est-à-dire nulle part).
-CLE_ACTIF = "llm_actif"
+#  L'activation de l'assistant n'est plus une clé d'ici : c'est celle du SERVICE
+#  (`utils/services`, #1718), lue par `service_actif` comme les autres.
 CLE_FOURNISSEUR = "llm_fournisseur"
 CLE_API = "llm_api_key"
 CLE_BASE_URL = "llm_base_url"
@@ -257,7 +258,7 @@ def config_llm(session: Session, usage: Optional[str] = None) -> ConfigLLM:
     fournisseur = FOURNISSEURS.get(code) or FOURNISSEURS[FOURNISSEUR_DEFAUT]
 
     commun = ConfigLLM(
-        actif=cfg.get(CLE_ACTIF) == "1",
+        actif=service_actif(cfg, SERVICE_IA),
         fournisseur=fournisseur,
         cle=cfg.get(CLE_API) or "",
         base_url=cfg.get(CLE_BASE_URL) or fournisseur.base_url,

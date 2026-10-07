@@ -52,8 +52,8 @@ def _check_whatsapp(session: Session) -> list[str]:
         CleBridgeRefusee,
         config_whatsapp,
         get_whatsapp_status,
-        whatsapp_actif,
     )
+    from app.utils.services import SERVICE_DIFFUSION, service_actif
 
     issues = []
     #  Ce contrôle n'a besoin que de trois clés, mais c'est la MÊME notion que
@@ -61,7 +61,7 @@ def _check_whatsapp(session: Session) -> list[str]:
     #  Lire l'ensemble complet ne coûte rien et supprime la divergence.
     cfg = config_whatsapp(session)
 
-    if not whatsapp_actif(cfg):
+    if not service_actif(cfg, SERVICE_DIFFUSION):
         return []
 
     if not cfg.get("whatsapp_api_url", "").strip():

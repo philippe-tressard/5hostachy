@@ -46,6 +46,7 @@
 	import OngletWhatsApp from '$lib/components/OngletWhatsApp.svelte';
 	import OngletSmtp from '$lib/components/OngletSmtp.svelte';
 	import OngletIA from '$lib/components/OngletIA.svelte';
+	import OngletServices from '$lib/components/OngletServices.svelte';
 	import OngletDescriptifPages from '$lib/components/OngletDescriptifPages.svelte';
 	import OngletTelemetrie from '$lib/components/OngletTelemetrie.svelte';
 	import OngletATraiter from '$lib/components/OngletATraiter.svelte';
@@ -224,6 +225,15 @@
 	// brutes qu'elle a lues, et lui laisse leur interprétation.
 	let smtpValeurs: Record<string, string> = {};
 
+	// ── Services ────────────────────────────────────────────────
+	//  Une bascule dans « Services » écrit la clé que les onglets de réglages
+	//  lisent dans ces deux objets à leur montage : sans ce report, l'onglet IA ou
+	//  WhatsApp rouvert réenregistrerait l'ancienne valeur (#1718).
+	function apresBascule(cle: string, valeur: string) {
+		smtpValeurs = { ...smtpValeurs, [cle]: valeur };
+		waCfgPublique = { ...waCfgPublique, [cle]: valeur };
+	}
+
 	import { getPageConfig, configStore, siteNomStore, loadSiteConfig } from '$lib/stores/pageConfig';
 	$: _pc = getPageConfig($configStore, 'admin', defautsDePage('admin'));
 	$: _siteNom = $siteNomStore;
@@ -280,6 +290,8 @@
 	<OngletModelesEmail />
 {:else if erreurParametrage && ONGLETS_DU_PARAMETRAGE.includes(onglet)}
 	<EtatListe erreur={erreurParametrage} titreErreur={TITRE_PARAMETRAGE_ILLISIBLE} />
+{:else if onglet === 'services'}
+	<OngletServices {apresBascule} />
 {:else if onglet === 'site'}
 	<OngletSite bind:siteConfig {siteSaving} {siteManagerUsers} {saveSiteConfig} />
 {:else if onglet === 'pages'}

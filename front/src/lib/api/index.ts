@@ -45,6 +45,7 @@ export * from './telemetrie';
 export * from './synthese';
 export * from './reglement';
 export * from './assistant';
+export * from './services';
 
 //  ── Ce que le serveur RENVOIE (#1572) ───────────────────────────────────────────
 //
