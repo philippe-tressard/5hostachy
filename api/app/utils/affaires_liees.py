@@ -34,6 +34,7 @@ affaire, c'est lire les deux colonnes.
 from __future__ import annotations
 
 from fastapi import HTTPException
+from pydantic import NaiveDatetime
 from sqlmodel import Session, or_, select
 
 from app.auth.deps import est_moderateur
@@ -47,14 +48,21 @@ def _paire(a: int, b: int) -> tuple[int, int]:
     return (a, b) if a < b else (b, a)
 
 
-def ids_lies(session: Session, ticket_id: int) -> set[int]:
-    """Les affaires liées à celle-ci, dans les deux sens."""
+def liens_de(session: Session, ticket_id: int) -> dict[int, NaiveDatetime]:
+    """Les affaires liées à celle-ci, dans les deux sens, avec la DATE du lien."""
     lignes = session.exec(
         select(AffaireLiee).where(
             or_(AffaireLiee.affaire_id == ticket_id, AffaireLiee.liee_id == ticket_id)
         )
     ).all()
-    return {lg.liee_id if lg.affaire_id == ticket_id else lg.affaire_id for lg in lignes}
+    return {
+        (lg.liee_id if lg.affaire_id == ticket_id else lg.affaire_id): lg.cree_le for lg in lignes
+    }
+
+
+def ids_lies(session: Session, ticket_id: int) -> set[int]:
+    """Les affaires liées à celle-ci, dans les deux sens."""
+    return set(liens_de(session, ticket_id))
 
 
 def index_des_liens(session: Session) -> dict[int, set[int]]:

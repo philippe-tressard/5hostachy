@@ -35,6 +35,7 @@
 	import EtatListe from './EtatListe.svelte';
 	import SyntheseAffaire from './SyntheseAffaire.svelte';
 	import { basculer } from '$lib/accordeon';
+	import { isCS } from '$lib/stores/auth';
 
 	let donnees: Carnet | null = null;
 	let erreur = '';
@@ -97,11 +98,19 @@
 		return [...par.entries()].sort((a, b) => (a[1][0].date < b[1][0].date ? 1 : -1));
 	})();
 
-	$: enRetard = (donnees?.entrees ?? []).filter((e) => e.alerte).length;
+	/**  Les entrées en alerte — l'encart les NOMME : un compte sans les noms oblige à
+	 *   chercher dans la liste ce que l'encart vient d'annoncer. */
+	$: enAlerte = (donnees?.entrees ?? []).filter((e) => e.alerte);
+	$: enRetard = enAlerte.length;
 
 	/**  🧾 La ligne d'une affaire qui a une synthèse VALIDÉE se déplie (#1643) :
 	 *   la synthèse, puis le lien vers l'affaire. Une seule ouverte à la fois. */
 	let ouverte: string | null = null;
+
+	/**  Un contrat se lit chez les prestataires, que seul le CS voit : pour un
+	 *   copropriétaire le lien mènerait à une page refusée. Il lit le nom, sans lien. */
+	const lienOuvert = (e: EntreeCarnet, cs: boolean) =>
+		e.origine === 'contrat' && !cs ? '' : e.lien;
 
 	const ORIGINES: Record<string, string> = {
 		contrat: 'Contrat',
@@ -141,7 +150,21 @@
 			⚠️ <strong
 				>{enRetard} visite{enRetard > 1 ? 's' : ''} attendue{enRetard > 1 ? 's' : ''}</strong
 			>
-			dont l'échéance est dépassée.
+			dont l'échéance est dépassée :
+			<ul class="concernees">
+				{#each enAlerte as entree (entree.origine + entree.lien + entree.date)}
+					<li>
+						{#if lienOuvert(entree, $isCS)}
+							<a href={entree.lien}>{entree.libelle}</a>
+						{:else}
+							<strong>{entree.libelle}</strong>
+						{/if}
+						<span class="concernee-detail"
+							>({libelleEquipement(entree.equipement)} · {portee(entree.perimetre)}) — {entree.alerte}</span
+						>
+					</li>
+				{/each}
+			</ul>
 		</EncartAvertissement>
 	{/if}
 
@@ -275,6 +298,17 @@
 	}
 	.alerte {
 		color: var(--color-warning);
+	}
+	.concernees {
+		margin: 0.35rem 0 0;
+		padding-left: 1.25rem;
+	}
+	.concernees a {
+		color: inherit;
+		font-weight: 600;
+	}
+	.concernee-detail {
+		font-size: var(--fs-sm);
 	}
 	.origine {
 		white-space: nowrap;
