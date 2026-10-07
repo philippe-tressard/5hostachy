@@ -42,9 +42,19 @@ export interface ConfigSite {
 	reference_copro: string;
 }
 
+/**
+ * Le nom de la RÉSIDENCE quand la configuration n'en porte pas — **neutre**.
+ *
+ * 🔴 Il valait « 5Hostachy » ici et dans `siteNomStore` : le nom de CETTE
+ * copropriété, affiché chez toute autre le temps que sa configuration arrive
+ * (#1725). Même valeur que `NOM_SITE_PAR_DEFAUT` côté API (`utils/liens.py`),
+ * tenue par `api/tests/test_plateforme.py`.
+ */
+export const NOM_SITE_PAR_DEFAUT = 'Ma Résidence';
+
 /** L'état initial du formulaire, avant tout chargement. */
 export const CONFIG_SITE_DEFAUT: ConfigSite = {
-	nom: '5Hostachy',
+	nom: NOM_SITE_PAR_DEFAUT,
 	url: '',
 	email_admin: '',
 	login_sous_titre: 'Votre espace numérique de résidence',
@@ -56,7 +66,7 @@ export const CONFIG_SITE_DEFAUT: ConfigSite = {
 	notify_new_user_created_email: false,
 	site_manager_user_id: '',
 	whatsapp_footer: '— Le Conseil Syndical',
-	email_footer: '— Envoyé depuis 5hostachy.fr',
+	email_footer: '',
 	reference_copro: '',
 };
 

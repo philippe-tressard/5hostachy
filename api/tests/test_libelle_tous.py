@@ -18,7 +18,7 @@ import ast
 import pathlib
 import re
 
-from tests.aides_sources import modules_app
+from tests.aides_sources import chaines_du_code, modules_app
 
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
 _FRONT = _RACINE / "front" / "src"
@@ -33,29 +33,13 @@ EXCEPTIONS = {"LIBELLE_TOUS_ANCIEN", "PASSAGES_TOUS_LES_RESIDENTS"}
 def chaines_servies_python(source: str) -> list[tuple[int, str]]:
     """Les littéraux de chaîne d'un module, docstrings exclues. PURE."""
     arbre = ast.parse(source)
-    docstrings = set()
-    for noeud in ast.walk(arbre):
-        if isinstance(noeud, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            corps = noeud.body
-            if (
-                corps
-                and isinstance(corps[0], ast.Expr)
-                and isinstance(corps[0].value, ast.Constant)
-            ):
-                docstrings.add(id(corps[0].value))
     exemptes = set()
     for noeud in ast.walk(arbre):
         if isinstance(noeud, ast.Assign) and any(
             isinstance(c, ast.Name) and c.id in EXCEPTIONS for c in noeud.targets
         ):
             exemptes |= {id(n) for n in ast.walk(noeud.value)}
-    return [
-        (n.lineno, n.value)
-        for n in ast.walk(arbre)
-        if isinstance(n, ast.Constant)
-        and isinstance(n.value, str)
-        and id(n) not in docstrings | exemptes
-    ]
+    return [(n.lineno, n.value) for n in chaines_du_code(arbre) if id(n) not in exemptes]
 
 
 def texte_servi_svelte(source: str) -> str:

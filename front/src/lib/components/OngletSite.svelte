@@ -19,6 +19,7 @@
 	import { GLYPHE_URGENCE } from '$lib/options-publication';
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
+	import { NOM_SITE_PAR_DEFAUT } from '$lib/configSite';
 
 	/** Lié : la page porte l'état et l'enregistre. */
 	export let siteConfig: any;
@@ -31,9 +32,12 @@
 	<h2 class="config-section-title"><Icon name="settings" size={17} />Paramètres généraux</h2>
 	<div class="form-grid largeur-saisie">
 		<label class="field">
-			Nom de la plateforme
-			<input type="text" bind:value={siteConfig.nom} placeholder="5Hostachy" />
-			<span class="aide">Affiché sur la page de connexion et dans le menu.</span>
+			Nom de la résidence
+			<input type="text" bind:value={siteConfig.nom} placeholder={NOM_SITE_PAR_DEFAUT} />
+			<span class="aide"
+				>Affiché sur la page de connexion, dans le menu, en tête des courriels et sous l’icône de
+				l’application installée sur le téléphone.</span
+			>
 		</label>
 		<label class="field">
 			URL publique

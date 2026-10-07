@@ -16,8 +16,29 @@ import json
 import re
 
 from app.utils.arrivees_notification import SOURCE_WHATSAPP, etiqueter_lien
-from app.utils.liens import base_site
+from app.utils.liens import base_site, nom_site
 from app.utils.perimetres import est_perimetre_par_defaut
+
+#: La signature d'un message quand la configuration n'en porte pas — **neutre**.
+#:
+#: 🔴 Le repli était « — Conseil Syndical 5Hostachy », écrit TROIS fois (deux
+#: ici, une dans `whatsapp_scheduler`) : le nom de CETTE résidence, qu'une autre
+#: copropriété aurait signé à sa place le jour où son pied serait vide (#1725).
+#: Le seed pose la même valeur (`seed.CONFIG_DEFAUTS`), et il l'importe d'ici.
+PIED_WHATSAPP_PAR_DEFAUT = "— Le Conseil Syndical"
+
+
+def pied_whatsapp(footer: str | None) -> str:
+    """La signature d'un message : celle de la configuration, sinon le repli.
+
+    >>> pied_whatsapp("  — Le CS du Parc  ")
+    '— Le CS du Parc'
+    >>> pied_whatsapp("")
+    '— Le Conseil Syndical'
+    >>> pied_whatsapp(None)
+    '— Le Conseil Syndical'
+    """
+    return (footer or "").strip() or PIED_WHATSAPP_PAR_DEFAUT
 
 
 def _libelle_perimetre(perimetre_cible: str | list | None) -> str:
@@ -107,7 +128,7 @@ def _build_message(
     text = text.replace("\u00a0", " ")
     text = text.strip()
 
-    footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
+    footer = pied_whatsapp(footer)
     #  Le lien vient APRÈS le texte et AVANT la signature : c'est la place
     #  qu'il occupe déjà dans le message restreint, et le lecteur d'un groupe
     #  WhatsApp cherche l'action en bas du message, jamais au milieu.
@@ -142,6 +163,7 @@ def _build_message_restreint(
     site_url: str,
     footer: str | None = None,
     lien: str | None = None,
+    site_nom: str | None = None,
 ) -> str:
     """Construit un message WhatsApp court pour une publication à audience restreinte.
 
@@ -156,7 +178,7 @@ def _build_message_restreint(
     avertissement = (
         "🔒 Cette publication est réservée à un public ciblé.\n"
         "Elle n'est pas accessible à tous.\n"
-        "Si vous êtes concerné(e), connectez-vous sur 5Hostachy pour la consulter :"
+        f"Si vous êtes concerné(e), connectez-vous sur {nom_site(site_nom)} pour la consulter :"
     )
     #  🔴 Le lien FOURNI (#1091) : l'actualité est devenue une affaire, son
     #  adresse est celle de sa fiche. `pub_id` et `/actualites#pub-<id>` ont été
@@ -164,8 +186,7 @@ def _build_message_restreint(
     if not lien:
         lien = site_url.rstrip("/") + "/"
 
-    footer = (footer or "").strip() or "— Conseil Syndical 5Hostachy"
-    return f"{header}\n\n{avertissement}\n{lien}\n\n{footer}"
+    return f"{header}\n\n{avertissement}\n{lien}\n\n{pied_whatsapp(footer)}"
 
 
 def message_sans_contenu(public_cible: str | list | None, confidentiel: bool = False) -> bool:
@@ -215,6 +236,7 @@ def construire_message(
             site_url,
             footer,
             lien or etiqueter_lien(site_url + "/", SOURCE_WHATSAPP, site_url),
+            config.get("site_nom"),
         )
     #  Le lien ne concerne QUE le message normal : le message restreint en porte
     #  déjà un, qui renvoie vers l'application parce que le contenu n'y est pas.

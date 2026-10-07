@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.113.2",
+	"version": "2.114.0",
 	"private": true,
 	"license": "SEE LICENSE IN LICENSE-5Hostachy.md",
 	"scripts": {
@@ -113,6 +113,7 @@
 		"lint:etage-libelle": "node scripts/check-etage-libelle.mjs",
 		"lint:type-lot": "node scripts/check-type-lot.mjs --selftest && node scripts/check-type-lot.mjs",
 		"lint:identite-copropriete": "node scripts/check-identite-copropriete.mjs --selftest && node scripts/check-identite-copropriete.mjs",
+		"lint:nom-residence": "node scripts/check-nom-residence.mjs --selftest && node scripts/check-nom-residence.mjs",
 		"lint:lien-consignes": "node scripts/check-lien-consignes.mjs --selftest && node scripts/check-lien-consignes.mjs",
 		"lint:caracteristiques-lot": "node scripts/check-caracteristiques-lot.mjs --selftest && node scripts/check-caracteristiques-lot.mjs",
 		"lint:suppression-confirmee": "node scripts/check-suppression-confirmee.mjs --selftest && node scripts/check-suppression-confirmee.mjs",

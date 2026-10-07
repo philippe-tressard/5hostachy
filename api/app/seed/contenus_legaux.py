@@ -7,7 +7,7 @@ rédactionnelle — cf. `standards/14-conformite-juridique.md`.
 
 ## 🔴 LE SEED PORTE LE PRODUIT, LA BASE PORTE L'INSTANCE (03/09/2026)
 
-5Hostachy est sous Licence 5Hostachy et peut être déployé ailleurs. Écrire ICI le nom
+Le logiciel (CoproConnect, `utils/plateforme`) peut être déployé ailleurs. Écrire ICI le nom
 d'un éditeur ou d'un hébergeur les imposerait à tout autre déploiement, qui
 publierait alors des mentions **fausses** — pire que des mentions vagues. Les
 mentions de CETTE instance vivent en base (migration 0170).
@@ -24,6 +24,7 @@ cherche qui contacter. La nôtre a vécu ainsi jusqu'à ce qu'un lecteur le voie
 """
 
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
+from app.utils.plateforme import LICENCE_NOM, LICENCE_URL, NOM_PLATEFORME
 from app.utils.purge_comptes.regles import DELAI_AVANT_SUPPRESSION_JOURS, INACTIVITE_ANS
 
 
@@ -284,8 +285,9 @@ DEFAULT_LEGAL = {
         "<p><strong>À RENSEIGNER</strong> — nom et coordonnées de l'hébergeur, ou mention "
         "de l'auto-hébergement et des intermédiaires techniques éventuels (DNS, proxy).</p>"
         "<h2>Propriété intellectuelle</h2>"
-        "<p>Le code source de 5Hostachy est <strong>accessible</strong> et distribué sous la "
-        '<a href="https://github.com/philippe-tressard/5hostachy/blob/main/LICENSE-5Hostachy.md" target="_blank" rel="noopener noreferrer">Licence 5Hostachy</a> '
+        f"<p>Ce site est servi par {NOM_PLATEFORME}, dont le code source est "
+        "<strong>accessible</strong> et distribué sous la "
+        f'<a href="{LICENCE_URL}" target="_blank" rel="noopener noreferrer">{LICENCE_NOM}</a> '
         "— source-available, fondée sur les principes de l'AGPLv3, avec clauses commerciales. "
         "Les particuliers, associations et copropriétés peuvent l'utiliser gratuitement ; tout usage "
         "commercial requiert un accord préalable de l'auteur.</p>"

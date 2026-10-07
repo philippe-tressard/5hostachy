@@ -46,6 +46,7 @@ from app.utils.whatsapp import (
     STATUTS_NON_REJOUABLES,
     verdict_envoi,
 )
+from app.utils.whatsapp_message import pied_whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def check_and_send():
                     _alerter(session, sched, deja.statut, deja.erreur)
                 continue
 
-            footer = (config.get("whatsapp_footer") or "").strip() or "— Conseil Syndical 5Hostachy"
+            footer = pied_whatsapp(config.get("whatsapp_footer"))
             message_complet = f"{sched.message}\n\n{footer}"
 
             # Réutilise le log d'échec du jour au lieu d'en empiler un nouveau à

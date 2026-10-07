@@ -39,6 +39,8 @@ from __future__ import annotations
 import pathlib
 import re
 
+from app.seed.faq import FAQ_COMPLEMENTAIRE, FAQ_INITIALE
+
 _API = pathlib.Path(__file__).resolve().parents[1] / "app"
 _FRONT = pathlib.Path(__file__).resolve().parents[2] / "front" / "src"
 
@@ -130,7 +132,6 @@ def test_la_question_du_prix_d_un_badge_existe_et_repond_a_son_lien():
     Le contrôle lit le motif **dans le résolveur**, il ne le recopie pas : deux
     expressions qui se recopient divergent au premier ajustement.
     """
-    seed = (_API / "seed" / "faq.py").read_text(encoding="utf-8")
     #  Le résolveur vit dans `$lib/faq` depuis le 26/09/2026 (#1329,
     #  `estQuestionPrixBadge`) : il était écrit dans la page.
     page = (_FRONT / "lib" / "faq.ts").read_text(encoding="utf-8")
@@ -142,7 +143,10 @@ def test_la_question_du_prix_d_un_badge_existe_et_repond_a_son_lien():
     )
     motif = re.compile(motif_lu.group(1), re.I)
 
-    questions = re.findall(r'",\s*"([^"]+\?)"', seed)
+    #  Les DONNÉES du seed, pas son texte : une regex exigeait une catégorie écrite
+    #  entre guillemets, et la constante `CATEGORIE_APPLICATION` (#1725) la rendait
+    #  aveugle aux questions de cette rubrique.
+    questions = [q for _, q, _, _ in (*FAQ_INITIALE, *FAQ_COMPLEMENTAIRE)]
     assert questions, "aucune question lue dans le seed — portée perdue"
 
     assert any(motif.search(q) for q in questions), (

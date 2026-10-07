@@ -2000,6 +2000,12 @@ jobs:
         working-directory: front
         run: npm run lint:identite-copropriete
 
+      # Le nom de CETTE résidence ne s'écrit pas dans le site (#1725) : la résidence
+      # se lit dans sa configuration, la plateforme dans `$lib/plateforme`.
+      - name: Nom de la résidence jamais écrit dans le site
+        working-directory: front
+        run: npm run lint:nom-residence
+
       # Le lien vers les consignes de la copropriété se rend par `LienConsignes`
       # seul (#779, 01/10/2026) : trois copies, deux libellés et deux icônes.
       - name: Lien vers les consignes écrit une seule fois

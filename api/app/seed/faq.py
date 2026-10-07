@@ -9,6 +9,12 @@ pas déjà : c'est la voie à suivre pour enrichir la FAQ après coup.
 Format : (catégorie, question, réponse, ordre).
 """
 
+#: La catégorie qui parle du logiciel lui-même. Elle s'appelait « 📱 Application
+#: 5Hostachy » — le nom de CETTE résidence, posé dans la FAQ de toute autre
+#: installation (#1725). La migration 0268 renomme la catégorie en base, pour que
+#: les questions complémentaires à venir ne s'ouvrent pas une seconde rubrique.
+CATEGORIE_APPLICATION = "📱 L'application"
+
 FAQ_INITIALE = [
     (
         "🗑\ufe0f Tri des déchets",
@@ -71,28 +77,28 @@ FAQ_INITIALE = [
         10,
     ),
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "Comment changer mon mot de passe ?",
         "Rendez-vous dans Mon profil, section Modifier le mot de passe, et saisissez votre mot de passe actuel puis le nouveau.",
         11,
     ),
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "L'application fonctionne-t-elle hors connexion ?",
-        "5Hostachy est une application compatible PC, tablette et mobile nécessitant une connexion internet. Elle peut s'installer sur l'écran d'accueil de votre téléphone comme une vraie app, mais les fonctions principales (affaires, documents, accès) restent inaccessibles sans réseau.",
+        "L'application est compatible PC, tablette et mobile nécessitant une connexion internet. Elle peut s'installer sur l'écran d'accueil de votre téléphone comme une vraie app, mais les fonctions principales (affaires, documents, accès) restent inaccessibles sans réseau.",
         12,
     ),
 ]
 
 FAQ_COMPLEMENTAIRE = [
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "Pourquoi mes anciennes affaires n'apparaissent plus dans la liste principale ?",
         "Les affaires résolues ou annulées passent automatiquement dans l'onglet <strong>🗂️ Archives</strong> de la page Affaires, après un délai fixé par le conseil syndical. Cela garde la liste principale centrée sur les demandes encore actives, sans rien perdre : tout reste consultable dans les archives.",
         13,
     ),
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "Que voit le conseil syndical lorsqu'il traite mon affaire ?",
         "Le conseil syndical traite les demandes depuis la page <strong>Affaires</strong>, où il voit le détail, l'historique, ainsi que le <strong>prénom / nom</strong> et le <strong>bâtiment</strong> du demandeur, afin de situer rapidement le contexte. Il peut y changer le statut et y ajouter une suite. L'<strong>Espace CS</strong>, lui, en donne la vue d'ensemble dans son onglet Reporting.",
         14,
@@ -112,13 +118,13 @@ FAQ_COMPLEMENTAIRE = [
     #  copropriété et se vote. Y écrire un chiffre serait inventer une donnée de
     #  référence, et elle serait fausse partout ailleurs (`standards/06`).
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "Quel prix pour un badge ou une télécommande ?",
         "Le tarif d'un badge Vigik ou d'une télécommande de parking est fixé par la copropriété, et non par l'application : il couvre le coût du support et sa programmation. Le montant en vigueur est indiqué par le conseil syndical ou le syndic, et figure dans les décisions d'assemblée générale. Depuis <strong>Mes lots &amp; accès</strong>, la demande d'un accès supplémentaire se fait avec le bouton « + Nouvel accès » ; déclarer un accès que vous détenez déjà est gratuit.",
         16,
     ),
     (
-        "📱 Application 5Hostachy",
+        CATEGORIE_APPLICATION,
         "Pourquoi mon nom apparaît-il sur une demande que je n'ai pas saisie ?",
         "Le conseil syndical peut enregistrer une demande <strong>pour</strong> quelqu'un — ce que vous avez signalé par téléphone, par exemple. Le formulaire porte alors une section <strong>Au nom de</strong>, et c'est votre nom qui s'affiche sur la fiche : c'est bien de votre demande qu'il s'agit, et vous recevez les courriels de suivi. La personne qui a fait la saisie reste indiquée comme auteur — les deux informations coexistent parce qu'elles ne disent pas la même chose. Cela vaut pour les affaires comme pour les actualités.",
         15,

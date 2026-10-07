@@ -33,7 +33,8 @@ def _fiche(membres: list[dict]) -> str:
     return generer_fiche_arrivant(
         cs_data={"membres": membres},
         syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
-        site_url="5hostachy.fr",
+        site_nom="Résidence Témoin",
+        site_url="https://residence.example",
         whatsapp_url=None,
         annee=2026,
     )

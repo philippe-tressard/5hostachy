@@ -2,6 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
 import { config as configApi } from '$lib/api';
+import { NOM_SITE_PAR_DEFAUT } from '$lib/configSite';
 
 import { fusionnerSurcharge } from '$lib/pages-surcharge';
 
@@ -62,8 +63,11 @@ export { defautsDePage, configDepuisPage } from '$lib/pages';
 
 export const configStore = writable<Record<string, string>>({});
 
-// Nom du site réactif
-export const siteNomStore = derived(configStore, ($c) => $c['site_nom'] ?? '5Hostachy');
+// Nom du site réactif — le repli neutre vient de `$lib/configSite` (#1725)
+export const siteNomStore = derived(
+	configStore,
+	($c) => ($c['site_nom'] ?? '').trim() || NOM_SITE_PAR_DEFAUT,
+);
 
 let _configLoaded = false;
 

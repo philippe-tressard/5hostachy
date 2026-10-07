@@ -55,7 +55,8 @@ def test_la_fiche_arrivant_se_rend_en_pdf():
     html = generer_fiche_arrivant(
         cs_data={"membres": [], "titre": "Conseil syndical"},
         syndic_data={"nom": "Syndic Test", "telephone": "0102030405"},
-        site_url="5hostachy.fr",
+        site_nom="Résidence Témoin",
+        site_url="https://residence.example",
         whatsapp_url=None,
         annee=2026,
     )
@@ -119,7 +120,8 @@ def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
     html = generer_fiche_arrivant(
         cs_data={"membres": membres},
         syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
-        site_url="5hostachy.fr",
+        site_nom="Résidence Témoin",
+        site_url="https://residence.example",
         whatsapp_url="https://chat.whatsapp.com/essai",
         annee=2026,
     )
@@ -167,8 +169,8 @@ def test_l_annonce_de_hall_se_rend_en_pdf():
         # un KeyError. Trouvé au premier passage réel en intégration continue :
         # un autotest ne couvre pas ce qu'il ne fait pas tourner (standards/04 §11).
         format_effectif="a4",
-        site_nom="5Hostachy",
-        site_url="5hostachy.fr",
+        site_nom="Résidence Témoin",
+        site_url="https://residence.example",
         images=None,
         date_affichage=date(2026, 8, 4),
     )

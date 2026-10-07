@@ -8,6 +8,7 @@
 	import { currentUser, isAdmin, isCS, isGestionnaire, quandAuthResolue } from '$lib/stores/auth';
 	import { refuserLaCommunaute } from '$lib/communaute';
 	import { safeHtml } from '$lib/sanitize';
+	import { siteNomStore } from '$lib/stores/pageConfig';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FilAriane from '$lib/components/FilAriane.svelte';
 	import FormulaireSondage from '$lib/components/FormulaireSondage.svelte';
@@ -155,7 +156,7 @@
 	$: voirResultats = sondage?.resultats_visibles ?? false;
 </script>
 
-<svelte:head><title>{sondage ? sondage.question : 'Sondage'} — 5Hostachy</title></svelte:head>
+<svelte:head><title>{sondage ? sondage.question : 'Sondage'} — {$siteNomStore}</title></svelte:head>
 
 <FilAriane
 	segments={[{ libelle: 'Communauté', href: '/sondages' }]}

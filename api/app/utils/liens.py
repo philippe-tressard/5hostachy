@@ -129,6 +129,22 @@ def nom_site(*valeurs: str | None) -> str:
     return NOM_SITE_PAR_DEFAUT
 
 
+def adresse_lisible(valeur: str | None) -> str:
+    """L'adresse du site telle qu'on l'IMPRIME — sans protocole ni barre finale.
+
+    >>> adresse_lisible("https://residence.example/")
+    'residence.example'
+    >>> adresse_lisible("http://residence.example")
+    'residence.example'
+    >>> adresse_lisible(None)
+    'localhost'
+
+    Elle part de `base_site`, donc du même repli : la fiche arrivant recevait
+    une adresse sans protocole écrite en dur, et y préfixait `https://` (#1725).
+    """
+    return base_site(valeur).split("://", 1)[-1]
+
+
 # préfixe d'ancre → route du front qui rend réellement `id="<prefixe>-…"`.
 #
 # La route est celle de l'ONGLET, pas seulement de la page : `/calendrier` est la vue

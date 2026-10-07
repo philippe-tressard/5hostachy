@@ -23,6 +23,7 @@ Aucune donnée du site : un GET vers une adresse fixe, sans cookie ni clé.
 
 from __future__ import annotations
 
+from app.utils.plateforme import NOM_PLATEFORME
 
 DELAI_S = 20
 #: Une grille au-delà de cette taille n'est plus une grille : on la tronque
@@ -41,7 +42,8 @@ async def _lire(url: str) -> str:
         async with httpx.AsyncClient(timeout=DELAI_S, follow_redirects=True) as client:
             #  ⚠️ En ASCII : un en-tête HTTP n'admet pas d'accent, et httpx lève
             #  avant même d'envoyer (constaté au premier essai réel).
-            r = await client.get(url, headers={"User-Agent": "5Hostachy (tarif-modele)"})
+            entetes = {"User-Agent": f"{NOM_PLATEFORME} (tarif-modele)"}
+            r = await client.get(url, headers=entetes)
     except httpx.HTTPError as exc:
         raise SourceIndisponible(f"« {url} » n'a pas pu être lue.") from exc
     if r.status_code != 200:

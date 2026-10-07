@@ -56,6 +56,8 @@ from app.seed.diagnostics import DIAGNOSTICS
 from app.seed.emails import EMAIL_TEMPLATES, INTENTIONS_PAR_MODELE
 from app.seed.faq import FAQ_COMPLEMENTAIRE, FAQ_INITIALE
 from app.seed.patrimoine import poser_arborescence
+from app.utils.liens import NOM_SITE_PAR_DEFAUT
+from app.utils.whatsapp_message import PIED_WHATSAPP_PAR_DEFAUT
 from app.seed.profils_documents import CATEGORIES, PROFILS
 
 __all__ = [
@@ -70,16 +72,21 @@ __all__ = [
     "FAQ_COMPLEMENTAIRE",
 ]
 
+#: 🔴 Le seed porte le PRODUIT, la base porte l'INSTANCE (#1725) : aucune valeur
+#: ici ne nomme une résidence. `email_footer` valait « ©2026-5Hostachy - Envoyé
+#: depuis 5hostachy.fr » — une autre copropriété l'aurait signé. Vide, le pied
+#: ne s'affiche pas (`email/gabarit.py`) ; le nom et l'adresse du site, eux,
+#: figurent déjà dans l'en-tête de chaque courriel.
 CONFIG_SITE_PAR_DEFAUT: dict[str, str] = {
-    "site_nom": "Ma Résidence",
+    "site_nom": NOM_SITE_PAR_DEFAUT,
     "site_url": "https://example.com/",
     "site_email": "admin@example.com",
     "site_manager_user_id": "",
     "login_sous_titre": "Votre espace numérique de résidence",
     "notify_ticket_bug_email": "0",
     "notify_new_user_created_email": "0",
-    "whatsapp_footer": "— Le Conseil Syndical",
-    "email_footer": "— ©2026-5Hostachy - Envoyé depuis 5hostachy.fr —",
+    "whatsapp_footer": PIED_WHATSAPP_PAR_DEFAUT,
+    "email_footer": "",
     "reference_copro": "",
     **DEFAULT_LEGAL,
 }

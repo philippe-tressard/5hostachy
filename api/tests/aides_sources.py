@@ -81,6 +81,39 @@ def modules_app(sous_dossier: str = "", *, minimum: int = 1) -> tuple[Module, ..
     return trouves
 
 
+def docstrings(arbre: ast.AST) -> set[int]:
+    """Les `id()` des nœuds qui sont des docstrings — module, classe, fonction.
+
+    Un contrôle qui lit les chaînes littérales du code les écarte : une docstring
+    raconte, elle n'exécute rien, et elle doit pouvoir CITER la forme refusée.
+    Écrite QUATRE fois jusqu'au 07/10/2026 (#1725), dont deux qui ne vérifiaient pas
+    que la constante fût une chaîne, et une qui écartait aussi la première chaîne
+    d'un `if` ou d'un `for`.
+    """
+    vus: set[int] = set()
+    for noeud in ast.walk(arbre):
+        if isinstance(noeud, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            corps = noeud.body
+            if (
+                corps
+                and isinstance(corps[0], ast.Expr)
+                and isinstance(corps[0].value, ast.Constant)
+                and isinstance(corps[0].value.value, str)
+            ):
+                vus.add(id(corps[0].value))
+    return vus
+
+
+def chaines_du_code(arbre: ast.AST) -> list[ast.Constant]:
+    """Les chaînes littérales d'un arbre, docstrings exclues (l'AST ignore les commentaires)."""
+    exclues = docstrings(arbre)
+    return [
+        n
+        for n in ast.walk(arbre)
+        if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in exclues
+    ]
+
+
 def module_app(rel: str) -> Module:
     """Un module précis de `app/`, par son chemin relatif — ou lève s'il a disparu."""
     for m in _tous():
