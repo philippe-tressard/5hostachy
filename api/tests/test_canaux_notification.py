@@ -36,10 +36,14 @@ def test_les_cles_de_configuration_whatsapp_ne_sont_ecrites_qu_une_fois():
         #  redéfinition de l'ensemble.
         if sum(m in module.source for m in _MARQUEURS) >= 2
     }
-    assert porteurs == {"utils/whatsapp.py"}, (
+    #  Le registre des services (#1718) porte l'ACTIVATION du canal et nomme le
+    #  réglage sans lequel il ne fonctionne pas : il ne redéfinit pas l'ensemble,
+    #  il en est la source pour la clé d'activation. Déclaré, et il doit servir.
+    attendus = {"utils/whatsapp.py", "utils/services.py"}
+    assert porteurs == attendus, (
         "Les clés de configuration WhatsApp doivent vivre dans `app/utils/whatsapp.py` "
-        "(`CLES_CONFIG`) et nulle part ailleurs. Modules fautifs : "
-        f"{sorted(porteurs - {'utils/whatsapp.py'})}. Utiliser `config_whatsapp(session)`."
+        "(`CLES_CONFIG`) — et l'activation dans `utils/services.py` — nulle part ailleurs. "
+        f"Écart : {sorted(porteurs ^ attendus)}. Utiliser `config_whatsapp(session)`."
     )
 
 

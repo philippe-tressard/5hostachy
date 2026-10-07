@@ -366,6 +366,18 @@ l'adaptateur ; les clés `whatsapp_*` et la table `whatsapp_log` gardent leur no
 jusqu'au second (#1060). 🔒 `test_diffusion_canal.py` refuse qu'un appelant
 importe les gestes du transport.
 
+### Couper ou rétablir un service
+
+« Ce service est-il activé ? » se demande à `utils/services` —
+`service_actif(cfg, SERVICE_…)`, et `cle_actif(SERVICE_…)` pour nommer la clé —,
+jamais par une lecture de `llm_actif`, `whatsapp_enabled` ou `imap_enabled` :
+elles avaient trois règles, dont une plus large (#1718). Le registre `SERVICES`
+est la seule liste ; l'onglet **Admin › Services** s'en déduit
+(`GET /config/services`). Un service neuf s'y déclare, avec ce qu'on perd en le
+coupant. 🔴 **Les courriels de sécurité ne sont pas un service**
+(`COURRIELS_DE_SECURITE`) : le SMTP y est une infrastructure, sans interrupteur.
+🔒 `test_services_registre.py`, `test_courriels_securite_hors_service.py`.
+
 ### Sécurité
 - JWT HS256 en cookies `httponly=True`, `secure=settings.cookie_secure`, `samesite="strict"`
 - CORS : allowlist explicite, jamais `["*"]` avec `credentials=True`

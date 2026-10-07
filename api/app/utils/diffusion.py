@@ -29,13 +29,14 @@ les gestes du transport.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable, Optional
 
+from app.utils.services import SERVICE_DIFFUSION, service_actif
 from app.utils.whatsapp import (
     CLES_CONFIG,
     config_whatsapp,
     envoyer_whatsapp_avec_log,
-    whatsapp_actif,
 )
 
 
@@ -57,7 +58,8 @@ CANAUX: dict[str, Canal] = {
         libelle="Groupe WhatsApp de la résidence",
         cles_config=CLES_CONFIG,
         lire_config=config_whatsapp,
-        est_actif=whatsapp_actif,
+        #  L'activation du canal est celle du SERVICE (#1718) : une règle, au registre.
+        est_actif=partial(service_actif, code=SERVICE_DIFFUSION),
         envoyer=envoyer_whatsapp_avec_log,
     ),
 }

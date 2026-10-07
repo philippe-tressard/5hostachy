@@ -10,6 +10,7 @@
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, BASE, buildQuery } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
+import type { ServiceCopropriete } from './services';
 import type { FiltreGestionnaire, PorteeTelemetrie, TableauTelemetrie } from './telemetrie';
 import type { User } from './types';
 import type {
@@ -408,6 +409,9 @@ export const config = {
 	/**  Les USAGES de l'assistant — la SEULE liste (#984) : l'écran rend un bloc
 	 *   par entrée. Les valeurs courantes, elles, viennent de `admin()`. */
 	llmUsages: () => api.get<UsageIA[]>('/config/llm-usages'),
+	/**  Les services de la copropriété et leur état — la SEULE liste (#1718).
+	 *   Un interrupteur s'écrit par `save({ [cle_actif]: '1' | '0' })`. */
+	services: () => api.get<ServiceCopropriete[]>('/config/services'),
 	/**  Ce que l'assistant a consommé, par mois, usage et modèle — lu par
 	 *   `ConsommationIA`, dans l'onglet Maintenance (#1383). */
 	llmConsommation: () => api.get<ConsommationIA>('/config/llm-consommation'),

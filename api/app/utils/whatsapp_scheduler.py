@@ -38,6 +38,7 @@ from sqlmodel import Session, select
 
 from app.database import engine
 from app.models.core import WhatsAppScheduled, WhatsAppLog, ConfigSite
+from app.utils.services import SERVICE_DIFFUSION, service_actif
 from app.utils.whatsapp import (
     STATUT_EN_COURS,
     STATUT_ENVOYE,
@@ -95,7 +96,7 @@ def check_and_send():
         rows = session.exec(select(ConfigSite)).all()
         config = {r.cle: r.valeur for r in rows}
 
-        if config.get("whatsapp_enabled") != "1":
+        if not service_actif(config, SERVICE_DIFFUSION):
             logger.info("WhatsApp désactivé, pas d'envoi planifié.")
             return
 

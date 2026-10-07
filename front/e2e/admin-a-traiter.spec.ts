@@ -82,7 +82,7 @@ test('Admin › À traiter : trois sections en accordéon, Télémétrie en gest
 	await page.goto('/admin?onglet=pages');
 	await page.locator('.page-row-btn', { hasText: 'Paramétrage' }).click();
 	const cartes = page.locator('.onglet-card');
-	await expect(cartes).toHaveCount(17);
+	await expect(cartes).toHaveCount(18);
 	await expect(cartes.first().locator('input').first()).toHaveValue('À traiter');
 
 	const deborde = await page.evaluate(
