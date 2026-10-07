@@ -30,6 +30,7 @@
  */
 import { replier } from '$lib/texte';
 import { stripHtml } from '$lib/utils';
+import type { ContactPrestataire, ContratEntretien, Prestataire } from '$lib/api';
 
 /**  Un type d'équipement, tel que l'écran le nomme.
  *
@@ -108,9 +109,11 @@ export function contactVide(): ContactSaisi {
 /**  Les contacts d'une fiche, prêts à corriger : les siens ; à défaut, un par
  *   numéro de l'ancien champ `telephone` (« 01…,06… ») ; à défaut, une ligne
  *   vide — la saisie en propose toujours au moins une. */
-export function contactsDepuis(p: Record<string, any> = {}): ContactSaisi[] {
+export function contactsDepuis(
+	p: Partial<Pick<Prestataire, 'contacts' | 'telephone'>> = {},
+): ContactSaisi[] {
 	const contacts: ContactSaisi[] = p.contacts?.length
-		? p.contacts.map((c: Record<string, string | null | undefined>) => ({
+		? p.contacts.map((c: ContactPrestataire) => ({
 				telephone: c.telephone ?? '',
 				prenom: c.prenom ?? '',
 				nom: c.nom ?? '',
@@ -447,7 +450,7 @@ export function contratVierge(perimetreDefaut: string[]): FormulaireContratData 
  *   contrat ne le porte pas.
  */
 export function contratDepuis(
-	c: Record<string, any>,
+	c: ContratEntretien,
 	perimetreDefaut: string[],
 	typeEquipement: string,
 ): FormulaireContratData {
@@ -477,7 +480,7 @@ export function contratDepuis(
  * recopié deux fois dans la page, et la correction énumérait ses champs à part —
  * l'adresse et la description (#1327) auraient dû s'ajouter aux trois endroits.
  */
-export function prestataireDepuis(p: Record<string, any> = {}) {
+export function prestataireDepuis(p: Partial<Prestataire> = {}) {
 	return {
 		nom: p.nom ?? '',
 		specialite: p.specialite ?? '',

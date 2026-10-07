@@ -13,9 +13,9 @@
  *  `<th>` de plus que de `<td>` ne lève rien, il déplace les valeurs d'une
  *  case, et le lecteur voit une durée sous « Taille ».
  */
-import type { ExecutionTache } from '$lib/api';
+import type { ExecutionTache, ExecutionTelemetrie } from '$lib/api';
 import { fmtDatetime } from '$lib/date';
-import { fmtOctets } from '$lib/utils';
+import { champDe, fmtOctets } from '$lib/utils';
 
 //  Taille DB et Détail ne sont renseignés que par la maintenance applicative.
 //  Ils ne sont PAS structurellement vides : ils l'étaient parce qu'aucun
@@ -27,8 +27,11 @@ import { fmtOctets } from '$lib/utils';
 //  tableau affichait donc quatre tirets alignés — l'utilisateur les a lus
 //  comme un historique « incomplet », ce qui est exactement ce qu'une colonne
 //  vide raconte. Une colonne qu'aucune ligne ne renseigne ne s'affiche pas.
-export const aValeur = (lignes: any[], champ: string) =>
-	lignes.some((l) => l?.[champ] !== null && l?.[champ] !== undefined && l?.[champ] !== '');
+export const aValeur = (lignes: readonly object[], champ: string) =>
+	lignes.some((l) => {
+		const v = champDe(l, champ);
+		return v !== null && v !== undefined && v !== '';
+	});
 
 //  Colonnes propres à la sauvegarde et à l'agrégation. Elles vivaient dans les
 //  deux cartes supprimées avec #299, et la ligne dépliée ne savait pas les
@@ -40,18 +43,18 @@ export const aValeur = (lignes: any[], champ: string) =>
 //  Chacune suit la même règle que Taille DB et Détail : présente dès qu'une
 //  ligne la renseigne, absente sinon. Une tâche ne montre donc que les
 //  colonnes que sa table sait remplir.
-export const CHAMPS_PURGE = ['events_purges', 'daily_purges', 'monthly_purges'];
+export const CHAMPS_PURGE = ['events_purges', 'daily_purges', 'monthly_purges'] as const;
 
 //  0 est une valeur, pas une absence : `aValeur` ne retient que null, undefined
 //  et la chaîne vide. Une purge qui n'a rien eu à purger doit s'afficher « 0 ».
-export const aPurges = (lignes: any[]) => CHAMPS_PURGE.some((c) => aValeur(lignes, c));
+export const aPurges = (lignes: readonly object[]) => CHAMPS_PURGE.some((c) => aValeur(lignes, c));
 
-export const totalPurges = (l: any): number =>
-	CHAMPS_PURGE.reduce((somme, c) => somme + (Number(l?.[c]) || 0), 0);
+export const totalPurges = (l: ExecutionTache): number =>
+	CHAMPS_PURGE.reduce((somme, c) => somme + (Number(champDe(l, c)) || 0), 0);
 
 //  « 1 jour · 0 mois » — le pluriel suit le nombre de JOURS, comme dans la
 //  carte d'origine ; les mois gardent leur forme courte.
-export const fmtAgrege = (l: any): string =>
+export const fmtAgrege = (l: ExecutionTelemetrie): string =>
 	`${l.jours_agreges} jour${l.jours_agreges > 1 ? 's' : ''} · ${l.mois_agreges} mois`;
 
 /**
@@ -70,8 +73,8 @@ export const fmtAgrege = (l: any): string =>
  */
 export const COLONNES: {
 	titre: string;
-	visible?: (lignes: any[]) => boolean;
-	valeur?: (l: any) => string;
+	visible?: (lignes: ExecutionTache[]) => boolean;
+	valeur?: (l: ExecutionTache) => string;
 	style?: string;
 }[] = [
 	{ titre: 'Date', valeur: (l) => fmtDatetime(l.cree_le) },
@@ -90,7 +93,7 @@ export const COLONNES: {
 	{
 		titre: 'Événements agrégés',
 		visible: (lg) => aValeur(lg, 'jours_agreges'),
-		valeur: (l) => fmtAgrege(l),
+		valeur: (l) => ('jours_agreges' in l ? fmtAgrege(l) : '—'),
 		style: 'color:var(--color-text-muted)',
 	},
 	{
@@ -102,23 +105,24 @@ export const COLONNES: {
 	{
 		titre: 'Durée',
 		visible: (lg) => aValeur(lg, 'duree_secondes'),
-		valeur: (l) => (l.duree_secondes != null ? `${l.duree_secondes} s` : '—'),
+		valeur: (l) =>
+			'duree_secondes' in l && l.duree_secondes != null ? `${l.duree_secondes} s` : '—',
 	},
 	{
 		titre: 'Taille',
 		visible: (lg) => aValeur(lg, 'taille_octets'),
-		valeur: (l) => fmtOctets(l.taille_octets),
+		valeur: (l) => fmtOctets('taille_octets' in l ? l.taille_octets : null),
 	},
 	{
 		titre: 'Taille DB',
 		visible: (lg) => aValeur(lg, 'taille_db_octets'),
-		valeur: (l) => fmtOctets(l.taille_db_octets),
+		valeur: (l) => fmtOctets('taille_db_octets' in l ? l.taille_db_octets : null),
 	},
 	{
 		titre: 'Détail',
 		visible: (lg) => aValeur(lg, 'details'),
 		valeur: (l) =>
-			l.details
+			'details' in l && l.details
 				? Object.entries(l.details)
 						//  Une LISTE se compte ici : les constats des contrôles de
 						//  fiabilité se lisent en entier dans leur propre carte.
@@ -141,5 +145,5 @@ export const motifEchec = (l: ExecutionTache): string | null =>
 	('message_erreur' in l ? l.message_erreur : l.erreur) ?? null;
 
 /** Celles qui ont quelque chose à montrer pour ce jeu de lignes. */
-export const colonnesVisibles = (lignes: any[]) =>
+export const colonnesVisibles = (lignes: ExecutionTache[]) =>
 	COLONNES.filter((c) => !c.visible || c.visible(lignes));

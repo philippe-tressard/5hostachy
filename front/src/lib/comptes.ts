@@ -21,7 +21,7 @@
  * 🔴 `standards/02` §4 bis : quand deux implémentations coexistent, on retient
  * **la plus disante**. C'est elle qui est ici, et les deux écrans l'obtiennent.
  */
-import { admin as adminApi, type CompteTraite } from '$lib/api';
+import { admin as adminApi, type CompteTraite, type User } from '$lib/api';
 import { nomAffiche } from '$lib/noms';
 
 /** Un message à afficher, et le ton sur lequel le dire. */
@@ -36,7 +36,10 @@ export interface Annonce {
  * ⚠️ Séparée de l'appel réseau pour être vérifiable sans rien monter : c'est la
  * partie qui porte les six cas, donc celle qui peut se tromper.
  */
-export function annonceValidation(reponse: CompteTraite, utilisateur: any): Annonce {
+/**  Ce que la validation lit du compte : identifiant, statut, nom de l'aidé(e). */
+type CompteAValider = Pick<User, 'id' | 'statut' | 'nom_aide' | 'prenom_aide'>;
+
+export function annonceValidation(reponse: CompteTraite, utilisateur: CompteAValider): Annonce {
 	const auto = reponse?.auto_match;
 	const aide = auto?.aide_match;
 	if (aide?.aide_trouve) {
@@ -94,7 +97,7 @@ export interface ValidationDemandee {
  * au conseil syndical au sujet d'un compte qui doit exister.
  */
 export async function validerCompte(
-	utilisateur: any,
+	utilisateur: CompteAValider,
 	demande: ValidationDemandee,
 ): Promise<Annonce[]> {
 	const reponse = await adminApi.traiterCompte(utilisateur.id, { action: 'valider' });
@@ -161,7 +164,9 @@ export interface FormulaireCompte {
  * ⚠️ `actif` vaut `true` par défaut : un compte qu'on crée est actif, et
  * proposer l'inverse ferait d'un oubli de case une désactivation.
  */
-export function formulaireCompte(u?: Record<string, any> | null): FormulaireCompte {
+export function formulaireCompte(
+	u?: { [K in keyof FormulaireCompte]?: FormulaireCompte[K] | null } | null,
+): FormulaireCompte {
 	return {
 		nom: u?.nom ?? '',
 		prenom: u?.prenom ?? '',

@@ -30,11 +30,28 @@
  * prop `marge` d'`EntetePage` (`ux-patterns` §13) : *tant que le mécanisme
  * d'exception existe, l'exception se reproduit.*
  */
-import { acces as accesApi, type LotPourBadge } from '$lib/api';
+import {
+	acces as accesApi,
+	type AppariementImport,
+	type CompteImportTableur,
+	type LigneImportAcces,
+	type LigneImportAccesBrute,
+	type LigneImportTelecommandeBrute,
+	type LigneImportVigikBrute,
+	type LotPourBadge,
+	type RattachementImport,
+	type StatsImportAcces,
+	type StatutLigneImport,
+} from '$lib/api';
 
 //  Le type vit à côté du client qui le rend (#1572) ; réexporté pour ses lecteurs.
 export type { LotPourBadge };
 import { parAttribut } from '$lib/table-statuts';
+
+/**  Une ligne de la liste, quel que soit le type d'import — ce que rend `api.list`. */
+export type LigneImport =
+	| LigneImportAcces<LigneImportTelecommandeBrute>
+	| LigneImportAcces<LigneImportVigikBrute>;
 
 /** Une colonne du tableau, propre à un type d'import. */
 export interface ColonneImport {
@@ -68,22 +85,23 @@ export interface ModeleImportAcces {
 	/** Cases supplémentaires du formulaire d'édition. */
 	champsBooleens: ChampBooleen[];
 	/** Décorations du statut — icônes que seul un type porte. */
-	decorationsStatut: (imp: any) => { icone: string; titre: string }[];
+	decorationsStatut: (imp: LigneImportAccesBrute) => { icone: string; titre: string }[];
 	api: {
-		upload: (file: File, remplacer: boolean) => Promise<any>;
-		list: (statut?: string) => Promise<any[]>;
-		stats: () => Promise<any>;
-		autoMatch: () => Promise<any>;
+		upload: (file: File, remplacer: boolean) => Promise<CompteImportTableur>;
+		list: (statut?: string) => Promise<LigneImport[]>;
+		stats: () => Promise<StatsImportAcces>;
+		autoMatch: () => Promise<AppariementImport>;
 		/** Le rattachement en masse : chaque ligne dont le lot est connu (#1194). */
-		rattacher: () => Promise<any>;
-		patch: (id: number, data: unknown) => Promise<any>;
-		resoudre: (id: number) => Promise<any>;
-		ignorer: (id: number) => Promise<any>;
+		rattacher: () => Promise<RattachementImport>;
+		patch: (id: number, data: unknown) => Promise<LigneImportAccesBrute>;
+		/** L'objet créé diffère d'un type à l'autre ; l'écran ne lit que la ligne. */
+		resoudre: (id: number) => Promise<{ import_id: number }>;
+		ignorer: (id: number) => Promise<{ statut: StatutLigneImport }>;
 		/**  Rattrape un import ignoré par erreur. OBLIGATOIRE depuis #576 : les
 		 *   deux objets ont le même cycle d'import, donc les mêmes gestes. */
-		remettreEnAttente: (id: number) => Promise<any>;
+		remettreEnAttente: (id: number) => Promise<{ statut: StatutLigneImport }>;
 		/** 🔒 Administrateur : supprimer une ligne erronée (23/09/2026). */
-		supprimer: (id: number) => Promise<any>;
+		supprimer: (id: number) => Promise<unknown>;
 	};
 }
 

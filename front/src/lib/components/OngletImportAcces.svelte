@@ -18,9 +18,15 @@
   « Vigik », ni « télécommande », ni un chemin d'API.
 -->
 <script lang="ts">
-	import { nombreOuNull } from '$lib/utils';
+	import { champDe, nombreOuNull } from '$lib/utils';
 	import { onMount } from 'svelte';
-	import { acces as accesApi, admin as adminApi, type LotPourBadge } from '$lib/api';
+	import {
+		acces as accesApi,
+		admin as adminApi,
+		type LotPourBadge,
+		type StatsImportAcces,
+		type UtilisateurAdmin,
+	} from '$lib/api';
 	import { nomAffiche } from '$lib/noms';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
@@ -32,6 +38,7 @@
 		STATUT_LABEL,
 		libelleLotPourBadge,
 		lotsPourBadge,
+		type LigneImport,
 		type ModeleImportAcces,
 	} from '$lib/imports-acces';
 	import BarreImport from '$lib/components/BarreImport.svelte';
@@ -43,8 +50,8 @@
 
 	$: _siteNom = $siteNomStore;
 
-	let imports: any[] = [];
-	let stats: any = null;
+	let imports: LigneImport[] = [];
+	let stats: StatsImportAcces | null = null;
 	let lots: LotPourBadge[] = [];
 	let chargement = true;
 	let erreur = '';
@@ -53,9 +60,9 @@
 
 	$: lotsTries = lotsPourBadge(lots, modele.natureLot);
 	/** Les comptes, pour désigner le locataire qui a le badge en main. */
-	let comptes: any[] = [];
+	let comptes: UtilisateurAdmin[] = [];
 
-	async function geste(appel: () => Promise<any>, succes: (r: any) => string) {
+	async function geste<T>(appel: () => Promise<T>, succes: (r: T) => string) {
 		enCours = true;
 		try {
 			const r = await appel();
@@ -136,14 +143,14 @@
 	//  Les cases propres à un type (« Locataire a refusé ») : le modèle les déclare.
 	let editBooleens: Record<string, boolean> = {};
 
-	function ouvrirEdition(imp: any) {
+	function ouvrirEdition(imp: LigneImport) {
 		editId = imp.id;
 		editLot = String(imp.lot_id ?? '');
 		editChezLoc = imp.chez_locataire;
 		editLocataire = String(imp.user_locataire_id ?? '');
 		editNotes = imp.notes_admin ?? '';
 		editBooleens = Object.fromEntries(
-			modele.champsBooleens.map((c) => [c.cle, imp[c.cle] ?? false]),
+			modele.champsBooleens.map((c) => [c.cle, champDe(imp, c.cle) === true]),
 		);
 	}
 
@@ -257,7 +264,7 @@
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
 						{#each modele.colonnes as c (c.cle)}
-							<td style="font-size:var(--fs-sm)">{imp[c.cle] ?? '—'}</td>
+							<td style="font-size:var(--fs-sm)">{champDe(imp, c.cle) ?? '—'}</td>
 						{/each}
 						<td>
 							<span style="font-weight:500">{imp.nom_proprietaire}</span>
@@ -267,7 +274,7 @@
 								>
 							{/if}
 						</td>
-						<td><code style="font-size:var(--fs-sm)">{imp[modele.colonneCle.cle] ?? '—'}</code></td>
+						<td><code style="font-size:var(--fs-sm)">{champDe(imp, modele.colonneCle.cle) ?? '—'}</code></td>
 						<td>
 							{#if imp.lot_label}
 								<span class="badge badge-green">{imp.lot_label} · {porteurs(imp.lot_porteurs)}</span
@@ -343,7 +350,7 @@
 										Indices du fichier : <strong>{imp.nom_proprietaire}</strong>{imp.nom_locataire
 											? ` · locataire ${imp.nom_locataire}`
 											: ''} · {modele.colonneCle.entete.toLowerCase()}
-										<code>{imp[modele.colonneCle.cle] ?? '—'}</code>
+										<code>{champDe(imp, modele.colonneCle.cle) ?? '—'}</code>
 									</p>
 									<div class="imp-edit-grid">
 										<div class="field" style="grid-column:1 / -1">
