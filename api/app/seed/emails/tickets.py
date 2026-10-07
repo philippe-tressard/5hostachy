@@ -72,6 +72,40 @@ _FIL_MESSAGES_EXTERNE = (
 )
 
 
+def _tableau_historique(source: str, *, marge: str = "0 0 20px") -> str:
+    """Le tableau du fil d'activité : deux colonnes zébrées, date puis libellé.
+
+    Écrit une fois pour deux emplois — l'historique de l'affaire et celui de
+    chaque affaire liée — qui ne diffèrent que par la liste parcourue. Le texte
+    produit pour `historique` n'a pas bougé d'un caractère (`test_fragments_identiques`).
+    """
+    return (
+        f'<table role="presentation" style="border-collapse:collapse;width:100%;font-size:.88rem;margin:{marge};border:1px solid {BORD};border-radius:8px;overflow:hidden">'
+        "{% for h in " + source + " %}"
+        f'<tr style="background:{{% if loop.index is odd %}}{CREME}{{% else %}}#FFFFFF{{% endif %}}">'
+        f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};white-space:nowrap;color:{GRIS};font-size:.82rem">{{{{ h.date }}}}</td>'
+        f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};color:{TEXTE}">{{{{ h.label }}}}</td>'
+        "</tr>{% endfor %}"
+        "</table>"
+    )
+
+
+#: Les affaires liées, sous l'historique : chacune avec le sien, de la plus
+#: ancienne à la plus récente (l'ordre est celui du contexte, pas du gabarit).
+_AFFAIRES_LIEES = (
+    "{% if affaires_liees %}"
+    f'<h3 style="margin:12px 0 8px;font-size:15px;color:{BLEU}">Affaires liées</h3>'
+    "{% for a in affaires_liees %}"
+    + encart(
+        f'<p style="margin:0 0 4px;font-size:13px;color:{GRIS}">Affaire #{{{{ a.numero }}}} · créée le {{{{ a.date_creation }}}}</p>'
+        f'<p style="margin:0 0 8px;font-weight:700;font-size:15px;color:{BLEU}">{{{{ a.titre }}}}</p>'
+        + _tableau_historique("a.historique", marge="0"),
+        marge="0 0 12px",
+    )
+    + "{% endfor %}{% endif %}"
+)
+
+
 def _modele_ticket_transmis(
     code: str,
     nom: str,
@@ -134,14 +168,14 @@ def _modele_ticket_transmis(
         #  appelant nommerait une notion qui n'existe pas.
         + "{% if not is_commentaire and historique and historique|length > 1 %}"
         + HISTORIQUE_TITRE
-        + f'<table role="presentation" style="border-collapse:collapse;width:100%;font-size:.88rem;margin:0 0 20px;border:1px solid {BORD};border-radius:8px;overflow:hidden">'
-        + "{% for h in historique %}"
-        f'<tr style="background:{{% if loop.index is odd %}}{CREME}{{% else %}}#FFFFFF{{% endif %}}">'
-        f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};white-space:nowrap;color:{GRIS};font-size:.82rem">{{{{ h.date }}}}</td>'
-        f'<td style="padding:.35rem .75rem;border-bottom:1px solid {BORD};color:{TEXTE}">{{{{ h.label }}}}</td>'
-        "</tr>{% endfor %}"
-        "</table>"
-        "{% endif %}" + _bouton_ticket(marge=MARGE_BOUTON_SELON_COMMENTAIRE),
+        + _tableau_historique("historique")
+        + "{% endif %}"
+        #  🔴 Les affaires liées, SOUS l'historique — sur une création comme sur un
+        #  commentaire (05/10/2026). Elles ont leur bloc et non une ligne de plus :
+        #  c'est l'historique de CHACUNE qu'on veut lire, dans l'ordre où les
+        #  affaires ont été ouvertes (`historique_courriel`).
+        + _AFFAIRES_LIEES
+        + _bouton_ticket(marge=MARGE_BOUTON_SELON_COMMENTAIRE),
         True,
     )
 

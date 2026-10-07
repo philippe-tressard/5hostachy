@@ -56,7 +56,10 @@ from app.seed import EMAIL_TEMPLATES
 #: ⬇️ Mise à jour le 04/10/2026 (#1580) : un modèle AJOUTÉ, `compte_inactif_avertissement`,
 #: posé par le seed ; l'empreinte des 33 autres est inchangée (vérifié en
 #: l'écartant : ca8db203…).
-EMPREINTE = "e4d7162a6c71a40ad9deb17a8599a622ef5d8da8525d8fafda5418465737754f"
+#: ⬇️ Mise à jour le 05/10/2026 : `ticket_syndic` et `ticket_copie_auteur` portent le
+#: bloc des affaires liées sous leur historique — migration **0266**. Les autres
+#: modèles sont inchangés (vérifié : seuls ces deux corps diffèrent de HEAD).
+EMPREINTE = "fe58557e6735da3989879646a156a07ee3cb16e0dcef1ef9c10dddc9f1cefa20"
 NOMBRE_ATTENDU = 34  # + ticket_partage, lien_partage (#1357), adresse_changement_avis (#1549),
 #  synthese_a_valider (#1643), ticket_copie_auteur, publication_copie_auteur,
 #  compte_inactif_avertissement (#1580) — AJOUTÉS, donc posés par le seed : aucune migration.

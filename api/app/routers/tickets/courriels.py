@@ -33,7 +33,11 @@ from .commun import (
     config_site,
     contexte_site,
     destinataires_syndic_cs,
-    libelle_evolution,
+)
+from .historique_courriel import (
+    affaires_liees_du_courriel,
+    contexte_affaires_liees,
+    lignes_historique,
 )
 from app.utils.noms import contexte_personne, nom_affiche
 from app.utils.liens import base_site, nom_site
@@ -165,11 +169,11 @@ def contexte_ticket_syndic(
     cfg = config_site(session)
 
     messages_ctx = []
-    historique = [{"date": date_courte(ticket.cree_le), "label": "Création du ticket"}]
+    #  Les affaires liées prolongent l'historique : le lien s'y trace, et chacune
+    #  s'ajoute dessous avec le sien (`historique_courriel`).
+    liees = affaires_liees_du_courriel(session, ticket)
+    historique = lignes_historique(ticket, evolutions or [], liees)
     for ev in evolutions or []:
-        historique.append(
-            {"date": fmt_paris(ev.cree_le), "label": libelle_evolution(ev, avec_extrait=True)}
-        )
         if ev.contenu:
             auteur_e = session.get(Utilisateur, ev.auteur_id)
             messages_ctx.append(
@@ -232,6 +236,7 @@ def contexte_ticket_syndic(
         #  frise à l'envers ne se lit pas. Deux blocs, deux ordres, deux raisons.
         "messages": list(reversed(messages_ctx)),
         "historique": historique,
+        "affaires_liees": contexte_affaires_liees(session, liees),
         "fichiers": bool(pieces_jointes),
     }
     return ctx

@@ -39,6 +39,8 @@ EXPECTED_VARS: dict[str, set[str]] = {
         "historique",
         "auteur",
         "commentaire_perimetre",
+        #  Les affaires liées, sous l'historique (05/10/2026, migration 0266).
+        "affaires_liees",
     },
     #  `urgent` conditionne un liseré rouge et la mention URGENT : c'est le
     #  ticket qui le porte, pas le destinataire.
