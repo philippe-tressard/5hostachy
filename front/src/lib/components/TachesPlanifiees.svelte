@@ -107,7 +107,7 @@
 	//  donnait. Les supprimer sans les déplacer aurait perdu la seule mention du
 	//  lieu de stockage des archives.
 	const AIDE_TACHE: Record<string, string> = {
-		backup: 'Stockage des archives : /data/5hostachy/backups/',
+		backup: 'Stockage des archives : /backups, dans le conteneur de l’API',
 		telemetrie:
 			'Automatique chaque nuit à 2 h. Agrège les événements bruts en données ' +
 			'journalières puis mensuelles, et purge les données expirées.',

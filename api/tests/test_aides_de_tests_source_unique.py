@@ -85,6 +85,14 @@ MOTIFS = (
         "`app.utils.horloge.maintenant()` — l'UTC naïf de la base",
     ),
     Motif(
+        "docstrings écartées à la main",
+        #  Quatre copies jusqu'au 07/10/2026 (#1725), dont une qui écartait aussi
+        #  la première chaîne d'un `if` ou d'un `for`.
+        re.compile(r"isinstance\(\s*corps\[0\]\.value,\s*ast\.Constant\s*\)"),
+        "aides_sources.py",
+        "`aides_sources.docstrings(arbre)` ou `aides_sources.chaines_du_code(arbre)`",
+    ),
+    Motif(
         "portée des scripts shell",
         re.compile(r"glob\(\s*[\"'][^\"']*\*\.sh[\"']"),
         "conftest.py",
@@ -154,6 +162,7 @@ def test_le_controle_sait_REFUSER():
         "aide importée depuis un fichier de tests": "from tests.test_autre import _aide",
         "migration chargée à la main": "spec = importlib.util.spec_from_file_location(n, c)",
         "horloge dépréciée": "t = datetime.utcnow()",
+        "docstrings écartées à la main": "if isinstance(corps[0].value, ast.Constant):",
         "portée des scripts shell": 'racine.rglob("*.sh")',
     }
     assert set(forges) == {m.nom for m in MOTIFS}, "un motif n'a pas son extrait forgé"

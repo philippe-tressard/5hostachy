@@ -69,19 +69,10 @@ export default defineConfig({
 			base: '/',
 			scope: '/',
 			strategies: 'generateSW',
-			manifest: {
-				name: '5Hostachy',
-				short_name: '5Hostachy',
-				description: 'Application de gestion de copropriété',
-				theme_color: '#1E3A5F',
-				background_color: '#ffffff',
-				display: 'standalone',
-				start_url: '/',
-				icons: [
-					{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-					{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-				],
-			},
+			// PAS de manifeste généré : il est SERVI par `routes/manifest.webmanifest`,
+			// qui y écrit le nom de la résidence lu dans sa configuration (#1725). Un
+			// manifeste figé au build portait « 5Hostachy » pour toute installation.
+			manifest: false,
 			workbox: {
 				// PAS de repli de navigation. `vite-plugin-pwa` suppose une SPA et pose
 				// par défaut `navigateFallback: 'index.html'` : le service worker répond

@@ -3,6 +3,7 @@ Configuration du site — paramètres admin persistants en base de données.
 Remplace le localStorage pour permettre la synchronisation multi-appareils.
 """
 
+from html import escape
 from typing import Dict
 from app.utils import horloge
 
@@ -22,7 +23,8 @@ from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
 from app.utils.destinataires import peut_gerer_le_site
-from app.utils.liens import base_site
+from app.utils.config_site import config_site
+from app.utils.liens import base_site, nom_site
 from app.utils.recuperer import ou_404
 
 router = APIRouter(prefix="/config", tags=["config"])
@@ -376,6 +378,10 @@ async def smtp_test(
     #  serveur qui refuse la seconde — cas courant quand elle est un ALIAS et non
     #  un compte — passait le test et échouait sur un vrai ticket.
     adresses = adresses_a_tester(smtp_cfg)
+    #  Le nom de CETTE résidence, lu dans sa configuration (#1725) : il était
+    #  écrit « 5Hostachy » trois fois dans ce message.
+    nom = nom_site(config_site(session).get("site_nom"))
+    site = escape(nom)
     envoyees: list[str] = []
     try:
         from fastapi_mail import FastMail, MessageSchema
@@ -384,16 +390,16 @@ async def smtp_test(
             cfg = connexion_smtp(smtp_cfg, expediteur=adresse)
             fm = FastMail(cfg)
             msg = MessageSchema(
-                subject=f"[5Hostachy] Test de configuration SMTP — depuis {adresse}",
+                subject=f"[{nom}] Test de configuration SMTP — depuis {adresse}",
                 recipients=[payload.email],
                 body=(
                     "<p>Bonjour,</p>"
                     "<p>Ceci est un e-mail de test envoyé depuis l'interface "
-                    "d'administration de <strong>5Hostachy</strong>.</p>"
+                    f"d'administration de <strong>{site}</strong>.</p>"
                     f"<p>Il part de <strong>{adresse}</strong>. Si vous recevez un message "
                     "pour chacune des adresses configurées, l'envoi fonctionne pour les "
                     "deux ✅</p>"
-                    "<p style='color:#64748b;font-size:.85em'>— 5Hostachy</p>"
+                    f"<p style='color:#64748b;font-size:.85em'>— {site}</p>"
                 ),
                 subtype="html",
             )

@@ -298,7 +298,7 @@
 
 				<div class="rgpd-box">
 					<p class="rgpd-info">
-						<strong>Responsable du traitement :</strong> Admin de 5Hostachy (CS de la copropriété).<br
+						<strong>Responsable du traitement :</strong> l’administrateur de {_siteNom} (CS de la copropriété).<br
 						/>
 						<strong>Finalité :</strong> Gestion de la copropriété (Art. 6.1.b RGPD).<br />
 						<strong>Conservation :</strong> Durée de résidence + 3 ans.<br />

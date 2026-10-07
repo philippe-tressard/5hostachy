@@ -22,32 +22,14 @@ défauts.
 import ast
 from pathlib import Path
 
-from tests.aides_sources import modules_app
+from tests.aides_sources import chaines_du_code, modules_app
 
 RACINE_API = Path(__file__).resolve().parents[1]
 
 
 def _constantes_texte_hors_docstring(fichier: Path) -> list[str]:
     """Les chaînes littérales du fichier, docstrings et commentaires exclus."""
-    arbre_py = ast.parse(fichier.read_text(encoding="utf-8"))
-    docstrings = set()
-    for noeud in ast.walk(arbre_py):
-        if isinstance(noeud, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            corps = getattr(noeud, "body", [])
-            if (
-                corps
-                and isinstance(corps[0], ast.Expr)
-                and isinstance(corps[0].value, ast.Constant)
-                and isinstance(corps[0].value.value, str)
-            ):
-                docstrings.add(id(corps[0].value))
-    return [
-        noeud.value
-        for noeud in ast.walk(arbre_py)
-        if isinstance(noeud, ast.Constant)
-        and isinstance(noeud.value, str)
-        and id(noeud) not in docstrings
-    ]
+    return [n.value for n in chaines_du_code(ast.parse(fichier.read_text(encoding="utf-8")))]
 
 
 def test_aucune_liste_de_perimetres_ne_subsiste_dans_le_code():

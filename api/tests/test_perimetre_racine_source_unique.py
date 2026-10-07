@@ -48,7 +48,7 @@ from __future__ import annotations
 import ast
 import unicodedata
 
-from tests.aides_sources import modules_app
+from tests.aides_sources import docstrings, modules_app
 
 _CODE = "résidence"
 
@@ -76,21 +76,6 @@ def _sans_accent(texte: str) -> str:
     return "".join(c for c in decompose if not unicodedata.combining(c)).casefold()
 
 
-def _docstrings(arbre: ast.AST) -> set[int]:
-    vus: set[int] = set()
-    for noeud in ast.walk(arbre):
-        if isinstance(noeud, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            corps = noeud.body
-            if (
-                corps
-                and isinstance(corps[0], ast.Expr)
-                and isinstance(corps[0].value, ast.Constant)
-                and isinstance(corps[0].value.value, str)
-            ):
-                vus.add(id(corps[0].value))
-    return vus
-
-
 def _en_position_de_code(arbre: ast.AST) -> set[int]:
     """Les constantes comparées, ou rangées dans une liste, un tuple, un ensemble."""
     vus: set[int] = set()
@@ -110,7 +95,7 @@ def _en_position_de_code(arbre: ast.AST) -> set[int]:
 def occurrences(source: str) -> int:
     """Le nombre de littéraux qui écrivent le code racine dans ce source."""
     arbre = ast.parse(source)
-    exclues = _docstrings(arbre)
+    exclues = docstrings(arbre)
     en_code = _en_position_de_code(arbre)
     code, cite = _forme(_CODE), f'"{_forme(_CODE)}"'
     compte = 0

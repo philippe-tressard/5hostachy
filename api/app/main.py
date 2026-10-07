@@ -3,15 +3,11 @@
 API FastAPI v0.1
 """
 
-import json as _json
 import logging as _logging
 import os as _os
-import re as _re
 import traceback as _traceback
 from contextlib import asynccontextmanager
-from datetime import datetime
 from app.utils import horloge
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,49 +45,7 @@ _logging.basicConfig(
 _logger = _logging.getLogger("hostachy.api")
 
 
-# ── Sérialisation UTC : toutes les datetime naïves sortent avec "Z" ───────────
-# Problème : FastAPI 0.115+ / Pydantic v2 appelle model_dump(mode="json")
-# qui convertit les datetime en chaînes ISO AVANT que ENCODERS_BY_TYPE ne
-# puisse ajouter le suffixe "Z". Résultat : "2026-04-10T00:00:00" sans "Z"
-# → le navigateur interprète comme heure locale au lieu d'UTC.
-#
-# Solution : UTCJSONResponse post-traite le JSON pour ajouter "Z" à toute
-# chaîne ISO datetime naïve (sans timezone). Le _UTCEncoder reste en place
-# pour les cas où un dict brut contient des objets datetime Python.
-from fastapi.encoders import ENCODERS_BY_TYPE
-
-ENCODERS_BY_TYPE[datetime] = lambda dt: (
-    dt.isoformat() + "Z" if dt.tzinfo is None else dt.isoformat()
-)
-
-# Regex : "2026-04-10T00:00:00" ou "2026-04-10T00:00:00.123456" (sans suffixe TZ)
-_NAIVE_DT_RE = _re.compile(r'"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)"')
-
-
-class _UTCEncoder(_json.JSONEncoder):
-    """Filet de sécurité : si un datetime arrive directement dans le JSON
-    (retour de dict brut), on ajoute Z aussi."""
-
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, datetime):
-            if obj.tzinfo is None:
-                return obj.isoformat() + "Z"
-            return obj.isoformat()
-        return super().default(obj)
-
-
-class UTCJSONResponse(JSONResponse):
-    def render(self, content: Any) -> bytes:
-        body = _json.dumps(
-            content,
-            cls=_UTCEncoder,
-            ensure_ascii=False,
-        )
-        # Post-traitement : ajouter "Z" aux datetime ISO naïves
-        # (Pydantic v2 les a déjà converties en chaînes sans timezone)
-        body = _NAIVE_DT_RE.sub(r'"\1Z"', body)
-        return body.encode("utf-8")
-
+from app.utils.reponse_utc import UTCJSONResponse
 
 from app.database import _run_migrations, engine
 from app.routers import (
@@ -134,6 +88,7 @@ from app.routers import assistant, config_llm, config_services, reglement
 from app.config import get_settings
 from app.seed import seed
 from app.utils.backup import setup_scheduler
+from app.utils.plateforme import NOM_PLATEFORME
 
 
 @asynccontextmanager
@@ -326,8 +281,8 @@ _enable_docs = _os.getenv("ENABLE_API_DOCS", "false").lower() == "true"
 API_VERSION = "0.2.0"
 
 app = FastAPI(
-    title="5Hostachy API",
-    description="API de gestion de la copropriété — Résidence du Parc",
+    title=f"{NOM_PLATEFORME} API",
+    description="API de gestion de copropriété",
     version=API_VERSION,
     lifespan=lifespan,
     default_response_class=UTCJSONResponse,

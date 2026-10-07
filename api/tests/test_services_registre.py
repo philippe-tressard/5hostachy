@@ -34,7 +34,7 @@ from app.utils.services import (
     service_actif,
 )
 from tests.aides_http import base_http, client_http
-from tests.aides_sources import module_app, modules_app
+from tests.aides_sources import chaines_du_code, module_app, modules_app
 
 REGISTRE = "utils/services.py"
 FRONT = pathlib.Path(__file__).resolve().parents[2] / "front/src/lib"
@@ -42,24 +42,12 @@ PAGES_ROLES = FRONT / "pages-roles.ts"
 ICONES = FRONT / "icones-svg.json"
 
 
-def _docstrings(arbre: ast.AST) -> set[int]:
-    ids = set()
-    for noeud in ast.walk(arbre):
-        corps = getattr(noeud, "body", None)
-        if isinstance(corps, list) and corps and isinstance(corps[0], ast.Expr):
-            if isinstance(corps[0].value, ast.Constant):
-                ids.add(id(corps[0].value))
-    return ids
-
-
 def _cles_ecrites(source: str) -> list[tuple[int, str]]:
     """Les clés d'activation écrites en littéral dans ce source — docstrings exclues."""
-    arbre = ast.parse(source)
-    exclues = _docstrings(arbre)
     return [
         (n.lineno, n.value)
-        for n in ast.walk(arbre)
-        if isinstance(n, ast.Constant) and n.value in CLES_ACTIVATION and id(n) not in exclues
+        for n in chaines_du_code(ast.parse(source))
+        if n.value in CLES_ACTIVATION
     ]
 
 

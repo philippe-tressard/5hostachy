@@ -19,13 +19,14 @@ le moteur d'envoi). Deux défauts, dont un silencieux :
 ressemblent, et chaque fichier était cohérent avec lui-même.
 """
 
+import ast
 import re
 from pathlib import Path
 
 import pytest
 
 from app.utils.liens import NOM_SITE_PAR_DEFAUT, nom_site
-from tests.aides_sources import modules_app
+from tests.aides_sources import chaines_du_code, modules_app
 
 APP = Path(__file__).resolve().parents[1] / "app"
 
@@ -33,27 +34,83 @@ APP = Path(__file__).resolve().parents[1] / "app"
 _SOURCE = APP / "utils" / "liens.py"
 
 
-def test_aucun_nom_de_copropriete_en_dur():
-    """Le nom de cette copropriété ne s'écrit pas dans le code.
+#: Ce qui a le droit d'écrire « hostachy » dans un littéral de `app/` :
+#: chemin → (nombre exact d'occurrences, raison). Une exception qui cesse de
+#: servir — ou qui sert davantage — fait échouer le contrôle.
+EXCEPTIONS_HOSTACHY: dict[str, tuple[int, str]] = {
+    "utils/plateforme.py": (
+        3,
+        "la SOURCE : l'adresse du dépôt et la licence en vigueur portent ce nom "
+        "(la licence change avec #1726)",
+    ),
+    "utils/backup.py": (
+        1,
+        "`hostachy_backup_` : le préfixe des archives DÉJÀ sur disque, que la rotation "
+        "et la restauration reconnaissent",
+    ),
+    "utils/fiche_arrivant.py": (
+        1,
+        "« Boulevard Hostachy », un nom de RUE dans les consignes en dur — #1727 les rend "
+        "administrables",
+    ),
+}
 
-    ⚠️ On cherche la chaîne **entre guillemets**, pas le mot : les docstrings et
-    les commentaires racontent l'incident et doivent pouvoir le nommer. C'est la
-    leçon de `lint:html`, dont la première version comptait les mentions dans les
-    commentaires qui expliquaient la règle.
+#: Un nom de journal (`logging.getLogger("hostachy.llm")`) est un espace de noms
+#: technique, jamais affiché : les filtres d'exploitation le lisent.
+_NOM_DE_JOURNAL = re.compile(r"hostachy\.[a-z_]+")
+
+
+def occurrences_hostachy(source: str) -> int:
+    """Le nombre de littéraux de ce source qui écrivent « hostachy », en toute casse.
+
+    Docstrings et commentaires exclus — ils racontent l'histoire et doivent
+    pouvoir la nommer (la leçon de `lint:html`) —, noms de journal aussi. PURE.
     """
-    motif = re.compile(r"""["']5Hostachy["']""")
-    fautifs = []
+    return sum(
+        1
+        for n in chaines_du_code(ast.parse(source))
+        if "hostachy" in n.value.casefold() and not _NOM_DE_JOURNAL.fullmatch(n.value)
+    )
+
+
+@pytest.mark.parametrize(
+    "source,attendu",
+    [
+        ('X = "5Hostachy"\n', 1),
+        #  🔴 Le motif d'origine — `"5Hostachy"` ENTRE GUILLEMETS — ne voyait aucun
+        #  de ces trois-là, et les trois étaient dans le code le 07/10/2026 (#1725).
+        ('footer = f"— Conseil Syndical 5Hostachy"\n', 1),
+        ('titre = "Bienvenue — 5Hostachy"\n', 1),
+        ('url = "5hostachy.fr"\n', 1),
+        ('"""La docstring peut nommer 5Hostachy."""\n', 0),
+        ("# un commentaire aussi : 5Hostachy\n", 0),
+        ('logger = logging.getLogger("hostachy.llm")\n', 0),
+        ('X = "rien à signaler"\n', 0),
+    ],
+)
+def test_le_controle_reconnait_le_nom_ecrit(source, attendu):
+    assert occurrences_hostachy(source) == attendu
+
+
+def test_aucun_nom_de_copropriete_en_dur():
+    """Le nom de cette copropriété ne s'écrit pas dans le code (#1725).
+
+    Le nom de la RÉSIDENCE se lit dans la configuration (`nom_site`), celui de la
+    PLATEFORME dans `utils/plateforme` — le logiciel s'appelle CoproConnect
+    (`specs/architecture/multi-coproprietes.md`, D9).
+    """
+    fautes = []
     for m in modules_app():
-        for numero, ligne in enumerate(m.lignes, 1):
-            nue = ligne.strip()
-            if nue.startswith("#") or nue.startswith("#:"):
-                continue
-            if motif.search(ligne):
-                fautifs.append(f"{m.chemin.relative_to(APP)}:{numero}")
-    assert not fautifs, (
-        "Le nom de la copropriété est écrit dans le code :\n  "
-        + "\n  ".join(fautifs)
-        + "\n→ employer `nom_site(cfg.get('site_nom'))` (`app.utils.liens`)."
+        n = occurrences_hostachy(m.source)
+        attendu = EXCEPTIONS_HOSTACHY.get(m.rel, (0, ""))[0]
+        if n != attendu:
+            fautes.append(f"{m.rel} : {n} littéral(aux), {attendu} déclaré(s)")
+    assert not fautes, (
+        "« hostachy » est écrit dans le code :\n  "
+        + "\n  ".join(fautes)
+        + "\n→ la résidence : `nom_site(cfg.get('site_nom'))` (`app.utils.liens`) ;"
+        "\n  la plateforme : `app.utils.plateforme.NOM_PLATEFORME`."
+        "\n  Une exception se déclare dans EXCEPTIONS_HOSTACHY, avec sa raison."
     )
 
 

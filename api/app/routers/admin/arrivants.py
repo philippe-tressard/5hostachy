@@ -11,7 +11,6 @@ from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
     AgCsInfo,
-    ConfigSite,
     MembreCS,
     MembreSyndic,
     Notification,
@@ -39,6 +38,8 @@ from app.utils.courriel_arrivee import envoyer as envoyer_message_arrivee
 from app.utils.ticket_arrivant import creer_ticket_arrivant
 from app.utils.recuperer import ou_404
 from app.utils.cloche import sonner_systeme
+from app.utils.config_site import config_site
+from app.utils.liens import base_site, nom_site
 
 router = APIRouter()
 
@@ -329,10 +330,11 @@ def get_fiche_arrivant(
     syndic_info = session.exec(select(SyndicInfo)).first()
     syndic_membres = membres_du_syndic(session)
 
-    whatsapp_url = (
-        session.exec(select(ConfigSite).where(ConfigSite.cle == "whatsapp_community_url")).first()
-        or ConfigSite(cle="", valeur="")
-    ).valeur or None
+    #  Une lecture de la configuration pour les trois réglages : le nom et
+    #  l'adresse du site n'étaient pas lus du tout (#1725), et la fiche imprimait
+    #  ceux de cette résidence, en dur.
+    site = config_site(session, "whatsapp_community_url")
+    whatsapp_url = (site.get("whatsapp_community_url") or "").strip() or None
 
     html = generer_fiche_arrivant(
         cs_data={
@@ -349,6 +351,8 @@ def get_fiche_arrivant(
             "site_web": syndic_info.site_web if syndic_info else None,
             "membres": syndic_membres,
         },
+        site_nom=nom_site(site.get("site_nom")),
+        site_url=base_site(site.get("site_url")),
         whatsapp_url=whatsapp_url,
         annee=horloge.aujourd_hui().year,
     )

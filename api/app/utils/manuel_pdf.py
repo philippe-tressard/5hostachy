@@ -51,6 +51,7 @@ from pathlib import Path
 from app.utils import manuel_pdf_cache
 from app.utils.dates_fr import date_longue
 from app.utils.manuel_pdf_css import css_du_pdf
+from app.utils.plateforme import LICENCE_NOM, NOM_PLATEFORME
 from app.utils.pdf_theme import (
     html_to_pdf,
     logo_svg,
@@ -283,8 +284,8 @@ def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str
     <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
         l'accès est réservé aux personnes inscrites.</dd>
     <dt>Licence</dt>
-    <dd>Le code source de 5Hostachy est distribué sous la <strong>Licence
-        5Hostachy</strong> : consultable, modifiable et réutilisable par une autre
+    <dd>Ce site est servi par {NOM_PLATEFORME}, dont le code source est distribué
+        sous la <strong>{LICENCE_NOM}</strong> : consultable, modifiable et réutilisable par une autre
         copropriété, une association ou un particulier. Tout usage commercial
         requiert un accord préalable de l'auteur. Le présent document et les
         contenus publiés dans l'application restent la propriété de leurs

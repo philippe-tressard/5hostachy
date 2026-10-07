@@ -8,6 +8,7 @@ from typing import Optional
 
 from app.utils.dates_fr import date_longue
 from app.utils.fiche_arrivant_css import CSS
+from app.utils.liens import adresse_lisible
 from app.utils.pdf_theme import (
     icone_svg,
     image_data_uri as _photo_data_uri,
@@ -272,7 +273,7 @@ def _build_syndic_section(syndic_data: dict) -> str:
     return html
 
 
-def _build_consignes_section(site_url: str) -> str:
+def _build_consignes_section(adresse: str) -> str:
     html = "<h3>📋 Consignes de la copropriété</h3>\n"
     html += '<div class="consignes-intro">\n'
     html += (
@@ -289,7 +290,7 @@ def _build_consignes_section(site_url: str) -> str:
         html += f'  <div class="regle-contenu">{contenu}</div>\n'
         html += "</div>\n"
 
-    html += f'<p class="consigne-footer-note">Ce document est un résumé. Le règlement complet est disponible sur <strong>{escape(site_url)}</strong> → Résidence.</p>\n'
+    html += f'<p class="consigne-footer-note">Ce document est un résumé. Le règlement complet est disponible sur <strong>{escape(adresse)}</strong> → Résidence.</p>\n'
     return html
 
 
@@ -300,12 +301,21 @@ def generer_fiche_arrivant(
     *,
     cs_data: dict,
     syndic_data: dict,
-    site_url: str = "5hostachy.fr",
+    site_nom: str,
+    site_url: str,
     whatsapp_url: str | None = None,
     annee: int = 2026,
 ) -> str:
-    """Génère le HTML complet de la fiche arrivant à partir des données annuaire."""
-    site_qr = _qr_data_uri(f"https://{site_url}")
+    """Génère le HTML complet de la fiche arrivant à partir des données annuaire.
+
+    `site_nom` et `site_url` sont ceux de la CONFIGURATION, sans défaut (#1725) :
+    le paramètre valait `"5hostachy.fr"` par défaut et le seul appelant ne le
+    passait pas — la fiche imprimait donc l'adresse de cette résidence quelle que
+    soit la configuration, et le nom « Résidence 5 Hostachy » était écrit en dur.
+    """
+    site_qr = _qr_data_uri(site_url)
+    adresse = adresse_lisible(site_url)
+    nom = escape(site_nom)
     wa_qr = _qr_data_uri(whatsapp_url) if whatsapp_url else ""
     globe_svg = icone_svg("globe")
     wa_svg = icone_svg("whatsapp")
@@ -338,7 +348,7 @@ def generer_fiche_arrivant(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bienvenue — 5Hostachy</title>
+<title>Bienvenue — {nom}</title>
 <style>
 {CSS}
 </style>
@@ -355,15 +365,15 @@ def generer_fiche_arrivant(
   <div class="accent-bar"></div>
   <div class="content">
     <h2>Bonjour et bienvenue&nbsp;!</h2>
-    <p>Vous venez d'emménager à la <strong>Résidence 5 Hostachy</strong>. Créez votre compte sur le portail pour accéder aux documents, calendrier, tickets et toutes les infos de la résidence.</p>
+    <p>Vous venez d'emménager à la <strong>{nom}</strong>. Créez votre compte sur le portail pour accéder aux documents, calendrier, tickets et toutes les infos de la résidence.</p>
     <div class="dual-cta">
       <div class="cta-banner">
         <div class="cta-banner-text">
           <div class="label">Votre espace en ligne</div>
-          <div class="url">{globe_svg}{escape(site_url)}</div>
+          <div class="url">{globe_svg}{escape(adresse)}</div>
           <div class="hint">Inscription → Validation par le CS → C'est prêt !</div>
         </div>
-        <img class="qr-code" src="{site_qr}" alt="QR {escape(site_url)}">
+        <img class="qr-code" src="{site_qr}" alt="QR {escape(adresse)}">
       </div>
       {wa_cta}
     </div>
@@ -372,10 +382,10 @@ def generer_fiche_arrivant(
     <hr class="sep">
     {_build_syndic_section(syndic_data)}
     <hr class="sep">
-    {_build_consignes_section(site_url)}
+    {_build_consignes_section(adresse)}
   </div>
   <div class="footer">
-    <p>© {annee} • 5Hostachy • <strong>{escape(site_url)}</strong> • Résidence 5 Hostachy</p>
+    <p>© {annee} • {nom} • <strong>{escape(adresse)}</strong></p>
   </div>
 </div>
 </body>

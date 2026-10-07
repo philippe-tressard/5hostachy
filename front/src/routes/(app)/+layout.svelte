@@ -16,6 +16,7 @@
 		setTelemetryOptOut,
 	} from '$lib/telemetry';
 	import { lireSourceArrivee } from '$lib/arrivees';
+	import { lienSource, NOM_PLATEFORME } from '$lib/plateforme';
 	import pkg from '../../../package.json';
 
 	onMount(async () => {
@@ -95,9 +96,10 @@
 			&nbsp;·&nbsp; {buildVer}
 			&nbsp;·&nbsp;
 			<a
-				href="https://github.com/philippe-tressard/5hostachy"
+				href={lienSource(import.meta.env.VITE_GIT_HASH)}
 				target="_blank"
-				rel="noopener noreferrer">GitHub</a
+				rel="noopener noreferrer"
+				title="Le code source de la version en service">{NOM_PLATEFORME}</a
 			>
 			&nbsp;·&nbsp; <a href="/mentions-legales">Mentions légales</a>
 			&nbsp;·&nbsp; <a href="/politique-de-confidentialite">Politique de confidentialité</a>

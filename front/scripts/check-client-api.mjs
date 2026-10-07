@@ -135,9 +135,10 @@ const FETCH_LEGITIMES = {
 	'src/lib/telemetry.ts':
 		'repli de `navigator.sendBeacon` — un envoi `keepalive` au déchargement de ' +
 		'la page, que le client (avec son renouvellement de session sur 401) ne peut pas porter',
-	'src/routes/+layout.server.ts':
+	'src/lib/server/config-site.ts':
 		'rendu SSR : le `fetch` de SvelteKit, sur une base ABSOLUE — le client ' +
-		"vise `/api`, relatif, qui n'existe pas côté serveur",
+		"vise `/api`, relatif, qui n'existe pas côté serveur. Lu par le layout racine " +
+		"et le manifeste de l'application installée (#1725)",
 };
 
 function fichiers(dir, acc = []) {

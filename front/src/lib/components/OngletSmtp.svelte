@@ -314,7 +314,7 @@
 				<textarea
 					bind:value={emailFooter}
 					rows="2"
-					placeholder="— Envoyé depuis 5hostachy.fr"
+					placeholder="— Le conseil syndical de la résidence"
 					style="width:100%;resize:vertical;font-size:var(--fs-md);font-family:monospace"
 				></textarea>
 				<span class="aide"
