@@ -93,6 +93,15 @@ const DEUX_DECIMALES = new Intl.NumberFormat('fr-FR', {
  *
  * 🔒 `npm run lint:dates` refuse `toFixed(` et une division par 1024 hors d'ici.
  */
+/**
+ *  Un champ lu par son NOM, quand ce nom est une donnée — la colonne d'une table
+ *  déclarée (imports d'accès, historique des tâches) — et non un champ que le type
+ *  connaît d'avance. Rend `unknown` : l'appelant décide de ce qu'il en fait.
+ *  Écrit ici une fois, plutôt qu'un `any` par écran (#1571).
+ */
+export const champDe = (objet: object | null | undefined, cle: string): unknown =>
+	objet == null ? undefined : (objet as Record<string, unknown>)[cle];
+
 export function fmtOctets(n: number | null | undefined): string {
 	if (n == null) return '—';
 	if (n < 1024) return `${fmtNombre(Math.round(n))} o`;
