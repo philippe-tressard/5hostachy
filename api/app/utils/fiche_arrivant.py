@@ -46,36 +46,8 @@ def _initials(prenom: str, nom: str) -> str:
 # ── CSS ── la feuille de style vit dans `fiche_arrivant_css.py` (plafond de 500 l.)
 
 
-# ── Consignes (contenu statique) ─────────────────────────────────────────────
-
-_CONSIGNES = [
-    (
-        "📦 1. Emménagement / déménagement",
-        "Prévenez le conseil syndical du bâtiment concerné, <strong>1 semaine à l'avance</strong>, "
-        "pour toute arrivée ou départ afin de permettre à ce dernier d'effectuer un état des lieux "
-        "des parties communes avant et après.\n"
-        "Pensez à demander l'autorisation à la mairie pour le stationnement des camions devant la copropriété.\n"
-        "Protégez au mieux les parties communes lors des déménagements (ascenseur, escaliers, halls) "
-        "et évacuez les cartons et encombrants rapidement, sans les laisser dans les couloirs ou les locaux à poubelles.\n"
-        "Demander au syndic IFF Gestion de changer les noms sur la boîte aux lettres et l'interphone.",
-    ),
-    (
-        "🗑 2. Sortie des poubelles et tri",
-        "Déchets encombrants : <strong>ne pas les laisser dans les parties communes</strong>. "
-        "Apportez-les à la déchèterie ou en collecte sur le trottoir :\n"
-        "<strong>Boulevard Hostachy</strong> : Collecte des encombrants à partir de 6h, "
-        "le 3ème samedi de chaque mois. Sortir la veille après 19h.\n"
-        "<strong>Rue Maurice Berteaux</strong> : Collecte des encombrants à partir de 6h, "
-        "le 4ème samedi de chaque mois. Sortir la veille après 19h.",
-    ),
-    (
-        "🏢 3. Parties communes",
-        "Gardez les couloirs, escaliers et halls propres. "
-        "Ne laissez rien traîner : poubelles, poussettes, vélos, cartons, etc.\n"
-        "Respectez la tranquillité des lieux : évitez de faire du bruit, surtout entre 22h et 7h.\n"
-        "Ne donnez pas de code ou de clé aux personnes non autorisées.",
-    ),
-]
+# ── Consignes ── elles vivent en base, éditables par le CS (#1727) : le texte
+#    arrive ÉCHAPPÉ et rendu par `utils/consignes_arrivant`, jamais écrit ici.
 
 
 # ── Builders ─────────────────────────────────────────────────────────────────
@@ -273,7 +245,7 @@ def _build_syndic_section(syndic_data: dict) -> str:
     return html
 
 
-def _build_consignes_section(adresse: str) -> str:
+def _build_consignes_section(adresse: str, consignes: list[tuple[str, str]]) -> str:
     html = "<h3>📋 Consignes de la copropriété</h3>\n"
     html += '<div class="consignes-intro">\n'
     html += (
@@ -284,7 +256,7 @@ def _build_consignes_section(adresse: str) -> str:
     )
     html += "</div>\n"
 
-    for titre, contenu in _CONSIGNES:
+    for titre, contenu in consignes:
         html += '<div class="regle">\n'
         html += f'  <div class="regle-titre">{titre}</div>\n'
         html += f'  <div class="regle-contenu">{contenu}</div>\n'
@@ -304,6 +276,7 @@ def generer_fiche_arrivant(
     site_nom: str,
     site_url: str,
     whatsapp_url: str | None = None,
+    consignes: list[tuple[str, str]],
     annee: int = 2026,
 ) -> str:
     """Génère le HTML complet de la fiche arrivant à partir des données annuaire.
@@ -382,7 +355,7 @@ def generer_fiche_arrivant(
     <hr class="sep">
     {_build_syndic_section(syndic_data)}
     <hr class="sep">
-    {_build_consignes_section(adresse)}
+    {_build_consignes_section(adresse, consignes)}
   </div>
   <div class="footer">
     <p>© {annee} • {nom} • <strong>{escape(adresse)}</strong></p>

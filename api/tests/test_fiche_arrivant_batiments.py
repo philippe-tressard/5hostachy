@@ -36,6 +36,7 @@ def _fiche(membres: list[dict]) -> str:
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
         whatsapp_url=None,
+        consignes=[],
         annee=2026,
     )
 
