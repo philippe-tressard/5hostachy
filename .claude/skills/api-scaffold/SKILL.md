@@ -305,6 +305,7 @@ Chacun porte, en tête de fichier, le pourquoi et la règle arbitrée :
 | savoir **ce qu'est** une affaire (actualité, affaire suivie, catégorie réservée, statut de départ) | `utils/nature_affaire` — dérivé, jamais saisi ; `utils/categories_ticket.libelle_categorie` pour le libellé français d'une catégorie |
 | marquer un texte « Rédigé avec l'assistant IA » | `utils/assiste_ia` (`marquer`) ; les usages de l'assistant (modèle, prompt, plafond) se déclarent dans `utils/llm_usages` |
 | décrire un **badge d'accès** (Vigik, télécommande) | `utils/types_acces` ; ses porteurs se LISENT par `utils/porteurs_acces`, la ligne d'import se rattache par `utils/resolution_acces` — rien n'enregistre un porteur |
+| savoir si un **service** est activé (IA, diffusion, réponses par courriel) | `utils/services` (`service_actif`, `cle_actif`) — jamais la clé lue à la main ; un service neuf s'y déclare, et l'écran Admin › Services le montre seul |
 | lire la **configuration du site** | `utils/config_site` (`config_site`, `contexte_site`) — pas un `select` sur la table dans un routeur |
 | savoir **à qui part « une copie à moi »** | `utils/copie_auteur` — l'auteur de l'objet, pas celui du message |
 | lier des affaires entre elles | `utils/affaires_liees` — un lien ne révèle rien qu'on ne puisse lire |
