@@ -163,6 +163,14 @@ export const PAGES_ROLES: PageDef[] = [
 					'Les associations entre comptes et lots, pour repérer et retirer les affectations erronées.',
 			},
 			{
+				id: 'services',
+				route: '/admin?onglet=services',
+				label: 'Services',
+				groupe: '⚙️ Configuration',
+				descriptif:
+					"Les services de la copropriété sur un seul écran : ce qui est activé, ce qu'on perd en le coupant, et le lien vers ses réglages.",
+			},
+			{
 				id: 'site',
 				route: '/admin?onglet=site',
 				label: 'Paramétrage site',

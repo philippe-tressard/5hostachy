@@ -367,6 +367,27 @@ export interface JournalEnvoiWhatsApp {
 	envoye_le: string | null;
 }
 
+/**  Un service de la copropriété (`GET /config/services`, #1718) — décrit par le
+ *   registre `utils/services`, seule liste. `cle_actif` est `null` pour une
+ *   infrastructure (l'envoi des courriels), qui ne se coupe pas. */
+export interface ServiceCopropriete {
+	code: string;
+	libelle: string;
+	description: string;
+	/**  Ce qu'on perd quand il est coupé. */
+	perte: string;
+	plafond: string;
+	/**  L'onglet d'administration de ses réglages détaillés. */
+	onglet: string;
+	/**  Son tracé, du catalogue `$lib/icones-svg.json` (vérifié côté serveur). */
+	icone: string;
+	coupable: boolean;
+	cle_actif: string | null;
+	etat: 'actif' | 'coupe' | 'incomplet';
+	/**  Les réglages qui lui manquent pour fonctionner, nommés. */
+	manque: string[];
+}
+
 export const config = {
 	//  ⚠️ Appelée par `loadSiteConfig()` (`stores/pageConfig`), qui écrivait
 	//  `fetch('/api/config')` en dur jusqu'au 12/09/2026 — un contournement du
@@ -408,6 +429,9 @@ export const config = {
 	/**  Les USAGES de l'assistant — la SEULE liste (#984) : l'écran rend un bloc
 	 *   par entrée. Les valeurs courantes, elles, viennent de `admin()`. */
 	llmUsages: () => api.get<UsageIA[]>('/config/llm-usages'),
+	/**  Les services de la copropriété et leur état — la SEULE liste (#1718).
+	 *   Un interrupteur s'écrit par `save({ [cle_actif]: '1' | '0' })`. */
+	services: () => api.get<ServiceCopropriete[]>('/config/services'),
 	/**  Ce que l'assistant a consommé, par mois, usage et modèle — lu par
 	 *   `ConsommationIA`, dans l'onglet Maintenance (#1383). */
 	llmConsommation: () => api.get<ConsommationIA>('/config/llm-consommation'),
