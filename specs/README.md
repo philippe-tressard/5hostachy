@@ -24,6 +24,10 @@ du manuel.
 | [`design/`](design/) | Charte graphique, principes UX, parcours utilisateurs |
 | [`architecture/`](architecture/) | Vue d'ensemble, pile technique, modèle de données, API |
 
+> 🧭 **Une exception** : [`architecture/multi-coproprietes.md`](architecture/multi-coproprietes.md)
+> n'est pas historique. Il décrit l'architecture **cible** du chantier
+> multi-copropriétés et se tient à jour à chaque arbitrage.
+
 La partie qui vieillit le plus vite est la **navigation** (`web/navigation.md`,
 `mobile/navigation.md`) : l'arborescence des écrans change à chaque lot.
 Les noms de tables, de routes et de modèles de `architecture/` sont, eux aussi, ceux
