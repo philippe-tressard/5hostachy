@@ -67,6 +67,7 @@ from app.utils.courriel_ingestion import (
 )
 from app.utils.cloche import sonner_systeme
 from app.utils.reponse_courriel import date_d_envoi, suite_de_reponse
+from app.utils.services import SERVICE_REPONSES_COURRIEL, cle_actif, service_actif
 from app.utils.valeurs import valeur
 
 logger = logging.getLogger(__name__)
@@ -74,9 +75,9 @@ logger = logging.getLogger(__name__)
 #: Combien de relèves ont échoué D'AFFILÉE (#858) — voir `utils/echecs_repetes`.
 _ECHECS_RELEVE = CompteurEchecs("relève de la boîte des réponses")
 
-#: Les clés lues dans `ConfigSite`. `imap_enabled` d'abord : sans elle, rien.
+#: Les clés lues dans `ConfigSite`. L'activation d'abord : sans elle, rien.
 _CLES = {
-    "imap_enabled",
+    cle_actif(SERVICE_REPONSES_COURRIEL),
     "imap_server",
     "imap_port",
     "imap_username",
@@ -309,7 +310,7 @@ def relever() -> dict[str, int]:
     session = SessionLocal()
     try:
         cfg = config_imap(session)
-        if (cfg.get("imap_enabled") or "").lower() not in ("1", "true", "oui"):
+        if not service_actif(cfg, SERVICE_REPONSES_COURRIEL):
             #  🔴 UNE TRACE MÊME QUAND ON NE FAIT RIEN (04/09/2026) : sans elle,
             #  « désactivée » et « boîte vide » rendaient le même silence — le
             #  CONTRAT DE BATTEMENT d'`auto-deploy.sh` (C14). En `info` et non en

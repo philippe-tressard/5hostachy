@@ -26,7 +26,7 @@ import ast
 
 from tests.aides_sources import modules_app
 
-GESTES_DU_TRANSPORT = {"config_whatsapp", "whatsapp_actif", "envoyer_whatsapp_avec_log"}
+GESTES_DU_TRANSPORT = {"config_whatsapp", "envoyer_whatsapp_avec_log"}
 
 EXCEPTIONS = {
     #  L'adaptateur lui-même, et le registre qui le déclare.

@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 import httpx
 
+from app.utils.services import SERVICE_DIFFUSION, cle_actif, service_actif
 from app.utils.whatsapp_media import image_pour_bridge, renvoi_photos
 
 logger = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ def verdict_envoi(envoi: Callable[[], Any]) -> tuple[str, str | None]:
 #: pour renvoyer vers l'application quand la publication est à public restreint.
 CLES_CONFIG = frozenset(
     {
-        "whatsapp_enabled",
+        cle_actif(SERVICE_DIFFUSION),
         "whatsapp_api_url",
         "whatsapp_group_jid",
         "whatsapp_footer",
@@ -169,11 +170,6 @@ def config_whatsapp(session, *cles_en_plus: str) -> dict:
     return {r.cle: r.valeur for r in lignes}
 
 
-def whatsapp_actif(config: dict) -> bool:
-    """Le canal est-il activé ? Seul `'1'` vaut oui — comparé à la main partout avant."""
-    return config.get("whatsapp_enabled") == "1"
-
-
 #  La COMPOSITION du message vit dans `utils/whatsapp_message.py` depuis le
 #  28/09/2026 (#779) ; ré-exportée ici pour les importeurs existants.
 from app.utils.whatsapp_message import (  # noqa: E402,F401
@@ -196,7 +192,7 @@ def envoyer_whatsapp(
     lien: str | None = None,
 ) -> None:
     """Envoie un message sur le groupe WhatsApp. Silencieux en cas d'échec."""
-    if config.get("whatsapp_enabled") != "1":
+    if not service_actif(config, SERVICE_DIFFUSION):
         return
     api_url = config.get("whatsapp_api_url", "").strip()
     group_jid = config.get("whatsapp_group_jid", "").strip()

@@ -12,6 +12,12 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
 from app.auth.deps import require_admin
+from app.utils.services import (
+    CLES_ACTIVATION,
+    SERVICE_REPONSES_COURRIEL,
+    normaliser_activation,
+    service_actif,
+)
 from app.database import get_session
 from app.models.core import ConfigSite, Utilisateur
 from app.seed import DEFAULT_LEGAL
@@ -96,7 +102,12 @@ def _valeur_pour_admin(cle: str, valeur: str) -> str:
 #: une restauration peut la ramener, et rien n'oblige à passer par cet écran. On
 #: normalise aux DEUX bouts — ici pour que la donnée soit propre, là-bas pour que
 #: le lien le soit même quand elle ne l'est pas.
-_NORMALISEURS = {"site_url": lambda v: base_site(str(v))}
+_NORMALISEURS = {
+    "site_url": lambda v: base_site(str(v)),
+    #  L'activation d'un service ne s'écrit que `"1"` ou `"0"` (#1718) : la
+    #  lecture unique (`service_actif`) n'en accepte pas d'autre.
+    **{cle: normaliser_activation for cle in CLES_ACTIVATION},
+}
 
 #: 🔴 Refusées en base (#1596) : la clé du bridge n'a qu'une source, `.env` — se
 #: saisir ici en recréerait une seconde, qu'aucun contrôle ne confrontait.
@@ -350,14 +361,14 @@ async def smtp_test(
     session: Session = Depends(get_session),
 ):
     """Envoie un e-mail de test à l'adresse fournie en utilisant la config SMTP actuelle (admin uniquement)."""
-    from app.config import get_settings
-    from app.utils.email import _get_smtp_config, connexion_smtp
+    from app.utils.email import _get_smtp_config, connexion_smtp, envoi_actif
     from app.utils.smtp import adresses_a_tester
 
-    settings = get_settings()
     smtp_cfg = _get_smtp_config(session)
 
-    if smtp_cfg.get("smtp_enabled") != "1" and not settings.mail_enabled:
+    #  La règle de l'ENVOI, pas une recopie (#1718) : elle disait « actif » quand
+    #  la base désactivait l'envoi et que l'environnement l'activait.
+    if not envoi_actif(session):
         raise HTTPException(400, "L'envoi d'e-mails est désactivé. Activez-le avant de tester.")
 
     #  UN envoi PAR ADRESSE d'expédition configurée (#756). Le test n'en exerçait
@@ -448,7 +459,7 @@ def imap_test(
         except Exception:
             pass
 
-    actif = (cfg.get("imap_enabled") or "").lower() in ("1", "true", "oui")
+    actif = service_actif(cfg, SERVICE_REPONSES_COURRIEL)
     return {
         "ok": True,
         "non_lus": non_lus,

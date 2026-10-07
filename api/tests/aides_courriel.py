@@ -253,7 +253,7 @@ def imap_actif(monkeypatch):
         courriel_boite,
         "config_imap",
         lambda _session: {
-            "imap_enabled": "true",
+            "imap_enabled": "1",
             "imap_host": "imap.invalide",
             "imap_port": "993",
             "imap_user": "essai@invalide",
