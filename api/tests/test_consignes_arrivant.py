@@ -15,10 +15,9 @@ Ce que ce fichier tient :
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import re
 
 import pytest
-from sqlmodel import Session
 
 from app.models.core import ConfigSite, RoleUtilisateur
 from app.seed.consignes_arrivant import GABARIT
@@ -34,11 +33,16 @@ from app.utils.consignes_arrivant import (
 from app.utils.fiche_arrivant import generer_fiche_arrivant
 from tests.aides_http import base_http, client_http
 from tests.aides_migrations import charger_migration
+from tests.aides_sources import modules_app
 
-API = Path(__file__).resolve().parents[1]
 
-#: Les données de CETTE résidence qui ne doivent plus vivre dans le code.
-NOMS_INSTANCE = ("Boulevard Hostachy", "Maurice Berteaux", "IFF Gestion")
+#: Les rues de CETTE résidence : des données de l'instance, pas du produit.
+RUES_INSTANCE = ("Boulevard Hostachy", "Maurice Berteaux")
+
+#: Le syndic ne se nomme pas — même ici : le dépôt est public, et un nom en dur
+#: est exactement ce que le ticket retire. La règle se lit sur la PHRASE :
+#: « Demander au syndic » est toujours suivi du marqueur, jamais d'un nom.
+_SYNDIC_EN_DUR = re.compile(r"au syndic (?!\{syndic\})[A-Z]")
 
 
 @pytest.fixture(name="moteur")
@@ -50,24 +54,26 @@ def moteur_fixture():
 # ── 1. Le garde-fou ─────────────────────────────────────────────────────────
 
 
-def _occurrences(racine: Path) -> list[str]:
-    trouves = []
-    for f in sorted(racine.rglob("*.py")):
-        texte = f.read_text(encoding="utf-8")
-        trouves += [f"{f.relative_to(API)} : {n}" for n in NOMS_INSTANCE if n in texte]
-    return trouves
+def _fautes(sources: dict[str, str]) -> list[str]:
+    fautes = []
+    for nom, texte in sources.items():
+        fautes += [f"{nom} : {r}" for r in RUES_INSTANCE if r in texte]
+        fautes += [f"{nom} : syndic nommé" for _ in _SYNDIC_EN_DUR.finditer(texte)]
+    return fautes
 
 
 def test_aucun_nom_de_rue_ni_de_syndic_dans_le_code():
-    fichiers = list((API / "app").rglob("*.py"))
-    assert len(fichiers) > 100, "cas zéro : le balayage n'a rien lu"
-    assert _occurrences(API / "app") == []
+    #  `modules_app` lève si la portée est vide : le cas zéro est le sien.
+    assert _fautes({m.rel: m.source for m in modules_app(minimum=100)}) == []
 
 
-def test_temoin_le_balayage_voit_les_noms_la_ou_ils_vivent():
-    #  La migration les porte : si le motif ne les y trouvait pas, le test
-    #  précédent serait vert sans rien mesurer.
-    assert len(_occurrences(API / "alembic" / "versions")) >= len(NOMS_INSTANCE)
+def test_temoin_le_balayage_voit_ce_qu_il_refuse():
+    #  Si le motif ne trouvait rien ici, le test précédent serait vert sans rien mesurer.
+    assert len(_fautes({"témoin": "Demander au syndic Cabinet Témoin. Rue Maurice Berteaux"})) == 2
+    assert _fautes({"témoin": "Demander au syndic {syndic} de changer les noms."}) == []
+    #  Et la migration, qui porte le texte de la résidence, porte bien ses rues.
+    migration = charger_migration("*_consignes_arrivant_en_base")
+    assert all(r in migration.VALEUR for r in RUES_INSTANCE)
 
 
 # ── 2 et 3. Le rendu ────────────────────────────────────────────────────────
