@@ -274,7 +274,11 @@
 								>
 							{/if}
 						</td>
-						<td><code style="font-size:var(--fs-sm)">{champDe(imp, modele.colonneCle.cle) ?? '—'}</code></td>
+						<td
+							><code style="font-size:var(--fs-sm)"
+								>{champDe(imp, modele.colonneCle.cle) ?? '—'}</code
+							></td
+						>
 						<td>
 							{#if imp.lot_label}
 								<span class="badge badge-green">{imp.lot_label} · {porteurs(imp.lot_porteurs)}</span

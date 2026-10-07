@@ -64,8 +64,7 @@ export function verdict(total, plafond) {
 	return 'OK';
 }
 
-const eslint = () =>
-	new ESLint({ cwd: RACINE, overrideConfig: { rules: { [REGLE]: 'error' } } });
+const eslint = () => new ESLint({ cwd: RACINE, overrideConfig: { rules: { [REGLE]: 'error' } } });
 
 if (process.argv.includes('--selftest')) {
 	let ko = 0;

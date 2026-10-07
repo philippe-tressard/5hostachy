@@ -50,8 +50,7 @@ import { parAttribut } from '$lib/table-statuts';
 
 /**  Une ligne de la liste, quel que soit le type d'import — ce que rend `api.list`. */
 export type LigneImport =
-	| LigneImportAcces<LigneImportTelecommandeBrute>
-	| LigneImportAcces<LigneImportVigikBrute>;
+	LigneImportAcces<LigneImportTelecommandeBrute> | LigneImportAcces<LigneImportVigikBrute>;
 
 /** Une colonne du tableau, propre à un type d'import. */
 export interface ColonneImport {
