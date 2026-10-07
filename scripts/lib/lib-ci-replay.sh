@@ -252,6 +252,33 @@ ci_workers_e2e() {
   [ "$2" -ge "$3" ] && echo 1 || echo ""
 }
 
+# ── Les e2e peuvent-ils se fier au node_modules du worktree ? (#1722) ────────
+#  Un worktree dont `front/node_modules` est une JONCTION vers celui du clone
+#  principal partage aussi le cache d'optimisation de Vite (`node_modules/.vite`).
+#  Qu'une autre session lance Vite, et les e2e tombent au hasard — « Failed to
+#  fetch dynamically imported module … app.js », hydratation à 10 s —, un spec
+#  DIFFÉRENT à chaque passage, vert isolé. Écrit en mémoire le 03/10, revenu le
+#  07/10 : trois rejeux rouges pour #1718. Le lot n'y est pour rien : INCONNU,
+#  jamais FAIL. (PURE)
+#    $1 = lien | repertoire | absent → "" (mesurable) | motif d'INCONNU
+#    `absent` est laissé à l'étape elle-même, qui dit déjà « non installé ».
+ci_node_modules_etat() {
+  case "${1:-}" in
+    repertoire|absent) echo "" ;;
+    lien) echo "node_modules partagé par jonction : le cache de Vite l'est aussi (#1722)" ;;
+    *)    echo "node_modules non examiné : son genre est illisible" ;;
+  esac
+}
+
+#  Une étape SERT-elle l'application par Vite ? Ce sont les tests de navigateur :
+#  `npm run e2e` dans ci.yml, `playwright test` s'il était appelé en direct. Le
+#  mot « playwright » seul ne suffit pas — il désigne aussi l'INSTALLATION des
+#  navigateurs, qui n'est jamais rejouée : un premier jet le prenait pour critère
+#  et n'attrapait donc rien. (PURE) Corps sur stdin → oui | non
+ci_sert_par_vite() {
+  grep -v '^[[:space:]]*#' | grep -Eq '(^|[^[:alnum:]_:-])(npm run e2e([^[:alnum:]:_-]|$)|playwright test)'     && echo oui || echo non
+}
+
 # ── Self-test ────────────────────────────────────────────────────────────────
 ci_replay_selftest() {
   local st=0 got
@@ -352,12 +379,43 @@ YAML
   t "workers — charge inconnue : défaut"     "$(ci_workers_e2e "" "" 30)" ""
   t "workers — charge illisible : défaut"    "$(ci_workers_e2e "" "n/a" 30)" ""
 
+  t "node_modules — propre au worktree : mesurable" "$(ci_node_modules_etat repertoire)" ""
+  t "node_modules — absent : laissé au contrôle de l'étape" "$(ci_node_modules_etat absent)" ""
+  t "node_modules — jonction partagée : INCONNU nommé"     "$(ci_node_modules_etat lien)"     "node_modules partagé par jonction : le cache de Vite l'est aussi (#1722)"
+  t "Vite — les tests de navigateur"       "$(printf 'npm run e2e 2>&1 | tee x.log
+' | ci_sert_par_vite)" "oui"
+  t "Vite — playwright appelé en direct"   "$(printf 'npx playwright test
+' | ci_sert_par_vite)" "oui"
+  t "Vite — l'installation n'en est pas"   "$(printf 'npx playwright install --with-deps chromium
+' | ci_sert_par_vite)" "non"
+  t "Vite — un lint voisin n'en est pas"   "$(printf 'npm run lint:e2e-serveur
+' | ci_sert_par_vite)" "non"
+  t "Vite — un commentaire n'en est pas"   "$(printf '# npm run e2e
+npm run build
+' | ci_sert_par_vite)" "non"
+  #  🔴 Le cas zéro : un genre que personne n'a su lire n'autorise pas les e2e.
+  t "node_modules — genre inconnu : INCONNU"     "$(ci_node_modules_etat '')" "node_modules non examiné : son genre est illisible"
+
   #  Éprouvé sur le VRAI fichier quand il est là : c'est le seul contrôle qui
   #  verrait un `ci.yml` réécrit dans une forme que le parseur ne sait plus lire.
   #  Absent → on le DIT, on ne conclut pas.
   if [ -f .github/workflows/ci.yml ]; then
     local p; p=$(ci_parite .github/workflows/ci.yml)
     t "parité sur le ci.yml réel (${p% *} écrits)" "${p#* }" "${p% *}"
+    #  Le critère de #1722 doit reconnaître AU MOINS une étape du vrai fichier :
+    #  sinon le garde-fou du node_modules partagé ne garde plus rien.
+    local corps_vite=0 bloc=""
+    while IFS= read -r l; do
+      case "$l" in
+        '@@RUN') bloc="" ;;
+        '@@END') [ "$(printf '%s
+' "$bloc" | ci_sert_par_vite)" = oui ] && corps_vite=$((corps_vite+1)) ;;
+        '@@'*) ;;
+        *) bloc="$bloc$l"$'
+' ;;
+      esac
+    done < <(ci_extraire < .github/workflows/ci.yml)
+    t "le ci.yml réel a une étape servie par Vite" "$([ "$corps_vite" -ge 1 ] && echo oui || echo "aucune")" "oui"
   else
     echo "?     parité sur le ci.yml réel — fichier absent, non mesuré"
   fi

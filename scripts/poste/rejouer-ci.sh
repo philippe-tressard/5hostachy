@@ -171,6 +171,22 @@ if [ -n "$SCRIPTS_PY" ] && [ -d "$SCRIPTS_PY" ]; then
   PATH="$SCRIPTS_PY_EXPOSES:$PATH" && export PATH
 fi
 
+#  ── Le node_modules du front est-il celui du worktree ? (#1722) ────────────
+#  La règle est `ci_node_modules_etat` ; ici, seulement le constat. `-L`
+#  reconnaît aussi une jonction NTFS sous Git Bash (mesuré le 07/10/2026).
+genre_node_modules() {
+  local d="$RACINE/front/node_modules"
+  if [ -L "$d" ]; then echo lien
+  elif [ -d "$d" ]; then echo repertoire
+  else echo absent; fi
+}
+MOTIF_NODE_MODULES=$(ci_node_modules_etat "$(genre_node_modules)")
+[ -n "$MOTIF_NODE_MODULES" ] && {
+  echo "? $MOTIF_NODE_MODULES — les tests de navigateur rendront INCONNU."
+  echo "  Réparer : cmd //c \"rmdir front\node_modules\" && (cd front && npm ci --legacy-peer-deps)"
+  echo "  (rmdir retire le LIEN, jamais le node_modules partagé.)"
+}
+
 FILTRE="$*"
 SHA=$(git rev-parse HEAD 2>/dev/null)
 SHA_COURT=$(git rev-parse --short HEAD 2>/dev/null)
@@ -254,6 +270,12 @@ executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/c
   esac
   if [ -s "$TMP/deps-$1" ]; then
     rapporter INCONNU "$1" "$2" "ne mesure pas le lot : dépendances du poste (ligne ENV)"
+    return
+  fi
+  #  Les tests de navigateur, et eux seuls, servent l'application par Vite.
+  if [ -n "$MOTIF_NODE_MODULES" ] && [ "$(printf '%s
+' "$corps" | ci_sert_par_vite)" = oui ]; then
+    rapporter INCONNU "$1" "$2" "$MOTIF_NODE_MODULES"
     return
   fi
 

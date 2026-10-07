@@ -1,7 +1,7 @@
 # Multi-copropriétés — architecture cible
 
-> 🧭 **Spécification de CIBLE, en conception — aucune ligne de code n'en découle
-> encore.** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
+> 🧭 **Spécification de CIBLE, en conception — seul le premier lot (#1718,
+> v2.113.0) en découle à ce jour.** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
 > tel qu'il a été conçu à l'origine, celui-ci décrit **où le produit va**. Il est
 > rédigé le 07/10/2026, à partir des arbitrages de l'auteur pris le même jour.
 >
@@ -36,6 +36,8 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D6 | Canaux et services | **par copropriété**, et **chaque service se désactive** | §4.8 ; premier lot : #1718 |
 | D7 | Licence | **GNU AGPLv3 pure**, sans clause commerciale | §7 |
 | D8 | Une personne dans deux copros | le cas existe, **rare**. Lecture retenue, **à confirmer** : deux comptes indépendants, un par caisson | §4.7 |
+| D9 | Nom de la plateforme (07/10/2026) | **CoproConnect** ; la résidence garde le sien, « 5Hostachy » | §8, phase 1 : le nom de la **plateforme** (attribution, lien vers le source) et celui de la **résidence** (administrable) sont deux réglages distincts |
+| D10 | Variante de la licence (07/10/2026) | **`AGPL-3.0-or-later`** | §7 |
 
 ## 3. Les trois architectures comparées
 
@@ -219,7 +221,13 @@ la **GNU AGPLv3**, une licence open source reconnue par l'OSI. ⚠️ Ce qui sui
 - **L'attribution** peut subsister dans la limite des conditions additionnelles
   que l'AGPLv3 §7 admet, et rien de plus restrictif.
 - **Les versions déjà publiées** restent sous l'ancienne licence.
-- **Non tranché** : `AGPL-3.0-only` ou `AGPL-3.0-or-later`.
+- **Tranché le 07/10/2026 (D10)** : **`AGPL-3.0-or-later`**. Les versions ultérieures
+  de l'AGPL publiées par la FSF s'appliqueront au choix de qui reçoit le code ;
+  c'est l'identifiant SPDX à écrire dans `LICENSE`, `REUSE.toml` et les en-têtes.
+- **La marque** porte le nom de la **plateforme**, **CoproConnect** (D9), pas celui
+  de la résidence. Une recherche web du 07/10/2026 n'a trouvé aucun produit de ce
+  nom ; elle **ne remplace pas** une recherche d'antériorité (INPI, EUIPO) avant de
+  s'en servir publiquement.
 - **Avant le changement** : vérifier qu'aucun contributeur extérieur n'existe dans
   l'historique antérieur au 07/09/2026, et réexaminer contre l'AGPLv3 les
   exceptions « à valider » de `docs/licences-tierces.md`.
@@ -232,7 +240,7 @@ elle.
 | Phase | Contenu | Prérequis |
 |---|---|---|
 | 0 | Décisions restantes (§9) | — |
-| 1 | **Mono-copro propre** : services activables (#1718, en premier), puis identité de la copropriété en configuration (domaine, adresses, nom, textes légaux, lien vers le source) | aucun |
+| 1 | **Mono-copro propre** : services activables (#1718, livré en v2.113.0), puis identité de la copropriété en configuration (domaine, adresses, nom de la résidence, textes légaux) et nom de la plateforme, CoproConnect (D9), avec le lien vers le source | aucun ; le lien vers le source attend le passage effectif à l'AGPL (§7) |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices | phase 1 |
 | 3 | **Plateforme cloud** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), outillage de flotte (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
 | 4 | **Copropriété pilote** : une seconde résidence réelle et volontaire | phase 3 |
@@ -246,10 +254,11 @@ elle.
    confidentialité **par copro**, et un hébergeur conforme. À faire valider.
 2. **Hébergeur** : PostgreSQL géré, stockage objet, coffre à secrets, localisation
    des données.
-3. **Nom du produit** : « 5Hostachy » est l'adresse de la résidence. La plateforme
-   a besoin d'un nom neutre, la résidence garde le sien.
+3. ~~**Nom du produit**~~ — tranché le 07/10/2026 : **CoproConnect** (D9). Reste la
+   recherche d'antériorité de la marque (§7).
 4. **D8** : confirmer les deux comptes indépendants.
-5. **Licence** : `-only` ou `-or-later` ; politique de marque.
+5. **Licence** : la variante est tranchée (`-or-later`, D10) ; restent la politique
+   de marque et les vérifications d'avant changement (§7).
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
    l'hébergement ; elle interdit seulement d'en fermer le code.
 7. **La résidence actuelle** : devient-elle une copropriété de la plateforme, ou

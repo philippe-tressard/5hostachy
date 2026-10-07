@@ -726,6 +726,12 @@ seul worker** (`E2E_WORKERS`, seuil et mesure dans `rejouer-ci.sh`, règle
 `ci_workers_e2e`) : les workers s'y disputaient la machine et quatre specs
 tombaient en délai d'hydratation (#1665). La CI GitHub garde le défaut.
 
+🔒 Un worktree dont `front/node_modules` est une **jonction** vers le clone
+principal en partage le cache de Vite : les e2e y tombent au hasard dès qu'une
+autre session lance Vite. Le rejeu les rend alors **INCONNU** et donne la
+commande qui répare — `rmdir` de la jonction (le lien seul) puis `npm ci` dans
+le worktree (#1722, `ci_node_modules_etat`).
+
 ---
 
 ## Infrastructure — l'essentiel
