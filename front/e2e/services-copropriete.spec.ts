@@ -69,8 +69,8 @@ test('Admin › Services : état, manque, bascule et infrastructure sans case', 
 	});
 	await page.goto('/admin?onglet=services');
 
-	const carte = (titre: string) => page.locator('section.service', { hasText: titre });
-	await expect(page.locator('section.service')).toHaveCount(3);
+	const carte = (titre: string) => page.locator('section[data-service]', { hasText: titre });
+	await expect(page.locator('section[data-service]')).toHaveCount(3);
 	await expect(carte('Assistant IA').locator('.badge')).toHaveText('Activé');
 	await expect(carte('Assistant IA')).toContainText('Plafond');
 	await expect(carte('WhatsApp').locator('.badge')).toHaveText('Activé, incomplet');

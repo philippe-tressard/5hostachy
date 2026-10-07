@@ -25,7 +25,6 @@
 	import { onMount } from 'svelte';
 	import { config as configApi, type ServiceCopropriete } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
-	import { parAttribut } from '$lib/table-statuts';
 	import { toast } from '$lib/components/Toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -33,11 +32,13 @@
 	/**  La page tient la configuration lue au chargement : elle y reporte la bascule. */
 	export let apresBascule: (cle: string, valeur: string) => void = () => {};
 
-	const { libelle: LIBELLE_ETAT, badge: BADGE_ETAT } = parAttribut({
-		actif: { libelle: 'Activé', badge: 'badge-green' },
-		coupe: { libelle: 'Coupé', badge: 'badge-gray' },
-		incomplet: { libelle: 'Activé, incomplet', badge: 'badge-orange' },
-	});
+	//  Trois états, rendus ICI seulement : la couleur se pose par `class:` — une
+	//  classe interpolée rendrait le fichier non mesurable par `lint:css-orphelin`.
+	const LIBELLE_ETAT: Record<ServiceCopropriete['etat'], string> = {
+		actif: 'Activé',
+		coupe: 'Coupé',
+		incomplet: 'Activé, incomplet',
+	};
 
 	let services: ServiceCopropriete[] = [];
 	let chargement = true;
@@ -78,10 +79,15 @@
 
 <EtatListe {chargement} {erreur} vide={services.length === 0}>
 	{#each services as s (s.code)}
-		<section class="card config-section service" aria-labelledby="service-{s.code}">
+		<section class="card config-section" data-service={s.code} aria-labelledby="service-{s.code}">
 			<h2 class="config-section-title" id="service-{s.code}">
 				<Icon name={s.icone} size={17} />{s.libelle}
-				<span class="badge {BADGE_ETAT[s.etat]}">{LIBELLE_ETAT[s.etat]}</span>
+				<span
+					class="badge"
+					class:badge-green={s.etat === 'actif'}
+					class:badge-gray={s.etat === 'coupe'}
+					class:badge-orange={s.etat === 'incomplet'}>{LIBELLE_ETAT[s.etat]}</span
+				>
 			</h2>
 			<p class="config-section-intro">{s.description}</p>
 			{#if s.manque.length}

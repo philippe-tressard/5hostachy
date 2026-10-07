@@ -10,6 +10,7 @@
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
 import { api, BASE, buildQuery } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
+import type { ServiceCopropriete } from './services';
 import type { FiltreGestionnaire, PorteeTelemetrie, TableauTelemetrie } from './telemetrie';
 import type { User } from './types';
 import type {
@@ -365,27 +366,6 @@ export interface JournalEnvoiWhatsApp {
 	statut: string;
 	erreur: string | null;
 	envoye_le: string | null;
-}
-
-/**  Un service de la copropriété (`GET /config/services`, #1718) — décrit par le
- *   registre `utils/services`, seule liste. `cle_actif` est `null` pour une
- *   infrastructure (l'envoi des courriels), qui ne se coupe pas. */
-export interface ServiceCopropriete {
-	code: string;
-	libelle: string;
-	description: string;
-	/**  Ce qu'on perd quand il est coupé. */
-	perte: string;
-	plafond: string;
-	/**  L'onglet d'administration de ses réglages détaillés. */
-	onglet: string;
-	/**  Son tracé, du catalogue `$lib/icones-svg.json` (vérifié côté serveur). */
-	icone: string;
-	coupable: boolean;
-	cle_actif: string | null;
-	etat: 'actif' | 'coupe' | 'incomplet';
-	/**  Les réglages qui lui manquent pour fonctionner, nommés. */
-	manque: string[];
 }
 
 export const config = {
