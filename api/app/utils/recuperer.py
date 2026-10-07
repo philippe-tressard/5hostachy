@@ -34,6 +34,7 @@ où lire les droits (`standards/03` §1).
 
 from __future__ import annotations
 
+import os
 from typing import Optional, Type, TypeVar
 
 from fastapi import HTTPException
@@ -63,6 +64,38 @@ def ou_404(
     objet: Optional[T] = session.get(modele, identifiant)
     if not objet or any(getattr(objet, k, None) != v for k, v in (sous or {}).items()):
         raise HTTPException(404, f"{libelle} introuvable")
+    return objet
+
+
+def fichier_ou_404(chemin: Optional[str], libelle: str = "Fichier") -> str:
+    """Le chemin d'un fichier **présent sur le disque**, ou un **404** qui le nomme.
+
+    L'enregistrement existe mais son fichier a disparu du volume : la question
+    n'est plus « existe-t-il en base ? » (`ou_404`) mais « est-il encore là ? ».
+    Écrite quatre fois à la main (documents, diagnostics, compteurs, affiches),
+    avec le même message — le jour où l'on veut tracer ces absences, une seule
+    ligne à changer (#1571).
+
+    `chemin` peut valoir `None` ou `""` (colonne vide) : le 404 est alors la bonne
+    réponse. `isfile`, et non `exists` : un répertoire n'est pas servable.
+    """
+    if not chemin or not os.path.isfile(chemin):
+        raise HTTPException(404, f"{libelle} introuvable sur le serveur")
+    return chemin
+
+
+def premier_ou_404(session: Session, modele: Type[T], detail: str) -> T:
+    """La **ligne unique** d'une table de réglage, ou un 404 qui dit `detail`.
+
+    Pour une table qui n'a qu'une ligne (la copropriété) : il n'y a pas
+    d'identifiant à passer à `ou_404`, et l'absence veut dire « pas encore
+    configurée » plutôt que « introuvable » — d'où le `detail` libre, écrit par
+    l'appelant, qui connaît le genre et le mot. Écrit trois fois à l'identique
+    dans `copropriete.py` (#1571).
+    """
+    objet: Optional[T] = session.exec(select(modele)).first()
+    if not objet:
+        raise HTTPException(404, detail)
     return objet
 
 

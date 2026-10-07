@@ -21,9 +21,13 @@ from app.utils.destinataires import syndic_principal
 from app.utils.document_contrat import id_document_designe
 from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.lecture import lire_objet
+from app.utils.recuperer import premier_ou_404
 from app.utils.syndic import nom_du_syndic
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
+
+#: Ce que dit le 404 quand la fiche de la copropriété n'a jamais été saisie.
+COPROPRIETE_ABSENTE = "Copropriété non configurée"
 
 
 class CoproprieteUpdate(BaseModel):
@@ -351,9 +355,7 @@ def get_copropriete(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(get_current_user),
 ):
-    copro = session.exec(select(Copropriete)).first()
-    if not copro:
-        raise HTTPException(404, "Copropriété non configurée")
+    copro = premier_ou_404(session, Copropriete, COPROPRIETE_ABSENTE)
     return copropriete_lue(session, copro)
 
 
@@ -363,9 +365,7 @@ def update_copropriete(
     session: Session = Depends(get_session),
     _: Utilisateur = Depends(require_admin),
 ):
-    copro = session.exec(select(Copropriete)).first()
-    if not copro:
-        raise HTTPException(404, "Copropriété non configurée")
+    copro = premier_ou_404(session, Copropriete, COPROPRIETE_ABSENTE)
     donnees = body.model_dump(exclude_none=True)
 
     #  ⚠️ La conversion de `assurance_echeance` (chaîne ISO → `date`) vivait ici.
@@ -422,9 +422,7 @@ def contrats_candidats(
     if section not in SECTIONS_CONTRAT:
         raise HTTPException(404, "Section inconnue")
     _, type_equipement = SECTIONS_CONTRAT[section]
-    copro = session.exec(select(Copropriete)).first()
-    if not copro:
-        raise HTTPException(404, "Copropriété non configurée")
+    copro = premier_ou_404(session, Copropriete, COPROPRIETE_ABSENTE)
     contrats = session.exec(
         select(ContratEntretien)
         .where(

@@ -27,7 +27,7 @@ from app.utils.fichiers import REPERTOIRE_PRIVE, enregistrer_televersement
 from app.utils.visibility import document_visible, profil_admet
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import fichier_ou_404, ou_404
 from app.config import get_settings
 from app.utils.cloche import sonner
 
@@ -217,9 +217,9 @@ def download_document(
     doc = ou_404(session, Document, doc_id, "Document")
     if not document_visible(user, doc, session):
         raise HTTPException(403, "Accès refusé")
-    if not os.path.exists(doc.fichier_chemin):
-        raise HTTPException(404, "Fichier introuvable sur le serveur")
-    return FileResponse(doc.fichier_chemin, filename=doc.fichier_nom, media_type=doc.mime_type)
+    return FileResponse(
+        fichier_ou_404(doc.fichier_chemin), filename=doc.fichier_nom, media_type=doc.mime_type
+    )
 
 
 class DocumentUpdate(BaseModel):
