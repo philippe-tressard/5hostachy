@@ -396,6 +396,8 @@ export default defineConfig(
 			// `any` hors du client d'API : des props d'entité et des charges utiles
 			// d'écran, encore nombreuses. Le supprimer est un travail de TYPAGE, pas
 			// un réglage de linter (#1572) — le client, lui, est à zéro : bloc suivant.
+			// Coupée ici, elle n'est pas pour autant libre : `scripts/check-any.mjs`
+			// (`npm run lint:any`) en tient le PLAFOND, qui ne fait que baisser (#1571).
 			'@typescript-eslint/no-explicit-any': 'off',
 
 			// Même raison que dans le bloc Svelte : `a ? f() : g()` employé comme
