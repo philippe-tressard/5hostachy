@@ -180,6 +180,8 @@ const REPONSES_PAR_DEFAUT: Record<string, unknown> = {
 	},
 	//  `bailleur.monBail()` rend `null` sans bail — une liste vide passerait pour un bail.
 	'/api/bailleur/mon-bail': null,
+	//  `ConsignesArrivant` : Espace CS › Annuaire lit `consignes` (#1727).
+	'/api/admin/consignes-arrivant': { consignes: [], personnalisees: false },
 };
 
 /**

@@ -199,9 +199,4 @@
 		padding: 0.6rem;
 		margin: 0.5rem 0;
 	}
-	.btn-retirer {
-		color: var(--color-danger);
-		border-color: currentColor;
-		margin-top: 0.4rem;
-	}
 </style>
