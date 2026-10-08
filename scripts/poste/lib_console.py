@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Sortie console UTF-8 — la console de ce poste est en cp1252.
 
 🔴 **Sans cela, un contrôle PLANTE en affichant son propre verdict** : un « ✓ »

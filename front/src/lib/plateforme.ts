@@ -15,8 +15,7 @@
  * contextes de build `./api` et `./front` ne partagent aucun fichier.
  * `api/tests/test_plateforme.py` échoue si les deux divergent.
  *
- * ⚠️ La licence est celle EN VIGUEUR : son passage à l'AGPL-3.0-or-later est un
- * lot séparé (#1726), qui ne changera que les deux constantes de licence.
+ * La licence est l'AGPL-3.0-or-later depuis le 08/10/2026 (#1726).
  */
 
 /** Le nom du logiciel — l'attribution et le lien vers le source. */
@@ -26,9 +25,11 @@ export const NOM_PLATEFORME = 'CoproConnect';
  *  pour une seule résidence (source déclarée de `lint:nom-residence`). */
 export const DEPOT_SOURCE = 'https://github.com/philippe-tressard/5hostachy';
 
-/** La licence en vigueur, telle qu'on la nomme et qu'on la lie. */
-export const LICENCE_NOM = 'Licence 5Hostachy';
-export const LICENCE_URL = `${DEPOT_SOURCE}/blob/main/LICENSE-5Hostachy.md`;
+/** La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
+ *  foi est l'officiel, en anglais (`LICENSE`). */
+export const LICENCE_SPDX = 'AGPL-3.0-or-later';
+export const LICENCE_NOM = 'GNU Affero General Public License, version 3 ou ultérieure';
+export const LICENCE_URL = `${DEPOT_SOURCE}/blob/main/LICENSE`;
 
 /**
  * Le code source de la version qui TOURNE — l'AGPLv3 §13 vise celle-là, pas la

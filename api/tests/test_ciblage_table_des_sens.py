@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """La table des sens du ciblage : ce que `NULL`, `[]` et le défaut veulent dire (#789).
 
 ## Pourquoi ce fichier existe

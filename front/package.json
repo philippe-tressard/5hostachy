@@ -2,7 +2,7 @@
 	"name": "hostachy-front",
 	"version": "2.115.0",
 	"private": true,
-	"license": "SEE LICENSE IN LICENSE-5Hostachy.md",
+	"license": "AGPL-3.0-or-later",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",

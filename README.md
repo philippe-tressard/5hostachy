@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="LICENSE-5Hostachy.md"><img src="https://img.shields.io/badge/licence-5Hostachy-8a2be2.svg" alt="Licence 5Hostachy — source-available" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg" alt="Licence AGPL-3.0-or-later — logiciel libre" /></a>
   <a href="https://api.reuse.software/info/github.com/philippe-tressard/5hostachy"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/5hostachy" alt="REUSE compliant" /></a>
   <img src="https://img.shields.io/badge/python-3.12-3776ab.svg" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/node-22+-339933.svg" alt="Node 22+" />
@@ -196,17 +196,19 @@ Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
-**[Licence 5Hostachy](LICENSE-5Hostachy.md)** — Philippe TRESSARD, 2024-2026.
+**[AGPL-3.0-or-later](LICENSE)** — GNU Affero General Public License, version 3
+ou ultérieure. © Philippe TRESSARD, 2024-2026.
 
-Code source **accessible**, copyleft fondé sur les principes de l'AGPLv3, avec
-clauses commerciales. Les particuliers, associations, copropriétés et syndicats
-de copropriétaires peuvent l'utiliser **gratuitement** ; tout usage commercial
-requiert un accord préalable de l'auteur.
+CoproConnect est un **logiciel libre** : chacun peut l'utiliser, l'étudier, le
+modifier et le redistribuer, y compris à titre commercial — à condition de
+publier ses modifications sous la même licence, **y compris** quand il le fait
+fonctionner comme service en ligne (AGPL §13). Aucune condition additionnelle.
 
-⚠️ Ce n'est **pas** une licence libre au sens de l'OSI, et elle n'est **pas**
-compatible AGPLv3 : la clause commerciale ajoute une restriction que l'AGPLv3 §7
-n'admet pas. Voir aussi [`NOTICE.md`](NOTICE.md).
+Les versions publiées jusqu'à la 2.115.0 restent sous leur licence d'origine ;
+l'historique du changement et les mentions de copyright sont dans
+[`NOTICE.md`](NOTICE.md). La licence ne cède aucun droit sur les noms ni sur le
+logo.
 
-Les composants tiers gardent leur propre licence : [`NOTICE.md`](NOTICE.md) §9
-les nomme, dont `libsignal` (GPL-3.0) dans le service de messagerie — sa
-compatibilité avec la licence du projet reste à valider par l'auteur.
+Les composants tiers gardent leur propre licence : [`NOTICE.md`](NOTICE.md) §6
+les nomme, dont `libsignal` (GPL-3.0) dans le service de messagerie — tous
+compatibles avec l'AGPL-3.0-or-later, analyse validée par l'auteur.

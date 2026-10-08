@@ -33,7 +33,7 @@ def _constante_ts(fichier: Path, nom: str) -> str:
     return trouve.group(2)
 
 
-@pytest.mark.parametrize("nom", ["NOM_PLATEFORME", "DEPOT_SOURCE", "LICENCE_NOM"])
+@pytest.mark.parametrize("nom", ["NOM_PLATEFORME", "DEPOT_SOURCE", "LICENCE_SPDX", "LICENCE_NOM"])
 def test_la_plateforme_est_la_meme_des_deux_cotes(nom):
     assert _constante_ts(FRONT_LIB / "plateforme.ts", nom) == getattr(plateforme, nom)
 
@@ -50,11 +50,17 @@ def test_les_replis_de_la_residence_sont_les_memes_des_deux_cotes():
 
 
 def test_la_licence_nommee_est_celle_du_depot():
-    """Le titre du texte de licence, et le fichier que le lien vise."""
-    titre = (RACINE / "LICENSE").read_text(encoding="utf-8").splitlines()[0].lstrip("# ").strip()
-    assert titre == plateforme.LICENCE_NOM, (
-        f"`LICENSE` s'intitule « {titre} », les mentions légales annoncent "
-        f"« {plateforme.LICENCE_NOM} » : mettre à jour `utils/plateforme.py` ET "
+    """L'identifiant que REUSE.toml accorde, et le fichier que le lien vise.
+
+    Lié au dépôt RÉEL depuis #1726 : les mentions légales ne peuvent pas
+    annoncer une licence que le dépôt n'accorde plus — le titre du texte
+    officiel, lui, est tenu par `test_gouvernance_depot.py`.
+    """
+    reuse = (RACINE / "REUSE.toml").read_text(encoding="utf-8")
+    accorde = re.search(r'SPDX-License-Identifier\s*=\s*"([^"]+)"', reuse).group(1)
+    assert accorde == plateforme.LICENCE_SPDX, (
+        f"REUSE.toml accorde « {accorde} », les mentions légales annoncent "
+        f"« {plateforme.LICENCE_SPDX} » : mettre à jour `utils/plateforme.py` ET "
         "`front/src/lib/plateforme.ts`."
     )
     fichier = plateforme.LICENCE_URL.rsplit("/", 1)[-1]

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Philippe Tressard
-// SPDX-License-Identifier: LicenseRef-5Hostachy
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Ce que git ignore sous `front/` est PRODUIT — donc ESLint ne doit pas le lire.
  *

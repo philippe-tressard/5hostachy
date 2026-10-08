@@ -39,7 +39,7 @@ civilité ni capitales, par exemple : à casse mixte, la forme attraperait chaqu
 paire de mots entre guillemets —, ni ce qui est public sans être un fichier :
 messages de commit, tickets et PR GitHub. La consigne qui couvre le reste :
 `.claude/skills/security-audit`. L'attribution légale (`NOTICE.md`,
-`LICENSE-5Hostachy.md`, SPDX) est hors de sa portée, et c'est voulu : elle doit
+`LICENSE`, SPDX) est hors de sa portée, et c'est voulu : elle doit
 nommer l'auteur.
 """
 
@@ -67,7 +67,7 @@ CODE = ("front/src", "front/scripts", "scripts", "api/alembic")
 #: Les documents : ils sont publics au même titre que le code (#1544).
 DOCUMENTS = ("docs", "specs", "infra", ".claude/skills", ".github")
 #: Les documents de la racine, nommés un à un. `NOTICE.md` et
-#: `LICENSE-5Hostachy.md` n'y sont PAS : l'attribution légale nomme l'auteur,
+#: `LICENSE` n'y sont PAS : l'attribution légale nomme l'auteur,
 #: et c'est voulu.
 DOCUMENTS_RACINE = ("README.md", "CLAUDE.md", "CONTRIBUTING.md", "SECURITY.md")
 

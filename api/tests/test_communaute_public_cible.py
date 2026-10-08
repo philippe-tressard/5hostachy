@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Le public cible d'une annonce et d'une idée protège **tous** les chemins (#782).
 
 ## Ce que ce test verrouille, et pourquoi ce n'est pas la liste

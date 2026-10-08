@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Garde-fou : « un compte externe ne contribue pas » ne s'écrit qu'à UN endroit.
 
 ## Le défaut (06/09/2026)

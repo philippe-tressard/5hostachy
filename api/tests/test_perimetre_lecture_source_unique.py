@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Garde-fou : lire un `perimetre_cible` pour l'AFFICHER passe par une seule fonction.
 
 ## Le défaut (06/09/2026, #789)

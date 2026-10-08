@@ -39,9 +39,8 @@ _SOURCE = APP / "utils" / "liens.py"
 #: servir — ou qui sert davantage — fait échouer le contrôle.
 EXCEPTIONS_HOSTACHY: dict[str, tuple[int, str]] = {
     "utils/plateforme.py": (
-        3,
-        "la SOURCE : l'adresse du dépôt et la licence en vigueur portent ce nom "
-        "(la licence change avec #1726)",
+        1,
+        "la SOURCE : l'adresse du dépôt public porte le nom historique",
     ),
     "utils/backup.py": (
         1,
