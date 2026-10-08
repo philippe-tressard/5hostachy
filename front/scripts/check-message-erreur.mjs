@@ -44,6 +44,7 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
+import { neutraliserCommentaires } from './lib-commentaires.mjs';
 
 const RACINE = 'src';
 
@@ -62,7 +63,28 @@ const PLAFOND = 0;
 /**  Le ternaire recopié : `<e> instanceof ApiError ? <e>.message : …`.
  *   La rétro-référence `\1` exige la MÊME variable des deux côtés — sans elle,
  *   un test légitime sur deux erreurs distinctes serait compté à tort. */
-const TERNAIRE = /(\w+) instanceof ApiError \? \1\.message/g;
+const TERNAIRE = /(\w+)\s+instanceof\s+ApiError\s*\?\s*\1\.message/g;
+
+/**  🔴 Deux autres écritures de la MÊME notion, que le ternaire ne voyait pas
+ *   (#1571, 08/10/2026) — 31 copies dans 13 fichiers, et une forme du ternaire
+ *   écrite sur plusieurs lignes (`FormulaireTicket`) qu'un motif sans `\s`
+ *   laissait passer :
+ *     `e.message ?? 'Erreur'`               — un `catch (e: any)`, qui affiche
+ *                                             « Failed to fetch » à une coupure ;
+ *     `e instanceof Error ? e.message : …`  — même chose, sous un autre test.
+ *   Toutes disent moins que `messageErreur` : ni session expirée, ni réseau. */
+//  Les noms d'une ERREUR seulement : `res.message ?? 'Vote enregistré'` est le
+//  message de succès qu'une réponse du serveur porte (`PageCommunaute`).
+const REPLI_LOCAL = /\b(e|err|erreur|error)\.message\s*\?\?/g;
+const TERNAIRE_ERROR = /(\w+)\s+instanceof\s+Error\s*\?\s*\1\.message/g;
+
+/**  Les lectures de `.message` qui ne SONT PAS un message à l'utilisateur, avec
+ *   leur raison. Une entrée qui ne sert plus fait échouer le contrôle. */
+const EXCEPTIONS = {
+	//  La télémétrie des erreurs de navigateur relève le TEXTE brut de
+	//  l'exception pour le classer : rien n'est affiché à personne.
+	'lib/telemetry.ts': 'relevé brut d’une exception pour la télémétrie, jamais affiché',
+};
 
 function fichiers(dir, acc = []) {
 	for (const e of readdirSync(dir)) {
@@ -75,7 +97,10 @@ function fichiers(dir, acc = []) {
 
 /**  La décision, PURE — combien de copies dans cette source ? */
 export function compterCopies(source) {
-	return (source.match(TERNAIRE) ?? []).length;
+	return [TERNAIRE, REPLI_LOCAL, TERNAIRE_ERROR].reduce(
+		(n, motif) => n + (source.match(motif) ?? []).length,
+		0,
+	);
 }
 
 if (process.argv.includes('--selftest')) {
@@ -99,6 +124,15 @@ if (process.argv.includes('--selftest')) {
 	//  une autre erreur. La rétro-référence l'exclut, et c'est le faux positif
 	//  que trois contrôles de ce dépôt ont déjà rencontré.
 	t('variables différentes', 0, 'e instanceof ApiError ? autre.message : 0');
+	//  #1571 : les trois écritures que le motif d'origine laissait passer.
+	t('repli local', 1, "toast('error', e.message ?? 'Erreur');");
+	t('message de succès d’une réponse', 0, "toast('success', res.message ?? 'Vote enregistré');");
+	t('ternaire sur Error', 1, "toast('error', err instanceof Error ? err.message : 'x');");
+	t(
+		'ternaire sur plusieurs lignes',
+		1,
+		'error =\n\te instanceof ApiError\n\t\t? e.message\n\t\t: "x";',
+	);
 	//  Le cas zéro : une source vide ne compte rien, et ne prétend rien.
 	t('source vide', 0, '');
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
@@ -110,18 +144,30 @@ let total = 0;
 let lus = 0;
 const parFichier = [];
 
+const exceptionsServies = new Set();
 for (const f of tous) {
 	lus++;
-	const n = compterCopies(readFileSync(f, 'utf8'));
+	const rel = f
+		.split(sep)
+		.join('/')
+		.replace(/^src\//, '');
+	//  Un commentaire qui CITE la forme refusée n'en est pas une copie.
+	const n = compterCopies(neutraliserCommentaires(readFileSync(f, 'utf8')));
 	if (!n) continue;
+	if (rel in EXCEPTIONS) {
+		exceptionsServies.add(rel);
+		continue;
+	}
 	total += n;
-	parFichier.push([
-		f
-			.split(sep)
-			.join('/')
-			.replace(/^src\//, ''),
-		n,
-	]);
+	parFichier.push([rel, n]);
+}
+
+const perimees = Object.keys(EXCEPTIONS).filter((r) => !exceptionsServies.has(r));
+if (perimees.length) {
+	console.error(
+		`\n✗ Exception(s) qui ne servent plus : ${perimees.join(', ')} — la retirer d'EXCEPTIONS.\n`,
+	);
+	process.exit(1);
 }
 
 //  🔴 LE CAS ZÉRO (`standards/04` §2) : si aucun fichier n'a été lu, le contrôle

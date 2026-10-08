@@ -32,6 +32,7 @@
   porte plus de « ✕ Annuler » quand le formulaire est ouvert (#367).
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { pourChampLocal } from '$lib/date';
 	import { contexteAssistant, perimetreContexte } from '$lib/assistant';
 	import { createEventDispatcher } from 'svelte';
@@ -40,7 +41,6 @@
 		tickets as ticketsApi,
 		admin as adminApi,
 		prestataires as prestatairesApi,
-		ApiError,
 		type Ticket,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -334,12 +334,10 @@
 			);
 			dispatch('cree', t);
 		} catch (e) {
-			error =
-				e instanceof ApiError
-					? e.message
-					: modeEdition
-						? 'Erreur lors de l’enregistrement'
-						: 'Erreur lors de la création';
+			error = messageErreur(
+				e,
+				modeEdition ? 'Erreur lors de l’enregistrement' : 'Erreur lors de la création',
+			);
 		} finally {
 			loading = false;
 		}

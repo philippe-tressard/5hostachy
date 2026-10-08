@@ -55,6 +55,7 @@
     - change(detail: string[]) — après ajout ou retrait (mode normal)
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import Vignette from './Vignette.svelte';
 	import PastilleFichier from './PastilleFichier.svelte';
@@ -72,9 +73,8 @@
 
 	export let urls: string[] = [];
 	export let max = MAX_FICHIERS;
-	/** 'photos' | 'documents' | 'mixte' — porte à la fois le filtre du sélecteur
-	 *  et le libellé par défaut : une page n'a ni import ni ligne de plus à écrire
-	 *  pour dire « ici, ce sont des photos ». */
+	/** Porte à la fois le filtre du sélecteur et le libellé par défaut : une page
+	 *  n'a ni import ni ligne de plus à écrire pour dire « ici, ce sont des photos ». */
 	export let mode: 'photos' | 'documents' | 'mixte' = 'documents';
 	export let label: string | null = null;
 	export let accept: string | null = null;
@@ -288,7 +288,7 @@
 			libelleFichier = '';
 			dispatch('change', urls);
 		} catch (err) {
-			toast('error', err instanceof Error ? err.message : "Erreur lors de l'envoi du document");
+			toast('error', messageErreur(err, "Erreur lors de l'envoi du document"));
 		} finally {
 			envoi = false;
 		}
@@ -305,7 +305,7 @@
 			urls = Array.isArray(maj) ? maj : urls.filter((u) => u !== p.cle);
 			dispatch('change', urls);
 		} catch (err) {
-			toast('error', err instanceof Error ? err.message : 'Erreur lors de la suppression');
+			toast('error', messageErreur(err, 'Erreur lors de la suppression'));
 		}
 	}
 </script>

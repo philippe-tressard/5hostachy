@@ -17,6 +17,7 @@
   la page qui reste propriétaire de `siteConfig`.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	import { config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -129,8 +130,8 @@
 			smtpConfig.password = '';
 			await relire();
 			toast('success', 'Configuration SMTP enregistrée.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			smtpSaving = false;
 		}
@@ -145,8 +146,8 @@
 			//  l'écran annoncerait autre chose que ce qui est parti.
 			const r = await configApi.testerSmtp(smtpTestEmail);
 			toast('success', r?.message ?? `E-mail de test envoyé à ${smtpTestEmail}`);
-		} catch (e: any) {
-			toast('error', e.message ?? "Échec de l'envoi");
+		} catch (e) {
+			toast('error', messageErreur(e, "Échec de l'envoi"));
 		} finally {
 			smtpTesting = false;
 		}

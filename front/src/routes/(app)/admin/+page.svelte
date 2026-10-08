@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import OngletMaintenance from '$lib/components/OngletMaintenance.svelte';
@@ -207,8 +208,8 @@
 			await configApi.save(payload);
 			configStore.update((c: Record<string, string>) => ({ ...c, ...payload }));
 			toast('success', 'Paramètres sauvegardés.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur lors de la sauvegarde.');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur lors de la sauvegarde.'));
 		} finally {
 			siteSaving = false;
 		}

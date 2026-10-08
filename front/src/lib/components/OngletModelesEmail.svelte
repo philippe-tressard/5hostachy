@@ -31,6 +31,7 @@
   `{{ ["civilite" }}`. Recopier le geste aurait recopié le défaut.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { onMount } from 'svelte';
@@ -150,8 +151,8 @@
 			emailTemplates = emailTemplates.map((t) => (t.id === id ? updated : t));
 			toast('success', 'Modèle mis à jour.');
 			emailEdit = null;
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			emailSaving = false;
 		}
@@ -177,8 +178,8 @@
 			emailTemplates = emailTemplates.map((t) => (t.id === id ? updated : t));
 			openEmailEdit(updated);
 			toast('success', 'Modèle remis par défaut.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			emailResetOne = false;
 		}
@@ -205,8 +206,8 @@
 			const res = await adminApi.resetEmailTemplates();
 			toast('success', res?.message ?? 'Designs réinitialisés.');
 			await loadEmails();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			emailResetting = false;
 		}

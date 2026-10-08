@@ -17,6 +17,7 @@
   page arrivent en `valeurs`, tout le reste vit ici.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { onMount } from 'svelte';
 	import { config as configApi } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -85,8 +86,8 @@
 			await configApi.save({ [`page_config_${pg.id}`]: val });
 			configStore.update((c: Record<string, string>) => ({ ...c, [`page_config_${pg.id}`]: val }));
 			toast('success', 'Configuration enregistrée.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur lors de la sauvegarde.');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur lors de la sauvegarde.'));
 		}
 	}
 	async function movePage(i: number, dir: number) {
@@ -107,8 +108,8 @@
 			// Cet écran enregistre au fil de l'eau, sans bouton : jusqu'ici seul l'ÉCHEC
 			// parlait, et l'absence de retour laissait croire que rien n'était enregistré.
 			toast('success', 'Ordre enregistré.');
-		} catch (e: any) {
-			toast('error', e.message ?? "Erreur lors de la sauvegarde de l'ordre.");
+		} catch (e) {
+			toast('error', messageErreur(e, "Erreur lors de la sauvegarde de l'ordre."));
 		}
 	}
 	//  L'onglet s'amorce SEUL à partir des valeurs reçues : la page n'a plus à

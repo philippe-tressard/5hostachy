@@ -18,6 +18,7 @@
   quoi faire »*.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import ChampSecret from '$lib/components/ChampSecret.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -96,8 +97,8 @@
 			await relire();
 			dispatch('enregistre');
 			toast('success', 'Réception des réponses enregistrée.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			imapSaving = false;
 		}
@@ -110,8 +111,8 @@
 			const r = await configApi.testerImap();
 			imapResultat = r.message;
 			toast('success', 'Connexion à la boîte réussie.');
-		} catch (e: any) {
-			imapResultat = e.message ?? 'Échec';
+		} catch (e) {
+			imapResultat = messageErreur(e);
 			toast('error', imapResultat);
 		} finally {
 			imapTesting = false;
