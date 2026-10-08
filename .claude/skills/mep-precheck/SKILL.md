@@ -546,6 +546,12 @@ au commit précédent (`git reset --hard <commit-précédent>`), puis `docker co
 build && docker compose up -d` — aucune ouverture de `app.db` : ce n'est pas une
 violation de la règle d'or.
 
+Ce retour au code précédent tient **sans restaurer la base** parce que les
+migrations sont compatibles sur une version (#1757, `test_migrations_compatibles.py`) :
+l'ancien code lit et écrit le schéma que la version fautive a migré. Une migration
+historique (jusqu'à 0271) n'offre pas cette garantie — si le lot fautif en est une,
+la restauration de la sauvegarde reste le seul retour sûr.
+
 🔴 **Mais ce geste ne se lance pas de sa propre initiative.** Le hook global
 `garde-git-destructif.py` le **refuse** depuis l'outil Bash — y compris glissé dans
 un `ssh … '… && git reset --hard …'` —, parce que rien n'en défait l'effet et qu'il

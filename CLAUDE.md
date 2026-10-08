@@ -250,6 +250,15 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   `foreign_key` dans le modèle non plus — sinon base neuve et base migrée
   divergent. `api/tests/test_migrations.py` le refuse.
 - `start.sh` a `set -e` : une migration qui crash = conteneur bloqué
+- 🔴 **Une migration reste compatible avec la version précédente du code** (#1757,
+  08/10/2026) : revenir en arrière doit n'être qu'un changement d'image, sans
+  restaurer la base. **Ajouter, puis retirer — jamais dans la même version** : une
+  colonne neuve est nullable ou porte un `server_default` ; retirer une table ou
+  une colonne, renommer, passer à `nullable=False` est un **second temps**, annoncé
+  dans `CONTRACTIONS` par le lot où le code cesse d'en dépendre, et fait dans une
+  version ultérieure. Pas de SQL brut qui retire ou renomme. 🔒
+  `test_migrations_compatibles.py` (l'historique, jusqu'à 0271, n'est pas jugé ; il
+  vérifie aussi qu'aucun modèle ne déclare plus ce qui est retiré).
 
 ### Dépendances d'auth
 | Dependency | Usage |
@@ -632,6 +641,12 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   hors du fichier qui porte la notion — s'écrit sur `front/scripts/lib-source-unique.mjs`
   (cas zéro, témoin qui doit servir, exceptions déclarées, commentaires blanchis) :
   six contrôles en recopiaient le squelette, et l'un n'avait pas de cas zéro (#779).
+- 🔒 **Aucun état mutable de module de plus** (#1743, chantier multi-copropriétés) :
+  un conteneur de module modifié depuis une fonction, un `global`, un `@lru_cache`
+  fuiraient d'une copropriété à l'autre dans un même processus (spec §4.5).
+  `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
+  en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
+  donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,
