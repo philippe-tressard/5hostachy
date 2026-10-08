@@ -11,6 +11,7 @@
   en place (#889). `lint:geste-edition` le déclare (liste `MODALES`).
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { createEventDispatcher } from 'svelte';
 	import { admin as adminApi } from '$lib/api';
 	import Modale from '$lib/components/Modale.svelte';
@@ -36,8 +37,8 @@
 			});
 			toast('success', `Actions d'accueil envoyées pour ${nomAffiche(utilisateur)}.`);
 			fermer();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			envoi = false;
 		}

@@ -47,8 +47,8 @@
 			if (result.erreurs?.length) toast('error', result.erreurs.slice(0, 3).join('\n'));
 			signalerEcartes(result.auto_sans_occupant, result.auto_hors_perimetre);
 			await reload();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur import');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur import'));
 		} finally {
 			uploading = false;
 		}
@@ -63,8 +63,8 @@
 			const r = await lotsApi.autoMatchImports();
 			toast('success', `${r.matches} liaison(s) automatique(s) trouvée(s)`);
 			await reload();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			autoMatching = false;
 		}
@@ -80,8 +80,8 @@
 			toast('success', `${r.resolus} copropriétaire(s) résolu(s) automatiquement`);
 			signalerEcartes(r.sans_occupant, r.hors_perimetre);
 			await reload();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			autoResolving = false;
 		}
@@ -150,8 +150,8 @@
 			toast('success', 'Liaisons mises à jour');
 			editId = null;
 			await reload();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
 		}
@@ -164,7 +164,7 @@
 			await lotsApi.resoudreImport(id);
 			toast('success', 'Lot confirmé et lien copropriétaire créé');
 			await reload();
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e, 'Erreur résolution'));
 		}
 	}
@@ -175,7 +175,7 @@
 			await lotsApi.ignorerimport(id);
 			toast('info', 'Import ignoré');
 			await reload();
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}

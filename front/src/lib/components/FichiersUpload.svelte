@@ -55,6 +55,7 @@
     - change(detail: string[]) — après ajout ou retrait (mode normal)
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import Vignette from './Vignette.svelte';
 	import PastilleFichier from './PastilleFichier.svelte';
@@ -288,7 +289,7 @@
 			libelleFichier = '';
 			dispatch('change', urls);
 		} catch (err) {
-			toast('error', err instanceof Error ? err.message : "Erreur lors de l'envoi du document");
+			toast('error', messageErreur(err, "Erreur lors de l'envoi du document"));
 		} finally {
 			envoi = false;
 		}
@@ -305,7 +306,7 @@
 			urls = Array.isArray(maj) ? maj : urls.filter((u) => u !== p.cle);
 			dispatch('change', urls);
 		} catch (err) {
-			toast('error', err instanceof Error ? err.message : 'Erreur lors de la suppression');
+			toast('error', messageErreur(err, 'Erreur lors de la suppression'));
 		}
 	}
 </script>

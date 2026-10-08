@@ -76,8 +76,8 @@
 			await adminApi.traiterCompte(id, { action: 'refuser', motif });
 			toast('info', 'Compte refusé.');
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -113,7 +113,7 @@
 			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== u.id);
 			for (const a of annonces) toast(a.ton, a.texte);
 			cvModal = null;
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			cvSubmitting = false;
@@ -126,8 +126,8 @@
 			if (!(await accepterCommandeAcces(id))) return;
 			toast('success', 'Commande acceptée.');
 			commandes = commandes.filter((c) => c.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -136,8 +136,8 @@
 			await refuserCommandeAcces(id, motif);
 			toast('info', 'Commande refusée.');
 			commandes = commandes.filter((c) => c.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -147,8 +147,8 @@
 			await adminApi.traiterDemandeProfil(id, { action: 'approuver' });
 			toast('success', 'Demande approuvée.');
 			demandesProfil = demandesProfil.filter((d) => d.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -160,8 +160,8 @@
 			});
 			toast('info', 'Demande rejetée.');
 			demandesProfil = demandesProfil.filter((d) => d.id !== id);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 </script>

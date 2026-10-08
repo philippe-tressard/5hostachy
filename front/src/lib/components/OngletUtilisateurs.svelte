@@ -13,6 +13,7 @@
   l'onglet Site en lit aussi les gestionnaires possibles.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { admin as adminApi, type UtilisateurAdmin } from '$lib/api';
 	import {
 		adresseChangee,
@@ -62,8 +63,8 @@
 				toast('success', `${userNom} — ${lotsM} lot(s) matché(s) (en attente de résolution).`);
 			else toast('info', `${userNom} — Aucun import trouvé pour ce nom.`);
 			await recharger();
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur auto-match');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur auto-match'));
 		}
 	}
 
@@ -91,8 +92,8 @@
 				`Rôle ${libelleRole(role)} ${action === 'ajouter' ? 'ajouté à' : 'retiré de'} ${nomAffiche(user)}.`,
 			);
 			utilisateurs = utilisateurs.map((u) => (u.id === user.id ? { ...u, ...updated } : u));
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			roleEnCours = null;
 		}
@@ -124,8 +125,8 @@
 			);
 			editUser = null;
 			motDePasseAdmin = '';
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 
@@ -160,8 +161,8 @@
 			} else {
 				toast('success', `${nomAffiche(u)} réautorisé à la communauté.`);
 			}
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		}
 	}
 

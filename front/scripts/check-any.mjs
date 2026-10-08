@@ -36,8 +36,10 @@ import { fileURLToPath } from 'node:url';
  *  07/10/2026 (#1571) : 275 relevés ; 245 le même jour — les modèles d'import
  *  d'accès, les colonnes des tâches planifiées, les comptes et les prestataires
  *  typés sur les types du client, un champ lu par son nom passant par `champDe`.
+ *  Puis 214 (#1571) : trente et un `catch (e: any)` deviennent `catch (e)`, leur
+ *  message passant par `messageErreur` au lieu d'un `e.message ?? '…'` recopié.
  */
-export const PLAFOND = 245;
+export const PLAFOND = 214;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REGLE = '@typescript-eslint/no-explicit-any';

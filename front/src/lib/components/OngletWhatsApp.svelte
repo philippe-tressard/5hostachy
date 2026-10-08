@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	//  Onglet « WhatsApp » de l'administration — extrait de `admin/+page.svelte`
 	//  le 14/08/2026 : la page dépassait 2 200 lignes et la règle de modularité
 	//  impose de découper le fichier quand on y touche. L'onglet est autonome
@@ -79,8 +80,8 @@
 				enabled: item.enabled,
 			});
 			toast('success', `Message « ${item.label} » enregistré.`);
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			waScheduledSaving = { ...waScheduledSaving, [item.id]: false };
 		}
@@ -92,10 +93,10 @@
 		try {
 			await configApi.testerWhatsapp(waTestMessage);
 			toast('success', 'Message de test envoyé sur le groupe WhatsApp.');
-		} catch (e: any) {
+		} catch (e) {
 			//  Le serveur répond 502 quand le bridge n'a pas acquitté : ce n'est pas
 			//  un échec, et surtout ce n'est pas une invitation à recliquer.
-			toast('error', e.message ?? "Échec de l'envoi");
+			toast('error', messageErreur(e, "Échec de l'envoi"));
 		} finally {
 			waTesting = false;
 			loadWaLogs();
@@ -107,9 +108,9 @@
 		try {
 			waStatus = await configApi.whatsappStatut();
 			if (waStatus?.state === 'waiting_qr') waQrTimestamp = Date.now();
-		} catch (e: any) {
+		} catch (e) {
 			waStatus = null;
-			toast('error', e.message ?? 'Impossible de joindre le bridge');
+			toast('error', messageErreur(e, 'Impossible de joindre le bridge'));
 		} finally {
 			waStatusLoading = false;
 		}
@@ -137,8 +138,8 @@
 				whatsapp_group_jid: waConfig.group_jid,
 			}));
 			toast('success', 'Configuration WhatsApp enregistrée.');
-		} catch (e: any) {
-			toast('error', e.message ?? 'Erreur');
+		} catch (e) {
+			toast('error', messageErreur(e));
 		} finally {
 			waSaving = false;
 		}
