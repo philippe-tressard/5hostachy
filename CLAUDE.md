@@ -955,7 +955,14 @@ Instanciation 5Hostachy :
   de la version est jointe aux notes de version. Les scripts des RPi ne s'y
   déplacent pas (arbitrage du 08/10/2026 : ils ne partent déjà pas avec une
   installation). Le contenu de `front/static/` part tel quel chez toutes : il ne
-  nomme jamais la résidence (`npm run lint:nom-residence`, le manuel dit CoproConnect). 🔒 `test_images_publiees.py` :
+  nomme jamais la résidence (`npm run lint:nom-residence`, le manuel dit CoproConnect).
+- **Une réplique se met à jour seule chaque nuit** (#1756) :
+  `deploiement/standard/mise-a-jour.sh` — sauvegarde vérifiée AVANT tout geste,
+  retour à l'image précédente puis à la sauvegarde si la santé reste KO, rapport
+  `mise_a_jour` (courriel de 06:00 en cas d'échec, `utils/sante_mise_a_jour`).
+  Ce retour arrière tient parce que `start.sh` **saute les migrations d'une base
+  en avance sur le code** (`utils/revision_base`) : sans lui, l'ancienne image
+  s'arrêtait en boucle sur une révision inconnue. 🔒 `test_images_publiees.py` :
   la matrice publie exactement ce que `docker-compose.yml` construit. Aucune
   installation ne tire encore ces images (DI-6, #1758).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise

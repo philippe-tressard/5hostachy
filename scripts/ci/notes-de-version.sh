@@ -30,6 +30,7 @@ FICHIERS_DEPLOIEMENT=(
     Caddyfile
     .env.example
     deploiement/standard/LISEZMOI.md
+    deploiement/standard/mise-a-jour.sh
     LICENSE
 )
 

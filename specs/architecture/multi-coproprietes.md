@@ -244,6 +244,11 @@ stables de main. »*
    ajoute, la suivante retire. L'image précédente tourne alors sur le schéma
    migré, et le retour arrière n'est qu'un changement d'image — sans quoi il
    faudrait restaurer la sauvegarde et perdre les écritures de la nuit.
+   ⚠️ La compatibilité ne suffit pas seule (constaté le 08/10/2026, #1756) :
+   l'ancienne image ne connaît pas la révision que la nouvelle a posée, et son
+   `alembic upgrade head` arrêtait le conteneur en boucle. `api/start.sh` saute
+   donc les migrations d'une base **en avance** sur le code
+   (`api/app/utils/revision_base.py`), et le dit.
 8. **Le produit se sépare de l'exploitation des RPi** (#1755) : la bascule,
    `health-watch`, les points d'entrée et les crontabs restent dans le dépôt, mais
    ne partent pas avec une installation ; celle-ci a son déploiement standard.

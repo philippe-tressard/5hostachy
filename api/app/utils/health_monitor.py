@@ -359,6 +359,7 @@ def _check_reference_copro(session: Session) -> list[str]:
 
 from app.utils.sante_modeles_email import controler as controler_modeles_email
 from app.utils.etat_taches import problemes_taches
+from app.utils.sante_mise_a_jour import problemes_mise_a_jour
 from app.utils.llm_journal import problemes_ia
 from app.utils.liens import base_site, nom_site
 
@@ -449,6 +450,7 @@ def collecter_problemes(session: Session) -> list[str]:
     problemes += _check_whatsapp(session)
     problemes += _check_backups(session)
     problemes += _check_export_hors_site(session)
+    problemes += problemes_mise_a_jour(session)
     problemes += _check_disk()
     problemes += _check_reference_copro(session)
     #  Ce que l'écran « Santé des tâches planifiées » montre en rouge, et que

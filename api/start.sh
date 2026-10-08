@@ -27,8 +27,18 @@ if [ "$(id -u)" = "0" ]; then
     exec setpriv --reuid=app --regid=app --init-groups "$0" "$@"
 fi
 
-echo "==> Lancement des migrations Alembic... (utilisateur : $(id -un))"
-alembic upgrade head
+#  Une base EN AVANCE sur ce code (retour à l'image précédente, #1756) : son
+#  `alembic upgrade head` échouerait sur une révision qu'il ne connaît pas, et
+#  `set -e` arrêterait le conteneur en boucle. Les migrations étant compatibles
+#  d'une version à l'autre (#1757), ce code sait servir cette base : on démarre
+#  sans migrer, et on le DIT. Lecture impossible → « inconnu » → on migre.
+ETAT_BASE=$(python -m app.utils.revision_base 2>/dev/null || echo inconnu)
+if [ "$ETAT_BASE" = "en_avance" ]; then
+    echo "==> ⚠ Base EN AVANCE sur ce code (retour à une version précédente) — migrations ignorées."
+else
+    echo "==> Lancement des migrations Alembic... (utilisateur : $(id -un))"
+    alembic upgrade head
+fi
 
 echo "==> Démarrage de l'API..."
 #  --no-access-log (#1300, 25/09/2026) : pas une ligne par requête avec l'adresse

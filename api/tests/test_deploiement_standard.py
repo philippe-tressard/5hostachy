@@ -67,8 +67,57 @@ def test_chaque_service_construit_prend_son_image():
 
 def test_l_archive_emporte_ce_que_le_mode_d_emploi_cite():
     script = NOTES.read_text(encoding="utf-8")
-    cites = set(re.findall(r"^\| `([^`]+)` \|", LISEZMOI.read_text(encoding="utf-8"), re.M))
+    #  Le tableau des FICHIERS : une première colonne qui porte un chemin. Le
+    #  tableau des réglages (`COPROCONNECT_…`) n'en est pas un.
+    cites = {
+        c
+        for c in re.findall(r"^\| `([^`]+)` \|", LISEZMOI.read_text(encoding="utf-8"), re.M)
+        if re.search(r"[./]", c)
+    }
     assert cites, "le tableau des fichiers du mode d'emploi est illisible"
     for fichier in cites:
         assert fichier in script, f"l'archive n'emporte pas {fichier}, que le mode d'emploi cite"
         assert (RACINE / fichier).exists(), f"{fichier} n'existe pas"
+
+
+# ── La mise à jour nocturne (#1756) ──────────────────────────────────────────
+
+MISE_A_JOUR = RACINE / "deploiement" / "standard" / "mise-a-jour.sh"
+
+
+def _constante(nom: str) -> str:
+    for ligne in MISE_A_JOUR.read_text(encoding="utf-8").splitlines():
+        if ligne.startswith(f"{nom}="):
+            return ligne.split("=", 1)[1].strip().strip('"')
+    raise AssertionError(f"{nom} introuvable dans mise-a-jour.sh")
+
+
+def test_la_mise_a_jour_vise_le_depot_le_registre_et_les_services_publies():
+    from app.utils.plateforme import DEPOT_SOURCE
+
+    assert DEPOT_SOURCE.endswith("/" + _constante("DEPOT")), (
+        "le dépôt suivi n'est pas celui du source"
+    )
+    registre = yaml.safe_load(IMAGES.read_text(encoding="utf-8"))["env"]["REGISTRE"]
+    assert _constante("REGISTRE") == registre
+    assert set(_constante("SERVICES").split()) == _construits()
+
+
+def test_la_mise_a_jour_sauvegarde_avant_de_toucher_au_service():
+    """L'ordre est la promesse (D15) : rien ne s'arrête avant que tout soit prêt."""
+    #  Le code seul : l'en-tête du script raconte le déroulé et en cite les gestes.
+    texte = "\n".join(
+        ligne
+        for ligne in MISE_A_JOUR.read_text(encoding="utf-8").splitlines()
+        if not ligne.lstrip().startswith("#")
+    )
+    ordre = [
+        "pull --quiet",  # images tirées, service intact
+        "stop api",  # premier geste qui coupe
+        "integrity_check",  # la sauvegarde est vérifiée…
+        'sed -i "s/^COPROCONNECT_VERSION=',  # … avant de poser la version
+        "up -d --remove-orphans",
+    ]
+    positions = [texte.index(m) for m in ordre]
+    assert positions == sorted(positions), dict(zip(ordre, positions))
+    assert "COPROCONNECT_SAUVEGARDES absent" in texte, "pas de mise à jour sans sauvegarde"

@@ -43,6 +43,7 @@ dépôt), l'archive `coproconnect-deploiement-X.Y.Z.tar.gz`. Elle contient,
 | `Caddyfile` | le frontal HTTP (en-têtes de sécurité, routage `/api`) |
 | `.env.example` | le gabarit de configuration, commenté |
 | `deploiement/standard/LISEZMOI.md` | ce mode d'emploi |
+| `deploiement/standard/mise-a-jour.sh` | la mise à jour nocturne, réversible seule |
 | `LICENSE` | AGPL-3.0-or-later |
 
 ## Installer
@@ -89,8 +90,41 @@ et relancer `up -d`. C'est sûr parce qu'une migration reste compatible avec la
 version précédente du code (on ajoute, puis on retire à la version suivante —
 `api/tests/test_migrations_compatibles.py`).
 
-La mise à jour **automatique, chaque nuit**, avec sauvegarde et retour arrière
-seuls, est le lot DI-4 (#1756) : elle n'existe pas encore.
+## La mise à jour automatique, chaque nuit
+
+`deploiement/standard/mise-a-jour.sh` suit la branche `replica` : quand une
+version y est promue, il l'installe, et revient seul en arrière si elle ne
+démarre pas. Il ne touche **à rien** tant que tout n'est pas prêt :
+
+1. il lit la version de `replica` et décide : déjà à jour, épinglée, trop tôt
+   (échelonnement), ou à installer ;
+2. il télécharge l'archive de la version, tire ses images et vérifie leur
+   signature — le site tourne toujours ;
+3. il arrête l'API, **sauvegarde** les volumes dans `COPROCONNECT_SAUVEGARDES`
+   et vérifie la sauvegarde (archive lisible, intégrité de la base) ;
+4. il pose les fichiers et la version, redémarre, et sonde `/api/health` ;
+5. en échec, il revient aux fichiers et aux images précédents — la base
+   migrée se sert sans migrer —, et si la santé reste mauvaise, il **restaure
+   la sauvegarde** ;
+6. il rend compte à l'administration (*Administration › Maintenance*), et le
+   contrôle de 06:00 envoie un courriel si la nuit a échoué.
+
+**Réglages** (dans `.env`) :
+
+| Réglage | Rôle |
+|---|---|
+| `COPROCONNECT_SAUVEGARDES` | **obligatoire** — le dossier des sauvegardes d'avant mise à jour, à monter **hors de la machine** : sans lui, rien n'est installé |
+| `MAINTENANCE_KEY` | la clé qui permet au script de rendre compte à l'administration |
+| `COPROCONNECT_DELAI_JOURS` | `0` pour l'installation pilote (dès la promotion), `1` par défaut (la nuit suivante) |
+| `COPROCONNECT_EPINGLEE` | `oui` pour rester sur la version installée |
+| `COPROCONNECT_SIGNATURE` | `exigee` pour refuser une image dont la signature n'a pas pu être vérifiée (il faut `gh`, connecté) ; `si-possible` par défaut |
+
+**Le lancer chaque nuit**, à une heure creuse — une mise à jour coupe le site
+le temps de redémarrer (crontab de l'utilisateur qui pilote Docker) :
+
+```
+30 4 * * * /opt/coproconnect/deploiement/standard/mise-a-jour.sh >> /var/log/coproconnect-maj.log 2>&1
+```
 
 ## Sauvegarder
 

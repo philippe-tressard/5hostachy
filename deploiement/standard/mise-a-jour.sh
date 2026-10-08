@@ -1,0 +1,254 @@
+#!/bin/bash
+# =============================================================================
+#  mise-a-jour.sh — La mise à jour nocturne d'une réplique CoproConnect,
+#  réversible seule (#1756, 08/10/2026)
+#
+#  Lot DI-4 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
+#  §4.10, règles 6, 7 et 12 ; D14, D15). Lancé chaque nuit par le cron de
+#  l'installation (mode d'emploi : `deploiement/standard/LISEZMOI.md`).
+#
+#  ## Le déroulé — rien ne s'arrête tant que tout n'est pas prêt
+#
+#   1. la version à installer : celle de la branche `replica` du dépôt public ;
+#   2. décider (fonction PURE `decider_cible`) : à jour, épinglée, trop tôt
+#      (échelonnement), version illisible, ou mettre à jour ;
+#   3. télécharger l'archive de déploiement de la version, tirer ses images,
+#      vérifier leur signature — le service tourne toujours ;
+#   4. arrêter l'API, SAUVEGARDER les volumes dans `COPROCONNECT_SAUVEGARDES`,
+#      vérifier la sauvegarde (archive lisible, `PRAGMA integrity_check`) ;
+#   5. poser les fichiers et la version, `up -d` (l'API migre en démarrant) ;
+#   6. sonder `/api/health` ;
+#   7. en échec : revenir aux fichiers et à l'image précédents (la base migrée
+#      se sert sans migrer, `api/app/utils/revision_base.py`) ; si la santé
+#      reste KO, RESTAURER la sauvegarde (fonction PURE `decider_issue`).
+#   8. rendre compte : journal, et `POST /admin/maintenance/rapport` (tâche
+#      `mise_a_jour`) — le contrôle de 06:00 en fait un courriel s'il a échoué.
+#
+#  🔴 Une réplique tient sur UN serveur (D15) : pas de standby, pas de bascule.
+#  Le retour arrière et la sauvegarde hors de la machine sont tout son filet.
+#
+#  Réglages lus dans `.env` : COPROCONNECT_VERSION (la version installée),
+#  COPROCONNECT_SAUVEGARDES (dossier OBLIGATOIRE, de préférence monté hors de
+#  la machine), COPROCONNECT_EPINGLEE=oui (ne pas suivre), COPROCONNECT_DELAI_JOURS
+#  (0 pour l'installation pilote, 1 par défaut), COPROCONNECT_SIGNATURE
+#  (`exigee` ou `si-possible`, défaut), MAINTENANCE_KEY (pour rendre compte).
+#
+#  Test : bash deploiement/standard/mise-a-jour.sh --selftest
+# =============================================================================
+set -euo pipefail
+
+DEPOT="philippe-tressard/5hostachy"
+REGISTRE="ghcr.io/philippe-tressard"
+SERVICES="api front caddy whatsapp-bridge"
+SANTE_MAX_S=180
+
+# ── Décisions PURES ───────────────────────────────────────────────────────────
+
+#  $1 a ≤ $2 b, en versions X.Y.Z (comparaison numérique, pas alphabétique)
+version_au_plus() {
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]
+}
+
+#  $1 courante · $2 cible · $3 épinglée (oui|…) · $4 âge de la promotion en
+#  jours (vide : inconnu) · $5 délai d'échelonnement en jours
+#  → a-jour | epinglee | inconnue | retrograde | attendre | mettre-a-jour
+decider_cible() {
+    local courante="$1" cible="$2" epinglee="$3" age="$4" delai="${5:-1}"
+    local motif='^[0-9]+\.[0-9]+\.[0-9]+$'
+    if ! [[ "$cible" =~ $motif ]]; then echo inconnue; return; fi
+    if [ "$epinglee" = oui ]; then echo epinglee; return; fi
+    if [ "$cible" = "$courante" ]; then echo a-jour; return; fi
+    #  `replica` n'avance qu'en avant (#1754) : une cible plus ancienne est une
+    #  anomalie, pas un ordre de retour arrière.
+    if [[ "$courante" =~ $motif ]] && version_au_plus "$cible" "$courante"; then echo retrograde; return; fi
+    case "$age" in ''|*[!0-9]*) age=0 ;; esac
+    if [ "$age" -lt "$delai" ]; then echo attendre; return; fi
+    echo mettre-a-jour
+}
+
+#  $1 santé après la mise à jour (ok|ko) · $2 santé après le retour à l'image
+#  précédente (ok|ko|vide si non tenté) → reussie | revenir | revenue | restaurer
+decider_issue() {
+    if [ "$1" = ok ]; then echo reussie; return; fi
+    case "${2:-}" in
+        '') echo revenir ;;
+        ok) echo revenue ;;
+        *)  echo restaurer ;;
+    esac
+}
+
+if [ "${1:-}" = "--selftest" ]; then
+    fail=0
+    attendu() {  # $1 libellé · $2 attendu · $3 fonction · $4… arguments
+        local lib="$1" voulu="$2" f="$3" got; shift 3
+        got=$("$f" "$@")
+        if [ "$got" = "$voulu" ]; then echo "PASS  $lib"; else echo "FAIL  $lib — « $got »"; fail=1; fi
+    }
+    echo "== self-test : quelle version installer =="
+    attendu "même version → à jour"                     a-jour        decider_cible 2.120.0 2.120.0 non 5 1
+    attendu "épinglée → ne suit pas"                    epinglee      decider_cible 2.120.0 2.121.0 oui 5 1
+    attendu "cible illisible → inconnue"                inconnue      decider_cible 2.120.0 "404: Not" non 5 1
+    attendu "cible plus ancienne → anomalie"            retrograde    decider_cible 2.121.0 2.120.0 non 5 1
+    attendu "2.119.10 > 2.119.9 (numérique)"            mettre-a-jour decider_cible 2.119.9 2.119.10 non 5 1
+    attendu "promue hier, délai 1 → mettre à jour"      mettre-a-jour decider_cible 2.120.0 2.121.0 non 1 1
+    attendu "promue aujourd'hui, délai 1 → attendre"    attendre      decider_cible 2.120.0 2.121.0 non 0 1
+    attendu "pilote (délai 0) → dès la promotion"       mettre-a-jour decider_cible 2.120.0 2.121.0 non 0 0
+    attendu "âge illisible, délai 1 → attendre"         attendre      decider_cible 2.120.0 2.121.0 non "" 1
+    attendu "première installation sans version"       mettre-a-jour decider_cible "" 2.121.0 non 3 1
+    echo "== self-test : après la mise à jour =="
+    attendu "santé OK → réussie"                        reussie   decider_issue ok ""
+    attendu "santé KO → revenir à l'image précédente"   revenir   decider_issue ko ""
+    attendu "revenue, santé OK → revenue"               revenue   decider_issue ko ok
+    attendu "revenue, santé KO → restaurer"             restaurer decider_issue ko ko
+    exit "$fail"
+fi
+
+# ── Le script lui-même est remplacé par l'archive : il se relance d'une copie ──
+#  bash lit un script AU FIL de son exécution ; réécrire le fichier en cours de
+#  route ferait exécuter un mélange des deux versions.
+if [ -z "${MAJ_COPIE:-}" ]; then
+    copie=$(mktemp /tmp/coproconnect-maj.XXXXXX)
+    cp "$0" "$copie"
+    MAJ_COPIE="$copie" exec bash "$copie" "$(cd "$(dirname "$0")/../.." && pwd)"
+fi
+trap 'rm -f "$MAJ_COPIE"' EXIT
+
+DOSSIER="${1:?dossier manquant}"
+cd "$DOSSIER"
+exec 9>/tmp/coproconnect-maj.lock
+flock -n 9 || { echo "$(date '+%F %T') Une mise à jour tourne déjà — rien à faire."; exit 0; }
+
+journal() { echo "$(date '+%F %T') $*"; }
+lire_env() { sed -n "s/^$1=//p" .env 2>/dev/null | tail -1 | tr -d '"'"'"'\r'; }
+COMPOSE=(docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml)
+DEBUT=$(date +%s)
+PROJET=$(printf '%s' "${COMPOSE_PROJECT_NAME:-$(basename "$DOSSIER")}" | tr '[:upper:]' '[:lower:]')
+
+COURANTE=$(lire_env COPROCONNECT_VERSION)
+SAUVEGARDES=$(lire_env COPROCONNECT_SAUVEGARDES)
+SIGNATURE=$(lire_env COPROCONNECT_SIGNATURE); SIGNATURE=${SIGNATURE:-si-possible}
+DELAI=$(lire_env COPROCONNECT_DELAI_JOURS); DELAI=${DELAI:-1}
+
+rendre_compte() {  # $1 statut (succes|erreur) · $2 erreur (vide si succès) · $3 vers
+    local cle erreur corps
+    cle=$(lire_env MAINTENANCE_KEY)
+    [ -n "$cle" ] || { journal "(MAINTENANCE_KEY absente : rien rendu à l'administration)"; return 0; }
+    #  Le message ne porte que des versions et des chemins : on retire les
+    #  guillemets plutôt que d'échapper du JSON à la main.
+    erreur=null
+    [ -n "$2" ] && erreur="\"$(printf '%s' "$2" | tr -d '"\\')\""
+    corps=$(printf '{"tache":"mise_a_jour","statut":"%s","erreur":%s,"duree_secondes":%d,"details":{"de":"%s","vers":"%s"}}' \
+        "$1" "$erreur" "$(( $(date +%s) - DEBUT ))" "$COURANTE" "$3")
+    curl -fsS -m 20 -o /dev/null -X POST http://localhost/api/admin/maintenance/rapport \
+        -H "x-maintenance-key: $cle" -H "Content-Type: application/json" -d "$corps" \
+        || journal "⚠ Rapport non transmis à l'administration."
+}
+
+echouer() {  # $1 message — sortie SANS avoir touché au service
+    journal "⚠ $1"
+    rendre_compte erreur "$1" "${CIBLE:-}"
+    exit 1
+}
+
+sante() {  # → ok | ko, en sondant jusqu'à SANTE_MAX_S
+    local fin=$(( $(date +%s) + SANTE_MAX_S ))
+    while [ "$(date +%s)" -lt "$fin" ]; do
+        [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://localhost/api/health || true)" = 200 ] && { echo ok; return; }
+        sleep 5
+    done
+    echo ko
+}
+
+# ── 1–2. La version à installer, et la décision ───────────────────────────────
+CIBLE=$(curl -fsS -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
+    | sed -n 's/^[[:space:]]*"version": *"\([^"]*\)".*/\1/p' | head -1 || true)
+PUBLIEE=$(curl -fsS -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
+    | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
+AGE=""
+[ -n "$PUBLIEE" ] && AGE=$(( ( $(date +%s) - $(date -d "$PUBLIEE" +%s) ) / 86400 ))
+DECISION=$(decider_cible "$COURANTE" "$CIBLE" "$(lire_env COPROCONNECT_EPINGLEE)" "$AGE" "$DELAI")
+case "$DECISION" in
+    a-jour)    journal "À jour en $COURANTE."; exit 0 ;;
+    epinglee)  journal "Version épinglée sur $COURANTE (COPROCONNECT_EPINGLEE=oui) : $CIBLE n'est pas installée."; exit 0 ;;
+    attendre)  journal "$CIBLE promue il y a ${AGE:-?} jour(s), délai $DELAI : installée une nuit prochaine."; exit 0 ;;
+    inconnue)  echouer "version de replica illisible (« $CIBLE ») : dépôt injoignable ?" ;;
+    retrograde) echouer "replica porte $CIBLE, plus ancienne que $COURANTE : anomalie, rien n'est fait." ;;
+esac
+[ -n "$SAUVEGARDES" ] && [ -d "$SAUVEGARDES" ] && [ -w "$SAUVEGARDES" ] \
+    || echouer "COPROCONNECT_SAUVEGARDES absent ou non inscriptible : pas de mise à jour sans sauvegarde (D15)."
+journal "Mise à jour $COURANTE → $CIBLE."
+
+# ── 3. Tout préparer pendant que le service tourne ────────────────────────────
+TRAVAIL=$(mktemp -d)
+curl -fsSL -m 120 -o "$TRAVAIL/archive.tar.gz" \
+    "https://github.com/$DEPOT/releases/download/v$CIBLE/coproconnect-deploiement-$CIBLE.tar.gz" \
+    || echouer "archive de déploiement de $CIBLE introuvable."
+tar -xzf "$TRAVAIL/archive.tar.gz" -C "$TRAVAIL" || echouer "archive de $CIBLE illisible."
+NOUVEAUX="$TRAVAIL/coproconnect-$CIBLE"
+for s in $SERVICES; do
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+        gh attestation verify "oci://$REGISTRE/coproconnect-$s:$CIBLE" --owner "${DEPOT%%/*}" >/dev/null 2>&1 \
+            || echouer "signature de coproconnect-$s:$CIBLE refusée."
+    elif [ "$SIGNATURE" = exigee ]; then
+        echouer "signature exigée, mais gh n'est pas installé ou pas connecté."
+    else
+        journal "⚠ Signature de coproconnect-$s:$CIBLE NON vérifiée (gh absent) — COPROCONNECT_SIGNATURE=si-possible."
+    fi
+done
+COPROCONNECT_VERSION="$CIBLE" "${COMPOSE[@]}" pull --quiet || echouer "images de $CIBLE introuvables."
+
+# ── 4. Sauvegarder, l'API arrêtée (aucun écrivain) ────────────────────────────
+IMAGE_API="$REGISTRE/coproconnect-api:$COURANTE"
+ARCHIVE="coproconnect_${COURANTE:-neuve}_vers_${CIBLE}_$(date +%Y%m%d_%H%M%S).tar.gz"
+VOLUMES=(-v "${PROJET}_app_data:/donnees/app_data" -v "${PROJET}_uploads:/donnees/uploads" -v "$SAUVEGARDES:/sortie")
+"${COMPOSE[@]}" stop api >/dev/null
+if ! docker run --rm "${VOLUMES[@]}" --entrypoint tar "$IMAGE_API" -czf "/sortie/$ARCHIVE" -C /donnees . \
+    || ! tar -tzf "$SAUVEGARDES/$ARCHIVE" | grep -qx './app_data/app.db' \
+    || ! docker run --rm -v "$SAUVEGARDES:/sortie:ro" --entrypoint sh "$IMAGE_API" -c \
+        "cd /tmp && tar -xzf /sortie/$ARCHIVE ./app_data/app.db && python -c \"import sqlite3,sys; sys.exit(0 if sqlite3.connect('app_data/app.db').execute('PRAGMA integrity_check').fetchone()[0]=='ok' else 1)\""; then
+    "${COMPOSE[@]}" start api >/dev/null || true
+    echouer "sauvegarde avant mise à jour impossible ou invalide : rien n'est changé."
+fi
+journal "Sauvegarde vérifiée : $SAUVEGARDES/$ARCHIVE."
+
+# ── 5–6. Poser la version, démarrer, sonder ──────────────────────────────────
+PRECEDENT="$DOSSIER/.precedent"
+rm -rf "$PRECEDENT" && mkdir -p "$PRECEDENT"
+(cd "$NOUVEAUX" && find . -type f) | while read -r f; do
+    mkdir -p "$PRECEDENT/$(dirname "$f")" "$DOSSIER/$(dirname "$f")"
+    [ -f "$DOSSIER/$f" ] && cp -p "$DOSSIER/$f" "$PRECEDENT/$f"
+    cp "$NOUVEAUX/$f" "$DOSSIER/$f"
+done
+cp -p .env "$PRECEDENT/.env"
+sed -i "s/^COPROCONNECT_VERSION=.*/COPROCONNECT_VERSION=$CIBLE/" .env
+grep -q "^COPROCONNECT_VERSION=" .env || echo "COPROCONNECT_VERSION=$CIBLE" >> .env
+"${COMPOSE[@]}" up -d --remove-orphans >/dev/null 2>&1 || true
+NEUVE=$(sante)
+
+# ── 7. L'issue ────────────────────────────────────────────────────────────────
+RETOUR=""
+if [ "$(decider_issue "$NEUVE" "")" = revenir ]; then
+    journal "⚠ Santé KO après la mise à jour vers $CIBLE — retour à $COURANTE."
+    (cd "$PRECEDENT" && find . -type f) | while read -r f; do cp -p "$PRECEDENT/$f" "$DOSSIER/$f"; done
+    "${COMPOSE[@]}" up -d --remove-orphans >/dev/null 2>&1 || true
+    RETOUR=$(sante)
+fi
+case "$(decider_issue "$NEUVE" "$RETOUR")" in
+    reussie)
+        journal "Mise à jour réussie : $CIBLE (en $(( $(date +%s) - DEBUT )) s)."
+        rendre_compte succes "" "$CIBLE" ;;
+    revenue)
+        journal "⚠ Revenue en $COURANTE : la base garde les migrations de $CIBLE, compatibles."
+        rendre_compte erreur "santé KO après la mise à jour vers $CIBLE — revenue en $COURANTE" "$CIBLE"
+        exit 1 ;;
+    restaurer)
+        journal "🔴 Santé KO aussi en $COURANTE — restauration de $ARCHIVE."
+        "${COMPOSE[@]}" stop api >/dev/null || true
+        docker run --rm "${VOLUMES[@]}" --entrypoint sh "$IMAGE_API" -c \
+            "rm -rf /donnees/app_data/* /donnees/uploads/* && tar -xzf /sortie/$ARCHIVE -C /donnees"
+        "${COMPOSE[@]}" up -d >/dev/null 2>&1 || true
+        journal "Restauration terminée — santé : $(sante)."
+        rendre_compte erreur "santé KO en $CIBLE puis en $COURANTE — sauvegarde $ARCHIVE restaurée" "$CIBLE"
+        exit 1 ;;
+esac
+rm -rf "$TRAVAIL"
