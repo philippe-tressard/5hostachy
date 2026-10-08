@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
-	//  Extrait de `admin/+page.svelte` (2577 lignes) le 11/08/2026, au fil de
-	//  l'eau : y ajouter la colonne « Tâche » aurait fait grossir un fichier déjà
-	//  cinq fois au-dessus du plafond de modularité.
+	//  Extrait de `admin/+page.svelte` (2577 lignes, cinq fois le plafond de
+	//  modularité) le 11/08/2026, plutôt que d'y ajouter la colonne « Tâche ».
 	//
 	//  Les deux tableaux vivent ensemble parce qu'ils décrivent le MÊME fait sous
 	//  deux angles — ce qui aurait dû arriver, et ce qui est arrivé. Les séparer
