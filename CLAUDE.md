@@ -632,6 +632,12 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   hors du fichier qui porte la notion — s'écrit sur `front/scripts/lib-source-unique.mjs`
   (cas zéro, témoin qui doit servir, exceptions déclarées, commentaires blanchis) :
   six contrôles en recopiaient le squelette, et l'un n'avait pas de cas zéro (#779).
+- 🔒 **Aucun état mutable de module de plus** (#1743, chantier multi-copropriétés) :
+  un conteneur de module modifié depuis une fonction, un `global`, un `@lru_cache`
+  fuiraient d'une copropriété à l'autre dans un même processus (spec §4.5).
+  `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
+  en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
+  donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,
