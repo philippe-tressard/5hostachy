@@ -1,0 +1,97 @@
+# Installer CoproConnect — le déploiement standard
+
+Ce dossier décrit une **installation CoproConnect** à partir des images publiées,
+sans rien construire sur la machine. C'est l'installation d'une **réplique** :
+elle suit les versions promues sur la branche `replica`
+(`specs/architecture/multi-coproprietes.md` §4.10).
+
+> 5Hostachy, la résidence où le produit est né, en est le **maître** : ses deux
+> Raspberry Pi suivent `main` et portent leur propre outillage de haute
+> disponibilité (bascule, `health-watch`, crontabs — `scripts/exploitation/`,
+> `infra/points-entree/`). Cet outillage reste dans le dépôt et **ne fait pas
+> partie** d'une installation standard : rien ici n'en a besoin.
+
+⚠️ **Aujourd'hui, une installation sert UNE copropriété.** Plusieurs copropriétés
+isolées dans une même installation, c'est la phase 2 du chantier (en cours).
+
+## Ce qu'il faut
+
+- Docker et Docker Compose **2.24 ou plus récent** (pour `!reset`) ;
+- une machine `amd64` ou `arm64` ;
+- un accès HTTPS devant le port 80 : Caddy écoute en HTTP et suppose un frontal
+  (tunnel ou proxy inverse) qui termine le TLS. Le `Caddyfile` livré fait
+  confiance à l'en-tête `Cf-Connecting-Ip` d'un tunnel Cloudflare : l'adapter si
+  le frontal est un autre ;
+- une adresse d'envoi de courriels (SMTP).
+
+## Les fichiers
+
+Chaque version promue publie, dans ses notes de version (onglet *Releases* du
+dépôt), l'archive `coproconnect-deploiement-X.Y.Z.tar.gz`. Elle contient,
+**dans l'état exact de cette version** :
+
+| Fichier | Rôle |
+|---|---|
+| `docker-compose.yml` | les services, volumes et variables — le même que le maître |
+| `deploiement/standard/compose.images.yml` | remplace chaque construction par l'image publiée |
+| `Caddyfile` | le frontal HTTP (en-têtes de sécurité, routage `/api`) |
+| `.env.example` | le gabarit de configuration, commenté |
+| `deploiement/standard/LISEZMOI.md` | ce mode d'emploi |
+| `LICENSE` | AGPL-3.0-or-later |
+
+## Installer
+
+1. Décompresser l'archive dans un dossier dédié, par exemple `/opt/coproconnect`.
+2. `cp .env.example .env`, puis renseigner au moins `SECRET_KEY` (32 caractères
+   au minimum), `WHATSAPP_API_KEY` (16 au minimum, même si le service WhatsApp
+   n'est pas employé), `ORIGIN` (l'adresse publique) et la configuration SMTP.
+3. Ajouter **la version à installer** dans `.env` :
+   ```
+   COPROCONNECT_VERSION=2.119.1
+   ```
+4. Vérifier la provenance des images (facultatif, recommandé) :
+   ```bash
+   gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:2.119.1 --owner philippe-tressard
+   ```
+5. Démarrer :
+   ```bash
+   docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml up -d
+   ```
+6. Le premier lancement crée un compte administrateur dont le mot de passe
+   s'affiche une fois dans les journaux :
+   ```bash
+   docker compose logs api | grep "ADMIN INITIAL"
+   ```
+   Le changer dès la première connexion, puis régler l'identité de la résidence
+   (nom, adresse, logo) dans l'administration.
+
+## Mettre à jour
+
+Changer `COPROCONNECT_VERSION` dans `.env` pour la version promue suivante, puis :
+
+```bash
+docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml pull
+docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml up -d
+```
+
+Les migrations de la base s'appliquent au démarrage de l'API. Lire d'abord les
+notes de la version : elles listent les migrations et les réglages ajoutés ou
+retirés.
+
+**Revenir à la version précédente** : remettre l'ancienne `COPROCONNECT_VERSION`
+et relancer `up -d`. C'est sûr parce qu'une migration reste compatible avec la
+version précédente du code (on ajoute, puis on retire à la version suivante —
+`api/tests/test_migrations_compatibles.py`).
+
+La mise à jour **automatique, chaque nuit**, avec sauvegarde et retour arrière
+seuls, est le lot DI-4 (#1756) : elle n'existe pas encore.
+
+## Sauvegarder
+
+Les données vivent dans des volumes Docker : `app_data` (la base), `uploads` (les
+fichiers), `whatsapp_auth`, et `backups`, où l'application range ses sauvegardes
+planifiées (Administration › Sauvegarde). Copier ces archives **hors de la
+machine** : une sauvegarde qui vit à côté de ce qu'elle protège disparaît avec.
+
+🔴 Ne jamais ouvrir le fichier de la base depuis un autre processus tant que l'API
+tourne, même en lecture : arrêter l'API d'abord (`docker compose stop api`).

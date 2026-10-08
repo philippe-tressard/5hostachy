@@ -1,0 +1,42 @@
+# =============================================================================
+#  Installation standard de CoproConnect — les images, jamais un build
+#  (#1755, 08/10/2026 ; spec `specs/architecture/multi-coproprietes.md` §4.10)
+#
+#  S'emploie PAR-DESSUS le `docker-compose.yml` de la racine, qui reste la seule
+#  description des services (volumes, ports, variables, délais d'arrêt) :
+#
+#      docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml up -d
+#
+#  Ce fichier ne dit qu'une chose : chaque service vient de l'image publiée par
+#  la CI (`.github/workflows/images.yml`) pour la version `COPROCONNECT_VERSION`,
+#  et ne se construit pas. Le mode d'emploi : `deploiement/standard/LISEZMOI.md`.
+#
+#  `!reset` retire la section `build` héritée (Compose ≥ 2.24) : sans lui, une
+#  image introuvable serait CONSTRUITE en silence sur la machine — l'inverse de
+#  ce que l'installation promet.
+#
+#  🔒 `api/tests/test_deploiement_standard.py` : un service construit par la
+#  racine et oublié ici, ou une image qui ne serait pas celle que la CI publie,
+#  font échouer la CI.
+# =============================================================================
+
+services:
+  caddy:
+    build: !reset null
+    image: ghcr.io/philippe-tressard/coproconnect-caddy:${COPROCONNECT_VERSION:?COPROCONNECT_VERSION manquante dans .env}
+    pull_policy: missing
+
+  front:
+    build: !reset null
+    image: ghcr.io/philippe-tressard/coproconnect-front:${COPROCONNECT_VERSION:?COPROCONNECT_VERSION manquante dans .env}
+    pull_policy: missing
+
+  api:
+    build: !reset null
+    image: ghcr.io/philippe-tressard/coproconnect-api:${COPROCONNECT_VERSION:?COPROCONNECT_VERSION manquante dans .env}
+    pull_policy: missing
+
+  whatsapp-bridge:
+    build: !reset null
+    image: ghcr.io/philippe-tressard/coproconnect-whatsapp-bridge:${COPROCONNECT_VERSION:?COPROCONNECT_VERSION manquante dans .env}
+    pull_policy: missing

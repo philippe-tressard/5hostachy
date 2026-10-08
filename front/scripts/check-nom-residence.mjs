@@ -19,39 +19,60 @@
  *
  *  Le pendant serveur est `api/tests/test_nom_site.py`.
  *
+ *  🔴 `static/` aussi (#1755, 08/10/2026) : ce dossier part tel quel dans l'image
+ *  du front, donc chez TOUTES les installations. Le manuel utilisateur y nommait
+ *  le produit « 5Hostachy » huit fois ; il nomme la plateforme, CoproConnect
+ *  (arbitrage du 08/10/2026). Ce que `src/` ne voyait pas.
+ *
  *  Lancer : node scripts/check-nom-residence.mjs [--selftest]
  */
 import { controler, lignesPortant } from './lib-source-unique.mjs';
 
-process.exit(
-	controler({
-		extensions: ['.svelte', '.ts', '.js', '.css'],
-		temoin: 'src/lib/plateforme.ts',
-		exceptions: {
-			'src/lib/stores/locale.ts':
-				'`hostachy_locale` : la clé de stockage de la langue choisie. La renommer ' +
-				'ferait perdre leur réglage aux navigateurs déjà configurés, et elle ne ' +
-				"s'affiche nulle part.",
-		},
-		fautes: lignesPortant(/hostachy/i),
-		cas: [
-			[
-				"export const siteNomStore = derived(configStore, ($c) => $c['site_nom'] ?? '5Hostachy');",
-				1,
-			],
-			['<title>{sondage.question} — 5Hostachy</title>', 1],
-			['\t\thref="https://github.com/philippe-tressard/5hostachy"', 1],
-			['\t\t\tplaceholder="— Envoyé depuis 5hostachy.fr"', 1],
-			//  Les commentaires racontent l'histoire et peuvent la nommer.
-			['// « 5Hostachy » était écrit ici', 0],
-			['/*  5Hostachy — Styles globaux */', 0],
-			['<!-- 5Hostachy › Communauté -->', 0],
-			['<title>{titre} — {$siteNomStore}</title>', 0],
-		],
-		ok: 'Nom de la résidence : jamais écrit dans le code du site',
-		ko: 'ligne(s) qui écrivent « hostachy »',
-		conseil:
-			'La résidence : `$siteNomStore` (`$lib/stores/pageConfig`) ; la plateforme : ' +
-			'`$lib/plateforme`. Une exception se déclare dans ce contrôle, avec sa raison.',
-	}),
-);
+const MOTIF = /hostachy/i;
+
+const code = controler({
+	extensions: ['.svelte', '.ts', '.js', '.css'],
+	temoin: 'src/lib/plateforme.ts',
+	exceptions: {
+		'src/lib/stores/locale.ts':
+			'`hostachy_locale` : la clé de stockage de la langue choisie. La renommer ' +
+			'ferait perdre leur réglage aux navigateurs déjà configurés, et elle ne ' +
+			"s'affiche nulle part.",
+	},
+	fautes: lignesPortant(MOTIF),
+	cas: [
+		["export const siteNomStore = derived(configStore, ($c) => $c['site_nom'] ?? '5Hostachy');", 1],
+		['<title>{sondage.question} — 5Hostachy</title>', 1],
+		['\t\thref="https://github.com/philippe-tressard/5hostachy"', 1],
+		['\t\t\tplaceholder="— Envoyé depuis 5hostachy.fr"', 1],
+		//  Les commentaires racontent l'histoire et peuvent la nommer.
+		['// « 5Hostachy » était écrit ici', 0],
+		['/*  5Hostachy — Styles globaux */', 0],
+		['<!-- 5Hostachy › Communauté -->', 0],
+		['<title>{titre} — {$siteNomStore}</title>', 0],
+	],
+	ok: 'Nom de la résidence : jamais écrit dans le code du site',
+	ko: 'ligne(s) qui écrivent « hostachy »',
+	conseil:
+		'La résidence : `$siteNomStore` (`$lib/stores/pageConfig`) ; la plateforme : ' +
+		'`$lib/plateforme`. Une exception se déclare dans ce contrôle, avec sa raison.',
+});
+
+//  Le contenu livré tel quel : le manuel, le manifeste, les icônes.
+const livre = controler({
+	racine: 'static',
+	extensions: ['.html', '.txt', '.json', '.webmanifest', '.svg'],
+	temoin: null,
+	fautes: lignesPortant(MOTIF),
+	cas: [
+		['  <title>Manuel utilisateur · 5Hostachy</title>', 1],
+		['  <title>Manuel utilisateur · CoproConnect</title>', 0],
+	],
+	ok: 'Nom de la résidence : absent du contenu livré tel quel (static/)',
+	ko: 'ligne(s) du contenu livré qui écrivent « hostachy »',
+	conseil:
+		'Le manuel décrit la plateforme : « CoproConnect ». Une maquette d’écran montre ' +
+		'« Ma résidence », jamais le nom de celle-ci.',
+});
+
+process.exit(Math.max(code, livre));
