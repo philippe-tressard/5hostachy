@@ -58,3 +58,40 @@ test('Admin › Site : la pastille masque l’élément dans l’aperçu', async
 	await expect(apercu).not.toContainText('©');
 	await expect(apercu).toContainText('Mentions légales');
 });
+
+test('l’année de création fait « © 2026–… » ; le texte libre suit l’élément choisi', async ({
+	page,
+}) => {
+	const courante = new Date().getFullYear();
+	await simulerApi(page, (chemin) =>
+		chemin === '/api/config'
+			? {
+					site_nom: 'Résidence témoin',
+					pied_de_page_annee_debut: String(courante - 1),
+					pied_de_page_texte: 'Texte du conseil',
+					pied_de_page_texte_apres: 'annee',
+				}
+			: undefined,
+	);
+	await page.goto('/tableau-de-bord');
+	const elements = page.locator('footer.app-footer > .element');
+	await expect(elements.nth(0)).toHaveText(`© ${courante - 1}–${courante}`);
+	await expect(elements.nth(1)).toHaveText('Texte du conseil');
+	await expect(elements.nth(2)).toHaveText('Résidence témoin');
+});
+
+test('Admin › Site : le texte libre paraît dans l’aperçu et s’y déplace', async ({ page }) => {
+	await simulerApi(page, (chemin) => (chemin === '/api/auth/me' ? ADMIN : undefined));
+	await page.goto('/admin?onglet=site');
+	const apercu = page.getByRole('group', { name: 'Aperçu du pied de page' });
+	const elements = apercu.locator('.element');
+	await page.getByLabel('Texte libre').fill('Texte du conseil');
+	//  Sa place par défaut : juste après le nom de la résidence.
+	const rang = async () => (await elements.allTextContents()).indexOf('Texte du conseil');
+	const avant = await rang();
+	expect(avant, 'le texte libre doit paraître dans l’aperçu').toBeGreaterThan(0);
+	await page.getByRole('button', { name: 'Avancer le texte libre' }).click();
+	await expect.poll(rang).toBe(avant - 1);
+	await page.getByRole('button', { name: 'Reculer le texte libre' }).click();
+	await expect.poll(rang).toBe(avant);
+});

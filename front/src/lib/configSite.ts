@@ -24,7 +24,7 @@
  * séparé (`/config/legal`) — c'est pourquoi `lireConfigSite` les reçoit à part.
  */
 import { delaiArchivageJours } from '$lib/archivage';
-import { CLE_PIED_MASQUES, ecrireMasques, lireMasques } from '$lib/piedDePage';
+import { ecrireReglagePied, lireReglagePied, type ReglagePied } from '$lib/piedDePage';
 
 export interface ConfigSite {
 	nom: string;
@@ -41,8 +41,8 @@ export interface ConfigSite {
 	whatsapp_footer: string;
 	email_footer: string;
 	reference_copro: string;
-	/** Les éléments retirés du pied de page (`$lib/piedDePage`). */
-	pied_de_page_masques: string[];
+	/** Le pied de page : éléments masqués, année de création, texte libre (`$lib/piedDePage`). */
+	pied_de_page: ReglagePied;
 }
 
 /**
@@ -71,7 +71,7 @@ export const CONFIG_SITE_DEFAUT: ConfigSite = {
 	whatsapp_footer: '— Le Conseil Syndical',
 	email_footer: '',
 	reference_copro: '',
-	pied_de_page_masques: [],
+	pied_de_page: lireReglagePied({}),
 };
 
 /** Configuration stockée → formulaire. */
@@ -96,7 +96,7 @@ export function lireConfigSite(
 		whatsapp_footer: cfg['whatsapp_footer'] ?? CONFIG_SITE_DEFAUT.whatsapp_footer,
 		email_footer: cfg['email_footer'] ?? CONFIG_SITE_DEFAUT.email_footer,
 		reference_copro: cfg['reference_copro'] ?? '',
-		pied_de_page_masques: lireMasques(cfg[CLE_PIED_MASQUES]),
+		pied_de_page: lireReglagePied(cfg),
 	};
 }
 
@@ -125,6 +125,6 @@ export function ecrireConfigSite(c: ConfigSite): Record<string, string> {
 		whatsapp_footer: c.whatsapp_footer,
 		email_footer: c.email_footer,
 		reference_copro: c.reference_copro,
-		[CLE_PIED_MASQUES]: ecrireMasques(c.pied_de_page_masques),
+		...ecrireReglagePied(c.pied_de_page),
 	};
 }
