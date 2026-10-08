@@ -166,6 +166,9 @@ valeurs, identifiants depuis une constante, jamais de `foreign_key` dans un
   f-string, qui compterait contre le plafond de `test_migrations.py`.
 - BDD = **SQLite** — pas de `ALTER TYPE`, pas de `CREATE TYPE`
 - **Jamais** modifier une migration existante : en créer une nouvelle.
+- Une colonne ajoutée est **nullable ou porte un `server_default`** : l'image
+  précédente doit pouvoir insérer sans la connaître. Retirer ou renommer se fait
+  en deux versions (`CLAUDE.md` → « Migrations Alembic », #1757).
 - Corriger un texte **livré** en base (FAQ, modèle d'e-mail) : `utils/textes_livres.remplacer_si_intact` — il ne touche que les lignes intactes. Recopié quinze fois avant le 24/09/2026 ; `test_textes_livres.py` refuse la seizième copie.
 
 ### 4. Routeur FastAPI — `api/app/routers/`
@@ -325,7 +328,7 @@ Côté front, les familles équivalentes (composants `Section*`, `Onglet*`,
 - [ ] Modèle dans `app/models/<domaine>.py`, importé par `models/__init__.py` — jamais `core.py`
 - [ ] Pas de colonne `actif` : l'archivage se déclare dans `utils/archivage.REGLES`
 - [ ] Schémas dans `schemas_<domaine>.py` s'ils sont partagés, à côté du routeur sinon
-- [ ] Migration `NNNN_slug.py` au bon numéro ; aucune `foreign_key` dans un `add_column`
+- [ ] Migration `NNNN_slug.py` au bon numéro ; aucune `foreign_key` dans un `add_column` ; colonne neuve nullable ou avec `server_default`
 - [ ] Routeur monté (`main.py` ou `__init__.py` du paquet), routes fixes avant routes à paramètre
 - [ ] `ou_404` et `model_dump()` — ni `session.get` + 404, ni `.dict()`
 - [ ] Client dans le module de domaine de `front/src/lib/api/`, type dans `types.ts`
