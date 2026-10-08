@@ -57,6 +57,7 @@ _PUBLIC_KEYS = {
     "site_nom",  # titre de l'onglet et en-tête, écran de connexion inclus
     "site_url",  # liens des pages légales
     "site_icone",  # icône de la barre de navigation et de l'écran de connexion
+    "site_logo",  # nom du logo téléversé (#1728) : sa présence, et l'invalidation du cache
     "login_sous_titre",  # sous-titre de l'écran de connexion
     "pages_order",  # ordre des entrées de navigation
 }
@@ -115,6 +116,9 @@ _NORMALISEURS = {
 #: saisir ici en recréerait une seconde, qu'aucun contrôle ne confrontait.
 _CLES_HORS_BASE = {
     "whatsapp_api_key": "La clé du bridge WhatsApp se définit dans .env (WHATSAPP_API_KEY).",
+    #  Le nom du fichier n'est pas une donnée qu'on saisit : il est posé par le
+    #  téléversement, qui contrôle le fichier (#1728).
+    "site_logo": "Le logo se téléverse par POST /config/logo.",
 }
 
 

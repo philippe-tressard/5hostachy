@@ -1,4 +1,5 @@
 import type { RequestHandler } from './$types';
+import { config as configApi } from '$lib/api';
 import { NOM_SITE_PAR_DEFAUT } from '$lib/configSite';
 import { lireConfigServeur } from '$lib/server/config-site';
 
@@ -18,6 +19,14 @@ import { lireConfigServeur } from '$lib/server/config-site';
 export const GET: RequestHandler = async ({ fetch }) => {
 	const cfg = await lireConfigServeur(fetch);
 	const nom = (cfg['site_nom'] ?? '').trim() || NOM_SITE_PAR_DEFAUT;
+	//  Les icônes (#1728) : le logo de la résidence s'il a été téléversé,
+	//  redimensionné par l'API ; sinon les icônes neutres du dossier statique.
+	const logo = cfg['site_logo'] ?? '';
+	const icone = (taille: number) => ({
+		src: logo ? configApi.logoUrl(taille, logo) : `/icons/icon-${taille}.png`,
+		sizes: `${taille}x${taille}`,
+		type: 'image/png',
+	});
 	const manifeste = {
 		name: nom,
 		short_name: nom,
@@ -29,10 +38,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		background_color: '#ffffff',
 		display: 'standalone',
 		start_url: '/',
-		icons: [
-			{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-			{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-		],
+		icons: [icone(192), icone(512)],
 	};
 	return new Response(JSON.stringify(manifeste), {
 		headers: {

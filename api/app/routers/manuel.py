@@ -20,6 +20,7 @@ from sqlmodel import Session
 from app.database import get_session
 from app.utils.manuel_pdf import ManuelIndisponible, generer_manuel_pdf
 from app.utils.liens import base_site, nom_site
+from app.utils.logo import logo_televerse_png
 
 router = APIRouter(prefix="/manuel", tags=["manuel"])
 
@@ -34,7 +35,7 @@ def manuel_pdf(session: Session = Depends(get_session)):
     site_url = base_site(cfg.get("site_url"))
 
     try:
-        pdf = generer_manuel_pdf(site_nom, site_url)
+        pdf = generer_manuel_pdf(site_nom, site_url, logo_png=logo_televerse_png(session))
     except ManuelIndisponible as exc:
         #  🔴 502 et non 500 : la panne est CHEZ LE VOISIN, pas ici. Le message
         #  le dit, parce qu'un « erreur interne » enverrait chercher le défaut

@@ -12,7 +12,7 @@ changer distinctes — une retouche de charte graphique ne touche pas au SMTP.
 import re as _re
 
 from app.utils.fichiers import libelle_pieces_jointes
-from app.utils.pdf_theme import logo_svg as _logo_svg
+from app.utils.logo import adresse_logo
 
 
 # Intention d'un e-mail : ce qui est attendu du destinataire, annoncé d'emblée.
@@ -59,18 +59,17 @@ def _bandeau_intention(intention: str | None) -> str:
     )
 
 
-# ── Logo SVG inline ──
+# ── Logo ──
 #
 #  Le logo était redessiné ici, tracé pour tracé, alors que `CLAUDE.md` pose
-#  depuis toujours `utils/pdf_theme.py` comme sa source unique — « ne jamais
-#  redéfinir une palette, un logo ni un moteur PDF ailleurs ». Deux copies, donc
-#  deux logos le jour où l'une bouge : l'e-mail aurait porté une marque et le
-#  document imprimé une autre, sans que rien ne le signale (14/08/2026).
+#  `utils/pdf_theme.py` comme sa source unique (14/08/2026) ; puis il en était
+#  importé en SVG inline — que Gmail et Outlook retirent souvent.
 #
-#  `pdf_theme` pour un e-mail surprend, et son nom n'aide pas : ce module est le
-#  thème de la marque, dont le PDF n'est qu'un débouché. Importer là où la source
-#  est vaut mieux que la recopier là où l'on croit qu'elle devrait être.
-_LOGO_SVG = _logo_svg(48)
+#  🔴 Depuis #1728 (08/10/2026, arbitré) : une IMAGE PAR ADRESSE PUBLIQUE,
+#  `GET /config/logo.png`, qui sert le logo téléversé par la résidence ou le
+#  logo neutre. Un client qui bloque les images distantes affiche le `alt` : le
+#  nom de la résidence, déjà écrit à côté — rien n'est perdu.
+TAILLE_LOGO_COURRIEL = 48
 
 
 def _linkify_urls(text: str) -> str:
@@ -202,7 +201,7 @@ def _wrap_email(
   <!-- Header -->
   <tr><td style="background:linear-gradient(135deg,#1E3A5F 0%,#16304F 100%);padding:28px 32px;text-align:center">
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
-      <td style="vertical-align:middle;padding-right:14px">{_LOGO_SVG}</td>
+      <td style="vertical-align:middle;padding-right:14px"><img src="{adresse_logo(site_url, TAILLE_LOGO_COURRIEL * 2)}" width="{TAILLE_LOGO_COURRIEL}" height="{TAILLE_LOGO_COURRIEL}" alt="" style="display:block;border:0"></td>
       <td style="vertical-align:middle;text-align:left">
         <div style="font-family:Georgia,'Palatino Linotype','Book Antiqua',Palatino,serif;font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:0.3px">{site_nom}</div>
         <div style="font-size:12px;color:#C9983A;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;font-weight:600">Espace numérique de résidence</div>

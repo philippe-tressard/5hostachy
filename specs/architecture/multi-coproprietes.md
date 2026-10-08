@@ -242,7 +242,7 @@ elle.
 | Phase | Contenu | Prérequis |
 |---|---|---|
 | 0 | Décisions restantes (§9) | — |
-| 1 | **Mono-copro propre** : services activables (#1718, livré en v2.113.0), puis identité de la copropriété en configuration (domaine, adresses, nom de la résidence, textes légaux) et nom de la plateforme, CoproConnect (D9), avec le lien vers le source | aucun ; le lien vers le source attend le passage effectif à l'AGPL (§7) |
+| 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproConnect, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices | phase 1 |
 | 3 | **Plateforme cloud** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), outillage de flotte (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
 | 4 | **Copropriété pilote** : une seconde résidence réelle et volontaire | phase 3 |

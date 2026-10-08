@@ -20,6 +20,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
 	import { NOM_SITE_PAR_DEFAUT } from '$lib/configSite';
+	import ChampLogo from '$lib/components/ChampLogo.svelte';
 
 	/** Lié : la page porte l'état et l'enregistre. */
 	export let siteConfig: any;
@@ -39,6 +40,7 @@
 				l’application installée sur le téléphone.</span
 			>
 		</label>
+		<ChampLogo />
 		<label class="field">
 			URL publique
 			<input type="url" bind:value={siteConfig.url} placeholder="https://..." />

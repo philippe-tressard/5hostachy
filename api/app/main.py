@@ -84,7 +84,7 @@ from app.routers import uploads, faq, signalements, annonces_hall, patrimoine
 from app.routers import manuel
 from app.routers import courriels_affaires
 from app.routers import partage
-from app.routers import assistant, config_llm, config_services, reglement
+from app.routers import assistant, config_llm, config_logo, config_services, reglement
 from app.config import get_settings
 from app.seed import seed
 from app.utils.backup import setup_scheduler
@@ -187,10 +187,12 @@ async def lifespan(app: FastAPI):
         from app.utils.manuel_pdf import prechauffer
         from app.utils.config_site import config_site
         from app.utils.liens import base_site, nom_site
+        from app.utils.logo import logo_televerse_png
 
         with Session(engine) as _s:
             cfg = config_site(_s)
-        prechauffer(nom_site(cfg.get("site_nom")), base_site(cfg.get("site_url")))
+            logo = logo_televerse_png(_s)
+        prechauffer(nom_site(cfg.get("site_nom")), base_site(cfg.get("site_url")), logo_png=logo)
 
     scheduler.add_job(
         _prechauffer_manuel,
@@ -402,6 +404,7 @@ app.include_router(config.router)
 #  Même préfixe `/config` : l'assistant IA de l'administration (#984).
 app.include_router(config_llm.router)
 app.include_router(config_services.router)
+app.include_router(config_logo.router)
 app.include_router(diagnostics.router)
 app.include_router(regles_residence.router)
 app.include_router(delegations.router)

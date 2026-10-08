@@ -8,7 +8,7 @@
 //
 //  ⚠️ La surface publique NE BOUGE PAS : `index.ts` réexporte tout, et les
 //  quarante et un `from '$lib/api'` du front ne changent pas d'une ligne.
-import { api, BASE, buildQuery } from './client';
+import { api, BASE, buildQuery, postFormData } from './client';
 import type { ConsommationIA, UsageIA } from './assistant';
 import type { ServiceCopropriete } from './services';
 import type { FiltreGestionnaire, PorteeTelemetrie, TableauTelemetrie } from './telemetrie';
@@ -438,6 +438,15 @@ export const config = {
 		api.put<Accuse>(`/config/whatsapp-scheduled/${id}`, data),
 	testerWhatsapp: (message: string) =>
 		api.post<EssaiWhatsApp>('/config/whatsapp-test', { message }),
+
+	/**  Le logo de la résidence (#1728), servi PUBLIQUEMENT — le logo neutre s'il
+	 *   n'y en a pas. `version` (le nom du fichier, clé `site_logo`) change
+	 *   l'adresse quand le logo change : sans elle, le navigateur garderait l'ancien. */
+	logoUrl: (taille: number, version?: string | null): string =>
+		`${BASE}/config/logo.png?taille=${taille}${version ? `&v=${encodeURIComponent(version)}` : ''}`,
+	televerserLogo: (fichier: File) =>
+		postFormData<{ site_logo: string }>('/config/logo', { file: fichier }),
+	supprimerLogo: () => api.delete<{ site_logo: null }>('/config/logo'),
 };
 
 /**

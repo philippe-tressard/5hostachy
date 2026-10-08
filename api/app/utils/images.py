@@ -83,3 +83,28 @@ def reduire_sous_budget(data: bytes, budget_octets: int) -> bytes:
         if len(candidat) <= budget_octets:
             return candidat
     return meilleur
+
+
+def carre_png(data: bytes, taille: int) -> bytes:
+    """Octets d'image → PNG carré de `taille` pixels, transparence conservée.
+
+    Le logo d'une résidence (#1728) : il sert d'icône d'application, de favicon
+    et d'en-tête de document, qui sont tous CARRÉS. Une image qui ne l'est pas
+    est centrée sur un fond transparent, jamais rognée — on ne coupe pas un
+    nom écrit dans un logo. Orientation redressée comme pour une photo.
+
+    Lève `ValueError` si les octets ne sont pas une image lisible.
+    """
+    try:
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img) or img
+        img = img.convert("RGBA")
+        cote = max(img.size)
+        fond = Image.new("RGBA", (cote, cote), (0, 0, 0, 0))
+        fond.paste(img, ((cote - img.width) // 2, (cote - img.height) // 2))
+        fond = fond.resize((taille, taille), Image.LANCZOS)
+        sortie = io.BytesIO()
+        fond.save(sortie, format="PNG", optimize=True)
+        return sortie.getvalue()
+    except Exception as exc:  # noqa: BLE001 — toute erreur Pillow vaut « illisible »
+        raise ValueError("image illisible") from exc

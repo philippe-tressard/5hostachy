@@ -35,7 +35,7 @@ def test_le_prechauffage_garnit_le_cache(monkeypatch):
         return b"%PDF-1.7 factice"
 
     monkeypatch.setattr(manuel_pdf, "generer_manuel_pdf", _compte)
-    assert manuel_pdf.prechauffer("5Hostachy", "https://exemple.fr") is True
+    assert manuel_pdf.prechauffer("5Hostachy", "https://exemple.fr", logo_png=None) is True
 
     assert appels == [("5Hostachy", "https://exemple.fr")]
 

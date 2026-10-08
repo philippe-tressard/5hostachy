@@ -108,6 +108,11 @@ _PUBLICS_ASSUMES = {
     # (cf. `_PUBLIC_KEYS` dans routers/config.py) — vérifié plus bas.
     ("config.py", "get_config"),
     ("config.py", "get_legal_config"),
+    #  Le logo de la résidence (#1728) : il s'affiche AVANT toute connexion —
+    #  écran de connexion, onglet du navigateur, icône de l'application
+    #  installée, courriels. Une image, aucune donnée de résident, des tailles
+    #  bornées (`utils/logo.TAILLE_MAX`) — tenu par `test_config_logo.py`.
+    ("config_logo.py", "servir_logo"),
     # Télémétrie par `sendBeacon`, visiteurs anonymes inclus. Elle rattache au
     # compte par `utilisateur_ou_anonyme` (auth/deps.py, #1595) sans jamais
     # refuser ; plafonnée par minute ET par jour, lot et champs bornés (#1597) —

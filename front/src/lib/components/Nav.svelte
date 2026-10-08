@@ -7,6 +7,7 @@
 	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
+	import LogoResidence from '$lib/components/LogoResidence.svelte';
 	import {
 		HREFS_DEFAUT,
 		HREF_VERS_PAGE,
@@ -71,7 +72,6 @@
 	}
 
 	$: t = NAV_LABELS[$locale];
-	$: brandIcon = $configStore['site_icone'] ?? 'building-2';
 	$: siteNom = $siteNomStore;
 
 	function computeOrderedHrefs(orderJson: string | undefined): string[] {
@@ -147,7 +147,7 @@
 <!-- ─── Sidebar desktop ─────────────────────────────────────────────────── -->
 <nav class="sidebar">
 	<a href="/tableau-de-bord" class="brand brand-link">
-		<span class="brand-icon"><Icon name={brandIcon} size={22} /></span>
+		<span class="brand-icon"><LogoResidence taille={22} /></span>
 		<span class="brand-name">{siteNom}</span>
 	</a>
 
@@ -186,7 +186,7 @@
 		class="brand-link"
 		style="display:flex;align-items:center;gap:.4rem;text-decoration:none;color:inherit"
 	>
-		<span class="brand-icon"><Icon name={brandIcon} size={22} /></span>
+		<span class="brand-icon"><LogoResidence taille={22} /></span>
 		<span class="brand-name">{siteNom}</span>
 	</a>
 	<button class="hamburger" on:click={toggleMenu} aria-label="Menu" aria-expanded={menuOpen}>

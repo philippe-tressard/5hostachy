@@ -66,6 +66,7 @@ def test_la_fiche_arrivant_se_rend_en_pdf():
         syndic_data={"nom": "Syndic Test", "telephone": "0102030405"},
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
+        logo_png=None,
         whatsapp_url=None,
         consignes=_consignes_du_gabarit(),
         annee=2026,
@@ -132,6 +133,7 @@ def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
         syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
+        logo_png=None,
         whatsapp_url="https://chat.whatsapp.com/essai",
         consignes=_consignes_du_gabarit(),
         annee=2026,
@@ -182,6 +184,7 @@ def test_l_annonce_de_hall_se_rend_en_pdf():
         format_effectif="a4",
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
+        logo_png=None,
         images=None,
         date_affichage=date(2026, 8, 4),
     )

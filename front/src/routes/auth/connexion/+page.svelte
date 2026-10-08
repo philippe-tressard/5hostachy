@@ -6,7 +6,7 @@
 	import { setUser } from '$lib/stores/auth';
 	import { destinationApresConnexion } from '$lib/redirection';
 	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
-	import Icon from '$lib/components/Icon.svelte';
+	import LogoResidence from '$lib/components/LogoResidence.svelte';
 	import ChampMotDePasse from '$lib/components/ChampMotDePasse.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 
@@ -15,7 +15,6 @@
 	});
 
 	$: _siteNom = $siteNomStore;
-	$: brandIcon = $configStore['site_icone'] ?? 'building-2';
 	$: loginSousTitre = $configStore['login_sous_titre'] ?? 'Votre espace numérique de résidence';
 
 	let email = '';
@@ -65,7 +64,7 @@
 <div class="auth-page">
 	<div class="auth-card card">
 		<div class="auth-header">
-			<span class="auth-logo"><Icon name={brandIcon} size={48} /></span>
+			<span class="auth-logo"><LogoResidence taille={48} /></span>
 			<h1>{_siteNom}</h1>
 			{#if loginSousTitre}<p>{loginSousTitre}</p>{/if}
 		</div>

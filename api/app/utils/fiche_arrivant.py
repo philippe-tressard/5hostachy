@@ -12,7 +12,7 @@ from app.utils.liens import adresse_lisible
 from app.utils.pdf_theme import (
     icone_svg,
     image_data_uri as _photo_data_uri,
-    logo_svg,
+    logo_html,
     qr_data_uri as _qr_data_uri,
 )
 from app.utils.perimetres import perimetre_du_batiment, perimetre_label_un
@@ -275,6 +275,7 @@ def generer_fiche_arrivant(
     syndic_data: dict,
     site_nom: str,
     site_url: str,
+    logo_png: bytes | None,
     whatsapp_url: str | None = None,
     consignes: list[tuple[str, str]],
     annee: int = 2026,
@@ -329,7 +330,7 @@ def generer_fiche_arrivant(
 <body>
 <div class="page">
   <div class="header">
-    {logo_svg()}
+    {logo_html(logo_png)}
     <div class="header-text">
       <div class="header-title">Bienvenue dans votre résidence !</div>
       <div class="header-sub">Consignes de la copropriété</div>

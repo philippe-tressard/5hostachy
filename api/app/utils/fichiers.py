@@ -329,6 +329,10 @@ FAMILLES: dict[str, FamilleFichier] = {
     #  intégralement en mémoire par l'analyseur. Le plafond y protège la mémoire
     #  du Raspberry Pi autant qu'il contrôle l'entrée.
     "tableur": _famille(_TYPES_TABLEUR, plafond_mo=5),
+    #  Le logo de la résidence (#1728) : PNG ou JPEG SEULEMENT, arbitré le
+    #  08/10/2026. Un SVG peut porter du script, et le logo est servi
+    #  publiquement et inséré dans les documents et les courriels.
+    "logo": _famille({"image/png": ".png", "image/jpeg": ".jpg"}, plafond_mo=2),
 }
 
 

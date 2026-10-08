@@ -35,6 +35,7 @@ def _fiche(membres: list[dict]) -> str:
         syndic_data={"nom_syndic": "Syndic Test", "adresse": "1 rue Test", "membres": []},
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
+        logo_png=None,
         whatsapp_url=None,
         consignes=[],
         annee=2026,
