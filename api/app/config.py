@@ -9,9 +9,9 @@ _INSECURE_KEY_DEFAULTS = {
 
 
 class Settings(BaseSettings):
-    # Identité du nœud — déjà fournie au conteneur par docker-compose
-    # (`INSTANCE_ID: ${INSTANCE_ID:-}`) et utilisée par le front pour afficher
-    # « RPi1 » au pied de page. L'API l'ignorait, si bien qu'elle ne pouvait pas
+    # Identité du nœud — lue dans `.env` (`env_file`) ; le front la reçoit à
+    # l'exécution sous `PUBLIC_INSTANCE_ID` pour afficher « RPi1 » au pied de
+    # page (#1758). L'API l'ignorait, si bien qu'elle ne pouvait pas
     # dire sur quel nœud elle exécutait ses propres tâches (sauvegarde, maintenance
     # déclenchée à la main) : la colonne « Nœud » restait vide. Vide en local.
     instance_id: str = ""

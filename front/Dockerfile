@@ -1,9 +1,7 @@
 FROM node:22-alpine AS builder
 
 ARG GIT_HASH=dev
-ARG INSTANCE_ID=
 ENV VITE_GIT_HASH=$GIT_HASH
-ENV VITE_INSTANCE_ID=$INSTANCE_ID
 
 WORKDIR /app
 # Lockfile COPIÉ + `npm ci` : build DÉTERMINISTE (versions figées par package-lock.json).

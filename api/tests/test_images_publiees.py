@@ -119,3 +119,55 @@ def test_chaque_commit_publie_sous_son_empreinte():
 def test_aucune_etiquette_flottante():
     texte = WORKFLOW.read_text(encoding="utf-8")
     assert ":latest" not in texte and "type=raw,value=latest" not in texte
+
+
+# ── Le maître tire ce que la CI publie (#1758) ───────────────────────────────
+
+LIB_IMAGES_CI = RACINE / "scripts" / "lib" / "lib-images-ci.sh"
+
+
+def _constante_shell(nom: str) -> str:
+    for ligne in LIB_IMAGES_CI.read_text(encoding="utf-8").splitlines():
+        if ligne.startswith(f"{nom}="):
+            return ligne.split("=", 1)[1].strip().strip('"')
+    raise AssertionError(f"{nom} introuvable dans {LIB_IMAGES_CI.name}")
+
+
+def test_le_maitre_tire_exactement_ce_que_la_ci_publie():
+    """Un service publié mais pas tiré resterait construit ; tiré mais pas publié, introuvable."""
+    assert set(_constante_shell("SERVICES_IMAGES").split()) == set(services_publies())
+    assert _constante_shell("REGISTRE_IMAGES") == _yaml(WORKFLOW)["env"]["REGISTRE"]
+
+
+def test_auto_deploy_et_la_bascule_obtiennent_sans_construire_eux_memes():
+    """La porte est `obtenir_images` : tirer, construire seulement en secours.
+
+    Et sous `set -euo pipefail`, un code de retour non nul tue le script : chaque
+    appel capture le sien (`rc=0; obtenir_images … || rc=$?`), sans quoi « en
+    attente des images » arrêterait auto-deploy en silence.
+    """
+    import re
+
+    for chemin in ("scripts/exploitation/auto-deploy.sh", "scripts/exploitation/bascule.sh"):
+        code = [
+            ligne
+            for ligne in (RACINE / chemin).read_text(encoding="utf-8").splitlines()
+            if not ligne.lstrip().startswith("#")
+        ]
+        assert not [
+            ligne
+            for ligne in code
+            if re.search(r"(^|[;&|\s])construire_images\b", ligne) and "À faire sur" not in ligne
+        ], f"{chemin} construit lui-même"
+        assert any("obtenir_images" in ligne for ligne in code), (
+            f"{chemin} n'obtient plus ses images"
+        )
+    appels = [
+        ligne.strip()
+        for ligne in (RACINE / "scripts/exploitation/auto-deploy.sh")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if "obtenir_images" in ligne and not ligne.lstrip().startswith("#")
+    ]
+    assert len(appels) == 3, appels
+    assert all(a == "rc=0; obtenir_images --quiet || rc=$?" for a in appels), appels

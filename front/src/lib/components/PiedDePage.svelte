@@ -12,6 +12,7 @@
 -->
 <script lang="ts">
 	import pkg from '../../../package.json';
+	import { env } from '$env/dynamic/public';
 	import { configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { lienSource, NOM_PLATEFORME } from '$lib/plateforme';
 	import { elementsAffiches, mentionAnnee, type ReglagePied } from '$lib/piedDePage';
@@ -20,7 +21,9 @@
 	export let reglage: ReglagePied;
 
 	const empreinte = import.meta.env.VITE_GIT_HASH ?? 'dev';
-	const serveur = import.meta.env.VITE_INSTANCE_ID || '';
+	//  Le nœud se lit à l'EXÉCUTION (`PUBLIC_INSTANCE_ID`, docker-compose) : une
+	//  image construite par la CI sert les deux nœuds (#1758).
+	const serveur = env.PUBLIC_INSTANCE_ID || '';
 	const version = `v${pkg.version}`;
 	const build = [version, empreinte, import.meta.env.VITE_BUILD_DATE].filter(Boolean).join(' · ');
 	const anneeCourante = new Date().getFullYear();

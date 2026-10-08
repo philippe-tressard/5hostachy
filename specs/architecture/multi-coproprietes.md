@@ -394,12 +394,12 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 
 | Lot | Contenu | Taille | Prérequis | Ticket |
 |---|---|---|---|---|
-| DI-1 | **Un tag par version**, posé par la CI ; images construites, **signées**, publiées avec leur SBOM | M | — | #1753 |
-| DI-2 | **Branche `replica`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version | S | DI-1 | #1754 |
-| DI-3 | **Déploiement standard** d'une installation, séparé de l'exploitation des RPi ; aucune donnée de la résidence dans une image | M | DI-1 | #1755 |
-| DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
+| DI-1 | **Un tag par version**, posé par la CI ; images construites, **signées**, publiées avec leur SBOM. **Livré en v2.120.0** | M | — | #1753 |
+| DI-2 | **Branche `replica`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version. **Livré en v2.120.0** | S | DI-1 | #1754 |
+| DI-3 | **Déploiement standard** d'une installation, séparé de l'exploitation des RPi ; aucune donnée de la résidence dans une image. **Livré en v2.120.0** | M | DI-1 | #1755 |
+| DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable. **Livré en v2.120.0** | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou `test_migrations_compatibles.py`. **Livré en v2.119.1** | S | — | #1757 |
-| DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi | M | DI-1 | #1758 |
+| DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi ; construction locale en secours, avec alerte. **Livré en v2.122.0** | M | DI-1 | #1758 |
 | DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
 | DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica` | #1761 |
 

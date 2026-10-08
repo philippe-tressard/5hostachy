@@ -533,6 +533,9 @@ jobs:
           bash scripts/lib/lib-modules-sources.sh   --selftest
           bash scripts/lib/lib-parite.sh            --selftest
           bash scripts/lib/lib-cache-build.sh       --selftest
+          # Le maître TIRE les images de la CI (#1758) : tirer, attendre, ou
+          # construire en secours — et tout ou rien sur les quatre images.
+          bash scripts/lib/lib-images-ci.sh         --selftest
           # Les traces du poste dans le répertoire git DU clone, worktree compris (#1226).
           bash scripts/lib/lib-depot.selftest.sh
           # 🔒 Le verdict du point 19 : barre finale, 404, page derrière une
