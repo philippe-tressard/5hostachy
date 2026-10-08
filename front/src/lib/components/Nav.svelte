@@ -259,10 +259,10 @@
 	    héritait de ce rembourrage asymétrique — son logo montait hors de la barre. */
 	.brand {
 		display: flex;
-		/*  Le logo AU-DESSUS du nom : à 64 px, les deux ne tiennent pas côte à
-		    côte dans les 185 px de la barre, et le nom passait à la ligne. */
+		/*  Le logo AU-DESSUS du nom, centrés l'un sur l'autre : à 64 px, les deux
+		    ne tiennent pas côte à côte dans les 185 px de la barre. */
 		flex-direction: column;
-		align-items: flex-start;
+		align-items: center;
 		gap: 0.4rem;
 		padding: 0.5rem 1.25rem 1.25rem;
 		border-bottom: 1px solid var(--color-border);
