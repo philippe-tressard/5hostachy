@@ -86,5 +86,5 @@ case "$verdict" in
         exit 1 ;;
 esac
 
-[ -n "${GITHUB_OUTPUT:-}" ] && echo "versionner=$versionner" >> "$GITHUB_OUTPUT"
+[ -n "${GITHUB_OUTPUT:-}" ] && echo "versionner=$versionner" >> "${GITHUB_OUTPUT:-/dev/null}"
 exit 0

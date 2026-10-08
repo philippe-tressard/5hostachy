@@ -165,7 +165,7 @@ CIBLE=$(curl -fsS -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/
 PUBLIEE=$(curl -fsS -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
     | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
 AGE=""
-[ -n "$PUBLIEE" ] && AGE=$(( ( $(date +%s) - $(date -d "$PUBLIEE" +%s) ) / 86400 ))
+[ -n "${PUBLIEE:-}" ] && AGE=$(( ( $(date +%s) - $(date -d "${PUBLIEE:-}" +%s) ) / 86400 ))
 DECISION=$(decider_cible "$COURANTE" "$CIBLE" "$(lire_env COPROCONNECT_EPINGLEE)" "$AGE" "$DELAI")
 case "$DECISION" in
     a-jour)    journal "À jour en $COURANTE."; exit 0 ;;

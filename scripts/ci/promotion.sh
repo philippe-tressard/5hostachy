@@ -96,7 +96,7 @@ resume="${GITHUB_STEP_SUMMARY:-/dev/null}"
         jours=$(( ( $(date +%s) - $(git log -1 --format=%ct "$commit") ) / 86400 ))
         echo "| Rodage sur le maître | $jours jour(s) depuis la fusion — durée attendue : question 8 de la spec |"
         if [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
-            ci=$(gh api "repos/$GITHUB_REPOSITORY/commits/$commit/check-runs" \
+            ci=$(gh api "repos/${GITHUB_REPOSITORY:-}/commits/$commit/check-runs" \
                 --jq '[.check_runs[].conclusion] | group_by(.) | map("\(.[0] // "en cours") : \(length)") | join(", ")' 2>/dev/null || echo "illisible")
             echo "| Contrôles du commit | ${ci:-aucun} |"
         fi
@@ -120,5 +120,5 @@ esac
     echo "commit=$commit"
     echo "precedent=$replica"
     echo "verdict=$verdict"
-} >> "$GITHUB_OUTPUT"
+} >> "${GITHUB_OUTPUT:-/dev/null}"
 exit 0

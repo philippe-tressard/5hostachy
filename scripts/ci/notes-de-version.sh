@@ -108,7 +108,8 @@ if [ "${1:-}" = "--selftest" ]; then
     exit "$fail"
 fi
 
-: "${VERSION:?}" "${COMMIT:?}"
+VERSION="${VERSION:?VERSION manquante}"
+COMMIT="${COMMIT:?COMMIT manquant}"
 if gh release view "v$VERSION" >/dev/null 2>&1; then
     echo "Release v$VERSION déjà publiée : laissée telle quelle."
     exit 0
