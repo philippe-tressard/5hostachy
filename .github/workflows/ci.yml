@@ -567,6 +567,10 @@ jobs:
           # Le tag d'une version (#1753) : créer, relancer, lot sans bump, version
           # illisible — la décision qui pose `vX.Y.Z` et autorise la publication.
           bash scripts/ci/tag-version.sh            --selftest
+          # La promotion sur `replica` (#1754) : refus sans tag, hors de main, en
+          # arrière de replica ; et les notes de version des exploitants.
+          bash scripts/ci/promotion.sh              --selftest
+          bash scripts/ci/notes-de-version.sh       --selftest
           # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
           bash scripts/lib/lib-jeton-tunnel.sh      --selftest
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest

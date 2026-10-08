@@ -940,7 +940,14 @@ Instanciation 5Hostachy :
   le workflow `images.yml` publie les images signées des quatre services sur
   `ghcr.io/philippe-tressard/coproconnect-*` (amd64 et arm64), étiquetées
   `sha-<commit>` ; une version bumpée reçoit en plus le tag git `vX.Y.Z` (par
-  `scripts/ci/tag-version.sh`, jamais à la main) et l'étiquette d'image `X.Y.Z`. 🔒 `test_images_publiees.py` :
+  `scripts/ci/tag-version.sh`, jamais à la main) et l'étiquette d'image `X.Y.Z`.
+- **Les répliques suivent `replica`, et une version y passe par PROMOTION** (#1754) :
+  le workflow « Promotion », lancé à la main par l'auteur (`gh workflow run
+  promotion.yml -f version=X.Y.Z`), avance `replica` en avance rapide vers le tag
+  et publie les notes de version (release GitHub). `replica` n'a **aucun commit
+  propre** — un correctif passe par `main` puis se promeut ; elle est protégée par
+  une règle du dépôt. Je ne promeus **jamais** de moi-même : c'est la décision de
+  l'auteur, après rodage sur le maître (spec §9, question 8). 🔒 `test_images_publiees.py` :
   la matrice publie exactement ce que `docker-compose.yml` construit. Aucune
   installation ne tire encore ces images (DI-6, #1758).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise

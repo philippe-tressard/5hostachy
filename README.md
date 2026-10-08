@@ -124,6 +124,8 @@ L'application est accessible sur `http://localhost`.
 > `-caddy` et `-whatsapp-bridge`, étiquetées par version (et chaque commit de `main`
 > par `sha-<commit>`). Vérifier une image :
 > `gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:<version> --owner philippe-tressard`.
+> Les versions choisies pour les autres installations sont **promues** sur la branche
+> `replica`, avec leurs notes de version (onglet *Releases*).
 > L'installation à partir de ces images, sans construire, viendra avec le déploiement
 > standard de CoproConnect (#1755).
 
