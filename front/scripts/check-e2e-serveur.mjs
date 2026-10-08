@@ -23,7 +23,15 @@
  *   1. `reuseExistingServer` autre que `false` ;
  *   2. une commande de serveur sans `--strictPort` — Vite se replierait en
  *      silence sur un port voisin, pendant que Playwright interroge le premier ;
- *   3. le port de développement écrit en dur.
+ *   3. le port de développement écrit en dur ;
+ *   4. `localhost`, et un serveur sans `--host 127.0.0.1` (#1732, 08/10/2026).
+ *      Vite écoutait sur `localhost` résolu en `::1` SEUL, et les tests
+ *      visaient `localhost`, que le navigateur tente aussi en `127.0.0.1` :
+ *      des connexions refusées par intermittence — `ERR_CONNECTION_REFUSED`
+ *      au `goto`, ou « Failed to fetch dynamically imported module …/app.js »
+ *      —, un spec DIFFÉRENT à chaque passage, une suite complète sur deux sur
+ *      le poste. Une adresse, explicite, la même des deux côtés : six suites
+ *      complètes de suite au vert.
  *
  *  Lancer : node scripts/check-e2e-serveur.mjs [--selftest]
  */
@@ -45,6 +53,14 @@ export function fautes(source) {
 		);
 	if (/\b5173\b/.test(code))
 		f.push('le port 5173 est celui de `npm run dev` : un port partagé est un serveur partagé');
+	if (/\blocalhost\b/.test(code))
+		f.push(
+			'`localhost` se résout en ::1 OU 127.0.0.1 : le navigateur et Vite peuvent ne pas viser la même adresse (#1732)',
+		);
+	if (!/--host\s+127\.0\.0\.1\b/.test(code))
+		f.push(
+			'la commande du serveur doit porter `--host 127.0.0.1` : sans elle, Vite écoute sur ::1 seul (#1732)',
+		);
 	return f;
 }
 
@@ -57,14 +73,22 @@ if (process.argv.includes('--selftest')) {
 	};
 	const CONFORME =
 		'const PORT = Number(process.env.E2E_PORT);\n' +
-		'webServer: { command: `npm run dev -- --port ${PORT} --strictPort`, reuseExistingServer: false }';
-	//  🔴 L'état exact d'avant le 25/09/2026 : les trois fautes à la fois.
+		'const BASE = `http://127.0.0.1:${PORT}`;\n' +
+		'webServer: { command: `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`, reuseExistingServer: false }';
+	//  🔴 L'état exact d'avant le 25/09/2026 : ses trois fautes, plus l'adresse.
 	t(
 		'la config d’avant #1150',
-		3,
+		4,
 		"const PORT = 5173;\nwebServer: { command: 'npm run dev -- --port ' + PORT, reuseExistingServer: true }",
 	);
+	//  🔴 L'état exact d'avant le 08/10/2026 : `localhost`, et Vite sur ::1 seul.
+	t(
+		'la config d’avant #1732',
+		2,
+		CONFORME.replace('127.0.0.1:${PORT}', 'localhost:${PORT}').replace('--host 127.0.0.1 ', ''),
+	);
 	t('la config conforme', 0, CONFORME);
+	t('`localhost` cité en commentaire seulement', 0, CONFORME + '\n// jadis localhost');
 	t(
 		'réutilisation remise',
 		1,
