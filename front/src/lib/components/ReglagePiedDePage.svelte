@@ -131,7 +131,7 @@
 		gap: 0.75rem;
 		margin-top: 0.75rem;
 	}
-	@media (max-width: 640px) {
+	@media (max-width: 767px) {
 		.champs-pied {
 			grid-template-columns: 1fr;
 		}
