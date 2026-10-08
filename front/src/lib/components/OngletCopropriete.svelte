@@ -11,6 +11,7 @@
 	import SectionContratReference from '$lib/components/SectionContratReference.svelte';
 	import ChampsIdentiteCopropriete, {
 		chargeIdentite,
+		identiteDepuis,
 	} from '$lib/components/ChampsIdentiteCopropriete.svelte';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -30,19 +31,19 @@
 	//  décrivaient un contrat avec un prestataire, notion que le projet possède
 	//  déjà. Les laisser ici referait exactement la faute décrite ci-dessus —
 	//  un formulaire qui promet un enregistrement que le serveur n'accepte plus.
-	let form: any = {
-		nom: '',
-		adresse: '',
-		nb_lots_total: '',
-		nb_lots_principaux: '',
-		nb_parkings_communs: '',
-		annee_construction: '',
-		numero_immatriculation: '',
+	//
+	//  L'identité vient d'`identiteDepuis`, comme sur l'écran Résidence : la copie
+	//  écrite ici avait perdu `mois_debut_exercice` (#1643), jamais chargé (08/10).
+	const formulaireDepuis = (data: Copropriete | null) => ({
+		...identiteDepuis(data),
+		//  Non affiché : relu, et renvoyé tel quel.
+		nb_parkings_communs: data?.nb_parkings_communs ?? '',
 		//  Les deux DÉSIGNATIONS, seuls champs que la fiche écrit sur une section
 		//  adossée à un contrat. `null` = aucun contrat désigné.
-		assurance_contrat_id: null,
-		syndic_contrat_id: null,
-	};
+		assurance_contrat_id: data?.assurance_contrat_id ?? null,
+		syndic_contrat_id: data?.syndic_contrat_id ?? null,
+	});
+	let form = formulaireDepuis(null);
 	/**  Ce que la fiche AFFICHE des deux sections adossées à un contrat.
 	 *
 	 *   🔴 Lu, jamais réécrit — sauf la DÉSIGNATION (`*_contrat_id`), qui dit
@@ -51,7 +52,7 @@
 	 *
 	 *   ⚠️ Un seul objet pour les deux sections : deux objets auraient donné deux
 	 *   façons de lire la même réponse. */
-	let fiche: any = {};
+	let fiche: Partial<Copropriete> = {};
 	let loading = true;
 	let erreur = '';
 	let saving = false;
@@ -60,14 +61,9 @@
 		try {
 			const data = await coproprieteApi.get();
 			if (data) {
-				Object.keys(form).forEach((k) => {
-					const v = data[k as keyof Copropriete];
-					if (v !== undefined) form[k] = v ?? '';
-				});
+				form = formulaireDepuis(data);
 				//  Lu, jamais réécrit — cf. le commentaire de `fiche`.
 				fiche = data;
-				form.assurance_contrat_id = data.assurance_contrat_id ?? null;
-				form.syndic_contrat_id = data.syndic_contrat_id ?? null;
 			}
 		} catch (e) {
 			//  Seul un 404 dit « pas encore de fiche » : le formulaire vide est alors
