@@ -1,11 +1,12 @@
 # Multi-copropriétés — architecture cible
 
-> 🧭 **Spécification de CIBLE, en conception — seul le premier lot (#1718,
-> v2.113.0) en découle à ce jour.** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
+> 🧭 **Spécification de CIBLE, en conception — la phase 1 en découle (v2.113.0
+> à v2.117.0), la phase 2 est découpée en lots (§8 bis).** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
 > tel qu'il a été conçu à l'origine, celui-ci décrit **où le produit va**. Il est
 > rédigé le 07/10/2026, à partir des arbitrages de l'auteur pris le même jour.
 >
-> Le **travail** vit dans les tickets : le premier lot est #1718. Ce document en
+> Le **travail** vit dans les tickets : phase 1 à partir de #1718, phase 2 de #1743
+> à #1751. Ce document en
 > porte les **décisions** et leurs raisons. Il se met à jour **à chaque arbitrage**,
 > daté. Toute décision qui n'y figure pas n'est pas prise.
 
@@ -121,11 +122,20 @@ n° 12 de la copro A lirait le cache de l'utilisateur n° 12 de la copro B.
 - **Règle** : tout état mutable de module est **indexé par la copropriété**, ou
   n'existe pas.
 - **Garde-fou** : un contrôle statique refuse tout nouvel état de module qui ne
-  l'est pas. Il est peu coûteux tant qu'il n'y a qu'une copropriété : il peut
-  précéder tout le reste.
-- **Recensés le 07/10/2026** : `utils/statuts_lus.py` (`_cache` par `user_id`),
-  le `lru_cache` de `utils/recherche_affaires.py`, `_CACHE` de
-  `utils/manuel_pdf.py`, et le `lru_cache` de `config.py`.
+  l'est pas — `api/tests/test_etat_module_par_copropriete.py` (#1743, 08/10/2026).
+  Il précède tout le reste, puisqu'il ne coûte rien tant qu'il n'y a qu'une
+  copropriété.
+- **Recensés le 08/10/2026 par ce contrôle — neuf, et non quatre** comme l'écrivait
+  le relevé de la veille, fait à la main. La liste fait foi **dans le test**, et
+  ne se recopie pas ici. Deux familles :
+  - **à indexer par copropriété** (lot P2-2) — dont le cache de l'**arbre des
+    périmètres** et le quota horaire de l'IA par personne, que le relevé à la main
+    n'avait pas vus ;
+  - **du processus**, sans donnée de copropriété (configuration de la plateforme,
+    catalogue d'icônes, repli d'un caractère pour la recherche, diagnostic du
+    dernier rendu PDF). Le `lru_cache` de `config.py` y est rangé : ce qui est
+    propre à une copropriété sort de `settings` au lot P2-2, et le cache qui reste
+    est celui de la plateforme.
 
 ### 4.6 Les tâches planifiées
 
@@ -243,10 +253,43 @@ elle.
 |---|---|---|
 | 0 | Décisions restantes (§9) | — |
 | 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproConnect, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
-| 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices | phase 1 |
+| 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices. Neuf lots, §8 bis (#1743 à #1751) | phase 1 |
 | 3 | **Plateforme cloud** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), outillage de flotte (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
 | 4 | **Copropriété pilote** : une seconde résidence réelle et volontaire | phase 3 |
 | 5 | Accueil autonome des copropriétés ; facturation selon le modèle économique | modèle économique |
+
+## 8 bis. La phase 2 en lots (proposition du 08/10/2026)
+
+**Le chemin retenu : transformer 5Hostachy en CoproConnect, pas migrer.** Le même
+dépôt devient le code de la plateforme ; la résidence en serait la première
+copropriété (question 7, §9). C'est la suite logique de B (§3) : un code propre
+pour B l'est aussi pour A, et la licence (§7) est déjà celle de la plateforme.
+
+La phase 2 se mène **entièrement sur les Raspberry Pi, avec SQLite et une seule
+copropriété**. Chaque lot a une valeur seul, et diminue le coût de la phase 3
+quel que soit l'hébergeur. Proposée et validée le 08/10/2026 (« consigne la
+proposition dans la spec et ouvre les tickets ») ; le code de chaque lot reste
+soumis à accord, lot par lot.
+
+| Lot | Contenu | Taille | Prérequis | Ticket |
+|---|---|---|---|---|
+| P2-1 | **Contrôle de la mémoire du processus** : tout nouvel état mutable de module est refusé ; les existants sont déclarés, à indexer ou du processus (§4.5) | S | — | #1743 |
+| P2-2 | **Un seul accès aux ressources** d'une copropriété — base, fichiers, secret, expéditeur, services — par un module `contexte` qui lit `settings` tant qu'il n'y a qu'une copro ; garde-fou contre l'accès direct (§4.1, règle 3). Les états « à indexer » de P2-1 s'y soldent | L | P2-1 | #1744 |
+| P2-3 | **Tâches planifiées par copropriété** : une enveloppe, un journal par copro, l'échec de l'une ne bloque pas les autres (§4.6) | M | P2-2 | #1745 |
+| P2-4 | **Test d'étanchéité** sur deux copros factices aux identifiants identiques, avec cas zéro et témoin (§5.1, §5.3) | M | P2-2 | #1746 |
+| P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3) | M | — | #1747 |
+| P2-6 | **Stockage des fichiers** derrière une interface, disque local puis stockage objet, préfixe par copro (§4.4). Décision à y prendre : `/uploads/*` n'est plus servi en statique par Caddy | M | P2-2 | #1748 |
+| P2-7 | **Export / import vérifié** d'une copro (comptes et sommes de contrôle par table) : sauvegarde vérifiée aujourd'hui, passage à PostgreSQL demain, réversibilité ensuite (§4.3, §4.9) | M | — | #1749 |
+| P2-8 | **Scission du rôle `admin`** : administrateur de copro et opérateur de plateforme, sans donnée personnelle (§4.7, §5.5) | M | D8 confirmée | #1750 |
+| P2-9 | **Résolution par nom d'hôte** (§4.1, règles 1 et 2). ⚠️ Le standby est servi par son IP locale (`ORIGIN`) : le registre rattache **plusieurs hôtes** à une même copro. En dernier | S | P2-2 | #1751 |
+
+**Ce que la phase 2 ne fait pas, exprès :**
+
+- **aucune colonne `copropriete_id`** : ce serait l'option C, écartée (§3) ;
+- **pas de PostgreSQL en production sur les Raspberry Pi** : la phase 3 le
+  ferait deux fois, et la base actuelle courrait un risque pour rien ;
+- **pas d'outillage de flotte** (créer, migrer, sauvegarder N copros) avant le
+  choix de l'hébergeur : il en dépend.
 
 ## 9. Les questions encore ouvertes
 
@@ -264,4 +307,7 @@ elle.
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
    l'hébergement ; elle interdit seulement d'en fermer le code.
 7. **La résidence actuelle** : devient-elle une copropriété de la plateforme, ou
-   reste-t-elle sur les Raspberry Pi ?
+   reste-t-elle sur les Raspberry Pi ? *Recommandation du 08/10/2026, non
+   tranchée* : la première copropriété de la plateforme, qui sert de copro de
+   non-régression ; la haute disponibilité des Raspberry Pi s'éteint alors en
+   phase 3.
