@@ -67,6 +67,7 @@ _ARGUMENTS = dict(
     perimetre_label="Bât. 1 › Ascenseur",
     site_nom="5Hostachy",
     site_url="5hostachy.fr",
+    logo_png=None,
 )
 
 

@@ -3,6 +3,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import MajDisponible from '$lib/components/MajDisponible.svelte';
 	import { configStore } from '$lib/stores/pageConfig';
+	import { config as configApi } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { surveillerImagesProtegees } from '$lib/imagesProtegees';
 	import { unSeulDetailsOuvert } from '$lib/accordeon';
@@ -28,7 +29,20 @@
 	//  autres, partout. Ici pour la même raison — un écouteur global, posé une
 	//  fois ; les composants n'ont rien à écrire (`$lib/accordeon`).
 	onMount(unSeulDetailsOuvert);
+
+	//  L'icône de l'onglet (#1728) : le logo de la résidence s'il a été
+	//  téléversé, sinon le logo neutre. Elle vivait dans `app.html`, figée au
+	//  build — d'où ce `<svelte:head>`, qui lit la configuration servie.
+	$: logo = $configStore['site_logo'] ?? '';
 </script>
+
+<svelte:head>
+	{#if logo}
+		<link rel="icon" type="image/png" href={configApi.logoUrl(64, logo)} />
+	{:else}
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+	{/if}
+</svelte:head>
 
 <slot />
 

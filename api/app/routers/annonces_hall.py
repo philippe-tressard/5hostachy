@@ -76,6 +76,7 @@ UPLOADS_ROOT = os.path.realpath(get_settings().uploads_dir)
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de
 #  modularité) : ce qui DÉCLARE part, ce qui DÉCIDE reste.
 from app.utils.liens import base_site, nom_site
+from app.utils.logo import logo_televerse_png
 from app.utils.recuperer import fichier_ou_404, ou_404
 from app.routers.annonces_hall_schemas import (  # noqa: E402
     AnnonceHallArchive,
@@ -123,6 +124,7 @@ def _html_params(
         "format_effectif": format_effectif,
         "site_nom": nom_site(cfg.get("site_nom")),
         "site_url": base_site(cfg.get("site_url")),
+        "logo_png": logo_televerse_png(session),
         "images": body.images,
         "date_affichage": date_affichage,
     }

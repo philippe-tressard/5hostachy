@@ -27,7 +27,7 @@ from app.utils.pdf_theme import (
     regle_page,
     html_to_pdf,
     image_data_uri,
-    logo_svg,
+    logo_html,
     qr_data_uri,
 )
 
@@ -409,6 +409,7 @@ def construire_html(
     format_effectif: str,
     site_nom: str,
     site_url: str,
+    logo_png: bytes | None,
     images: list[str] | None = None,
     date_affichage: date | datetime | None = None,
 ) -> str:
@@ -451,7 +452,7 @@ def construire_html(
 <div class="page">
 
   <div class="entete">
-    {logo_svg(int(g["logo"]))}
+    {logo_html(logo_png, int(g["logo"]))}
     <div class="entete-texte">
       <div class="surtitre">Avis aux résidents</div>
       <div class="residence">{escape(site_nom)}</div>

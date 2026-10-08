@@ -102,6 +102,7 @@ def test_la_fiche_imprime_les_consignes_saisies(session):
         syndic_data={"nom_syndic": "", "adresse": "", "membres": []},
         site_nom="Résidence Témoin",
         site_url="https://exemple.fr",
+        logo_png=None,
         whatsapp_url=None,
         consignes=consignes_en_html(lire_consignes(session), "Syndic Témoin"),
         annee=2026,

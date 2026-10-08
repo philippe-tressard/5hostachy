@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import timedelta
 
 import pytest
@@ -129,7 +130,9 @@ def test_composer_email_n_etiquette_pas_le_lien_du_mot_de_passe_oublie():
     }
     _, html = composer_email(modele, ctx, site_nom="R", site_url=SITE, email_footer="")
     assert f'href="{lien}"' in html
-    assert "src=" not in html
+    #  L'ÉTIQUETTE (`?src=…`, `&src=…`), pas l'attribut `src` : l'en-tête porte
+    #  l'image du logo par son adresse publique depuis #1728.
+    assert not re.search(r"[?&](amp;)?src=", html)
 
 
 def test_le_message_whatsapp_etiquette_son_lien():

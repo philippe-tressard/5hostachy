@@ -54,7 +54,7 @@ from app.utils.manuel_pdf_css import css_du_pdf
 from app.utils.plateforme import LICENCE_NOM, LICENCE_SPDX, NOM_PLATEFORME
 from app.utils.pdf_theme import (
     html_to_pdf,
-    logo_svg,
+    logo_html,
     qr_data_uri,
 )
 
@@ -219,7 +219,9 @@ def version_du_manuel(html: str) -> str:
     return trouve.group(1) if trouve else ""
 
 
-def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
+def _garde(
+    site_nom: str, site_url: str, version: str, edite_le: date, logo_png: bytes | None
+) -> str:
     qr = qr_data_uri(site_url)
     bloc_qr = (
         f'<div class="garde-qr"><img src="{qr}" alt="">'
@@ -230,7 +232,7 @@ def _garde(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
     )
     return f"""
 <section class="garde">
-  <div class="garde-logo"><div class="garde-medaillon">{logo_svg(64)}</div></div>
+  <div class="garde-logo"><div class="garde-medaillon">{logo_html(logo_png, 64)}</div></div>
   <p class="garde-surtitre">{escape(site_nom)}</p>
   <h1 class="garde-titre">Manuel<br>utilisateur</h1>
   <p class="garde-sous">L'extranet de votre résidence.<br>
@@ -303,6 +305,7 @@ def composer_html(
     site_nom: str,
     site_url: str,
     *,
+    logo_png: bytes | None,
     html_manuel: str | None = None,
     edite_le: date | None = None,
 ) -> str:
@@ -327,7 +330,7 @@ def composer_html(
 <title>Manuel utilisateur — {escape(site_nom)}</title>
 <style>{css_du_pdf(styles_du_manuel(html))}</style>
 </head><body>
-{_garde(site_nom, site_url, version, edite_le)}
+{_garde(site_nom, site_url, version, edite_le, logo_png)}
 {_sommaire(releve)}
 {corps}
 {_mentions(site_nom, site_url, version, edite_le)}
@@ -369,6 +372,7 @@ def generer_manuel_pdf(
     site_nom: str,
     site_url: str,
     *,
+    logo_png: bytes | None,
     html_manuel: str | None = None,
     edite_le: date | None = None,
     dossier: Path | None = None,
@@ -386,6 +390,8 @@ def generer_manuel_pdf(
         site_nom,
         site_url,
         edite_le.isoformat(),
+        #  Le logo est DANS le document (#1728) : un logo changé est un autre PDF.
+        hashlib.sha256(logo_png).hexdigest() if logo_png else "neutre",
     )
     if cle in _CACHE:
         return _CACHE[cle]
@@ -398,7 +404,9 @@ def generer_manuel_pdf(
         pdf = manuel_pdf_cache.lire(cle, dossier)
         if pdf is None:
             pdf = html_to_pdf(
-                composer_html(site_nom, site_url, html_manuel=html, edite_le=edite_le)
+                composer_html(
+                    site_nom, site_url, logo_png=logo_png, html_manuel=html, edite_le=edite_le
+                )
             )
             manuel_pdf_cache.ecrire(cle, pdf, dossier, garder=_CACHE_MAX)
         if len(_CACHE) >= _CACHE_MAX:
@@ -416,7 +424,9 @@ TENTATIVES_PRECHAUFFAGE = 6
 PAUSE_PRECHAUFFAGE_S = 15.0
 
 
-def prechauffer(site_nom: str, site_url: str, *, pause_s: float | None = None) -> bool:
+def prechauffer(
+    site_nom: str, site_url: str, *, logo_png: bytes | None, pause_s: float | None = None
+) -> bool:
     """Rend le manuel une fois, pour que personne n'attende le premier rendu.
 
     ## 🔴 Pourquoi (18/09/2026, demandé par Philippe)
@@ -440,7 +450,7 @@ def prechauffer(site_nom: str, site_url: str, *, pause_s: float | None = None) -
     pause = PAUSE_PRECHAUFFAGE_S if pause_s is None else pause_s
     for essai in range(1, TENTATIVES_PRECHAUFFAGE + 1):
         try:
-            generer_manuel_pdf(site_nom, site_url)
+            generer_manuel_pdf(site_nom, site_url, logo_png=logo_png)
         except ManuelIndisponible as exc:
             if essai == TENTATIVES_PRECHAUFFAGE:
                 _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)

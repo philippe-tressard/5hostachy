@@ -108,7 +108,13 @@ def regle_page(
 
 
 def logo_svg(size: int = 36) -> str:
-    """Logo 5Hostachy en SVG inline (immeuble + vague de Seine)."""
+    """Le logo NEUTRE de CoproConnect en SVG inline — un immeuble sur fond bleu.
+
+    C'est le repli quand la résidence n'a pas téléversé le sien (#1728) : la
+    « vague de Seine » qui l'accompagnait évoquait CETTE résidence, et une autre
+    l'aurait portée. Le logo réellement affiché se demande à `utils/logo`
+    (`logo_document`), jamais ici. `front/static/favicon.svg` est le même dessin.
+    """
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" '
         f'width="{size}" height="{size}">\n'
@@ -121,9 +127,21 @@ def logo_svg(size: int = 36) -> str:
         '    <path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/>'
         '<path d="M25 46h14"/>\n'
         "  </g>\n"
-        '  <path d="M48 50c0 4.4-3.6 8-8 8h14a8 8 0 0 0-6-8Z" fill="#C9983A" opacity=".95"/>\n'
         "</svg>"
     )
+
+
+def logo_html(logo_png: bytes | None, size: int = 36) -> str:
+    """Le logo d'un document HTML autonome — **la seule écriture** (#1728).
+
+    `logo_png` est celui que la résidence a téléversé (`utils/logo.logo_televerse_png`),
+    ou None : le dessin neutre, en SVG, net à toute taille. Le PNG part en
+    data-URI, car un document se rend hors requête, sans rien charger.
+    """
+    if logo_png is None:
+        return logo_svg(size)
+    donnees = base64.b64encode(logo_png).decode()
+    return f'<img src="data:image/png;base64,{donnees}" width="{size}" height="{size}" alt="">'
 
 
 # ── Icônes ───────────────────────────────────────────────────────────────────
