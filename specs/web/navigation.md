@@ -290,36 +290,32 @@ Pied de page (toutes les pages)
 #### D. Pied de page (footer)
 
 Le pied de page est affiché sur toutes les pages de l'application (hors auth).
+Il se règle dans **Admin › Site › Pied de page** (08/10/2026).
 
-**Format par défaut :**
+**Ce qui fait foi : le code, pas cette section.** Les éléments, leur ordre et
+ceux qui ne se masquent pas sont déclarés dans `front/src/lib/piedDePage.ts`
+(`ELEMENTS_PIED`) ; le rendu, unique pour le site et l'aperçu de
+l'administration, est `front/src/lib/components/PiedDePage.svelte`. Cette
+section décrivait un format (`v{version}+{hash}.{date}`) et trois clés « à
+créer » qui n'existaient plus, ou pas encore.
+
+**Rendu par défaut :**
 
 ```
-© {année} · {site_nom} ({lien cliquable sur site_url}) · v{version}.{commit}.{date:heure build} · Mentions légales ({lien cliquable}) · Politique de confidentialité ({lien cliquable})
+© 2026 · {site_nom} · v2.118.1 · RPi1 · CoproConnect · Mentions légales · Politique de confidentialité
 ```
 
-| Élément | Clé de config | Valeur par défaut | Notes |
-|---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||---|---|---|---|---|---||
-| Texte copyright | — | `© {année actuelle}` | Année calculée dynamiquement côté client |
-| Nom du site (lien) | `site_nom` + `site_url` | `5Hostachy` — toujours lien cliquable | `site_url` avec fallback `https://<your-domain>/` — le nom est **toujours** un lien |
-| Version applicative | — | `v{package.json version}` | Issu de `pkg.version` |
-| Hash de commit + date/heure | — | `+{VITE_GIT_HASH}.{VITE_BUILD_DATE}` | Format : `+{hash}.{YYYY-MM-DD HH:mm}` — séparateur `.` entre hash et date |
-| Mentions légales | `footer_mentions_url` *(à créer)* | Lien vers `/mentions-legales` | Configurable si hébergé ailleurs |
-| Politique de confidentialité | `footer_rgpd_url` *(à créer)* | Lien vers `/politique-de-confidentialite` | Configurable si hébergé ailleurs |
-| Texte libre additionnel | `footer_texte` *(à créer)* | *(vide)* | Optionnel — ex. numéro SIRET |
+- La clé `pied_de_page_masques` (publique, liste de codes) porte les éléments
+  **retirés**. Si elle est absente, tout s'affiche, y compris un élément ajouté plus tard.
+- **Masquables** : année, nom de la résidence (lien vers `site_url`), version,
+  serveur (`VITE_INSTANCE_ID`, absent sur le poste de développement).
+- **Verrouillés** : le lien vers le code source de la version en service
+  (AGPLv3 §13), les mentions légales (LCEN, art. 6) et la politique de
+  confidentialité (RGPD, art. 13). `lireMasques` les écarte quelle que soit la valeur en base.
+- La version s'affiche **courte**. L'empreinte et la date du build sont dans
+  l'infobulle. Le post-check P3 lit la version dans le bundle, jamais dans ce rendu.
 
-**Exemple de rendu :**
-```
-© 2026 · 5Hostachy (avec lien) · v1.3.0+a4f82b1.2026-03-12 14:32 · Mentions légales (avec lien) · Politique de confidentialité (avec lien)
-```
-
-> **Implémenté (commit 63ff968)** : `siteUrl` dispose d'un fallback `'https://<your-domain>/'` — le nom est toujours encapsulé dans un `<a>` sans condition. Format version corrigé : séparateur `.` entre hash et date (`buildVer = v${pkg.version}+${VITE_GIT_HASH}.${VITE_BUILD_DATE}`).
-> 
-> **Implémenté** : `VITE_BUILD_DATE` est optionnel — si absent, le point séparateur est omis (`filter(Boolean).join('.')`). Format final : `v{version}+{hash}` ou `v{version}+{hash}.{date}`.
-
-|---|---|---|---|---|---|
-
-
-|---|---|---|---|---|---|
+🔒 `front/e2e/pied-de-page.spec.ts`.
 
 ### Règles UX — Interactions patrons
 

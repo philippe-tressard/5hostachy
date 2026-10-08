@@ -60,6 +60,7 @@ _PUBLIC_KEYS = {
     "site_logo",  # nom du logo téléversé (#1728) : sa présence, et l'invalidation du cache
     "login_sous_titre",  # sous-titre de l'écran de connexion
     "pages_order",  # ordre des entrées de navigation
+    "pied_de_page_masques",  # éléments retirés du pied de page (`$lib/piedDePage`)
 }
 # Titres et descriptifs des pages, consommés par `getPageConfig()` côté front.
 _PUBLIC_PREFIXES = ("page_config_",)

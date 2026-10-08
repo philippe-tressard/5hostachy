@@ -6,7 +6,7 @@
 	import { auth as authApi } from '$lib/api';
 	import { setUser, currentUser, marquerAuthResolue } from '$lib/stores/auth';
 	import { urlDeConnexion } from '$lib/redirection';
-	import { loadSiteConfig, configStore, siteNomStore } from '$lib/stores/pageConfig';
+	import { loadSiteConfig, configStore } from '$lib/stores/pageConfig';
 	import { chargerPerimetres } from '$lib/stores/perimetres';
 	import {
 		commencerNavigation,
@@ -16,8 +16,8 @@
 		setTelemetryOptOut,
 	} from '$lib/telemetry';
 	import { lireSourceArrivee } from '$lib/arrivees';
-	import { lienSource, NOM_PLATEFORME } from '$lib/plateforme';
-	import pkg from '../../../package.json';
+	import PiedDePage from '$lib/components/PiedDePage.svelte';
+	import { CLE_PIED_MASQUES, lireMasques } from '$lib/piedDePage';
 
 	onMount(async () => {
 		initTelemetry();
@@ -63,12 +63,7 @@
 		trackPageView(window.location.pathname, lireSourceArrivee());
 	});
 
-	$: siteNom = $siteNomStore;
-	$: siteUrl = $configStore['site_url'] ?? '';
-	const buildVerShort = `v${pkg.version}-${import.meta.env.VITE_GIT_HASH ?? 'dev'}`;
-	const instanceId = import.meta.env.VITE_INSTANCE_ID || '';
-	const buildVer = `${buildVerShort}-${import.meta.env.VITE_BUILD_DATE ?? ''}${instanceId ? ` · RPi${instanceId}` : ''}`;
-	const year = new Date().getFullYear();
+	$: masquesPied = lireMasques($configStore[CLE_PIED_MASQUES]);
 </script>
 
 <!--  🔴 LE LIEN D'ÉVITEMENT — premier élément focalisable de la page (#778).
@@ -90,20 +85,7 @@
 				<slot />
 			</div>
 		</main>
-		<footer class="app-footer">
-			© {year} &nbsp;·&nbsp;
-			<a href={siteUrl} target="_blank" rel="noopener noreferrer">{siteNom}</a>
-			&nbsp;·&nbsp; {buildVer}
-			&nbsp;·&nbsp;
-			<a
-				href={lienSource(import.meta.env.VITE_GIT_HASH)}
-				target="_blank"
-				rel="noopener noreferrer"
-				title="Le code source de la version en service">{NOM_PLATEFORME}</a
-			>
-			&nbsp;·&nbsp; <a href="/mentions-legales">Mentions légales</a>
-			&nbsp;·&nbsp; <a href="/politique-de-confidentialite">Politique de confidentialité</a>
-		</footer>
+		<PiedDePage masques={masquesPied} />
 	</div>
 </div>
 
@@ -127,15 +109,6 @@
 
 	.app-main {
 		flex: 1;
-	}
-
-	.app-footer {
-		text-align: center;
-		padding: 0.75rem 1rem;
-		font-size: var(--fs-2xs);
-		color: var(--color-text-muted);
-		border-top: 1px solid var(--color-border);
-		letter-spacing: 0.02em;
 	}
 
 	@media (max-width: 767px) {
