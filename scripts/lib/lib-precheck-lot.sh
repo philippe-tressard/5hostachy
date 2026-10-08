@@ -236,14 +236,19 @@ rapporter 15 "$V15" "Aucun endpoint orphelin" "$ORPH"
 #      (skill `avant-commit` §7) et n'a pas tenu. `rejouer-ci.sh` EXTRAIT les
 #      commandes de ci.yml et écrit sa trace ; ce point la lit.
 if [ -f "$GIT_DEPOT/rejeu-ci.ok" ]; then
-  read -r R_SHA _ R_OK R_FAIL R_INC < "$GIT_DEPOT/rejeu-ci.ok"
-  R_FAIL=${R_FAIL#FAIL=}; R_INC=${R_INC#INCONNU=}; R_OK=${R_OK#OK=}
+  #  `SAUTS=` en sixième champ depuis #1734 ; une trace plus ancienne n'en a pas.
+  #  Sans ce sixième nom, `R_INC` avalerait le reste de la ligne.
+  read -r R_SHA _ R_OK R_FAIL R_INC R_SAUTS _ < "$GIT_DEPOT/rejeu-ci.ok"
+  R_FAIL=${R_FAIL#FAIL=}; R_INC=${R_INC#INCONNU=}; R_OK=${R_OK#OK=}; R_SAUTS=${R_SAUTS#SAUTS=}
 else
-  R_SHA=""; R_OK="?"; R_FAIL=""; R_INC=""
+  R_SHA=""; R_OK="?"; R_FAIL=""; R_INC=""; R_SAUTS=""
 fi
 V16=$(verdict_rejeu_ci "${R_SHA:-}" "$(git rev-parse HEAD 2>/dev/null)" "${R_FAIL:-}" "${R_INC:-}")
 case "$V16" in
-  OK)   D16="$R_OK étape(s) rejouée(s) sur ce commit" ;;
+  #  Un saut n'est pas une faute, mais il se DIT (#1734) : ces tests-là, seule la
+  #  CI de la PR les joue — et c'est elle qui a vu ce que le rejeu taisait.
+  OK)   D16="$R_OK étape(s) rejouée(s) sur ce commit"
+        case "${R_SAUTS:-0}" in 0|*[!0-9]*) ;; *) D16="$D16, dont $R_SAUTS test(s) sauté(s) ici — joué(s) par la CI de la PR" ;; esac ;;
   FAIL) D16="$R_FAIL étape(s) en échec — la CI échouerait" ;;
   *)    D16="lancer \`bash scripts/poste/rejouer-ci.sh\` (trace absente ou d'un autre commit)" ;;
 esac

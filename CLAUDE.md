@@ -732,6 +732,15 @@ autre session lance Vite. Le rejeu les rend alors **INCONNU** et donne la
 commande qui répare — `rmdir` de la jonction (le lien seul) puis `npm ci` dans
 le worktree (#1722, `ci_node_modules_etat`).
 
+🔒 **Un test sauté sur le poste se NOMME** (#1734). Les tests de rendu PDF
+(`@besoin_weasyprint`) ne tournent pas ici — WeasyPrint ne s'installe pas sous
+Windows — et le rejeu rendait « pytest OK » sur un lot qui les cassait : la CI
+de la PR les a vus. L'étape reste OK, mais sa ligne compte et nomme ses sauts par
+raison, et le point 16 du pré-check les reprend (`SAUTS=` dans la trace). Un
+saut annoncé n'est pas une mesure : ces tests-là, **seule la CI de la PR** les
+joue. Mécanisme : le crochet de `api/tests/conftest.py` (`tests/aides_rejeu.py`)
+et `ci_resumer_sauts`.
+
 ---
 
 ## Infrastructure — l'essentiel

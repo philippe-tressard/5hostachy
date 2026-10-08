@@ -279,6 +279,25 @@ ci_sert_par_vite() {
   grep -v '^[[:space:]]*#' | grep -Eq '(^|[^[:alnum:]_:-])(npm run e2e([^[:alnum:]:_-]|$)|playwright test)'     && echo oui || echo non
 }
 
+# ── Les tests SAUTÉS d'une étape, nommés (#1734, 08/10/2026) ────────────────
+#  Le rejeu rendait « Run pytest — OK » sur un lot qui cassait deux tests de rendu
+#  PDF : ils portent `@besoin_weasyprint`, et WeasyPrint ne s'installe pas sur le
+#  poste. La CI GitHub les joue, et les a vus échouer. Un saut n'est pas une
+#  faute — rendre l'étape INCONNU bloquerait toute MEP depuis ce poste, et un
+#  contrôle dont le vert est inatteignable finit contourné (`standards/04` §25).
+#  C'est son SILENCE qui mentait : l'étape reste OK, mais elle dit ce qu'elle n'a
+#  pas joué, et pourquoi. Les lignes viennent du crochet de `api/tests/conftest.py`
+#  (`tests/aides_rejeu.py`), une par test sauté : `nœud<TAB>raison`. (PURE)
+#    stdin → « N test(s) sauté(s) ici : raison (k), … », ou vide sans saut.
+ci_resumer_sauts() {
+  #  Le tri se fait par `sort`, pas dans awk : `PROCINFO` n'existe que dans gawk,
+  #  et la CI (Ubuntu) lance mawk — l'ordre y serait celui du hasard.
+  awk -F'\t' 'NF >= 2 { r[$2]++ } END { for (k in r) printf "%d\t%s\n", r[k], k }' \
+    | sort -t "$(printf '\t')" -k1,1nr -k2,2 \
+    | awk -F'\t' '{ n += $1; l = l (NR > 1 ? " ; " : "") $2 " (" $1 ")" }
+        END { if (n) printf "%d test(s) sauté(s) ici, joué(s) par la CI GitHub : %s\n", n, l }'
+}
+
 # ── Self-test ────────────────────────────────────────────────────────────────
 ci_replay_selftest() {
   local st=0 got
@@ -393,6 +412,14 @@ YAML
   t "Vite — un commentaire n'en est pas"   "$(printf '# npm run e2e
 npm run build
 ' | ci_sert_par_vite)" "non"
+  #  #1734 : un saut se NOMME, il ne se tait pas ; aucun saut, aucune mention.
+  t "sauts — aucun : rien à dire"    "$(printf '' | ci_resumer_sauts)" ""
+  t "sauts — regroupés par raison, le plus fréquent d'abord"     "$(printf 'a::t1	WeasyPrint absent
+b::t2	front absent
+c::t3	WeasyPrint absent
+' | ci_resumer_sauts)"     "3 test(s) sauté(s) ici, joué(s) par la CI GitHub : WeasyPrint absent (2) ; front absent (1)"
+  t "sauts — une ligne sans raison ne compte pas" "$(printf 'a::t1
+' | ci_resumer_sauts)" ""
   #  🔴 Le cas zéro : un genre que personne n'a su lire n'autorise pas les e2e.
   t "node_modules — genre inconnu : INCONNU"     "$(ci_node_modules_etat '')" "node_modules non examiné : son genre est illisible"
 
