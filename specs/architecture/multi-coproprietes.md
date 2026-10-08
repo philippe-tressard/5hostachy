@@ -7,7 +7,7 @@
 > rédigé le 07/10/2026, à partir des arbitrages de l'auteur pris le même jour.
 >
 > Le **travail** vit dans les tickets : phase 1 à partir de #1718, phase 2 de #1743
-> à #1751, distribution de #1753 à #1759. Ce document en
+> à #1751, distribution de #1753 à #1759 et #1761. Ce document en
 > porte les **décisions** et leurs raisons. Il se met à jour **à chaque arbitrage**,
 > daté. Toute décision qui n'y figure pas n'est pas prise.
 
@@ -42,7 +42,7 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D8 | Une personne dans deux copros | le cas existe, **rare** : **deux comptes indépendants**, un par caisson — confirmé le 08/10/2026 | §4.7 |
 | D9 | Nom de la plateforme (07/10/2026) | **CoproConnect** ; la résidence garde le sien, « 5Hostachy » | §8, phase 1 : le nom de la **plateforme** (attribution, lien vers le source) et celui de la **résidence** (administrable) sont deux réglages distincts |
 | D10 | Variante de la licence (07/10/2026) | **`AGPL-3.0-or-later`** | §7 |
-| D11 | Maître et canaux (08/10/2026) | **5Hostachy est le maître**, sur les Raspberry Pi : le développement s'y fait, il suit `main` (canal continu). Une branche **`stable`** reçoit les versions de `main` **choisies** par l'auteur ; les installations CoproConnect la suivent | §4.10 ; `stable` n'a **aucun commit propre** |
+| D11 | Maître et canaux (08/10/2026) | **5Hostachy est le maître**, sur les Raspberry Pi : le développement s'y fait, il suit `main` (canal continu). Une branche **`replica`** reçoit les versions de `main` **choisies** par l'auteur ; les installations CoproConnect — les **répliques** — la suivent. Le nom `replica` est arbitré le 08/10/2026 (et non `stable`) | §4.10 ; `replica` n'a **aucun commit propre** |
 | D12 | Ce qui est distribué (08/10/2026) | des **images construites et signées par la CI**, une par version taggée — jamais un `git pull` suivi d'un build sur la machine | §4.10 ; #1753, #1758 |
 | D13 | Un seul produit (08/10/2026) | **un seul chemin de code** (5Hostachy est un CoproConnect à une copropriété) et **un seul moteur de base**, PostgreSQL, maître compris ; le produit se sépare de l'exploitation des RPi | §4.10 ; #1755, #1759 |
 | D14 | Mise à jour des installations (08/10/2026) | **chaque nuit, automatique, réversible seule** : sauvegarde, migrations base par base, santé, retour à l'image précédente ; migrations **compatibles sur une version** | §4.10 ; #1756, #1757 |
@@ -190,7 +190,7 @@ pas les autres**. Chaque exécution est journalisée par copro.
 - **Départ d'une copropriété** : elle repart avec sa base et ses fichiers, puis
   ceux-ci sont supprimés de la plateforme.
 
-### 4.10 La distribution — un maître, une branche stable, N installations (D11 à D14)
+### 4.10 La distribution — un maître, une branche `replica`, N installations (D11 à D14)
 
 Arbitré le 08/10/2026, à la demande de l'auteur : *« 5hostachy est le master
 (hébergé sur les RPi), le dev est fait dessus, il converge petit à petit vers
@@ -207,7 +207,7 @@ stables de main. »*
                   │                                  │ rodage de N jours sans incident
                   │     promotion, décidée par l'auteur
                   ▼
-   branche « stable » (avance rapide seulement, aucun commit propre)
+   branche « replica » (avance rapide seulement, aucun commit propre)
                   │  images de la version : construites et signées par la CI
                   ▼
    registre d'images ── chaque nuit ──► installation CoproConnect n° 1 (copros A, B…)
@@ -216,16 +216,16 @@ stables de main. »*
 
 **Les règles :**
 
-1. **`stable` est un pointeur, pas une branche de travail.** Elle n'avance qu'en
+1. **`replica` est un pointeur, pas une branche de travail.** Elle n'avance qu'en
    avance rapide vers un tag de `main`, et ne porte aucun commit propre. Un
    correctif urgent passe par `main`, puis se promeut. Le jour où un correctif se
-   ferait sur `stable`, il y aurait deux produits.
+   ferait sur `replica`, il y aurait deux produits.
 2. **Un seul chemin de code.** 5Hostachy est un CoproConnect à **une**
    copropriété (le registre de §4.2 n'a qu'une entrée), jamais un « mode mono »
-   à côté d'un « mode multi » : sinon le canal stable livrerait du code que la
+   à côté d'un « mode multi » : sinon le canal des répliques livrerait du code que la
    production du maître n'a jamais exécuté. C'est l'objet de la phase 2.
 3. **Un seul moteur de base**, PostgreSQL, maître compris (#1759) : un moteur
-   que seul le canal stable exercerait ne serait éprouvé nulle part.
+   que seul le canal des répliques exercerait ne serait éprouvé nulle part.
 4. **On distribue des images, pas des sources.** La CI construit une fois les
    images d'une version taggée, les signe et les publie (#1753) ; une
    installation les tire **par empreinte** — ni build, ni git, ni clé de dépôt
@@ -248,9 +248,17 @@ stables de main. »*
    ne partent pas avec une installation ; celle-ci a son déploiement standard.
 9. **Une installation n'envoie rien par défaut** — ni version, ni santé — sans
    l'accord de son exploitant (RGPD, D5).
-10. **Le canal stable est une porte vers toutes les installations à la fois** :
+10. **Le canal des répliques est une porte vers toutes les installations à la fois** :
     tags protégés, images signées, seule la CI publie. Une compromission de
-    `stable` les compromettrait toutes en une nuit.
+    `replica` les compromettrait toutes en une nuit.
+11. **L'administration dit le rôle de l'installation** (#1761, exigence du
+    08/10/2026) : **Maître** — suit `main` —, **Réplique** — suit `replica` —, ou
+    **Inconnu**, avec la version qui tourne et son écart à la branche suivie. Le
+    rôle appartient à l'**installation**, pas à l'image (une version promue est la
+    même image partout) : il se déclare dans sa configuration, et une
+    déclaration absente se lit « Inconnu », jamais « Maître ». Il ne se confond
+    pas avec le rôle d'un nœud dans la haute disponibilité (actif / standby) : les
+    deux RPi sont **ensemble** le maître.
 
 ## 5. Les garde-fous
 
@@ -325,7 +333,7 @@ elle.
 | 0 | Décisions restantes (§9) | — |
 | 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproConnect, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices. Neuf lots, §8 bis (#1743 à #1751) | phase 1 |
-| 2 bis | **Distribution** (§4.10, §8 ter) : tags et images signées, branche `stable` et promotion, déploiement standard, migrations compatibles sur une version ; le maître tire son image et passe sous PostgreSQL | phase 2 en partie (§8 ter) |
+| 2 bis | **Distribution** (§4.10, §8 ter) : tags et images signées, branche `replica` et promotion, déploiement standard, migrations compatibles sur une version ; le maître tire son image et passe sous PostgreSQL | phase 2 en partie (§8 ter) |
 | 3 | **Première installation CoproConnect** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), mise à jour nocturne réversible (§4.10), outillage d'installation (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
 | 4 | **Copropriété pilote** : une seconde résidence réelle et volontaire | phase 3 |
 | 5 | Accueil autonome des copropriétés ; facturation selon le modèle économique | modèle économique |
@@ -373,12 +381,13 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 | Lot | Contenu | Taille | Prérequis | Ticket |
 |---|---|---|---|---|
 | DI-1 | **Un tag par version**, posé par la CI ; images construites, **signées**, publiées avec leur SBOM | M | — | #1753 |
-| DI-2 | **Branche `stable`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version | S | DI-1 | #1754 |
+| DI-2 | **Branche `replica`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version | S | DI-1 | #1754 |
 | DI-3 | **Déploiement standard** d'une installation, séparé de l'exploitation des RPi ; aucune donnée de la résidence dans une image | M | DI-1 | #1755 |
 | DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou | S | — | #1757 |
 | DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi | M | DI-1 | #1758 |
 | DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
+| DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica` | #1761 |
 
 **Ordre conseillé** : DI-5 dès maintenant (il sert aussi au retour arrière du
 maître) ; DI-1 puis DI-6, qui suppriment les builds sur les RPi ; DI-2 et DI-3 ;
