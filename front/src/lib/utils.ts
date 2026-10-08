@@ -178,19 +178,6 @@ export function capsLockActif(e: KeyboardEvent | FocusEvent): boolean | null {
 }
 
 /**
- * Message d'une erreur d'API, ou un libellé de repli si elle n'en porte pas.
- *
- * `ApiError` expose `message`, mais un rejet réseau ou une exception de code n'en
- * portent pas toujours : lire `e.message` sans précaution affiche « undefined »
- * dans un toast — le seul endroit où l'utilisateur regarde quand ça a échoué.
- */
-export function apiMessage(e: unknown, fallback = 'Erreur'): string {
-	if (e && typeof e === 'object' && 'message' in e)
-		return String((e as { message?: unknown }).message ?? fallback);
-	return fallback;
-}
-
-/**
  * Une note sur 5 rendue en étoiles pleines et vides — `4` → `★★★★☆`.
  *
  * Écrite deux fois dans le dépôt (l'espace CS et la fiche prestataire) jusqu'au

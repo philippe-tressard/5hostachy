@@ -164,7 +164,7 @@
 			}
 			toast('success', editReleveId ? 'Relevé modifié' : 'Relevé ajouté');
 			resetReleveForm();
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			releveSaving = false;

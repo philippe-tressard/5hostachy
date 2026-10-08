@@ -38,8 +38,13 @@ import { fileURLToPath } from 'node:url';
  *  typés sur les types du client, un champ lu par son nom passant par `champDe`.
  *  Puis 214 (#1571) : trente et un `catch (e: any)` deviennent `catch (e)`, leur
  *  message passant par `messageErreur` au lieu d'un `e.message ?? '…'` recopié.
+ *  08/10/2026 (#1571) : 71. Les quarante `catch (e: any)` restants deviennent
+ *  `catch (e)` — quatorze lisaient `e?.message ??`, que `lint:message-erreur` ne
+ *  voyait pas, et passent par `messageErreur` ; Résidence et ses rubriques de
+ *  documents, la FAQ, les accès, le profil, les comptes, l'Espace CS, les
+ *  contrats et les prestataires sont typés sur les types du client.
  */
-export const PLAFOND = 214;
+export const PLAFOND = 71;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REGLE = '@typescript-eslint/no-explicit-any';

@@ -34,7 +34,8 @@
   Philippe qui a nommé la première. Chercher la NOTION, pas le nom demandé.
 -->
 <script lang="ts">
-	import { frequenceLabel } from '$lib/prestataires';
+	import { frequenceLabel, type FormulaireContratData } from '$lib/prestataires';
+	import type { ContratEntretien, Document, Prestataire } from '$lib/api';
 	import { fmtDateShort } from '$lib/date';
 	import { safeHtml } from '$lib/sanitize';
 	import { CONTRAT } from '$lib/entites/contrat';
@@ -44,11 +45,11 @@
 	import GesteEnPlace from './GesteEnPlace.svelte';
 	import NoteEtoiles from './NoteEtoiles.svelte';
 
-	export let contrat: any;
-	export let prest: any = null;
+	export let contrat: ContratEntretien;
+	export let prest: Prestataire | null | undefined = null;
 	export let expanded = false;
 	export let enRetard = false;
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	export let peutModifier = false;
 	/**  Rendue aux Archives : ↩️ y remplace 📦, et ✨ ✏️ se taisent — on
 	 *   ressort un contrat avant de le corriger (#1538). */
@@ -57,13 +58,13 @@
 	/**  Le contrat en cours de correction — `null` quand aucun ne l'est. La carte
 	 *   cède sa place au formulaire quand c'est le sien. */
 	export let editContratId: number | null = null;
-	export let contratForm: any = undefined;
-	export let prestataires: any[] = [];
+	export let contratForm: FormulaireContratData;
+	export let prestataires: Prestataire[] = [];
 	export let equipements: readonly { val: string; label: string }[] = [];
 	export let submitting = false;
 
 	export let onBasculer: (id: number) => void = () => {};
-	export let onModifier: (c: any) => void = () => {};
+	export let onModifier: (c: ContratEntretien) => void = () => {};
 	/** 📦 `true` range le contrat, `false` le ressort des Archives. */
 	export let onArchiver: (id: number, archivee: boolean) => void = () => {};
 	export let onSupprimerDoc: (contratId: number, docId: number) => void = () => {};
@@ -98,7 +99,7 @@
 	 *   ⚠️ `contrat.synthese_disponible` vient du SERVEUR : l'écran ne sait pas si
 	 *   l'assistant est configuré, et n'a pas à le savoir — cette configuration ne
 	 *   regarde pas la session d'un membre du conseil syndical. */
-	export let onSynthetiser: (c: any) => void = () => {};
+	export let onSynthetiser: (c: ContratEntretien) => void = () => {};
 	/** Le contrat dont la synthèse est en cours de rédaction, s'il y en a un. */
 	export let syntheseEnCoursId: number | null = null;
 

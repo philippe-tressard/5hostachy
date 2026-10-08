@@ -119,9 +119,9 @@
 			adminApi.emailsHistorique(),
 		]);
 		if (modeles.status === 'fulfilled') emailTemplates = modeles.value;
-		else erreurModeles = modeles.reason?.message ?? 'Chargement impossible';
+		else erreurModeles = messageErreur(modeles.reason, 'Chargement impossible');
 		if (historique.status === 'fulfilled') emailHistory = historique.value;
-		else erreurHistorique = historique.reason?.message ?? 'Chargement impossible';
+		else erreurHistorique = messageErreur(historique.reason, 'Chargement impossible');
 		emailsLoading = false;
 		emailHistoryLoading = false;
 	}

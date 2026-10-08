@@ -39,7 +39,10 @@
 		acces as accesApi,
 		lots as lotsApi,
 		bailleur as bailApi,
+		type AccesBail,
 		type AccesPorteur,
+		type Bail,
+		type MonLot,
 	} from '$lib/api';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	//  ⚠️ `confirmer` et `SUPPRESSION` sont partis avec la poubelle (15/09/2026) :
@@ -57,9 +60,9 @@
 
 	let vigiks: AccesPorteur[] = [];
 	let telecommandes: AccesPorteur[] = [];
-	let mesLots: any[] = [];
-	let accesRecus: any[] = [];
-	let mesBaux: any[] = [];
+	let mesLots: MonLot[] = [];
+	let accesRecus: AccesBail[] = [];
+	let mesBaux: Bail[] = [];
 	let loading = true;
 
 	// Formulaire demande
@@ -75,17 +78,19 @@
 			//  ⚠️ `mesCommandes()` n'est plus appelée (12/09/2026) : la section
 			//  Archives a quitté ces onglets, et charger une liste que rien
 			//  n'affiche serait un aller-retour pour personne.
-			const tasks: Promise<any>[] = [
+			//  Une liste par rôle, chacune à SA place : un locataire qui est aussi
+			//  bailleur recevait ses accès reçus à la place de ses baux, les deux
+			//  lisant le quatrième résultat.
+			const [v, t, lots, recus, baux] = await Promise.all([
 				accesApi.mesVigiks(),
 				accesApi.mesTelecommandes(),
 				lotsApi.mesList(),
-			];
-			if ($isLocataire) tasks.push(bailApi.mesAccesRecus());
-			if ($isBailleur) tasks.push(bailApi.mesBaux());
-			const results = await Promise.all(tasks);
-			[vigiks, telecommandes, mesLots] = results;
-			if ($isLocataire) accesRecus = results[3] ?? [];
-			if ($isBailleur) mesBaux = results[3] ?? [];
+				$isLocataire ? bailApi.mesAccesRecus() : null,
+				$isBailleur ? bailApi.mesBaux() : null,
+			]);
+			[vigiks, telecommandes, mesLots] = [v, t, lots];
+			if (recus) accesRecus = recus;
+			if (baux) mesBaux = baux;
 		} catch (e) {
 			toast('error', messageErreur(e, 'Erreur de chargement'));
 		} finally {
@@ -168,7 +173,7 @@
 	// ── Bailleur : vue par locataire ─────────────────────────────────────────
 	// Regroupement des vigiks/TCs confiés (chez_locataire) par locataire (email/nom)
 	$: locatairesAcces = (() => {
-		const bauxActifs = (mesBaux as any[]).filter(bailEnCours);
+		const bauxActifs = mesBaux.filter(bailEnCours);
 		const all = [
 			...vigiks.filter((v) => v.chez_locataire).map((v) => ({ ...v, typeAcces: 'vigik' as const })),
 			...telecommandes
@@ -176,7 +181,7 @@
 				.map((t) => ({ ...t, typeAcces: 'telecommande' as const })),
 		];
 		// Grouper par identité du locataire (email prioritaire, sinon nom+prénom)
-		const groupMap = new Map<string, { baux: any[]; items: any[] }>();
+		const groupMap = new Map<string, { baux: Bail[]; items: typeof all }>();
 		for (const bail of bauxActifs) {
 			const key =
 				bail.locataire_email?.trim().toLowerCase() ||
@@ -185,8 +190,8 @@
 			else groupMap.get(key)!.baux.push(bail);
 		}
 		for (const group of groupMap.values()) {
-			const bailIds = new Set(group.baux.map((b: any) => b.id));
-			group.items = all.filter((a) => bailIds.has(a.bail_id));
+			const bailIds = new Set(group.baux.map((b) => b.id));
+			group.items = all.filter((a) => a.bail_id != null && bailIds.has(a.bail_id));
 		}
 		return [...groupMap.values()];
 	})();
@@ -197,7 +202,7 @@
 			'Accès récupérés',
 			async () => {
 				const updates = await Promise.all(bailIds.map((id) => bailApi.recupererAcces(id)));
-				const ids = new Set(updates.flat().map((u: any) => `${u.type}:${u.id}`));
+				const ids = new Set(updates.flat().map((u) => `${u.type}:${u.id}`));
 				vigiks = vigiks.map((v) =>
 					ids.has(`vigik:${v.id}`) ? { ...v, chez_locataire: false, bail_id: null } : v,
 				);
@@ -302,7 +307,7 @@
 									>
 									<button
 										class="btn btn-sm btn-outline"
-										on:click={() => recupererTousLocataireAcces(baux.map((b: any) => b.id))}
+										on:click={() => recupererTousLocataireAcces(baux.map((b) => b.id))}
 										>↩ Tout récupérer</button
 									>
 								{:else}

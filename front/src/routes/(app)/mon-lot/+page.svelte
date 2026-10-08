@@ -123,7 +123,7 @@
 		try {
 			lots = await lotsApi.mesList();
 			if (lots.length > 0) lotChoisi = String(lots[0].id);
-		} catch (e: any) {
+		} catch (e) {
 			//  🔴 Sans cette variable, l'écran annonçait « Aucun lot associé » après
 			//  un échec de chargement (#816) — et la page explique alors, en trois
 			//  lignes, comment faire rattacher un lot qui EST peut-être déjà là.
@@ -138,7 +138,7 @@
 	async function relireLots() {
 		try {
 			lots = await lotsApi.mesList();
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e, 'Impossible de relire vos lots'));
 		}
 	}
@@ -163,7 +163,7 @@
 		if ($isLocataire) {
 			try {
 				monBailData = await bailApi.monBail();
-			} catch (e: any) {
+			} catch (e) {
 				//  « Pas de bail » est une réponse `null`, jamais une erreur (#1459).
 				toast('error', messageErreur(e, 'Impossible de charger votre bail'));
 			}
@@ -172,7 +172,7 @@
 		if (lecture) {
 			try {
 				baux = await lecture;
-			} catch (e: any) {
+			} catch (e) {
 				toast('error', messageErreur(e, 'Erreur de chargement des baux'));
 			}
 		}

@@ -9,13 +9,13 @@
   « Rafraîchir » doit savoir quoi recharger.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { confirmer } from '$lib/confirmation';
 	import { onMount } from 'svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { categorieTicketLabel } from '$lib/tickets';
 	import { tickets as ticketsApi, type Ticket, type ReponseRelance } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
-	import { apiMessage } from '$lib/utils';
 	//  `fmtDatetime` vient de $lib/date — jamais un format réimplémenté ici.
 	import { daysSince, fmtDatetime } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
@@ -59,9 +59,9 @@
 				relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours).map((t) => t.id),
 			);
 			relanceLoaded = true;
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur chargement relances syndic'));
-			erreur = e?.message ?? 'Chargement impossible';
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur chargement relances syndic'));
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			relanceLoading = false;
 		}
@@ -81,8 +81,8 @@
 			const res = await ticketsApi.envoiRelance(ids);
 			toast('success', `✅ Relance envoyée à ${res.relance_to}`);
 			await loadRelanceSyndic(true);
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur envoi relance'));
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur envoi relance'));
 		} finally {
 			relanceSending = false;
 		}
@@ -93,8 +93,8 @@
 			await ticketsApi.update(t.id, { non_relancable: val, non_relancable_motif: motif || null });
 			relanceNonRelancableEditing = null;
 			await loadRelanceSyndic(true);
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur mise à jour ticket'));
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur mise à jour ticket'));
 		}
 	}
 

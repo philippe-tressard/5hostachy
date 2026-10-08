@@ -20,7 +20,7 @@
 -->
 <script lang="ts">
 	import { nombreOuNull } from '$lib/utils';
-	import { documents as documentsApi } from '$lib/api';
+	import { documents as documentsApi, type Document } from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { supprimerDocument } from '$lib/gestes-document';
 	import { titreOuNomDuFichier } from '$lib/fichiers';
@@ -38,13 +38,13 @@
 	export let titre: string;
 	/** La catégorie de dépôt ; `null` tant qu'elle n'est pas lue — rien ne part. */
 	export let categorieId: number | null;
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	export let erreur = '';
 	export let messageVide: string;
 	export let peutModifier = false;
 	/** L'ordre d'affichage ; la liste elle-même garde l'ordre d'arrivée. */
-	export let trier: (docs: any[]) => any[] = (docs) => docs;
-	export let dateDe: ((doc: any) => string) | undefined = undefined;
+	export let trier: (docs: Document[]) => Document[] = (docs) => docs;
+	export let dateDe: ((doc: Document) => string) | undefined = undefined;
 	/** Le formulaire de dépôt. */
 	export let intitule: string;
 	export let placeholderTitre: string;
@@ -92,7 +92,7 @@
 		enregistrement = true;
 		await tenter(
 			async () => {
-				const deposes: any[] = [];
+				const deposes: Document[] = [];
 				for (const fichier of fichiers) deposes.push(await deposer(s, categorie, fichier));
 				aboutirGeste('document.deposer');
 				documents = [...deposes, ...documents];
@@ -120,7 +120,7 @@
 		});
 	}
 
-	function corriger(doc: any) {
+	function corriger(doc: Document) {
 		correction = {
 			...correctionVide(),
 			id: doc.id,

@@ -23,7 +23,13 @@
 <script lang="ts">
 	import { fmtDateShort } from '$lib/date';
 	import { PRESTATAIRE } from '$lib/entites/prestataire';
-	import { equipLabel, typePrestataireLabel } from '$lib/prestataires';
+	import {
+		equipLabel,
+		typePrestataireLabel,
+		type ContactSaisi,
+		type FormulairePrestataire,
+	} from '$lib/prestataires';
+	import type { ContratEntretien, Notation, Prestataire } from '$lib/api';
 	import { safeDescription } from '$lib/sanitize';
 	import { nomAffiche } from '$lib/noms';
 	import CarteModifiable from './CarteModifiable.svelte';
@@ -33,10 +39,10 @@
 	import ChampsPrestataire from './ChampsPrestataire.svelte';
 	import PiedFormulaire from './PiedFormulaire.svelte';
 
-	export let p: any;
-	export let cs: any[] = [];
+	export let p: Prestataire;
+	export let cs: ContratEntretien[] = [];
 	export let nextVisit: string | null = null;
-	export let notations: any[] = [];
+	export let notations: Notation[] = [];
 	export let expanded = false;
 	export let compactPrests = false;
 	export let peutModifier = false;
@@ -48,14 +54,14 @@
 	/**  Le prestataire en cours de correction — la carte cède sa place au
 	 *   formulaire quand c'est le sien. */
 	export let editPrestId: number | null = null;
-	export let prestForm: any = undefined;
-	export let prestContacts: any[] = [];
+	export let prestForm: FormulairePrestataire;
+	export let prestContacts: ContactSaisi[] = [];
 	export let typesPrestataire: readonly { val: string; label: string; desc?: string }[] = [];
 	export let equipements: readonly { val: string; label: string }[] = [];
 	export let submitting = false;
 
 	export let onBasculer: (id: number) => void = () => {};
-	export let onModifier: (p: any) => void = () => {};
+	export let onModifier: (p: Prestataire) => void = () => {};
 	/** 📦 `true` range la fiche, `false` la ressort des Archives. */
 	export let onArchiver: (id: number, archivee: boolean) => void = () => {};
 	export let onAnnuler: () => void = () => {};
@@ -114,7 +120,7 @@
 		{#if !compactPrests || expanded}
 			<div class="prest-contacts">
 				{#if p.contacts && p.contacts.length > 0}
-					{#each p.contacts as c (c.id ?? c)}
+					{#each p.contacts as c (c)}
 						<span class="prest-contact">
 							📞 {c.telephone}{#if c.prenom || c.nom}&nbsp;— {nomAffiche(
 									c,

@@ -35,7 +35,7 @@
 			const user = await authApi.login(email, password);
 			setUser(user);
 			goto(destinationApresConnexion());
-		} catch (e: any) {
+		} catch (e) {
 			const msg = messageErreur(e, 'Erreur de connexion');
 			if (msg.includes('rifier votre adresse') || msg.includes('email')) {
 				emailNotVerified = true;

@@ -45,6 +45,8 @@
 </script>
 
 <script lang="ts">
+	import type { Prestataire } from '$lib/api';
+	import type { FormulaireContratData } from '$lib/prestataires';
 	import { SECTIONS_LIBELLE } from '$lib/entites/types';
 	import SectionEquipement from './SectionEquipement.svelte';
 	import SectionPerimetre from './SectionPerimetre.svelte';
@@ -57,9 +59,9 @@
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
 	/** Le formulaire lié — l'écran porte l'état et l'enregistre. */
-	export let contratForm: any;
+	export let contratForm: FormulaireContratData;
 	/** Les prestataires proposables. */
-	export let prestataires: any[] = [];
+	export let prestataires: Prestataire[] = [];
 	/** La table des équipements (`{ val, label }`). */
 	export let equipements: readonly { val: string; label: string }[] = [];
 	/**  Création ou correction — c'est la DÉCLARATION qui en tire les sections

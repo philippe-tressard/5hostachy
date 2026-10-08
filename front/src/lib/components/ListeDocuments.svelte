@@ -22,10 +22,10 @@
 -->
 <script lang="ts">
 	import PastilleFichier from './PastilleFichier.svelte';
-	import { documents as docsApi } from '$lib/api';
+	import { documents as docsApi, type Document } from '$lib/api';
 
 	/** Les documents attachés — entités `Document` de l'API. */
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	/** Le lecteur peut-il retirer une pièce ? La croix n'apparaît que si oui. */
 	export let peutSupprimer = false;
 	/** Qui sait supprimer — l'écran, qui tient la table. */

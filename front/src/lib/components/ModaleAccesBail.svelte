@@ -68,7 +68,7 @@
 		try {
 			accesListe = await bailApi.accesBail(bailId);
 			preselectionRecommandee();
-		} catch (e: any) {
+		} catch (e) {
 			erreurAcces = messageErreur(e, 'Impossible de charger les accès');
 			toast('error', erreurAcces);
 		} finally {
@@ -130,7 +130,7 @@
 			selectionVigik = new Set();
 			selectionTc = new Set();
 			toast('success', 'Accès transférés au locataire');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e, 'Erreur lors du transfert'));
 		}
 	}
@@ -162,7 +162,7 @@
 			selectionVigik = new Set(selectionVigik);
 			selectionTc = new Set(selectionTc);
 			toast('success', 'Accès récupérés');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
@@ -178,7 +178,7 @@
 			selectionVigik = new Set();
 			selectionTc = new Set();
 			toast('success', 'Accès récupérés');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}

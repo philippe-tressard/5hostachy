@@ -48,7 +48,7 @@
 			compteurConfigs = compteurConfigs.map((c) => (c.id === cfg.id ? updated : c));
 			editCompteurId = null;
 			toast('success', 'Fournisseur mis à jour');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
@@ -68,7 +68,7 @@
 			showAddCompteur = false;
 			typeCompteur = created.type_compteur;
 			toast('success', 'Catégorie ajoutée');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			addCompteurSaving = false;

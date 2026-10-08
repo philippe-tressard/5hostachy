@@ -102,9 +102,9 @@
 				adminApi.comptesEnAttente(),
 				adminApi.commandesAccesEnAttente(),
 				essayer<{ id: number; numero: string }[]>(authApi.batiments(), []),
-				essayer<any[]>(adminApi.utilisateurs(), []),
-				essayer<any[]>(lotsApi.tous(), []),
-				essayer<any[]>(lotsApi.listImports(), []),
+				essayer(adminApi.utilisateurs(), []),
+				essayer(lotsApi.tous(), []),
+				essayer(lotsApi.listImports(), []),
 			]);
 			erreurReference = messagePartiel(eBat, eUsers, eLots, eImports);
 			comptesEnAttente = comptes;
@@ -113,17 +113,17 @@
 			//  commande en attente faisait tomber le rendu de l'onglet. La route
 			//  rend désormais `demandeur_nom`, `lot` et `batiment`.
 			commandesEnAttente = commandes;
-			batimentsMap = Object.fromEntries((batList as any[]).map((b) => [b.id, `Bât. ${b.numero}`]));
-			allUsers = (users as any[]).map((u) => ({
+			batimentsMap = Object.fromEntries(batList.map((b) => [b.id, `Bât. ${b.numero}`]));
+			allUsers = users.map((u) => ({
 				id: u.id,
 				prenom: u.prenom,
 				nom: u.nom,
 				email: u.email,
-				telephone: u.telephone,
-				batiment_id: u.batiment_id,
+				telephone: u.telephone ?? null,
+				batiment_id: u.batiment_id ?? null,
 			}));
 			allLots = lotsData as LotRapproche[];
-			lotImports = importsData as any[];
+			lotImports = importsData;
 		} catch {
 			toast('error', 'Erreur de chargement');
 		} finally {
@@ -164,7 +164,7 @@
 			comptesEnAttente = comptesEnAttente.filter((x) => x.id !== u.id);
 			for (const a of annonces) toast(a.ton, a.texte);
 			cvModal = null;
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			cvSubmitting = false;

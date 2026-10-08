@@ -44,11 +44,12 @@
   répété.
 -->
 <script lang="ts">
+	import type { AccesBail } from '$lib/api';
 	import { statutAccesBadge, statutAccesLabel, typeAccesLabel } from '$lib/types-acces';
 	import { isLocataire } from '$lib/stores/auth';
 
 	/** Les accès confiés par le bailleur — locataires seulement. */
-	export let accesRecus: any[] = [];
+	export let accesRecus: AccesBail[] = [];
 </script>
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->

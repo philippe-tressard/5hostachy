@@ -25,11 +25,16 @@
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import SectionEquipement from '$lib/components/SectionEquipement.svelte';
 	import { contexteAssistant } from '$lib/assistant';
-	import { contactRenseigne, contactVide } from '$lib/prestataires';
+	import {
+		contactRenseigne,
+		contactVide,
+		type ContactSaisi,
+		type FormulairePrestataire,
+	} from '$lib/prestataires';
 	import { sectionPresente, type Etat } from '$lib/entites/types';
 
-	export let prestForm: any;
-	export let prestContacts: any[] = [];
+	export let prestForm: FormulairePrestataire;
+	export let prestContacts: ContactSaisi[] = [];
 	export let typesPrestataire: readonly { val: string; label: string; desc?: string }[] = [];
 	export let equipements: readonly { val: string; label: string }[] = [];
 

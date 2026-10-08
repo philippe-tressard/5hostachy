@@ -493,3 +493,6 @@ export function prestataireDepuis(p: Partial<Prestataire> = {}) {
 		assiste_ia: false,
 	};
 }
+
+/** L'état du formulaire d'un prestataire, tel que `prestataireDepuis` le rend. */
+export type FormulairePrestataire = ReturnType<typeof prestataireDepuis>;

@@ -12,6 +12,8 @@
 		lots as lotsApi,
 		uploads as uploadsApi,
 		type MaDemandeProfil,
+		type MonLot,
+		type User,
 	} from '$lib/api';
 	import { tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -60,7 +62,7 @@
 	let restreindreAMesBatiments = false;
 
 	// ── Lots ──────────────────────────────────────────────────────────────────
-	let mesLots: any[] = [];
+	let mesLots: MonLot[] = [];
 
 	// ── Demandes de modif profil ───────────────────────────────────────────────
 	let demandes: MaDemandeProfil[] = [];
@@ -85,7 +87,7 @@
 	//  ⚠️ Le vocabulaire d'une demande vit dans `$lib/demandes` : cette page ET
 	//  `HistoriqueDemandes` le lisent. Je l'avais d'abord emporté avec la table
 	//  extraite — la page s'en sert aussi, quarante lignes plus haut.
-	$: derniereConnexion = ($currentUser as any)?.derniere_connexion ?? null;
+	$: derniereConnexion = $currentUser?.derniere_connexion ?? null;
 
 	// ── Init ──────────────────────────────────────────────────────────────────
 	//  L'initialisation suit le STORE, pas le montage : le layout `(app)` peuple
@@ -100,12 +102,12 @@
 		initialiserDepuis($currentUser);
 	}
 
-	function initialiserDepuis(u: any) {
+	function initialiserDepuis(u: User) {
 		prenom = u.prenom ?? '';
 		nom = u.nom ?? '';
-		telephone = (u as any).telephone ?? '';
+		telephone = u.telephone ?? '';
 		societe = u.societe ?? '';
-		fonction = (u as any).fonction ?? '';
+		fonction = u.fonction ?? '';
 		email = u.email ?? '';
 		//  La démarche « Nouvel arrivant » s'initialise dans `DemarcheArrivant`.
 
@@ -133,8 +135,8 @@
 		//  compte n'en avait aucun (#522). D'où le bandeau plutôt qu'un état de
 		//  liste : il n'y a pas de vide à distinguer, il y a un silence à rompre.
 		const [[lots, eLots], [bats, eBats]] = await Promise.all([
-			essayer<any[]>(lotsApi.mesList(), []),
-			essayer<any[]>(authApi.batiments(), []),
+			essayer<MonLot[]>(lotsApi.mesList(), []),
+			essayer<{ id: number; numero: string }[]>(authApi.batiments(), []),
 		]);
 		mesLots = lots;
 		batiments = bats;
@@ -184,7 +186,7 @@
 			async () => {
 				const { url } = await uploadsApi.avatar(e.detail);
 				const updated = { ...$currentUser!, photo_url: url };
-				setUser(updated as any);
+				setUser(updated);
 			},
 			'Photo de profil mise à jour',
 			'Erreur upload',

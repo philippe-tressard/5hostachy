@@ -35,6 +35,7 @@
     pas d'icône ✨, c'est la règle de tout le produit.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SectionFormulaire from '$lib/components/SectionFormulaire.svelte';
@@ -141,8 +142,8 @@
 			}
 			tarif = { etat: 'ok', message: r.remarque };
 			relireLimites();
-		} catch (e: any) {
-			tarif = { etat: 'ko', message: e?.message ?? 'La recherche du tarif a échoué' };
+		} catch (e) {
+			tarif = { etat: 'ko', message: messageErreur(e, 'La recherche du tarif a échoué') };
 		}
 	}
 
@@ -159,8 +160,8 @@
 				etat: 'ok',
 				message: `${r.fournisseur} · ${r.modele} — réponse « ${r.reponse} » en ${r.duree_ms} ms`,
 			};
-		} catch (e: any) {
-			test = { etat: 'ko', message: e?.message ?? 'Le test a échoué' };
+		} catch (e) {
+			test = { etat: 'ko', message: messageErreur(e, 'Le test a échoué') };
 		}
 	}
 </script>

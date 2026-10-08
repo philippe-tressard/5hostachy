@@ -17,6 +17,7 @@
   second état chez l'hôte finirait par se désaccorder de celui-ci.
 -->
 <script lang="ts">
+	import type { MonLot } from '$lib/api';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { TYPES_ACCES } from '$lib/types-acces';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
@@ -28,7 +29,7 @@
 	export let showDeclareForm = false;
 
 	/** Les lots de l'utilisateur, pour rattacher la demande. */
-	export let mesLots: any[] = [];
+	export let mesLots: MonLot[] = [];
 
 	/**  Ce que l'hôte sait faire : il tient les listes, donc il enregistre.
 	 *   Ce composant ne parle qu'à l'utilisateur. */
