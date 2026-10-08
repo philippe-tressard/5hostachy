@@ -119,6 +119,13 @@ docker compose up --build -d
 
 L'application est accessible sur `http://localhost`.
 
+> 📦 **Images publiées.** Chaque version reçoit un tag `vX.Y.Z` et des images
+> signées (amd64 et arm64) : `ghcr.io/philippe-tressard/coproconnect-api`, `-front`,
+> `-caddy` et `-whatsapp-bridge`, étiquetées par version. Vérifier une image :
+> `gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:<version> --owner philippe-tressard`.
+> L'installation à partir de ces images, sans construire, viendra avec le déploiement
+> standard de CoproConnect (#1755).
+
 Au premier lancement, un compte admin est créé avec un **mot de passe aléatoire** affiché dans les logs :
 
 ```bash

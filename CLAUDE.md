@@ -936,5 +936,11 @@ Instanciation 5Hostachy :
   refuse l'écart en CI — cette ligne ne nommait que `package.json`, et un bump
   l'a suivie à la lettre le 30/09/2026 (rattrapé au rejeu, pas avant).
 - Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
+- **Le bump fait le tag et les images** (#1753) : à la fusion sur `main`, le workflow
+  `images.yml` pose `vX.Y.Z` (par `scripts/ci/tag-version.sh`, jamais à la main) et
+  publie les images signées des quatre services sur `ghcr.io/philippe-tressard/coproconnect-*`,
+  amd64 et arm64. Un lot **sans** bump ne publie rien. 🔒 `test_images_publiees.py` :
+  la matrice publie exactement ce que `docker-compose.yml` construit. Aucune
+  installation ne tire encore ces images (DI-6, #1758).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.

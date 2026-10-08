@@ -564,6 +564,9 @@ jobs:
           # La ligne datée À L'ÉCRITURE et le contrat de sortie d'auto-deploy
           # (#1587) : chaque `exit` daté, aucun `git fetch` sans repli.
           bash scripts/lib/lib-journal.sh           --selftest
+          # Le tag d'une version (#1753) : créer, relancer, lot sans bump, version
+          # illisible — la décision qui pose `vX.Y.Z` et autorise la publication.
+          bash scripts/ci/tag-version.sh            --selftest
           # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
           bash scripts/lib/lib-jeton-tunnel.sh      --selftest
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest

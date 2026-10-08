@@ -1,0 +1,223 @@
+name: Images
+
+#  Lot DI-1 (#1753, 08/10/2026) — chantier multi-copropriétés, distribution
+#  (`specs/architecture/multi-coproprietes.md` §4.10, D12).
+#
+#  Chaque version bumpée sur `main` reçoit :
+#  - UN tag `vX.Y.Z`, posé ici et jamais à la main (`scripts/ci/tag-version.sh`) ;
+#  - les images de ses quatre services, construites UNE fois, pour amd64 et arm64
+#    (les Raspberry Pi), publiées sur ghcr.io/philippe-tressard/coproconnect-<service>
+#    et adressées par EMPREINTE ;
+#  - une attestation de provenance SIGNÉE (Sigstore, par le jeton OIDC du run)
+#    et une SBOM par image.
+#
+#  Vérifier une image : gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:X.Y.Z --owner philippe-tressard
+#
+#  ⚠️ Aucune installation ne tire encore ces images : le maître les tirera au lot
+#  DI-6 (#1758), les répliques au lot DI-4 (#1756). Ce workflow ne change donc
+#  rien à la production. Un lot fusionné SANS bump ne publie rien : son numéro est
+#  déjà pris par le commit précédent.
+#
+#  🔒 `api/tests/test_images_publiees.py` confronte la matrice aux services de
+#  `docker-compose.yml` : un service construit qui ne serait pas publié manquerait
+#  à toute installation.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+#  Deux publications de la même version ne se croisent pas, et aucune n'est
+#  interrompue : une image à moitié poussée est pire qu'une image en retard.
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  REGISTRE: ghcr.io/philippe-tressard
+
+#  Aucun droit par défaut : chaque job déclare les siens, et seulement ceux-là.
+permissions: {}
+
+jobs:
+  version:
+    name: Version et tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write   # pousser le tag, et rien d'autre
+    outputs:
+      version: ${{ steps.lire.outputs.version }}
+      empreinte: ${{ steps.lire.outputs.empreinte }}
+      publier: ${{ steps.tag.outputs.publier }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0   # les tags existants, pour savoir si la version en a déjà un
+
+      - name: Lire la version (package.json et son verrou doivent dire la même)
+        id: lire
+        run: |
+          version=$(node -p "require('./front/package.json').version")
+          verrou=$(node -p "require('./front/package-lock.json').version")
+          if [ "$version" != "$verrou" ]; then
+            echo "::error::front/package.json dit $version, package-lock.json dit $verrou"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "empreinte=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Poser le tag de la version
+        id: tag
+        run: bash scripts/ci/tag-version.sh "${{ steps.lire.outputs.version }}"
+
+  construire:
+    name: Construire ${{ matrix.service.nom }} (${{ matrix.plateforme }})
+    needs: version
+    if: needs.version.outputs.publier == 'true'
+    #  Un runner natif par architecture : l'émulation arm64 multiplierait par dix
+    #  la construction de l'API (bibliothèques du rendu PDF).
+    runs-on: ${{ matrix.plateforme == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        plateforme: [amd64, arm64]
+        service:
+          - { nom: api, contexte: api, fichier: api/Dockerfile }
+          - { nom: front, contexte: front, fichier: front/Dockerfile }
+          - { nom: caddy, contexte: ., fichier: Dockerfile.caddy }
+          - { nom: whatsapp-bridge, contexte: whatsapp-bridge, fichier: whatsapp-bridge/Dockerfile }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      #  Poussée par empreinte, sans étiquette : l'étiquette `X.Y.Z` ne se pose
+      #  qu'une fois les deux architectures construites (job `publier`), si bien
+      #  qu'elle ne désigne jamais une image à moitié publiée.
+      #  `INSTANCE_ID` reste vide : l'image ne nomme aucun nœud (il se lira à
+      #  l'exécution au lot DI-6, #1758).
+      - name: Construire et pousser par empreinte
+        id: construire
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.service.contexte }}
+          file: ${{ matrix.service.fichier }}
+          platforms: linux/${{ matrix.plateforme }}
+          build-args: |
+            GIT_HASH=${{ needs.version.outputs.empreinte }}
+          labels: |
+            org.opencontainers.image.title=coproconnect-${{ matrix.service.nom }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+            git.hash=${{ needs.version.outputs.empreinte }}
+          outputs: type=image,name=${{ env.REGISTRE }}/coproconnect-${{ matrix.service.nom }},push-by-digest=true,name-canonical=true,push=true
+          sbom: true
+          provenance: mode=max
+
+      - name: Noter l'empreinte
+        run: |
+          mkdir -p empreintes
+          echo "${{ steps.construire.outputs.digest }}" > "empreintes/${{ matrix.service.nom }}-${{ matrix.plateforme }}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: empreinte-${{ matrix.service.nom }}-${{ matrix.plateforme }}
+          path: empreintes/*
+          retention-days: 1
+          if-no-files-found: error
+
+  publier:
+    name: Publier ${{ matrix.service }} ${{ needs.version.outputs.version }}
+    needs: [version, construire]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      id-token: write       # signer l'attestation (Sigstore, sans clé stockée)
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, front, caddy, whatsapp-bridge]
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: empreinte-${{ matrix.service }}-*
+          path: empreintes
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Étiqueter les deux architectures sous la version
+        id: index
+        env:
+          IMAGE: ${{ env.REGISTRE }}/coproconnect-${{ matrix.service }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          n=$(ls empreintes | wc -l)
+          if [ "$n" -ne 2 ]; then
+            echo "::error::$n empreinte(s) pour ${{ matrix.service }}, il en faut 2 (amd64, arm64)"
+            exit 1
+          fi
+          refs=$(for f in empreintes/*; do printf '%s@%s ' "$IMAGE" "$(cat "$f")"; done)
+          # shellcheck disable=SC2086 — une référence par architecture
+          docker buildx imagetools create -t "$IMAGE:$VERSION" $refs
+          digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Publié : $IMAGE:$VERSION ($digest)"
+
+      - name: Attester la provenance (signée)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRE }}/coproconnect-${{ matrix.service }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true
+
+  verifier-front:
+    name: Le pied de page de l'image affiche sa version
+    needs: [version, publier]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      #  Le fait, pas l'étiquette : on extrait le client de l'image PUBLIÉE et on y
+      #  lit la version par l'extracteur même du post-check P3. Tag, package.json
+      #  et pied de page disent alors la même chose, ou le run échoue.
+      - name: Lire la version dans le client de l'image
+        env:
+          IMAGE: ${{ env.REGISTRE }}/coproconnect-front:${{ needs.version.outputs.version }}
+        run: |
+          id=$(docker create --platform linux/amd64 "$IMAGE")
+          docker cp "$id:/app/build/client" "$RUNNER_TEMP/client"
+          docker rm "$id" > /dev/null
+          node front/scripts/check-version-servie.mjs --client "$RUNNER_TEMP/client"
