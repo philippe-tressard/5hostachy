@@ -110,9 +110,9 @@ def regle_page(
 def logo_svg(size: int = 36) -> str:
     """Le logo NEUTRE de CoproConnect en SVG inline — un immeuble sur fond bleu.
 
-    C'est le repli quand la résidence n'a pas téléversé le sien (#1728) : la
-    « vague de Seine » qui l'accompagnait évoquait CETTE résidence, et une autre
-    l'aurait portée. Le logo réellement affiché se demande à `utils/logo`
+    C'est le repli quand la résidence n'a pas téléversé le sien (#1728) : un
+    logo propre à une résidence ne s'écrit pas dans le code, une autre l'aurait
+    porté. Le logo réellement affiché se demande à `utils/logo`
     (`logo_document`), jamais ici. `front/static/favicon.svg` est le même dessin.
     """
     return (

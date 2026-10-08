@@ -1,8 +1,8 @@
 """Le logo de la RÉSIDENCE — téléversé par l'administration, une seule porte (#1728).
 
 Le logo était écrit en dur : un dessin SVG dans `pdf_theme.logo_svg` (un immeuble
-et une « vague de Seine »), un `favicon.svg` et deux icônes PNG figées au build.
-Une autre copropriété aurait porté la vague de celle-ci sur ses affiches, ses
+marqué d'une touche dorée), un `favicon.svg` et deux icônes PNG figées au build.
+Une autre copropriété aurait porté le logo de celle-ci sur ses affiches, ses
 courriels et l'écran d'accueil de ses téléphones.
 
 Arbitré le 08/10/2026 :
@@ -10,7 +10,7 @@ Arbitré le 08/10/2026 :
 | Question | Réponse |
 |---|---|
 | formats | PNG ou JPEG seulement — famille « logo » de `utils/fichiers` |
-| sans logo | le dessin sans la vague, logo neutre de CoproConnect |
+| sans logo | le dessin sans la touche dorée, logo neutre de CoproConnect |
 | menu, connexion | le logo remplace l'icône du catalogue s'il existe |
 | courriels | une image par adresse publique, servie par `GET /config/logo.png` |
 

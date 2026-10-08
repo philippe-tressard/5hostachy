@@ -7,8 +7,9 @@
 
   Le logo était de 22 px, la taille d'une icône du menu : un logo téléversé est
   une vignette pleine, et son dessin s'y réduisait à une tache. « Doublé ou
-  triplé » sur la barre latérale, centré au-dessus du nom (arbitré à l'écran,
-  08/10/2026) — côte à côte, ils ne tiennent pas dans ses 185 px. L'en-tête
+  triplé » sur la barre latérale, centré au-dessus du nom et le bloc calé à
+  gauche (arbitré à l'écran, 08/10/2026) — côte à côte, ils ne tiennent pas
+  dans ses 185 px. L'en-tête
   mobile ne fait que 3,25 rem, 39 px au téléphone : le logo y reste en ligne,
   à une taille qui y laisse une marge. 🔒 `e2e/logo-menu.spec.ts`
 -->
@@ -46,8 +47,13 @@
 			opacity: 0.8;
 		}
 	}
+	/*  Une grille d'UNE colonne, à la largeur du plus large des deux : le bloc se
+	    cale à gauche de la barre (arbitré à l'écran, 08/10/2026), le logo centré
+	    au-dessus du nom. Le lien garde toute la largeur, donc son filet aussi. */
 	.barre {
-		flex-direction: column;
+		display: grid;
+		justify-content: start;
+		justify-items: center;
 		padding: 0.5rem 1.25rem 1.25rem;
 		border-bottom: 1px solid var(--color-border);
 		margin-bottom: 0.5rem;
