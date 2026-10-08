@@ -90,7 +90,7 @@
 			//  Le serveur peut avoir appliqué « avec » à un « sans » qui ne
 			//  changerait rien : les pastilles disent ce qui est APPLIQUÉ.
 			filtre = telemetryData.filtre_gestionnaire.applique;
-		} catch (e: any) {
+		} catch (e) {
 			//  La donnée précédente est écartée : l'afficher sous un onglet dont
 			//  la portée vient de changer la ferait passer pour la nouvelle.
 			telemetryData = null;

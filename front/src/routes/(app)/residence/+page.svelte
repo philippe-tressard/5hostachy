@@ -20,6 +20,7 @@
 		type Batiment,
 		type Copropriete,
 		type DiagnosticType,
+		type Document,
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
@@ -47,9 +48,9 @@
 	// ── State ──────────────────────────────────────────────────────────────────
 	let copropriete: Copropriete | null = null;
 	let batiments: Batiment[] = [];
-	let plans: any[] = [];
-	let reglements: any[] = [];
-	let crAg: any[] = [];
+	let plans: Document[] = [];
+	let reglements: Document[] = [];
+	let crAg: Document[] = [];
 	let loading = true;
 	//  🔴 Une erreur PAR liste, et non une pour la page (#522). Ces cinq
 	//  rubriques se chargent indépendamment : dire « rien n'a marché » quand
@@ -87,7 +88,7 @@
 	// Composition depuis les champs stockés sur Batiment et Copropriete
 
 	//  Réactif : le tri des plans lit `batiments`, qui arrive après eux.
-	$: trierPlans = (docs: any[]) =>
+	$: trierPlans = (docs: Document[]) =>
 		[...docs].sort((a, b) => {
 			if (!a.batiment_id && b.batiment_id) return -1;
 			if (a.batiment_id && !b.batiment_id) return 1;
@@ -95,13 +96,13 @@
 			const bB = batiments.find((x) => x.id === b.batiment_id);
 			return (bA?.numero ?? '').localeCompare(bB?.numero ?? '');
 		});
-	const trierCrAg = (docs: any[]) =>
+	const trierCrAg = (docs: Document[]) =>
 		[...docs].sort((a, b) => {
-			const anneeB = (b.annee as number) ?? 0;
-			const anneeA = (a.annee as number) ?? 0;
+			const anneeB = b.annee ?? 0;
+			const anneeA = a.annee ?? 0;
 			if (anneeB !== anneeA) return anneeB - anneeA;
-			const dateB = (b.date_ag ?? b.publie_le ?? '') as string;
-			const dateA = (a.date_ag ?? a.publie_le ?? '') as string;
+			const dateB = b.date_ag ?? b.publie_le ?? '';
+			const dateA = a.date_ag ?? a.publie_le ?? '';
 			return dateB.localeCompare(dateA);
 		});
 
@@ -115,9 +116,9 @@
 	onMount(async () => {
 		try {
 			const [[copro, eCopro], [bats, eBats], [cats, eCats]] = await Promise.all([
-				essayer<any>(coproprieteApi.get(), null),
-				essayer<any[]>(coproprieteApi.batiments(), []),
-				essayer<any[]>(documentsApi.listCategories(), []),
+				essayer<Copropriete | null>(coproprieteApi.get(), null),
+				essayer<Batiment[]>(coproprieteApi.batiments(), []),
+				essayer(documentsApi.listCategories(), []),
 			]);
 			copropriete = copro;
 			batiments = bats;
@@ -128,23 +129,23 @@
 			//  produite par une erreur survenue deux lignes plus haut.
 			eReference = messagePartiel(eCopro, eBats, eCats);
 
-			catIdPlan = (cats as any[]).find((c) => c.code === 'plan_residence')?.id ?? null;
-			catIdReglement = (cats as any[]).find((c) => c.code === 'reglement_copropriete')?.id ?? null;
-			catIdCrAg = (cats as any[]).find((c) => c.code === 'pv_ag')?.id ?? null;
+			catIdPlan = cats.find((c) => c.code === 'plan_residence')?.id ?? null;
+			catIdReglement = cats.find((c) => c.code === 'reglement_copropriete')?.id ?? null;
+			catIdCrAg = cats.find((c) => c.code === 'pv_ag')?.id ?? null;
 
 			//  Une catégorie absente propage l'erreur des catégories : la liste
 			//  n'est pas vide, elle est indéterminée.
 			const [[p, ep], [r, er], [ag, eag], [diag, ediag]] = await Promise.all([
 				catIdPlan
-					? essayer<any[]>(documentsApi.list(catIdPlan), [])
-					: Promise.resolve([[], eCats] as [any[], string]),
+					? essayer<Document[]>(documentsApi.list(catIdPlan), [])
+					: Promise.resolve([[], eCats] as [Document[], string]),
 				catIdReglement
-					? essayer<any[]>(documentsApi.list(catIdReglement), [])
-					: Promise.resolve([[], eCats] as [any[], string]),
+					? essayer<Document[]>(documentsApi.list(catIdReglement), [])
+					: Promise.resolve([[], eCats] as [Document[], string]),
 				catIdCrAg
-					? essayer<any[]>(documentsApi.list(catIdCrAg), [])
-					: Promise.resolve([[], eCats] as [any[], string]),
-				essayer<any[]>(diagnosticsApi.listTypes(), []),
+					? essayer<Document[]>(documentsApi.list(catIdCrAg), [])
+					: Promise.resolve([[], eCats] as [Document[], string]),
+				essayer<DiagnosticType[]>(diagnosticsApi.listTypes(), []),
 			]);
 			plans = p;
 			ePlans = ep;

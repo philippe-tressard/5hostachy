@@ -97,7 +97,7 @@
 			formMotif = '';
 			formDateFin = '';
 			toast('success', 'Délégation créée');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
@@ -109,7 +109,7 @@
 			const updated = await delegationsApi.accepter(id);
 			delegations = delegations.map((d) => (d.id === id ? updated : d));
 			toast('success', 'Délégation acceptée');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
@@ -120,7 +120,7 @@
 			const updated = await delegationsApi.revoquer(id);
 			delegations = delegations.map((d) => (d.id === id ? updated : d));
 			toast('success', 'Délégation révoquée');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}

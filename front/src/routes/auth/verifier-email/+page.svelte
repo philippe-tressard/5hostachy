@@ -26,7 +26,7 @@
 			const reponse = await authApi.verifierEmail(token);
 			changementAdresse = !!reponse?.changement_adresse;
 			status = 'success';
-		} catch (e: any) {
+		} catch (e) {
 			status = 'expired';
 			errorMessage = messageErreur(e, 'Lien de vérification invalide ou expiré.');
 		}

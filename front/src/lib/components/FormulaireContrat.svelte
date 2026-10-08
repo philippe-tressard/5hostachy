@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Document, Prestataire } from '$lib/api';
+	import type { FormulaireContratData } from '$lib/prestataires';
 	/**
 	 * Le formulaire d'un contrat d'entretien — **un seul rendu**, deux enveloppes.
 	 *
@@ -54,8 +56,8 @@
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 
 	/** L'état du formulaire, lié dans les deux sens par l'appelant. */
-	export let contratForm: any;
-	export let prestataires: any[] = [];
+	export let contratForm: FormulaireContratData;
+	export let prestataires: Prestataire[] = [];
 	export let equipements: readonly { val: string; label: string }[] = [];
 
 	/**
@@ -81,7 +83,7 @@
 	 *   collecte, et un état partagé par une prop liée se lit dans les deux sens
 	 *   sans qu'un des deux côtés invente sa copie. */
 	export let fichiersEnAttente: File[] = [];
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	export let onSupprimer: (contratId: number, docId: number) => void = () => {};
 	export let onAjoute: (contratId: number) => void = () => {};
 

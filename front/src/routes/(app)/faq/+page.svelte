@@ -9,7 +9,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import { onMount } from 'svelte';
 	import { cibleDuHash, revelerCible } from '$lib/deepLink';
-	import { faq as faqApi, manuel } from '$lib/api';
+	import { faq as faqApi, manuel, type EntreeFaq } from '$lib/api';
 	import { isCS, currentUser } from '$lib/stores/auth';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -32,14 +32,14 @@
 	$: _siteNom = $siteNomStore;
 
 	let open: Record<number, boolean> = {};
-	let items: any[] = [];
+	let items: EntreeFaq[] = [];
 	let loading = true;
 	//  Un échec de chargement se DIT (#1329) : il s'affichait « Aucune question ».
 	let erreur = '';
 
 	// ---- edition ----
 	let showForm = false;
-	let editingItem: any | null = null;
+	let editingItem: EntreeFaq | null = null;
 	let form: SaisieFaq = saisieFaqVide();
 	let saving = false;
 	let existingCategories: string[] = [];
@@ -106,7 +106,7 @@
 		showForm = true;
 	}
 
-	async function openEdit(it: any) {
+	async function openEdit(it: EntreeFaq) {
 		editingItem = it;
 		await chargerCategories();
 		form = saisieFaqDepuis(it, existingCategories);
@@ -140,8 +140,9 @@
 				actif: true,
 			};
 			if (editingItem) {
-				const updated = await faqApi.update(editingItem.id, payload);
-				items = items.map((i) => (i.id === editingItem.id ? updated : i));
+				const id = editingItem.id;
+				const updated = await faqApi.update(id, payload);
+				items = items.map((i) => (i.id === id ? updated : i));
 				toast('success', 'Élément mis à jour.');
 			} else {
 				const created = await faqApi.create(payload);
@@ -149,29 +150,29 @@
 				toast('success', 'Élément ajouté.');
 			}
 			showForm = false;
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			saving = false;
 		}
 	}
 
-	async function deleteItem(it: any) {
+	async function deleteItem(it: EntreeFaq) {
 		if (!(await confirmer(SUPPRESSION(`« ${it.question} »`)))) return;
 		try {
 			await faqApi.delete(it.id);
 			items = items.filter((i) => i.id !== it.id);
 			toast('info', 'Élément supprimé.');
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
 
-	async function toggleActif(it: any) {
+	async function toggleActif(it: EntreeFaq) {
 		try {
 			const updated = await faqApi.update(it.id, { actif: !it.actif });
 			items = items.map((i) => (i.id === it.id ? updated : i));
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
@@ -206,7 +207,7 @@
 			items = items.map((i) => (i.categorie === oldName ? { ...i, categorie: newName } : i));
 			toast('success', 'Catégorie renommée.');
 			cancelEditCategory();
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			savingCategory = false;

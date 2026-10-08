@@ -47,8 +47,9 @@
 	let userSearch = '';
 	let userStatutFilter = '';
 	let userCompteFilter = '';
-	let roleEnCours: { user: any; role: string; action: 'ajouter' | 'retirer' } | null = null;
-	let editUser: any | null = null;
+	let roleEnCours: { user: UtilisateurAdmin; role: string; action: 'ajouter' | 'retirer' } | null =
+		null;
+	let editUser: UtilisateurAdmin | null = null;
 	let editForm = formulaireCompte();
 	/** Le mot de passe de l'administrateur, si l'adresse change (#1549) — jamais gardé. */
 	let motDePasseAdmin = '';
@@ -69,9 +70,9 @@
 	}
 
 	//  L'accueil d'un arrivant : sa modale porte son état et son envoi.
-	let accueilPour: any | null = null;
+	let accueilPour: UtilisateurAdmin | null = null;
 
-	function demanderRole(u: any, role: string, action: 'ajouter' | 'retirer') {
+	function demanderRole(u: UtilisateurAdmin, role: string, action: 'ajouter' | 'retirer') {
 		roleEnCours = { user: u, role, action };
 	}
 
@@ -99,7 +100,7 @@
 		}
 	}
 
-	function openEdit(u: any) {
+	function openEdit(u: UtilisateurAdmin) {
 		editForm = formulaireCompte(u);
 		editUser = u;
 		motDePasseAdmin = '';
@@ -134,7 +135,7 @@
 	 *   définitive (`lint:suppression-confirmee`, #779). La modale écrite ici à la
 	 *   main disait la même chose autrement, et rendait « Erreur » là où l'API
 	 *   expliquait pourquoi : `confirmerPuis` passe par `messageErreur`. */
-	function supprimerUtilisateur(u: any) {
+	function supprimerUtilisateur(u: UtilisateurAdmin) {
 		return confirmerPuis(
 			SUPPRESSION(`Le compte de ${nomAffiche(u)} (${u.email}).`),
 			`${nomAffiche(u)} supprimé.`,
@@ -145,7 +146,7 @@
 		);
 	}
 
-	async function toggleBanCommunaute(u: any) {
+	async function toggleBanCommunaute(u: UtilisateurAdmin) {
 		const isBanned =
 			u.communaute_interdit ||
 			(u.communaute_ban_jusqu_au && new Date(u.communaute_ban_jusqu_au) > new Date());
@@ -182,7 +183,7 @@
 		.sort(comparerParNom);
 
 	// Rôles actifs : affiche les rôles réels (P·R·E·CS·A) depuis u.roles
-	function userBatimentLabel(u: any): string {
+	function userBatimentLabel(u: UtilisateurAdmin): string {
 		if (u.batiment_id && batimentsMap[u.batiment_id]) return batimentsMap[u.batiment_id];
 		if (u.batiment_nom) return u.batiment_nom;
 		if (u.batiment_id) return `Bât. ${u.batiment_id}`;

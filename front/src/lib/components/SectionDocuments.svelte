@@ -37,10 +37,11 @@
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import type { Document } from '$lib/api';
 
 	/** Le titre affiché, emoji compris — la page reste maîtresse de son vocabulaire. */
 	export let titre: string;
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	/**  Non vide = on n'a PAS pu charger. Distinct de « chargé et vide » : c'est
 	 *   toute la raison de ce lot (#522). */
 	export let erreur = '';
@@ -48,12 +49,12 @@
 	/** Le lecteur peut-il ajouter, corriger et supprimer ? (conseil syndical) */
 	export let peutModifier = false;
 	/** L'URL de téléchargement — construite par la page, qui connaît son client API. */
-	export let urlTelechargement: (doc: any) => string;
+	export let urlTelechargement: (doc: Document) => string;
 	export let onAjouter: () => void;
-	export let onModifier: (doc: any) => void;
+	export let onModifier: (doc: Document) => void;
 	export let onSupprimer: (id: number) => void;
 	/** Rendu de la date d'un document ; vide = pas de date affichée. */
-	export let dateDe: (doc: any) => string = () => '';
+	export let dateDe: (doc: Document) => string = () => '';
 </script>
 
 <section class="section-documents">

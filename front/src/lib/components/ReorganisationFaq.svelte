@@ -9,19 +9,19 @@
 -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { faq as faqApi } from '$lib/api';
+	import { faq as faqApi, type EntreeFaq } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { messageErreur } from '$lib/erreurs';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { grouperParCategorie, normalizeCategorieLabel } from '$lib/faq';
 
-	export let items: any[];
+	export let items: EntreeFaq[];
 
-	const dispatch = createEventDispatcher<{ fermer: any[] | null }>();
+	const dispatch = createEventDispatcher<{ fermer: EntreeFaq[] | null }>();
 
-	let copie: any[] = items.map((i) => ({ ...i }));
-	let dragItem: any | null = null;
-	let dragOverItem: any | null = null;
+	let copie: EntreeFaq[] = items.map((i) => ({ ...i }));
+	let dragItem: EntreeFaq | null = null;
+	let dragOverItem: EntreeFaq | null = null;
 	let dragCategory: string | null = null;
 	let enregistrement = false;
 
@@ -40,7 +40,7 @@
 	//  Les deux copies la reconstruisaient en `[...autres, ...catégorie]` : le
 	//  regroupement suivant l'ordre d'apparition, déplacer une question envoyait
 	//  toute sa catégorie en bas de l'écran (trouvé par `faq-reorganiser.spec`).
-	function remplacerCategorie(category: string, ordonnes: any[]) {
+	function remplacerCategorie(category: string, ordonnes: EntreeFaq[]) {
 		ordonnes.forEach((it, idx) => {
 			it.ordre = idx;
 		});
@@ -50,12 +50,12 @@
 		);
 	}
 
-	function handleDragStart(item: any, category: string) {
+	function handleDragStart(item: EntreeFaq, category: string) {
 		dragItem = item;
 		dragCategory = category;
 	}
 
-	function handleDragOver(e: DragEvent, item: any, category: string) {
+	function handleDragOver(e: DragEvent, item: EntreeFaq, category: string) {
 		if (dragCategory !== category) return;
 		e.preventDefault();
 		dragOverItem = item;
@@ -66,8 +66,10 @@
 		if (!dragItem || !dragOverItem || dragCategory !== category) return;
 		const catItems = groupes[category];
 		if (!catItems) return;
-		const fromIndex = catItems.findIndex((i: any) => i.id === dragItem.id);
-		const toIndex = catItems.findIndex((i: any) => i.id === dragOverItem.id);
+		const depart = dragItem.id;
+		const arrivee = dragOverItem.id;
+		const fromIndex = catItems.findIndex((i) => i.id === depart);
+		const toIndex = catItems.findIndex((i) => i.id === arrivee);
 		if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
 		const ordonnes = [...catItems];
 		const [moved] = ordonnes.splice(fromIndex, 1);
@@ -76,10 +78,10 @@
 		finGlisser();
 	}
 
-	function moveItem(category: string, item: any, direction: -1 | 1) {
+	function moveItem(category: string, item: EntreeFaq, direction: -1 | 1) {
 		const catItems = groupes[category];
 		if (!catItems) return;
-		const idx = catItems.findIndex((i: any) => i.id === item.id);
+		const idx = catItems.findIndex((i) => i.id === item.id);
 		const targetIdx = idx + direction;
 		if (targetIdx < 0 || targetIdx >= catItems.length) return;
 		const ordonnes = [...catItems];

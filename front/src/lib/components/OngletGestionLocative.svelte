@@ -106,7 +106,7 @@
 				'success',
 				nouvellesBaux.length > 1 ? `${nouvellesBaux.length} baux créés` : 'Bail créé',
 			);
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e));
 		} finally {
 			savingBail = false;
@@ -166,7 +166,7 @@
 			toast('success', `${n} accès affecté${n > 1 ? 's' : ''} automatiquement`);
 			const lecture = lireBaux();
 			if (lecture) baux = await lecture;
-		} catch (e: any) {
+		} catch (e) {
 			toast('error', messageErreur(e, "Erreur lors de l'affectation automatique"));
 		}
 	}

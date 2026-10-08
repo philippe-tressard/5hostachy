@@ -23,6 +23,7 @@
 		prestataires as prestApi,
 		documents as docsApi,
 		type ContratEntretien,
+		type Document,
 		type Notation,
 		type Prestataire,
 	} from '$lib/api';
@@ -100,7 +101,7 @@
 	// ── Documents ─────────────────────────────────────────────────
 	//  Chaque `DocumentsContrat` porte son propre envoi (#370) ; il ne reste ici
 	//  que la liste, qui appartient à l'onglet puisque c'est lui qui l'affiche.
-	let contratDocsMap: Record<number, any[]> = {};
+	let contratDocsMap: Record<number, Document[]> = {};
 
 	/** Les contrats rangés — `archivee` vient du serveur (`REGLES["contrat"]`). */
 	let archives: ContratEntretien[] = [];
@@ -138,9 +139,9 @@
 	 *   rangé montre les siens comme une autre. */
 	async function chargerDocs(liste: ContratEntretien[]) {
 		const results = await Promise.allSettled(
-			liste.map((c) => docsApi.list(undefined, c.id).then((docs: any[]) => ({ id: c.id, docs }))),
+			liste.map((c) => docsApi.list(undefined, c.id).then((docs) => ({ id: c.id, docs }))),
 		);
-		const map: Record<number, any[]> = { ...contratDocsMap };
+		const map: Record<number, Document[]> = { ...contratDocsMap };
 		for (const r of results) {
 			if (r.status === 'fulfilled') map[r.value.id] = r.value.docs;
 		}
