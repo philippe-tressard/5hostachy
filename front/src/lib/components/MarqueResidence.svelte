@@ -23,7 +23,12 @@
 	const TAILLE_LOGO = { barre: 64, entete: 30 };
 </script>
 
-<a href="/tableau-de-bord" class="marque {variante}">
+<a
+	href="/tableau-de-bord"
+	class="marque"
+	class:barre={variante === 'barre'}
+	class:entete={variante === 'entete'}
+>
 	<LogoResidence taille={TAILLE_LOGO[variante]} />
 	<span class="nom">{$siteNomStore}</span>
 </a>
