@@ -36,7 +36,7 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D5 | Opérateur de plateforme | **aucun accès aux données** d'une copropriété, même pour l'assistance | §4.7 ; l'assistance passe par l'administrateur de la copro |
 | D6 | Canaux et services | **par copropriété**, et **chaque service se désactive** | §4.8 ; premier lot : #1718 |
 | D7 | Licence | **GNU AGPLv3 pure**, sans clause commerciale — appliquée en v2.116.0 | §7 |
-| D8 | Une personne dans deux copros | le cas existe, **rare**. Lecture retenue, **à confirmer** : deux comptes indépendants, un par caisson | §4.7 |
+| D8 | Une personne dans deux copros | le cas existe, **rare** : **deux comptes indépendants**, un par caisson — confirmé le 08/10/2026 | §4.7 |
 | D9 | Nom de la plateforme (07/10/2026) | **CoproConnect** ; la résidence garde le sien, « 5Hostachy » | §8, phase 1 : le nom de la **plateforme** (attribution, lien vers le source) et celui de la **résidence** (administrable) sont deux réglages distincts |
 | D10 | Variante de la licence (07/10/2026) | **`AGPL-3.0-or-later`** | §7 |
 
@@ -146,7 +146,7 @@ pas les autres**. Chaque exécution est journalisée par copro.
 ### 4.7 Les identités, les rôles et l'opérateur
 
 - **Un compte appartient à une copropriété.** Le même courriel peut exister dans
-  deux copros sous la forme de **deux comptes indépendants** (D8, à confirmer).
+  deux copros sous la forme de **deux comptes indépendants** (D8, confirmée le 08/10/2026).
   Aucun pont, aucun sélecteur entre caissons.
 - **Deux niveaux d'administration** : l'**administrateur de copro**, qui gère sa
   résidence, et l'**opérateur de plateforme**, qui crée, suspend et supervise les
@@ -280,7 +280,7 @@ soumis à accord, lot par lot.
 | P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3) | M | — | #1747 |
 | P2-6 | **Stockage des fichiers** derrière une interface, disque local puis stockage objet, préfixe par copro (§4.4). Décision à y prendre : `/uploads/*` n'est plus servi en statique par Caddy | M | P2-2 | #1748 |
 | P2-7 | **Export / import vérifié** d'une copro (comptes et sommes de contrôle par table) : sauvegarde vérifiée aujourd'hui, passage à PostgreSQL demain, réversibilité ensuite (§4.3, §4.9) | M | — | #1749 |
-| P2-8 | **Scission du rôle `admin`** : administrateur de copro et opérateur de plateforme, sans donnée personnelle (§4.7, §5.5) | M | D8 confirmée | #1750 |
+| P2-8 | **Scission du rôle `admin`** : administrateur de copro et opérateur de plateforme, sans donnée personnelle (§4.7, §5.5) | M | — (D8 confirmée le 08/10/2026) | #1750 |
 | P2-9 | **Résolution par nom d'hôte** (§4.1, règles 1 et 2). ⚠️ Le standby est servi par son IP locale (`ORIGIN`) : le registre rattache **plusieurs hôtes** à une même copro. En dernier | S | P2-2 | #1751 |
 
 **Ce que la phase 2 ne fait pas, exprès :**
@@ -301,7 +301,7 @@ soumis à accord, lot par lot.
    des données.
 3. ~~**Nom du produit**~~ — tranché le 07/10/2026 : **CoproConnect** (D9). Reste la
    recherche d'antériorité de la marque (§7).
-4. **D8** : confirmer les deux comptes indépendants.
+4. ~~**D8**~~ — confirmée le 08/10/2026 : **deux comptes indépendants**.
 5. **Licence** : la variante est tranchée (`-or-later`, D10) ; restent la politique
    de marque et les vérifications d'avant changement (§7).
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
