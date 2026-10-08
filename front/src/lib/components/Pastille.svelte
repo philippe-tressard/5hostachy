@@ -115,6 +115,12 @@
 	 * préserver. C'est ce que faisait `.cat-option input[type='radio']`.
 	 */
 	export let radio: { nom: string; valeur: string } | null = null;
+
+	/**  Une pastille qui s'ACTIVE ou se DÉSACTIVE, indépendamment des autres
+	 *   (08/10/2026, éléments du pied de page) : `aria-pressed` dit son état au
+	 *   lecteur d'écran, que le fond plein ne lui dit pas. Laissé à `undefined`,
+	 *   l'attribut n'est pas rendu : un choix exclusif n'est pas un interrupteur. */
+	export let bascule = false;
 </script>
 
 <!--  ⚠️ `$$slots.detail` et non une prop : c'est le SEUL moyen pour Svelte de
@@ -160,6 +166,7 @@
 		class:petite
 		class:privatif
 		class:avec-detail={$$slots.detail}
+		aria-pressed={bascule ? active : undefined}
 		on:click
 	>
 		{#if icone}<Icon name={icone} size={15} />{/if}
