@@ -74,6 +74,22 @@ def test_badge_et_pied_du_manuel_portent_la_meme_version():
         )
 
 
+def test_le_manuel_montre_le_logo_de_la_residence():
+    """Le logo du manuel est celui que sert le site, jamais un dessin recopié (#1728).
+
+    Le manuel portait l'ancien logo en SVG écrit dans sa marge ; il y est resté
+    quand le logo est devenu téléversable, et seul l'écran l'a montré.
+    """
+    for nom in _MANUELS:
+        html = (_RACINE / "docs" / nom).read_text(encoding="utf-8")
+        marque = re.search(r'<div class="sidebar-logo">(.*?)</small>', html, re.S)
+        assert marque, f"{nom} : marque de la marge introuvable — le contrôle ne lit plus rien"
+        assert "/api/config/logo.png" in marque.group(1), (
+            f"{nom} : la marque doit afficher /api/config/logo.png, le logo de la résidence"
+        )
+        assert "<svg" not in marque.group(1), f"{nom} : un logo dessiné en dur dans la marge"
+
+
 def test_badge_python_du_readme_suit_l_image_de_production():
     """Le badge Python du README doit refléter `api/Dockerfile`.
 
