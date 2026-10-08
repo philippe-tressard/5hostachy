@@ -15,7 +15,8 @@ Ce que le test tient, sur le texte du workflow (PyYAML vient avec
 - le workflow ne tourne que sur `main` (ou à la main), jamais sur une PR : une PR
   d'un fork ne doit pas pouvoir publier ;
 - aucun droit par défaut, et l'écriture des paquets seulement là où elle sert ;
-- la version vient de `front/package.json` et le tag de `scripts/ci/tag-version.sh` ;
+- chaque commit publie sous `sha-<commit>` (le canal du maître) ; la version vient
+  de `front/package.json` et le tag de `scripts/ci/tag-version.sh` ;
 - aucune étiquette flottante (`latest`) : une installation désigne une version.
 """
 
@@ -103,6 +104,16 @@ def test_la_version_et_le_tag_ont_une_seule_source():
     assert "check-version-servie.mjs --client" in texte, (
         "le pied de page de l'image publiée doit être lu, pas supposé"
     )
+
+
+def test_chaque_commit_publie_sous_son_empreinte():
+    """Le maître tire `sha-<commit>` : aucun commit de main ne doit en manquer (arbitrage du 08/10)."""
+    flux = _yaml(WORKFLOW)
+    assert "if" not in flux["jobs"]["construire"], "la construction ne dépend pas d'un bump"
+    assert "if" not in flux["jobs"]["publier"]
+    texte = WORKFLOW.read_text(encoding="utf-8")
+    assert '"$IMAGE:sha-$COMMIT"' in texte
+    assert "COMMIT: ${{ github.sha }}" in texte, "l'empreinte complète, pas une abréviation"
 
 
 def test_aucune_etiquette_flottante():

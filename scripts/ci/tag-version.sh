@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
-#  tag-version.sh — Poser le tag `vX.Y.Z` d'une version, et dire s'il faut
-#  publier ses images (#1753, 08/10/2026)
+#  tag-version.sh — Poser le tag `vX.Y.Z` d'une version, et dire si les
+#  images du commit reçoivent l'étiquette de version (#1753, 08/10/2026)
 #
 #  Lot DI-1 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
 #  §4.10, D12) : chaque version bumpée sur `main` reçoit UN tag, posé par la CI,
@@ -10,16 +10,17 @@
 #
 #  ## La décision (fonction PURE, testée par --selftest)
 #
-#  | Le tag `vX.Y.Z`…               | Verdict   | Ce que fait le workflow                     |
-#  |--------------------------------|-----------|---------------------------------------------|
-#  | n'existe pas                   | `creer`   | pose le tag, publie les images              |
-#  | existe, sur CE commit          | `deja`    | publie (relance du même run : idempotent)   |
-#  | existe, sur un AUTRE commit    | `ignorer` | rien : lot fusionné sans bump (0d « ÉCART ») |
-#  | version illisible              | `erreur`  | échoue                                      |
+#  | Le tag `vX.Y.Z`…               | Verdict   | Images de ce commit étiquetées…              |
+#  |--------------------------------|-----------|----------------------------------------------|
+#  | n'existe pas                   | `creer`   | `sha-<commit>` ET `X.Y.Z` ; le tag est posé   |
+#  | existe, sur CE commit          | `deja`    | idem (relance du même run : idempotent)       |
+#  | existe, sur un AUTRE commit    | `ignorer` | `sha-<commit>` seulement : lot sans bump      |
+#  | version illisible              | `erreur`  | le run échoue                                 |
 #
 #  « ignorer » n'est pas une erreur : un lot sans bump se déploie quand même
-#  (`mep-precheck`, point 0d). Il n'a simplement pas de version à lui, donc pas
-#  d'images — une image étiquetée `2.119.1` doit contenir 2.119.1, pas son
+#  (`mep-precheck`, point 0d), et le maître en tire l'image par `sha-<commit>`
+#  (arbitrage du 08/10/2026). Il n'a simplement pas de VERSION à lui : une image
+#  étiquetée `2.119.1` doit être celle du commit qui a posé 2.119.1, pas son
 #  successeur sans numéro.
 #
 #  Usage : bash scripts/ci/tag-version.sh <version>   (dans un clone aux tags lus)
@@ -53,7 +54,7 @@ if [ "${1:-}" = "--selftest" ]; then
     echo "== self-test : tag d'une version =="
     attendu "version neuve → créer"                  creer   2.119.1 ""      abc123
     attendu "relance sur le même commit → déjà"      deja    2.119.1 abc123  abc123
-    attendu "lot sans bump → ignorer, pas d'images"  ignorer 2.119.1 abc123  def456
+    attendu "lot sans bump → ignorer (sha seul)"     ignorer 2.119.1 abc123  def456
     attendu "version illisible → erreur"             erreur  "2.119" ""      abc123
     attendu "préfixe v refusé (le tag l'ajoute)"     erreur  v2.119.1 ""     abc123
     attendu "version vide → erreur"                  erreur  ""      ""      abc123
@@ -73,17 +74,17 @@ case "$verdict" in
             tag -a "$tag" -m "CoproConnect $tag" "$head"
         git push origin "refs/tags/$tag"
         echo "Tag $tag posé sur $head."
-        publier=true ;;
+        versionner=true ;;
     deja)
         echo "Tag $tag déjà posé sur ce commit : publication relancée."
-        publier=true ;;
+        versionner=true ;;
     ignorer)
-        echo "::notice::$tag porte déjà le commit $commit_du_tag : ce lot n'a pas de bump, aucune image publiée."
-        publier=false ;;
+        echo "::notice::$tag porte déjà le commit $commit_du_tag : ce lot n'a pas de bump, ses images ne sont étiquetées que par leur commit."
+        versionner=false ;;
     *)
         echo "::error::version illisible dans front/package.json : « $version »"
         exit 1 ;;
 esac
 
-[ -n "${GITHUB_OUTPUT:-}" ] && echo "publier=$publier" >> "$GITHUB_OUTPUT"
+[ -n "${GITHUB_OUTPUT:-}" ] && echo "versionner=$versionner" >> "$GITHUB_OUTPUT"
 exit 0

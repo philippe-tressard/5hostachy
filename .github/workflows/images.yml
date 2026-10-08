@@ -3,11 +3,13 @@ name: Images
 #  Lot DI-1 (#1753, 08/10/2026) — chantier multi-copropriétés, distribution
 #  (`specs/architecture/multi-coproprietes.md` §4.10, D12).
 #
-#  Chaque version bumpée sur `main` reçoit :
-#  - UN tag `vX.Y.Z`, posé ici et jamais à la main (`scripts/ci/tag-version.sh`) ;
-#  - les images de ses quatre services, construites UNE fois, pour amd64 et arm64
-#    (les Raspberry Pi), publiées sur ghcr.io/philippe-tressard/coproconnect-<service>
-#    et adressées par EMPREINTE ;
+#  Chaque commit de `main` reçoit les images de ses quatre services, construites
+#  UNE fois, pour amd64 et arm64 (les Raspberry Pi), publiées sur
+#  ghcr.io/philippe-tressard/coproconnect-<service> et étiquetées `sha-<commit>` :
+#  le canal continu, que tire le maître (DI-6, #1758). Une version bumpée reçoit
+#  EN PLUS le tag git `vX.Y.Z`, posé ici et jamais à la main
+#  (`scripts/ci/tag-version.sh`), et l'étiquette d'image `X.Y.Z` — arbitrage du
+#  08/10/2026 : une image par commit, la version quand elle change ;
 #  - une attestation de provenance SIGNÉE (Sigstore, par le jeton OIDC du run)
 #    et une SBOM par image.
 #
@@ -15,8 +17,7 @@ name: Images
 #
 #  ⚠️ Aucune installation ne tire encore ces images : le maître les tirera au lot
 #  DI-6 (#1758), les répliques au lot DI-4 (#1756). Ce workflow ne change donc
-#  rien à la production. Un lot fusionné SANS bump ne publie rien : son numéro est
-#  déjà pris par le commit précédent.
+#  rien à la production.
 #
 #  🔒 `api/tests/test_images_publiees.py` confronte la matrice aux services de
 #  `docker-compose.yml` : un service construit qui ne serait pas publié manquerait
@@ -49,7 +50,7 @@ jobs:
     outputs:
       version: ${{ steps.lire.outputs.version }}
       empreinte: ${{ steps.lire.outputs.empreinte }}
-      publier: ${{ steps.tag.outputs.publier }}
+      versionner: ${{ steps.tag.outputs.versionner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -74,7 +75,6 @@ jobs:
   construire:
     name: Construire ${{ matrix.service.nom }} (${{ matrix.plateforme }})
     needs: version
-    if: needs.version.outputs.publier == 'true'
     #  Un runner natif par architecture : l'émulation arm64 multiplierait par dix
     #  la construction de l'API (bibliothèques du rendu PDF).
     runs-on: ${{ matrix.plateforme == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
@@ -102,7 +102,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      #  Poussée par empreinte, sans étiquette : l'étiquette `X.Y.Z` ne se pose
+      #  Poussée par empreinte, sans étiquette : les étiquettes ne se posent
       #  qu'une fois les deux architectures construites (job `publier`), si bien
       #  qu'elle ne désigne jamais une image à moitié publiée.
       #  `INSTANCE_ID` reste vide : l'image ne nomme aucun nœud (il se lira à
@@ -140,7 +140,7 @@ jobs:
           if-no-files-found: error
 
   publier:
-    name: Publier ${{ matrix.service }} ${{ needs.version.outputs.version }}
+    name: Publier ${{ matrix.service }}
     needs: [version, construire]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -168,11 +168,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Étiqueter les deux architectures sous la version
+      - name: Étiqueter les deux architectures (commit, et version si elle change)
         id: index
         env:
           IMAGE: ${{ env.REGISTRE }}/coproconnect-${{ matrix.service }}
           VERSION: ${{ needs.version.outputs.version }}
+          VERSIONNER: ${{ needs.version.outputs.versionner }}
+          COMMIT: ${{ github.sha }}
         run: |
           n=$(ls empreintes | wc -l)
           if [ "$n" -ne 2 ]; then
@@ -180,11 +182,13 @@ jobs:
             exit 1
           fi
           refs=$(for f in empreintes/*; do printf '%s@%s ' "$IMAGE" "$(cat "$f")"; done)
+          etiquettes=(-t "$IMAGE:sha-$COMMIT")
+          if [ "$VERSIONNER" = true ]; then etiquettes+=(-t "$IMAGE:$VERSION"); fi
           # shellcheck disable=SC2086 — une référence par architecture
-          docker buildx imagetools create -t "$IMAGE:$VERSION" $refs
-          digest=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+          docker buildx imagetools create "${etiquettes[@]}" $refs
+          digest=$(docker buildx imagetools inspect "$IMAGE:sha-$COMMIT" --format '{{json .Manifest}}' | jq -r .digest)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "Publié : $IMAGE:$VERSION ($digest)"
+          echo "Publié : $IMAGE:sha-$COMMIT (version $VERSION étiquetée : $VERSIONNER) — $digest"
 
       - name: Attester la provenance (signée)
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -215,7 +219,7 @@ jobs:
       #  et pied de page disent alors la même chose, ou le run échoue.
       - name: Lire la version dans le client de l'image
         env:
-          IMAGE: ${{ env.REGISTRE }}/coproconnect-front:${{ needs.version.outputs.version }}
+          IMAGE: ${{ env.REGISTRE }}/coproconnect-front:sha-${{ github.sha }}
         run: |
           id=$(docker create --platform linux/amd64 "$IMAGE")
           docker cp "$id:/app/build/client" "$RUNNER_TEMP/client"
