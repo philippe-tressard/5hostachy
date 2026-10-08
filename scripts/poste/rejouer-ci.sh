@@ -204,7 +204,12 @@ TMP=$(mktemp -d) || exit 2
 trap 'rm -rf "$TMP" "$VERROU_REJEU" ${SCRIPTS_PY_EXPOSES:+"$SCRIPTS_PY_EXPOSES"}' EXIT
 ci_extraire < "$CI" > "$TMP/flux"
 
-NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_PREP=0
+NB_OK=0; NB_FAIL=0; NB_INCONNU=0; NB_PREP=0; NB_SAUTS=0
+
+#  Les tests SAUTÉS se nomment (#1734) : le crochet de `api/tests/conftest.py`
+#  les consigne dans ce fichier, que chaque étape vide avant de tourner. Hors
+#  rejeu la variable est absente, et pytest n'écrit rien.
+export REJEU_SAUTS="$TMP/sauts"
 
 #  🔴 La sortie COMPLÈTE d'une étape en échec est gardée (#1150, 25/09/2026).
 #  Le rapport n'en montre que la queue, et pour Playwright la queue est faite
@@ -255,7 +260,7 @@ verifier_dependances() {   # $1 = job, $2 = rép, $3 = corps de l'installation
 }
 
 executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/corps
-  local corps genre sortie code duree t0
+  local corps genre sortie code duree t0 sauts n_sauts
   corps=$(ci_substituer "$SHA_COURT" < "$TMP/corps")
   genre=$(printf '%s\n' "$corps" | ci_classer)
 
@@ -280,6 +285,7 @@ executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/c
   fi
 
   printf '%s\n' "$corps" > "$TMP/etape.sh"
+  : > "$TMP/sauts"
   t0=$(date +%s)
   (
     cd "$RACINE${3:+/$3}" || exit 127
@@ -298,7 +304,10 @@ executer() {               # $1 = job, $2 = étape, $3 = rép, corps dans $TMP/c
 
   sortie=$(ci_requalifier "$code" < "$TMP/sortie")
   case "$sortie" in
-    OK)       rapporter OK "$1" "$2" "${duree}s" ;;
+    OK)       sauts=$(ci_resumer_sauts < "$TMP/sauts")
+              n_sauts=${sauts%% *}
+              NB_SAUTS=$((NB_SAUTS + ${n_sauts:-0}))
+              rapporter OK "$1" "$2" "${duree}s${sauts:+ — $sauts}" ;;
     INCONNU*) rapporter INCONNU "$1" "$2" "${sortie#INCONNU } (${duree}s)" ;;
     *)        rapporter FAIL "$1" "$2" "code $code (${duree}s)"
               sed 's/^/      │ /' "$TMP/sortie" | tail -15
@@ -359,6 +368,7 @@ REJOUEES=$((NB_OK + NB_FAIL + NB_INCONNU))
 echo "───────────────────────────────────────────────────────────────────────────────"
 printf "%d étape(s) rejouée(s) sur %d extraite(s) — OK=%d ÉCHEC=%d INCONNU=%d (préparation=%d)\n" \
        "$REJOUEES" "$ECRIT" "$NB_OK" "$NB_FAIL" "$NB_INCONNU" "$NB_PREP"
+[ "$NB_SAUTS" -gt 0 ] && echo "· $NB_SAUTS test(s) sauté(s) ici, que seule la CI GitHub joue — le détail est sur la ligne de leur étape (#1734)."
 
 if [ "$REJOUEES" -eq 0 ]; then
   echo "? Aucune étape rejouée — ce n'est pas un succès, c'est une absence de mesure."
@@ -369,7 +379,7 @@ if [ -n "$FILTRE" ]; then
   echo "  (rejeu partiel : aucune trace écrite — le point 16 du pré-check exige le rejeu complet.)"
 else
   mkdir -p "$(dirname "$MARQUEUR")"
-  printf '%s %s OK=%d FAIL=%d INCONNU=%d\n' "$SHA" "$(date +%s)" "$NB_OK" "$NB_FAIL" "$NB_INCONNU" > "$MARQUEUR"
+  printf '%s %s OK=%d FAIL=%d INCONNU=%d SAUTS=%d\n' "$SHA" "$(date +%s)" "$NB_OK" "$NB_FAIL" "$NB_INCONNU" "$NB_SAUTS" > "$MARQUEUR"
 fi
 
 [ "$NB_FAIL" -gt 0 ] && { echo "✗ La CI échouerait — corriger avant de pousser."; exit 1; }

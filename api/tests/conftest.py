@@ -240,3 +240,14 @@ def utilisateur():
         session.commit()
         purger_ligne(session, Utilisateur, u.id)
         session.commit()
+
+
+def pytest_runtest_logreport(report):
+    """Les tests sautés, consignés pour le rejeu local de la CI (#1734).
+
+    Sans `REJEU_SAUTS`, ne fait rien — la CI n'en sait rien. Le pourquoi :
+    `tests/aides_rejeu.py`.
+    """
+    from tests.aides_rejeu import consigner_saut
+
+    consigner_saut(report)
