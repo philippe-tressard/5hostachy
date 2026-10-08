@@ -222,6 +222,7 @@ AUTOUR d'un verdict faux est un contrôle qu'on finit par ne plus lire.
 | 18 | **Images du standby bâties sur son code** — le point 10 compare deux HEAD, pas ce qu'un failover démarre (#511) | OK · FAIL · INCONNU |
 | 19 | **Liens des courriels servis par la production** | OK · ÉCART · FAIL · INCONNU |
 | 20 | **Ordre du menu servi** (`pages_order`) — un fantôme rend ÉCART, une répétition FAIL (#1114) | OK · ÉCART · FAIL · INCONNU |
+| 21 | **Textes légaux servis complets** — un « À RENSEIGNER » dans la page publique rend ÉCART : à compléter dans Admin › Légal (#1585) | OK · ÉCART · INCONNU |
 
 ### Lire le verdict
 
