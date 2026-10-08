@@ -4,10 +4,10 @@
 	import { locale, NAV_LABELS } from '$lib/stores/locale';
 	import { auth as authApi } from '$lib/api';
 	import { CHEMIN_CONNEXION } from '$lib/redirection';
-	import { configStore, siteNomStore, getPageConfig } from '$lib/stores/pageConfig';
+	import { configStore, getPageConfig } from '$lib/stores/pageConfig';
 	import Icon from '$lib/components/Icon.svelte';
 	import LiensGuide from '$lib/components/LiensGuide.svelte';
-	import LogoResidence from '$lib/components/LogoResidence.svelte';
+	import MarqueResidence from '$lib/components/MarqueResidence.svelte';
 	import {
 		HREFS_DEFAUT,
 		HREF_VERS_PAGE,
@@ -32,14 +32,6 @@
 		});
 		return { href, icon: cfg.icone ?? def.icone, label: cfg.navLabel ?? def.navLabel };
 	}
-
-	/** Côté du logo de la résidence, en pixels. Il était de 22 px, la taille
-	 *  d'une icône du menu : un logo téléversé est une vignette pleine, et son
-	 *  dessin s'y réduisait à une tache. « Doublé ou triplé » sur la barre
-	 *  latérale (arbitré à l'écran, 08/10/2026). L'en-tête mobile ne fait que
-	 *  3,25 rem — 39 px au téléphone —, d'où une taille à part, qui y laisse
-	 *  une marge. 🔒 `e2e/logo-menu.spec.ts` */
-	const TAILLE_LOGO = { barre: 64, mobile: 30 };
 
 	let menuOpen = false;
 
@@ -80,7 +72,6 @@
 	}
 
 	$: t = NAV_LABELS[$locale];
-	$: siteNom = $siteNomStore;
 
 	function computeOrderedHrefs(orderJson: string | undefined): string[] {
 		if (!orderJson) return HREFS_DEFAUT;
@@ -154,10 +145,7 @@
 
 <!-- ─── Sidebar desktop ─────────────────────────────────────────────────── -->
 <nav class="sidebar">
-	<a href="/tableau-de-bord" class="brand brand-link">
-		<span class="brand-icon"><LogoResidence taille={TAILLE_LOGO.barre} /></span>
-		<span class="brand-name">{siteNom}</span>
-	</a>
+	<MarqueResidence variante="barre" />
 
 	<div class="nav-section">
 		{#each allNav as item (item.href)}
@@ -189,14 +177,7 @@
 
 <!-- ─── Topbar mobile (hamburger) ──────────────────────────────────────── -->
 <header class="mobile-topbar">
-	<a
-		href="/tableau-de-bord"
-		class="brand-link"
-		style="display:flex;align-items:center;gap:.4rem;text-decoration:none;color:inherit"
-	>
-		<span class="brand-icon"><LogoResidence taille={TAILLE_LOGO.mobile} /></span>
-		<span class="brand-name">{siteNom}</span>
-	</a>
+	<MarqueResidence variante="entete" />
 	<button class="hamburger" on:click={toggleMenu} aria-label="Menu" aria-expanded={menuOpen}>
 		{#if menuOpen}
 			<span class="hb-line hb-close-1"></span>
@@ -253,38 +234,6 @@
 		flex-direction: column;
 		padding: 1rem 0;
 		z-index: 100;
-	}
-
-	/*  `.brand` seul : le lien de l'en-tête mobile porte aussi `.brand-link`, et
-	    héritait de ce rembourrage asymétrique — son logo montait hors de la barre. */
-	.brand {
-		display: flex;
-		/*  Le logo AU-DESSUS du nom, centrés l'un sur l'autre : à 64 px, les deux
-		    ne tiennent pas côte à côte dans les 185 px de la barre. */
-		flex-direction: column;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.5rem 1.25rem 1.25rem;
-		border-bottom: 1px solid var(--color-border);
-		margin-bottom: 0.5rem;
-		text-decoration: none;
-		color: inherit;
-	}
-	@media (hover: hover) and (pointer: fine) {
-		.brand-link:hover {
-			opacity: 0.8;
-		}
-	}
-
-	.brand-icon {
-		display: flex;
-		align-items: center;
-		color: var(--color-primary);
-	}
-	.brand-name {
-		font-weight: 700;
-		font-size: 1.1rem;
-		color: var(--color-primary);
 	}
 
 	.nav-section {
@@ -468,13 +417,6 @@
 			border-bottom: 1px solid var(--color-border);
 			padding: 0 1rem;
 			z-index: 100;
-		}
-
-		.mobile-topbar .brand-name {
-			flex: 1;
-			font-weight: 700;
-			font-size: 1.05rem;
-			color: var(--color-primary);
 		}
 
 		.overlay-backdrop {
