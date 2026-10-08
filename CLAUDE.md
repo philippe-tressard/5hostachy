@@ -936,5 +936,34 @@ Instanciation 5Hostachy :
   refuse l'écart en CI — cette ligne ne nommait que `package.json`, et un bump
   l'a suivie à la lettre le 30/09/2026 (rattrapé au rejeu, pas avant).
 - Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
+- **Chaque commit de `main` publie ses images, le bump y ajoute le tag** (#1753) :
+  le workflow `images.yml` publie les images signées des quatre services sur
+  `ghcr.io/philippe-tressard/coproconnect-*` (amd64 et arm64), étiquetées
+  `sha-<commit>` ; une version bumpée reçoit en plus le tag git `vX.Y.Z` (par
+  `scripts/ci/tag-version.sh`, jamais à la main) et l'étiquette d'image `X.Y.Z`.
+- **Les répliques suivent `replica`, et une version y passe par PROMOTION** (#1754) :
+  le workflow « Promotion », lancé à la main par l'auteur (`gh workflow run
+  promotion.yml -f version=X.Y.Z`), avance `replica` en avance rapide vers le tag
+  et publie les notes de version (release GitHub). `replica` n'a **aucun commit
+  propre** — un correctif passe par `main` puis se promeut ; elle est protégée par
+  une règle du dépôt. Je ne promeus **jamais** de moi-même : c'est la décision de
+  l'auteur, après rodage sur le maître (spec §9, question 8).
+- **Une réplique s'installe par `deploiement/standard/`** (#1755) : la surcouche
+  `compose.images.yml` (`build: !reset`, image publiée à `COPROCONNECT_VERSION`)
+  se pose sur le `docker-compose.yml` de la racine, qui reste la **seule**
+  description des services ; le mode d'emploi est son `LISEZMOI.md`, et l'archive
+  de la version est jointe aux notes de version. Les scripts des RPi ne s'y
+  déplacent pas (arbitrage du 08/10/2026 : ils ne partent déjà pas avec une
+  installation). Le contenu de `front/static/` part tel quel chez toutes : il ne
+  nomme jamais la résidence (`npm run lint:nom-residence`, le manuel dit CoproConnect).
+- **Une réplique se met à jour seule chaque nuit** (#1756) :
+  `deploiement/standard/mise-a-jour.sh` — sauvegarde vérifiée AVANT tout geste,
+  retour à l'image précédente puis à la sauvegarde si la santé reste KO, rapport
+  `mise_a_jour` (courriel de 06:00 en cas d'échec, `utils/sante_mise_a_jour`).
+  Ce retour arrière tient parce que `start.sh` **saute les migrations d'une base
+  en avance sur le code** (`utils/revision_base`) : sans lui, l'ancienne image
+  s'arrêtait en boucle sur une révision inconnue. 🔒 `test_images_publiees.py` :
+  la matrice publie exactement ce que `docker-compose.yml` construit. Aucune
+  installation ne tire encore ces images (DI-6, #1758).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.

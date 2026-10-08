@@ -77,7 +77,17 @@ HORS_GABARIT = {
 #: `test_les_reglages_de_role_ne_s_ecrivent_qu_une_fois` la couvre désormais.
 #: Elle est restée déclarée le temps d'un lot, avec sa réserve écrite, plutôt
 #: que tolérée en silence : c'est la différence entre une exception et un oubli.
-AJUSTEMENTS_DECLARES: dict[tuple[str, str], str] = {}
+AJUSTEMENTS_DECLARES: dict[tuple[str, str], str] = {
+    #  Le self-test des notes de version (#1754) bâtit un dépôt JETABLE (`mktemp`)
+    #  pour éprouver la lecture des réglages ajoutés et retirés : il n'écrit le
+    #  `.env.example` d'aucune installation.
+    ("notes-de-version.sh", "printf 'A=1\\nC=3\\n' > .env.example"): (
+        "self-test : version 1 du gabarit, dans un dépôt jetable"
+    ),
+    ("notes-de-version.sh", "printf 'A=1\\nB=2\\n' > .env.example"): (
+        "self-test : version 2 du gabarit, dans un dépôt jetable"
+    ),
+}
 
 
 def _cles_du_gabarit() -> list[str]:

@@ -43,6 +43,11 @@
  *
  *     node scripts/check-version-servie.mjs                     # CI : build local
  *     node scripts/check-version-servie.mjs --site https://…    # P3 : production
+ *     node scripts/check-version-servie.mjs --client <dossier>  # le client d'une IMAGE publiée
+ *
+ * `--client` lit le dossier `client` d'un build adapter-node (`/app/build/client`
+ * dans l'image du front) : le workflow `images.yml` vérifie ainsi que l'image
+ * étiquetée `X.Y.Z` affiche bien X.Y.Z dans son pied de page (#1753).
  *     node scripts/check-version-servie.mjs --selftest
  *
  * Sortie du mode site : la version sur la sortie standard (code 0), ou
@@ -96,8 +101,8 @@ export function versionDansChunk(source) {
 }
 
 /** Les chunks d'un build local, contenu compris. */
-function chunksLocaux() {
-	const base = join(RACINE, '.svelte-kit', 'output', 'client', '_app', 'immutable');
+function chunksLocaux(client = join(RACINE, '.svelte-kit', 'output', 'client')) {
+	const base = join(client, '_app', 'immutable');
 	if (!existsSync(base)) return null;
 	const sortie = [];
 	const parcourir = (d) => {
@@ -196,15 +201,15 @@ async function modeSite(site) {
 	return code;
 }
 
-function modeCI() {
+function modeCI(client) {
 	const attendue = JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')).version;
-	const chunks = chunksLocaux();
+	const chunks = chunksLocaux(client);
 
 	//  Cas zéro : sans build, ce contrôle ne mesure rien — et le dire est le seul
 	//  comportement honnête. Le job `build-frontend` bâtit avant de l'appeler.
 	if (chunks === null || chunks.length === 0) {
 		console.error(
-			'✗ Cas zéro : aucun build dans `.svelte-kit/output/client` — lancer `npm run build` avant.\n' +
+			`✗ Cas zéro : aucun build dans \`${client ?? '.svelte-kit/output/client'}\` — lancer \`npm run build\` avant.\n` +
 				"  Ne pas lire ceci comme un succès : l'extracteur de P3 n'a pas été éprouvé.",
 		);
 		return 1;
@@ -325,7 +330,8 @@ const _lance = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 if (import.meta.url === _lance) {
 	const args = process.argv.slice(2);
 	const iSite = args.indexOf('--site');
+	const iClient = args.indexOf('--client');
 	if (args.includes('--selftest')) process.exit(await selftest());
 	else if (iSite !== -1) process.exit(await modeSite(args[iSite + 1]?.replace(/\/$/, '') ?? ''));
-	else process.exit(modeCI());
+	else process.exit(modeCI(iClient !== -1 ? args[iClient + 1] : undefined));
 }

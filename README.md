@@ -119,6 +119,16 @@ docker compose up --build -d
 
 L'application est accessible sur `http://localhost`.
 
+> 📦 **Images publiées.** Chaque version reçoit un tag `vX.Y.Z` et des images
+> signées (amd64 et arm64) : `ghcr.io/philippe-tressard/coproconnect-api`, `-front`,
+> `-caddy` et `-whatsapp-bridge`, étiquetées par version (et chaque commit de `main`
+> par `sha-<commit>`). Vérifier une image :
+> `gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:<version> --owner philippe-tressard`.
+> Les versions choisies pour les autres installations sont **promues** sur la branche
+> `replica`, avec leurs notes de version (onglet *Releases*).
+> **Installer sans construire** : [`deploiement/standard/LISEZMOI.md`](deploiement/standard/LISEZMOI.md)
+> — chaque version promue joint son archive de déploiement à ses notes de version.
+
 Au premier lancement, un compte admin est créé avec un **mot de passe aléatoire** affiché dans les logs :
 
 ```bash

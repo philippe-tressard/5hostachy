@@ -46,6 +46,7 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D12 | Ce qui est distribué (08/10/2026) | des **images construites et signées par la CI**, une par version taggée — jamais un `git pull` suivi d'un build sur la machine | §4.10 ; #1753, #1758 |
 | D13 | Un seul produit (08/10/2026) | **un seul chemin de code** (5Hostachy est un CoproConnect à une copropriété) et **un seul moteur de base**, PostgreSQL, maître compris ; le produit se sépare de l'exploitation des RPi | §4.10 ; #1755, #1759 |
 | D14 | Mise à jour des installations (08/10/2026) | **chaque nuit, automatique, réversible seule** : sauvegarde, migrations base par base, santé, retour à l'image précédente ; migrations **compatibles sur une version** | §4.10 ; #1756, #1757 |
+| D15 | Serveurs d'une réplique (08/10/2026) | **un seul serveur par défaut**, cloud ou hébergeur — « les instances replica ne seront installées par défaut que sur un seul serveur ». La haute disponibilité à deux nœuds reste **propre au maître** | §4.10, règle 12 ; la réversibilité d'une mise à jour (D14) et la sauvegarde **hors de la machine** (§4.9) deviennent le seul filet d'une réplique |
 
 ## 3. Les trois architectures comparées
 
@@ -243,6 +244,11 @@ stables de main. »*
    ajoute, la suivante retire. L'image précédente tourne alors sur le schéma
    migré, et le retour arrière n'est qu'un changement d'image — sans quoi il
    faudrait restaurer la sauvegarde et perdre les écritures de la nuit.
+   ⚠️ La compatibilité ne suffit pas seule (constaté le 08/10/2026, #1756) :
+   l'ancienne image ne connaît pas la révision que la nouvelle a posée, et son
+   `alembic upgrade head` arrêtait le conteneur en boucle. `api/start.sh` saute
+   donc les migrations d'une base **en avance** sur le code
+   (`api/app/utils/revision_base.py`), et le dit.
 8. **Le produit se sépare de l'exploitation des RPi** (#1755) : la bascule,
    `health-watch`, les points d'entrée et les crontabs restent dans le dépôt, mais
    ne partent pas avec une installation ; celle-ci a son déploiement standard.
@@ -259,6 +265,14 @@ stables de main. »*
     déclaration absente se lit « Inconnu », jamais « Maître ». Il ne se confond
     pas avec le rôle d'un nœud dans la haute disponibilité (actif / standby) : les
     deux RPi sont **ensemble** le maître.
+12. **Une réplique tient sur un seul serveur** (D15). Rien de la bascule du
+    maître ne s'y transpose : pas de standby, donc pas de failover, et une mise
+    à jour coupe le service le temps de redémarrer. Son filet, ce sont le
+    retour arrière par image (règle 7, #1757) et une sauvegarde copiée **hors
+    de la machine** — sur un seul serveur, une sauvegarde locale disparaît
+    avec ce qu'elle protège. La mise à jour nocturne (#1756) se cale donc sur
+    une heure creuse, et vérifie la sauvegarde **avant** de toucher à quoi que
+    ce soit.
 
 ## 5. Les garde-fous
 
