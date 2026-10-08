@@ -393,12 +393,13 @@ export default defineConfig(
 		files: ['**/*.{js,mjs,ts,svelte}'],
 		plugins: { '@typescript-eslint': ts.plugin },
 		rules: {
-			// `any` hors du client d'API : des props d'entité et des charges utiles
-			// d'écran, encore nombreuses. Le supprimer est un travail de TYPAGE, pas
-			// un réglage de linter (#1572) — le client, lui, est à zéro : bloc suivant.
-			// Coupée ici, elle n'est pas pour autant libre : `scripts/check-any.mjs`
-			// (`npm run lint:any`) en tient le PLAFOND, qui ne fait que baisser (#1571).
-			'@typescript-eslint/no-explicit-any': 'off',
+			// AUCUN `any`, nulle part (#1571, 08/10/2026). Le client d'API y était
+			// depuis la v2.105.0 (#1572, 119 → 0) ; le reste de `src/` était tenu par
+			// un plafond (`check-any.mjs`, 275 → 0), retiré à zéro : il y était muet.
+			// Une entité se type sur le client, un champ lu par son nom passe par
+			// `champDe`, un composant transmis sans lire ses props par
+			// `Component<never>` (`modale-imperative.ts`).
+			'@typescript-eslint/no-explicit-any': 'error',
 
 			// Même raison que dans le bloc Svelte : `a ? f() : g()` employé comme
 			// instruction est une forme volontaire et lisible de ce dépôt.
@@ -407,14 +408,5 @@ export default defineConfig(
 				{ allowTernary: true, allowShortCircuit: true },
 			],
 		},
-	},
-	// Le client d'API ne rend AUCUN `any` (#1572, v2.105.0) : il était à 119, et
-	// chaque écran retypait l'entité à sa façon. Placé après le bloc qui le coupe
-	// partout — le dernier bloc applicable gagne. Il remplace le plafond par module
-	// que tenait `check-types-locaux.mjs`, devenu muet à zéro.
-	{
-		files: ['src/lib/api/**/*.ts'],
-		plugins: { '@typescript-eslint': ts.plugin },
-		rules: { '@typescript-eslint/no-explicit-any': 'error' },
 	},
 );

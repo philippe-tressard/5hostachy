@@ -572,11 +572,10 @@ coupant. 🔴 **Les courriels de sécurité ne sont pas un service**
       jamais `any` qu'un écran retype. Un type d'entité (champ `id`) déclaré dans un
       écran est refusé (`npm run lint:types-locaux`, #1044 — dette soldée le 06/10/2026,
       seuls les `id` qui ne sont pas des entités se déclarent, avec leur raison), et
-      le client ne rend **aucun `any`** : ESLint `no-explicit-any` en erreur sur
-      `src/lib/api/` (`eslint.config.js`, #1572 — 119 → 0 en v2.105.0).
-      Hors du client, `any` reste toléré sous un **plafond** qui ne fait que
-      baisser (`npm run lint:any`, #1571) : typer sur les types du client, et lire
-      un champ dont le nom est une donnée par `champDe` (`$lib/utils`)
+      **aucun `any` nulle part** : ESLint `no-explicit-any` en erreur sur tout le
+      front (`eslint.config.js` — le client à zéro en v2.105.0, #1572, le reste
+      le 08/10/2026, #1571). Typer sur les types du client, lire un champ dont le
+      nom est une donnée par `champDe` (`$lib/utils`)
 - [ ] `cd api && ruff format .` — la CI refuse un fichier non formaté depuis le
       24/09/2026 (#1048 ; Ruff **épinglé** dans `ci.yml`, largeur 100, migrations
       exclues par `api/ruff.toml`). ⚠️ Une ligne coupée emporte son `# noqa` sur
