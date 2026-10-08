@@ -112,7 +112,8 @@ export interface ReglagePied {
 
 const AUTRES_CODES = ELEMENTS_PIED.map((e) => e.code).filter((c) => c !== 'texte');
 /** La place du texte libre quand rien n'est réglé : celle de `ELEMENTS_PIED`. */
-const TEXTE_APRES_DEFAUT = ELEMENTS_PIED[ELEMENTS_PIED.findIndex((e) => e.code === 'texte') - 1].code;
+const TEXTE_APRES_DEFAUT =
+	ELEMENTS_PIED[ELEMENTS_PIED.findIndex((e) => e.code === 'texte') - 1].code;
 
 /** Une année plausible, ou null — une saisie vide ou fautive ne casse pas le pied de page. */
 function lireAnnee(valeur: string | number | null | undefined): number | null {

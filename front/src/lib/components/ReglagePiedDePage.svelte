@@ -52,29 +52,35 @@
 		<LibelleGroupe titre="Éléments affichés" id="pied-elements" classe="perimetre-pills">
 			{#each pastilles as code (code)}
 				{#if code === 'texte' && texteActif}
-					<button
-						type="button"
-						class="btn-icon deplacer"
-						aria-label="Avancer le texte libre"
-						title="Avancer le texte libre"
-						disabled={avant === reglage.texteApres}
-						on:click={() => (reglage.texteApres = avant)}>←</button
-					>
-				{/if}
-				<Pastille
-					petite
-					bascule
-					active={!reglage.masques.includes(code)}
-					on:click={() => basculer(code)}>{libelles.get(code)}</Pastille
-				>
-				{#if code === 'texte' && texteActif}
-					<button
-						type="button"
-						class="btn-icon deplacer"
-						aria-label="Reculer le texte libre"
-						title="Reculer le texte libre"
-						disabled={apres === reglage.texteApres}
-						on:click={() => (reglage.texteApres = apres)}>→</button
+					<!--  Les flèches font 44 px au doigt : groupées avec leur pastille, elles
+					      n'étirent plus toute la rangée à leur hauteur. -->
+					<span class="texte-place">
+						<button
+							type="button"
+							class="btn-icon deplacer"
+							aria-label="Avancer le texte libre"
+							title="Avancer le texte libre"
+							disabled={avant === reglage.texteApres}
+							on:click={() => (reglage.texteApres = avant)}>←</button
+						>
+						<Pastille petite bascule active on:click={() => basculer(code)}
+							>{libelles.get(code)}</Pastille
+						>
+						<button
+							type="button"
+							class="btn-icon deplacer"
+							aria-label="Reculer le texte libre"
+							title="Reculer le texte libre"
+							disabled={apres === reglage.texteApres}
+							on:click={() => (reglage.texteApres = apres)}>→</button
+						>
+					</span>
+				{:else}
+					<Pastille
+						petite
+						bascule
+						active={!reglage.masques.includes(code)}
+						on:click={() => basculer(code)}>{libelles.get(code)}</Pastille
 					>
 				{/if}
 			{/each}
@@ -129,6 +135,11 @@
 		.champs-pied {
 			grid-template-columns: 1fr;
 		}
+	}
+	.texte-place {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
 	}
 	.deplacer:disabled {
 		opacity: 0.25;

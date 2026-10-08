@@ -85,7 +85,7 @@ test('Admin › Site : le texte libre paraît dans l’aperçu et s’y déplace
 	await page.goto('/admin?onglet=site');
 	const apercu = page.getByRole('group', { name: 'Aperçu du pied de page' });
 	const elements = apercu.locator('.element');
-	await page.getByLabel('Texte libre').fill('Texte du conseil');
+	await page.getByLabel('Texte libre', { exact: true }).fill('Texte du conseil');
 	//  Sa place par défaut : juste après le nom de la résidence.
 	const rang = async () => (await elements.allTextContents()).indexOf('Texte du conseil');
 	const avant = await rang();

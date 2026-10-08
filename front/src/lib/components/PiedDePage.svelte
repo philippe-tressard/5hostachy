@@ -35,7 +35,10 @@
 	      écrit dans le balisage, il héritait des blancs du gabarit d'un seul côté. -->
 	{#each affiches as code (code)}
 		<span class="element"
-			>{#if code === 'annee'}{mentionAnnee(reglage.anneeDebut, anneeCourante)}{:else if code === 'texte'}{reglage.texte}{:else if code === 'residence'}<a
+			>{#if code === 'annee'}{mentionAnnee(
+					reglage.anneeDebut,
+					anneeCourante,
+				)}{:else if code === 'texte'}{reglage.texte}{:else if code === 'residence'}<a
 					href={siteUrl}
 					target="_blank"
 					rel="noopener noreferrer">{$siteNomStore}</a
