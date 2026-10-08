@@ -40,11 +40,12 @@ def moteur(monkeypatch):
     m._CACHE.clear()
 
 
-def _generer(dossier, *, jour=JOUR, manuel=MANUEL, logo_png=None):
+def _generer(dossier, *, jour=JOUR, manuel=MANUEL, logo_png=None, sous_titre=""):
     return m.generer_manuel_pdf(
         "5Hostachy",
         "https://exemple.fr",
         logo_png=logo_png,
+        sous_titre=sous_titre,
         html_manuel=manuel,
         edite_le=jour,
         dossier=dossier,
@@ -202,6 +203,14 @@ def test_un_LOGO_change_produit_un_pdf_neuf(tmp_path, moteur):
     _generer(tmp_path, logo_png=b"PNG-factice")
     assert len(moteur) == 2, "le logo a changé, et le PDF servi est l'ancien"
     assert "data:image/png;base64," in moteur[1], "la page de garde ne porte pas le logo"
+
+
+def test_un_SOUS_TITRE_change_produit_un_pdf_neuf(tmp_path, moteur):
+    """Le sous-titre se règle dans Admin › Site : le changer est un autre PDF."""
+    _generer(tmp_path)
+    _generer(tmp_path, sous_titre="Notre résidence")
+    assert len(moteur) == 2, "le sous-titre a changé, et le PDF servi est l'ancien"
+    assert "Notre résidence<br>" in moteur[1]
 
 
 def test_le_cache_est_BORNE(tmp_path, moteur):

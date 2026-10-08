@@ -44,6 +44,7 @@ from app.utils.manuel_pdf import (
     version_du_manuel,
 )
 from app.utils.manuel_pdf_css import css_du_pdf
+from app.utils.plateforme import LICENCE_SPDX
 from tests.aides_caddy import bloc_handle, caddyfile
 
 _RACINE = Path(__file__).resolve().parents[2]
@@ -239,6 +240,40 @@ def test_la_page_de_garde_porte_le_QR_code_et_la_date(document):
     assert "https://5hostachy.fr" in document
 
 
+def test_le_sous_titre_de_la_garde_est_celui_d_Admin_Site(manuel):
+    """Il se règle dans Admin › Site, comme celui de la connexion (08/10/2026).
+
+    La garde disait « L'extranet de votre résidence », écrit en dur : la résidence
+    qui changeait son sous-titre le voyait partout, sauf sur son manuel imprimé.
+    """
+    avec = composer_html(
+        "5Hostachy",
+        "https://5hostachy.fr",
+        logo_png=None,
+        sous_titre="Le site <de> la résidence",
+        html_manuel=manuel,
+        edite_le=date(2026, 9, 3),
+    )
+    assert "Le site &lt;de&gt; la résidence<br>" in avec, "le sous-titre réglé n'est pas repris"
+    assert "L'extranet de votre résidence" not in avec, "le sous-titre écrit en dur est revenu"
+    sans = composer_html("5Hostachy", "https://5hostachy.fr", logo_png=None, html_manuel=manuel)
+    assert re.search(r'class="garde-sous">\s*Trouver vite', sans), (
+        "un sous-titre vide laisse une ligne vide"
+    )
+
+
+def test_l_identite_du_manuel_lit_le_reglage_d_Admin_Site(session):
+    from app.models.core import ConfigSite
+
+    session.add(ConfigSite(cle="login_sous_titre", valeur="  Notre résidence  "))
+    session.add(ConfigSite(cle="site_nom", valeur="Les Tilleuls"))
+    session.commit()
+    identite = m.identite_du_manuel(session)
+    assert identite["sous_titre"] == "Notre résidence"
+    assert identite["site_nom"] == "Les Tilleuls"
+    assert set(identite) == {"site_nom", "site_url", "logo_png", "sous_titre"}
+
+
 def test_la_version_du_manuel_est_reprise_telle_qu_elle_est_ecrite(manuel, document):
     """Elle est LUE dans le manuel, jamais saisie ici — sinon deux versions."""
     version = version_du_manuel(manuel)
@@ -278,10 +313,10 @@ def test_les_mentions_identifient_l_editeur(document):
     #  lignes, et le nom de la licence peut s'y trouver coupé en deux. Chercher
     #  la chaîne brute échouerait sur une coupure, pas sur une absence.
     plat = " ".join(document.split())
-    assert m.LICENCE_SPDX in plat, "le feuillet ne dit plus sous quelle licence"
+    assert LICENCE_SPDX in plat, "le feuillet ne dit plus sous quelle licence"
     assert "auto-hébergée" in document, "le feuillet ne dit plus où vivent les données"
     #  🔴 UNE SEULE FOIS — voir le pourquoi dans le docstring.
-    assert plat.count(m.LICENCE_SPDX) == 1, (
+    assert plat.count(LICENCE_SPDX) == 1, (
         "la licence est écrite deux fois dans le feuillet : le corps la répète "
         "alors que les mentions la portent (`corps_du_manuel` doit retirer la "
         "section « Un logiciel libre »)."

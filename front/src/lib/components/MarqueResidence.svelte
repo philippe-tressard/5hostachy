@@ -54,7 +54,7 @@
 		display: grid;
 		justify-content: start;
 		justify-items: center;
-		padding: 0.5rem 1.25rem 1.25rem;
+		padding: 0 1.25rem 1.25rem;
 		border-bottom: 1px solid var(--color-border);
 		margin-bottom: 0.5rem;
 	}

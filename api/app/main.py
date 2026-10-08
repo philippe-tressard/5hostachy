@@ -184,15 +184,11 @@ async def lifespan(app: FastAPI):
     #  (`utils/pdf_rendu`). Un échec ne remonte pas — `prechauffer` ne lève
     #  jamais, il journalise.
     def _prechauffer_manuel() -> None:
-        from app.utils.manuel_pdf import prechauffer
-        from app.utils.config_site import config_site
-        from app.utils.liens import base_site, nom_site
-        from app.utils.logo import logo_televerse_png
+        from app.utils.manuel_pdf import identite_du_manuel, prechauffer
 
         with Session(engine) as _s:
-            cfg = config_site(_s)
-            logo = logo_televerse_png(_s)
-        prechauffer(nom_site(cfg.get("site_nom")), base_site(cfg.get("site_url")), logo_png=logo)
+            identite = identite_du_manuel(_s)
+        prechauffer(**identite)
 
     scheduler.add_job(
         _prechauffer_manuel,

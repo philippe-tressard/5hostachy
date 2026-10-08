@@ -165,6 +165,8 @@ def test_un_document_porte_le_neutre_ou_le_logo_televerse():
     assert "C9983A" not in logo_html(None, 40), "la touche dorée de l'ancien logo est revenue"
     avec = logo_html(_png(), 40)
     assert avec.startswith('<img src="data:image/png;base64,') and 'width="40"' in avec
+    #  WeasyPrint ignore l'attribut : sans le style, le PNG sort à sa taille native.
+    assert 'style="width:40px;height:40px"' in avec, "le logo téléversé déborde du document"
 
 
 def test_le_courriel_charge_le_logo_par_son_adresse_publique():

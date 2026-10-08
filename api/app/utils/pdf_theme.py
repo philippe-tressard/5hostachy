@@ -137,11 +137,20 @@ def logo_html(logo_png: bytes | None, size: int = 36) -> str:
     `logo_png` est celui que la résidence a téléversé (`utils/logo.logo_televerse_png`),
     ou None : le dessin neutre, en SVG, net à toute taille. Le PNG part en
     data-URI, car un document se rend hors requête, sans rien charger.
+
+    🔴 La taille s'écrit AUSSI en `style` : WeasyPrint ignore les attributs
+    `width`/`height` d'un `<img>` (sans `presentational_hints`, que
+    `pdf_rendu` ne passe pas). Le PNG téléversé, carré de plusieurs centaines
+    de pixels, sortait alors à sa taille native et débordait la page de garde
+    du manuel (08/10/2026). Le SVG, lui, porte sa taille dans son élément.
     """
     if logo_png is None:
         return logo_svg(size)
     donnees = base64.b64encode(logo_png).decode()
-    return f'<img src="data:image/png;base64,{donnees}" width="{size}" height="{size}" alt="">'
+    return (
+        f'<img src="data:image/png;base64,{donnees}" width="{size}" height="{size}" '
+        f'style="width:{size}px;height:{size}px" alt="">'
+    )
 
 
 # ── Icônes ───────────────────────────────────────────────────────────────────
