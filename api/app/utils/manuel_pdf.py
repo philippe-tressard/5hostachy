@@ -48,15 +48,15 @@ from app.utils import horloge
 from html import escape, unescape
 from pathlib import Path
 
+from sqlmodel import Session
+
 from app.utils import manuel_pdf_cache
-from app.utils.dates_fr import date_longue
+from app.utils.config_site import config_site
+from app.utils.liens import base_site, nom_site
+from app.utils.logo import logo_televerse_png
 from app.utils.manuel_pdf_css import css_du_pdf
-from app.utils.plateforme import LICENCE_NOM, LICENCE_SPDX, NOM_PLATEFORME
-from app.utils.pdf_theme import (
-    html_to_pdf,
-    logo_html,
-    qr_data_uri,
-)
+from app.utils.manuel_pdf_pages import garde, mentions
+from app.utils.pdf_theme import html_to_pdf
 
 #: Le manuel, tel qu'il est SERVI. Nom de service Docker : les deux conteneurs
 #: partagent le réseau `hostachy`.
@@ -142,7 +142,7 @@ def corps_du_manuel(html: str) -> str:
     #  qu'il n'y ait pas de redondance »*.
     #
     #  Sur la page, cette section est désormais la dernière. Dans le feuillet
-    #  imprimé, elle tomberait donc juste AVANT `_mentions`, qui porte déjà la
+    #  imprimé, elle tomberait donc juste AVANT `mentions`, qui porte déjà la
     #  la licence — deux paragraphes de suite pour dire la même chose. Le corps
     #  la perd ici, et les mentions restent le seul endroit qui l'énonce : c'est
     #  là qu'on regarde quand on cherche « qui a fait ça, et sous quelles
@@ -219,33 +219,6 @@ def version_du_manuel(html: str) -> str:
     return trouve.group(1) if trouve else ""
 
 
-def _garde(
-    site_nom: str, site_url: str, version: str, edite_le: date, logo_png: bytes | None
-) -> str:
-    qr = qr_data_uri(site_url)
-    bloc_qr = (
-        f'<div class="garde-qr"><img src="{qr}" alt="">'
-        f"<p>Ouvrez le site en photographiant ce code<br>"
-        f"<strong>{escape(site_url)}</strong></p></div>"
-        if qr
-        else f'<div class="garde-qr"><p><strong>{escape(site_url)}</strong></p></div>'
-    )
-    return f"""
-<section class="garde">
-  <div class="garde-logo"><div class="garde-medaillon">{logo_html(logo_png, 64)}</div></div>
-  <p class="garde-surtitre">{escape(site_nom)}</p>
-  <h1 class="garde-titre">Manuel<br>utilisateur</h1>
-  <p class="garde-sous">L'extranet de votre résidence.<br>
-     Trouver vite ce dont vous avez besoin.</p>
-  <div class="garde-filet"></div>
-  {bloc_qr}
-  <p class="garde-pied">Édition du {date_longue(edite_le)}{
-        f" · {escape(version)}" if version else ""
-    }</p>
-</section>
-"""
-
-
 def _sommaire(releve: list[tuple[int, str, str]]) -> str:
     """Le sommaire, à DEUX niveaux et avec les numéros de page.
 
@@ -264,41 +237,18 @@ def _sommaire(releve: list[tuple[int, str, str]]) -> str:
     return f'<section class="sommaire"><h2>Sommaire</h2><ol>{lignes}</ol></section>'
 
 
-def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str:
-    """Les mentions du feuillet — ce qu'un document imprimé doit porter.
+def identite_du_manuel(session: Session) -> dict:
+    """Ce que la garde porte de l'instance — une lecture pour la route ET le préchauffage.
 
-    ⚠️ La LICENCE y figure (04/09/2026, à la demande). Le corps du manuel la
-    mentionne déjà, mais un feuillet imprimé se lit par sa fin quand on cherche
-    « qui a fait ça, et sous quelles conditions » : c'est là qu'on regarde, pas
-    au milieu d'une section « À quoi sert ce site ? ».
+    Le sous-titre est celui d'Admin › Site ; il était écrit en dur (08/10/2026).
     """
-    return f"""
-<section class="mentions">
-  <h2>À propos de ce document</h2>
-  <dl>
-    <dt>Document</dt>
-    <dd>Manuel utilisateur de {escape(site_nom)}{f" — {escape(version)}" if version else ""}.</dd>
-    <dt>Édité le</dt><dd>{date_longue(edite_le)}</dd>
-    <dt>Éditeur</dt>
-    <dd>Le conseil syndical de la copropriété. Mentions légales complètes et
-        politique de confidentialité sur {escape(site_url)}/mentions-legales.</dd>
-    <dt>Diffusion</dt>
-    <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
-        l'accès est réservé aux personnes inscrites.</dd>
-    <dt>Licence</dt>
-    <dd>Ce site est servi par {NOM_PLATEFORME}, un logiciel libre distribué sous la
-        {LICENCE_NOM} (<strong>{LICENCE_SPDX}</strong>) : chacun peut l'utiliser,
-        le modifier et le redistribuer, y compris à titre commercial, à condition
-        de publier ses modifications sous la même licence. Le présent document et les
-        contenus publiés dans l'application restent la propriété de leurs
-        auteurs.</dd>
-    <dt>Hébergement</dt>
-    <dd>Cette instance est <strong>auto-hébergée</strong> : les données restent sur
-        une machine de la copropriété, elles ne sont ni vendues ni confiées à un
-        prestataire.</dd>
-  </dl>
-</section>
-"""
+    cfg = config_site(session, "login_sous_titre")
+    return {
+        "site_nom": nom_site(cfg.get("site_nom")),
+        "site_url": base_site(cfg.get("site_url")),
+        "logo_png": logo_televerse_png(session),
+        "sous_titre": (cfg.get("login_sous_titre") or "").strip(),
+    }
 
 
 def composer_html(
@@ -306,6 +256,7 @@ def composer_html(
     site_url: str,
     *,
     logo_png: bytes | None,
+    sous_titre: str = "",
     html_manuel: str | None = None,
     edite_le: date | None = None,
 ) -> str:
@@ -330,10 +281,10 @@ def composer_html(
 <title>Manuel utilisateur — {escape(site_nom)}</title>
 <style>{css_du_pdf(styles_du_manuel(html))}</style>
 </head><body>
-{_garde(site_nom, site_url, version, edite_le, logo_png)}
+{garde(site_nom, site_url, version, edite_le, logo_png, sous_titre)}
 {_sommaire(releve)}
 {corps}
-{_mentions(site_nom, site_url, version, edite_le)}
+{mentions(site_nom, site_url, version, edite_le)}
 </body></html>"""
 
 
@@ -354,7 +305,7 @@ def composer_html(
 #: ⚠️ Le cache en mémoire disparaît à chaque redémarrage, donc à chaque
 #: déploiement. Il est doublé, depuis le 25/09/2026, d'une copie SUR DISQUE :
 #: voir `manuel_pdf_cache` (#1071).
-_CACHE: dict[tuple[str, str, str, str], bytes] = {}
+_CACHE: dict[tuple[str, ...], bytes] = {}
 
 #: Au-delà, on jette le plus ancien. Deux entrées suffisent (la date change à
 #: minuit) ; la borne existe pour qu'une boucle anormale ne gonfle pas la mémoire
@@ -373,6 +324,7 @@ def generer_manuel_pdf(
     site_url: str,
     *,
     logo_png: bytes | None,
+    sous_titre: str = "",
     html_manuel: str | None = None,
     edite_le: date | None = None,
     dossier: Path | None = None,
@@ -392,6 +344,8 @@ def generer_manuel_pdf(
         edite_le.isoformat(),
         #  Le logo est DANS le document (#1728) : un logo changé est un autre PDF.
         hashlib.sha256(logo_png).hexdigest() if logo_png else "neutre",
+        #  Le sous-titre aussi : il se règle dans Admin › Site.
+        sous_titre,
     )
     if cle in _CACHE:
         return _CACHE[cle]
@@ -405,7 +359,12 @@ def generer_manuel_pdf(
         if pdf is None:
             pdf = html_to_pdf(
                 composer_html(
-                    site_nom, site_url, logo_png=logo_png, html_manuel=html, edite_le=edite_le
+                    site_nom,
+                    site_url,
+                    logo_png=logo_png,
+                    sous_titre=sous_titre,
+                    html_manuel=html,
+                    edite_le=edite_le,
                 )
             )
             manuel_pdf_cache.ecrire(cle, pdf, dossier, garder=_CACHE_MAX)
@@ -425,7 +384,12 @@ PAUSE_PRECHAUFFAGE_S = 15.0
 
 
 def prechauffer(
-    site_nom: str, site_url: str, *, logo_png: bytes | None, pause_s: float | None = None
+    site_nom: str,
+    site_url: str,
+    *,
+    logo_png: bytes | None,
+    sous_titre: str = "",
+    pause_s: float | None = None,
 ) -> bool:
     """Rend le manuel une fois, pour que personne n'attende le premier rendu.
 
@@ -450,7 +414,7 @@ def prechauffer(
     pause = PAUSE_PRECHAUFFAGE_S if pause_s is None else pause_s
     for essai in range(1, TENTATIVES_PRECHAUFFAGE + 1):
         try:
-            generer_manuel_pdf(site_nom, site_url, logo_png=logo_png)
+            generer_manuel_pdf(site_nom, site_url, logo_png=logo_png, sous_titre=sous_titre)
         except ManuelIndisponible as exc:
             if essai == TENTATIVES_PRECHAUFFAGE:
                 _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)

@@ -18,9 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session
 
 from app.database import get_session
-from app.utils.manuel_pdf import ManuelIndisponible, generer_manuel_pdf
-from app.utils.liens import base_site, nom_site
-from app.utils.logo import logo_televerse_png
+from app.utils.manuel_pdf import ManuelIndisponible, generer_manuel_pdf, identite_du_manuel
 
 router = APIRouter(prefix="/manuel", tags=["manuel"])
 
@@ -28,14 +26,11 @@ router = APIRouter(prefix="/manuel", tags=["manuel"])
 @router.get("/pdf")
 def manuel_pdf(session: Session = Depends(get_session)):
     """Le manuel complet, avec page de garde, sommaire et mentions."""
-    from app.utils.config_site import config_site
-
-    cfg = config_site(session)
-    site_nom = nom_site(cfg.get("site_nom"))
-    site_url = base_site(cfg.get("site_url"))
+    identite = identite_du_manuel(session)
+    site_nom = identite["site_nom"]
 
     try:
-        pdf = generer_manuel_pdf(site_nom, site_url, logo_png=logo_televerse_png(session))
+        pdf = generer_manuel_pdf(**identite)
     except ManuelIndisponible as exc:
         #  🔴 502 et non 500 : la panne est CHEZ LE VOISIN, pas ici. Le message
         #  le dit, parce qu'un « erreur interne » enverrait chercher le défaut
