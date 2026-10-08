@@ -73,9 +73,8 @@
 
 	export let urls: string[] = [];
 	export let max = MAX_FICHIERS;
-	/** 'photos' | 'documents' | 'mixte' — porte à la fois le filtre du sélecteur
-	 *  et le libellé par défaut : une page n'a ni import ni ligne de plus à écrire
-	 *  pour dire « ici, ce sont des photos ». */
+	/** Porte à la fois le filtre du sélecteur et le libellé par défaut : une page
+	 *  n'a ni import ni ligne de plus à écrire pour dire « ici, ce sont des photos ». */
 	export let mode: 'photos' | 'documents' | 'mixte' = 'documents';
 	export let label: string | null = null;
 	export let accept: string | null = null;
