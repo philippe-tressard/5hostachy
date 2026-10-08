@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { FormulaireCompte } from '$lib/comptes';
 	import ChampAdresseCompte from '$lib/components/ChampAdresseCompte.svelte';
 	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
 	import { ETAGE_MAX, ETAGE_MIN } from '$lib/utils';
@@ -31,7 +32,7 @@
 	 * `FormulaireCreation`. La consigne décrivait donc un cadre que personne
 	 * n'utilisait, sur un ton qui invitait le prochain appelant à le rétablir.
 	 */
-	export let editForm: any;
+	export let editForm: FormulaireCompte;
 	/** L'adresse du compte aujourd'hui : en changer est une DEMANDE (#1549). */
 	export let adresseActuelle = '';
 	/** Le mot de passe de l'ADMINISTRATEUR, exigé seulement si l'adresse change. */

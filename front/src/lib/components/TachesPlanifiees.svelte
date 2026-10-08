@@ -10,7 +10,7 @@
 	//  hebdomadaire : jamais exécutée » au-dessus d'un tableau qui semblait
 	//  montrer des maintenances quotidiennes réussies.
 	import { onMount } from 'svelte';
-	import { admin as adminApi, type ExecutionTache } from '$lib/api';
+	import { admin as adminApi, type ExecutionTache, type SanteMaintenance } from '$lib/api';
 	import { fmtDatetime } from '$lib/date';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { LIBELLE_TACHE, LIBELLE_ACTION } from '$lib/taches';
@@ -30,7 +30,7 @@
 	const libelleBouton = (t: string) =>
 		LIBELLE_ACTION[t] ?? `Lancer ${LIBELLE_TACHE[t].toLowerCase()}`;
 
-	let sante: { taches: any[]; anomalies_recentes: any[] } | null = null;
+	let sante: SanteMaintenance | null = null;
 	let santeLoading = true;
 	/*  🔴 `catch { sante = null }` faisait dire « Aucune donnée — aucune exécution
 	    n'a encore été enregistrée » sur un chargement en ÉCHEC (#816). Sur l'écran
@@ -266,7 +266,7 @@
 									<span
 										title={t.noeuds?.length
 											? `Nœud de la dernière exécution. L'état de chaque nœud est détaillé sous cette ligne.`
-											: ''}>{t.noeud.toUpperCase()}</span
+											: ''}>{t.noeud?.toUpperCase()}</span
 									>
 								{/if}
 							</td>

@@ -34,12 +34,13 @@ import type { Component } from 'svelte';
  * @param refus      Ce qu'on rend quand il n'y a pas de fenêtre (SSR).
  */
 export function modaleImperative<R>(
-	//  ⚠️ `Component<any>` et non `Component<Record<string, unknown>>` : les props
-	//  d'un composant sont en position CONTRAVARIANTE, donc un type de props plus
-	//  large n'est pas assignable — `svelte-check` refuse les deux appelants. Ce
+	//  ⚠️ `Component<never>` et non `Component<Record<string, unknown>>` : les
+	//  props d'un composant sont en position CONTRAVARIANTE, donc un type de props
+	//  plus large n'est pas assignable — `svelte-check` refuse les appelants.
+	//  `never`, à l'inverse, accepte tout composant (c'était `any`, #1571). Ce
 	//  fichier ne lit aucune prop, il les transmet ; c'est l'appelant typé
 	//  (`confirmer`, `demander`) qui garantit qu'elles correspondent.
-	composant: Component<any>,
+	composant: Component<never>,
 	props: Record<string, unknown>,
 	refus: R,
 ): Promise<R> {
@@ -51,6 +52,7 @@ export function modaleImperative<R>(
 		let rendu = false;
 		const instance = mount(composant, {
 			target: hote,
+			//  Le pendant de `Component<never>` : les props sont transmises, pas lues.
 			props: {
 				...props,
 				onReponse: (reponse: R) => {
@@ -61,7 +63,7 @@ export function modaleImperative<R>(
 					hote.remove();
 					resoudre(reponse);
 				},
-			},
+			} as never,
 		});
 	});
 }

@@ -65,6 +65,7 @@
   cadre en comptait davantage : une liste recopiée ment dès le lot suivant.
 -->
 <script lang="ts">
+	import type { ApercuDiffusion } from '$lib/api';
 	import SectionDescription from '$lib/components/SectionDescription.svelte';
 	import SectionQuand from '$lib/components/SectionQuand.svelte';
 	import SectionsPiecesJointes from '$lib/components/SectionsPiecesJointes.svelte';
@@ -299,9 +300,9 @@
 	/**  La fonction d'aperçu de l'écran — transmise TELLE QUELLE à l'objet
 	 *   Diffusion, qui porte l'état et la modale (#498). Absente = pas d'aperçu,
 	 *   ce qui est le cas des écrans sans endpoint. */
-	export let demanderApercu: (() => Promise<any>) | null = null;
+	export let demanderApercu: (() => Promise<ApercuDiffusion>) | null = null;
 	//  Exposé au parent : c'est LUI qui déclenche l'aperçu au moment de soumettre.
-	export let refDiffusion: any = null;
+	export let refDiffusion: SectionDiffusion | null = null;
 	export let envoiEnCours = false;
 
 	//  🔴 Les badges d'état vivaient ICI, avec les deux sections écrites en

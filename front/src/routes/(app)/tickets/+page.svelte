@@ -236,7 +236,7 @@
 
 	const enregistrerOptionsTicket = (t: Ticket, data: unknown) =>
 		options.enregistrer(
-			() => ticketsApi.update(t.id, data as any),
+			() => ticketsApi.update(t.id, data),
 			(maj) => (ticketList = ticketList.map((x) => (x.id === maj.id ? { ...x, ...maj } : x))),
 		);
 

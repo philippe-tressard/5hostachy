@@ -40,6 +40,8 @@ export interface User {
 	demarche_arrivant?: string | null;
 	batiment_id?: number | null;
 	batiment_nom?: string | null; // "Bât. A"
+	/** Pour un locataire : le nom de son propriétaire, s'il l'a donné (`UserRead`). */
+	nom_proprietaire?: string | null;
 	/** Pour un aidant ou mandataire : le copropriétaire aidé, saisi à l'inscription (`UserRead`). */
 	nom_aide?: string | null;
 	prenom_aide?: string | null;

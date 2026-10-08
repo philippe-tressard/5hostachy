@@ -13,12 +13,12 @@
 <script lang="ts">
 	import { messageErreur } from '$lib/erreurs';
 	import { createEventDispatcher } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type User } from '$lib/api';
 	import Modale from '$lib/components/Modale.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { nomAffiche } from '$lib/noms';
 
-	export let utilisateur: any;
+	export let utilisateur: User;
 	export let batimentsMap: Record<number, string> = {};
 
 	const dispatch = createEventDispatcher<{ fermer: void }>();

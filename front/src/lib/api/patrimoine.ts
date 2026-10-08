@@ -360,11 +360,17 @@ export const lots = {
  * Le type `Perimetre` vit dans `$lib/perimetres`, qui n'importe rien : c'est ce
  * qui permet à `perimetreLabel()` de rester synchrone dans les gabarits.
  */
+/**  Ce qu'une écriture envoie : la lecture rend toujours un `libelle_court`, mais
+ *   `PerimetreCreate` / `PerimetreUpdate` l'acceptent à `null` — un abrégé vidé. */
+type EcriturePerimetre = Partial<Omit<PerimetreDTO, 'libelle_court'>> & {
+	libelle_court?: string | null;
+};
+
 export const perimetres = {
 	list: () => api.get<PerimetreDTO[]>('/perimetres'),
-	create: (data: Partial<PerimetreDTO> & { code: string; libelle: string }) =>
+	create: (data: EcriturePerimetre & { code: string; libelle: string }) =>
 		api.post<PerimetreDTO>('/perimetres', data),
-	update: (id: number, data: Partial<PerimetreDTO>) =>
+	update: (id: number, data: EcriturePerimetre) =>
 		api.patch<PerimetreDTO>(`/perimetres/${id}`, data),
 	remove: (id: number) => api.delete(`/perimetres/${id}`),
 };

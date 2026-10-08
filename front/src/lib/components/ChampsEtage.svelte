@@ -31,14 +31,14 @@
   l'administration du patrimoine, comme avant.
 -->
 <script lang="ts">
-	import { auth as authApi, lots as lotsApi } from '$lib/api';
+	import { auth as authApi, lots as lotsApi, type MonLot, type User } from '$lib/api';
 	import EncartAvertissement from '$lib/components/EncartAvertissement.svelte';
 	import { currentUser } from '$lib/stores/auth';
 	import { ETAGE_MAX, ETAGE_MIN, etageDuLot, etageLabel, lotTypeLabel } from '$lib/utils';
 
 	/**  L'étage de CHAQUE logement, par identifiant — donnée de patrimoine. */
 	export let etagesLot: Record<number, number | null> = {};
-	export let lots: any[] = [];
+	export let lots: MonLot[] = [];
 
 	/**  L'étage où l'on VIT — `Utilisateur.etage`, saisi à l'inscription puis
 	 *   modifiable ici. Sans validation du conseil syndical, délibérément : il ne
@@ -51,7 +51,7 @@
 	 *
 	 *   ⚠️ `?? null` et jamais `|| null` : `0` est le rez-de-chaussée, et un test
 	 *   de vérité le rendrait « non renseigné ». */
-	let etage: number | null = ($currentUser as any)?.etage ?? null;
+	let etage: number | null = $currentUser?.etage ?? null;
 
 	/**  L'étage que le classeur de la copropriété connaît, ou `null`. */
 	$: etageLot = etageDuLot(lots);
@@ -81,12 +81,12 @@
 	 *
 	 *   ⚠️ Seuls les lots CHANGÉS partent : réécrire les autres poserait un
 	 *   `modifie_le` sur des lignes que personne n'a touchées. */
-	export async function enregistrerEtagesDeLots(): Promise<any[]> {
+	export async function enregistrerEtagesDeLots(): Promise<MonLot[]> {
 		const changes = logements.filter((l) => (l.etage ?? null) !== (etagesLot[l.id] ?? null));
 		const majs = await Promise.all(
 			changes.map((l) => lotsApi.majEtage(l.id, etagesLot[l.id] ?? null)),
 		);
-		const parId = new Map(majs.map((m: any) => [m.id, m]));
+		const parId = new Map(majs.map((m) => [m.id, m]));
 		lots = lots.map((l) => parId.get(l.id) ?? l);
 		return lots;
 	}
@@ -100,7 +100,7 @@
 	 *
 	 *   ⚠️ Envoyé même à `null` : effacer son étage est un geste, et `update_me`
 	 *   n'écrit que ce qu'il reçoit — un champ omis ne s'efface jamais. */
-	export async function enregistrerEtagePersonnel(): Promise<any> {
+	export async function enregistrerEtagePersonnel(): Promise<User> {
 		return authApi.updateMe({ etage });
 	}
 </script>

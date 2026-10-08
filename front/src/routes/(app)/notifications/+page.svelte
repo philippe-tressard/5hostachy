@@ -8,7 +8,7 @@
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import { essayer } from '$lib/chargement';
 	import { onMount } from 'svelte';
-	import { notifications as notifApi } from '$lib/api';
+	import { notifications as notifApi, type Notification } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
 	import { safeRichContent } from '$lib/sanitize';
@@ -17,7 +17,7 @@
 	$: _pc = getPageConfig($configStore, 'notifications', defautsDePage('notifications'));
 	$: _siteNom = $siteNomStore;
 
-	let items: any[] = [];
+	let items: Notification[] = [];
 	let loading = true;
 	/*  🔴 Sans cette variable, un chargement en échec laissait `items` à `[]` et
 	    l'écran répondait « Aucune notification — Vous êtes à jour ! ». Le toast
@@ -89,10 +89,10 @@
 	 *  ⚠️ Une section vide n'est pas rendue, comme avant : les `{#if …length > 0}`
 	 *  du gabarit se ramènent au filtre ci-dessous.
 	 */
-	function grouper(notifs: any[]) {
+	function grouper(notifs: Notification[]) {
 		const maintenant = Date.now();
-		const recentes: any[] = [];
-		const anciennes: any[] = [];
+		const recentes: Notification[] = [];
+		const anciennes: Notification[] = [];
 		for (const n of notifs) {
 			const age = maintenant - new Date(n.cree_le).getTime();
 			(age < 86400000 ? recentes : anciennes).push(n);

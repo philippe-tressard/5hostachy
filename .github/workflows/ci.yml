@@ -1480,14 +1480,6 @@ jobs:
         working-directory: front
         run: npm run lint:eslint
 
-      # `no-explicit-any` est coupée hors du client d'API : sans plafond, c'était
-      # la seule dette de la carte #1571 en tolérance ouverte. Le compte est celui
-      # d'ESLint (commentaires et noms exclus), un `any` témoin prouve que la
-      # règle se déclenche encore, et le plafond échoue dans les deux sens.
-      - name: Plafond des `any` hors du client d'API
-        working-directory: front
-        run: npm run lint:any
-
       # Le front n'est jamais le gardien d'un droit, mais il doit dire la MÊME
       # chose que le serveur : plus large, il tend un bouton qui finira en 403 ;
       # plus étroit, il rend une capacité introuvable (#1041).

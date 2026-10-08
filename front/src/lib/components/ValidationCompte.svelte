@@ -28,10 +28,11 @@
   advient de sa liste après.
 -->
 <script lang="ts">
+	import type { User } from '$lib/api';
 	import PiedFormulaire from './PiedFormulaire.svelte';
 
 	/** L'utilisateur dont on valide le compte. */
-	export let utilisateur: any;
+	export let utilisateur: User;
 	/** Ce que l'écran sait de plus — « 3 lot(s) détecté(s) dans l'import ». */
 	export let precision = '';
 	export let enCours = false;

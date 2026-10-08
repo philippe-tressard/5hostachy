@@ -9,10 +9,10 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	import { tenter } from '$lib/erreurs';
-	import { uploads as uploadsApi } from '$lib/api';
+	import { uploads as uploadsApi, type Copropriete } from '$lib/api';
 
 	/** La fiche lue ; sa `photo_url` est remplacée après un téléversement. */
-	export let copropriete: any;
+	export let copropriete: Copropriete;
 	export let peutModifier = false;
 
 	let envoi = false;

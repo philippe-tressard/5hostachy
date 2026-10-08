@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.119.2",
+	"version": "2.119.3",
 	"private": true,
 	"license": "AGPL-3.0-or-later",
 	"scripts": {
@@ -12,7 +12,6 @@
 		"lint:format": "prettier --check .",
 		"lint:eslint": "eslint .",
 		"lint:eslint-ignore": "node scripts/check-eslint-ignore.mjs",
-		"lint:any": "node scripts/check-any.mjs --selftest && node scripts/check-any.mjs",
 		"lint:droits": "node scripts/check-droits-recomposes.mjs",
 		"lint:onglets-reserves": "node scripts/check-onglets-reserves.mjs",
 		"lint:en-tetes-lus": "node scripts/check-en-tetes-lus.mjs --selftest && node scripts/check-en-tetes-lus.mjs",

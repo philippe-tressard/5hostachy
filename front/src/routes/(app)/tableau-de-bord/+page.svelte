@@ -15,6 +15,7 @@
 		tickets as ticketsApi,
 		type FluxItem,
 		type FluxResponse,
+		type MonLot,
 		type Ticket,
 	} from '$lib/api';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
@@ -32,7 +33,7 @@
 	$: _siteNom = $siteNomStore;
 
 	let data: FluxResponse | null = null;
-	let userLots: any[] = [];
+	let userLots: MonLot[] = [];
 	let loading = true;
 	let ready = false;
 	let kanbanAffaires: Ticket[] = [];

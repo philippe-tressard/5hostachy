@@ -40,15 +40,15 @@
 		enCours = true;
 		try {
 			const [contrats, prests] = await Promise.all([prestApi.contrats(), prestApi.list()]);
-			const noms = new Map(prests.map((p: any) => [p.id, p.nom]));
+			const noms = new Map(prests.map((p) => [p.id, p.nom]));
 			const ctx = {
 				nomPrestataire: (id: number | null | undefined) => noms.get(id as number) ?? 'Prestataire',
 				perimetreDuBatiment,
 			};
 			const { sources: desContrats, echus } = sourcesDesContrats(contrats, ctx);
 			const titres = new Set(desContrats.map((s) => s.titre));
-			const sources = [...desContrats, ...sourcesDesAffaires(tickets as any[], titres)];
-			const plan = planifier(sources, clesDesAffaires(tickets as any[], exercice), exercice, echus);
+			const sources = [...desContrats, ...sourcesDesAffaires(tickets, titres)];
+			const plan = planifier(sources, clesDesAffaires(tickets, exercice), exercice, echus);
 			const message = resumePlan(plan, exercice);
 			if (plan.aCreer.length === 0) {
 				toast('info', message);
