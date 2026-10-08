@@ -44,4 +44,3 @@ def test_dans_le_rejeu_chaque_saut_s_ajoute(tmp_path, monkeypatch):
 def test_le_crochet_est_branche():
     #  Écrit dans un module qu'aucun crochet n'appelle, le relevé serait muet.
     assert callable(getattr(conftest, "pytest_runtest_logreport", None))
-
