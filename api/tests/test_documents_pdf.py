@@ -46,6 +46,15 @@ def test_weasyprint_present_en_ci():
     exiger_weasyprint_en_ci()
 
 
+def _consignes_du_gabarit() -> list[tuple[str, str]]:
+    """Les consignes du gabarit, rendues comme la route les rend (#1727) : le PDF
+    imprime alors de vraies rubriques, gras et nom du syndic compris."""
+    from app.seed.consignes_arrivant import GABARIT
+    from app.utils.consignes_arrivant import Consigne, Consignes, consignes_en_html
+
+    return consignes_en_html(Consignes(consignes=[Consigne(**c) for c in GABARIT]), "Syndic Test")
+
+
 @besoin_weasyprint
 def test_la_fiche_arrivant_se_rend_en_pdf():
     """Le document remis à un nouvel arrivant — celui du bug du 26/07."""
@@ -58,6 +67,7 @@ def test_la_fiche_arrivant_se_rend_en_pdf():
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
         whatsapp_url=None,
+        consignes=_consignes_du_gabarit(),
         annee=2026,
     )
     assert html.strip().startswith("<"), "le générateur ne rend plus du HTML"
@@ -123,6 +133,7 @@ def test_la_fiche_avec_ses_icones_se_rend_en_pdf(batiments, caplog):
         site_nom="Résidence Témoin",
         site_url="https://residence.example",
         whatsapp_url="https://chat.whatsapp.com/essai",
+        consignes=_consignes_du_gabarit(),
         annee=2026,
     )
     assert html.count("<svg") >= 3, (

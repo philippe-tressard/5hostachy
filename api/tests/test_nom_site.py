@@ -48,11 +48,6 @@ EXCEPTIONS_HOSTACHY: dict[str, tuple[int, str]] = {
         "`hostachy_backup_` : le préfixe des archives DÉJÀ sur disque, que la rotation "
         "et la restauration reconnaissent",
     ),
-    "utils/fiche_arrivant.py": (
-        1,
-        "« Boulevard Hostachy », un nom de RUE dans les consignes en dur — #1727 les rend "
-        "administrables",
-    ),
 }
 
 #: Un nom de journal (`logging.getLogger("hostachy.llm")`) est un espace de noms

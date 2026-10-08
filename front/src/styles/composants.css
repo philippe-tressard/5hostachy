@@ -76,6 +76,16 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 	font-size: var(--fs-base);
 }
 
+/*  ── Retirer une ligne d'une liste répétable — un contact, une rubrique ────
+    Montée ici le 07/10/2026 (#1727) : elle vivait dans `ChampsPrestataire`, et
+    les consignes de la fiche arrivant en ont repris le geste. Recopiée, elle
+    aurait été la même règle à deux endroits (`lint:css-duplique`). */
+.btn-retirer {
+	color: var(--color-danger);
+	border-color: currentColor;
+	margin-top: 0.4rem;
+}
+
 /*  ── Le champ de saisie COMPACT — une ligne de liste, pas un formulaire ─────
     Un motif de refus, un filtre au-dessus d'un tableau : une saisie qui vit
     DANS une rangée, à côté de boutons `.btn-sm`, et non dans un `.field`.

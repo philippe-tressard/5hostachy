@@ -5,7 +5,7 @@ Voir `__init__.py` pour la règle de découpage.
 """
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
@@ -26,6 +26,13 @@ from app.utils.annuaire import membres_du_conseil, membres_du_syndic
 from app.utils.destinataires import site_manager_user_id as _site_manager_user_id
 from app.utils.destinataires import syndic_principal as _syndic_principal
 from app.utils.syndic import nom_du_syndic
+from app.utils.consignes_arrivant import (
+    Consigne,
+    Consignes,
+    consignes_en_html,
+    enregistrer_consignes,
+    lire_consignes,
+)
 from html import escape
 from typing import Optional
 from app.utils.noms import nom_affiche
@@ -354,6 +361,9 @@ def get_fiche_arrivant(
         site_nom=nom_site(site.get("site_nom")),
         site_url=base_site(site.get("site_url")),
         whatsapp_url=whatsapp_url,
+        #  Éditables par le CS, rendues échappées ; le syndic y est NOMMÉ par le
+        #  contrat, comme dans l'encart ci-dessus (#1727).
+        consignes=consignes_en_html(lire_consignes(session), nom_du_syndic(session)),
         annee=horloge.aujourd_hui().year,
     )
     # Jamais de cache : la fiche est régénérée à chaque appel depuis l'annuaire
@@ -366,3 +376,31 @@ def get_fiche_arrivant(
         content=html,
         headers={"Cache-Control": "no-store, must-revalidate", "Pragma": "no-cache"},
     )
+
+
+# ── Les consignes de la fiche, éditables par le conseil syndical (#1727) ────
+
+
+class _ConsignesSaisies(BaseModel):
+    """Le corps de l'enregistrement : les rubriques, rien d'autre."""
+
+    consignes: list[Consigne] = Field(min_length=1, max_length=12)
+
+
+@router.get("/consignes-arrivant", response_model=Consignes)
+def get_consignes_arrivant(
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Les consignes de la résidence — le gabarit tant que rien n'est saisi."""
+    return lire_consignes(session)
+
+
+@router.put("/consignes-arrivant", response_model=Consignes)
+def put_consignes_arrivant(
+    body: _ConsignesSaisies,
+    session: Session = Depends(get_session),
+    _: Utilisateur = Depends(require_cs_or_admin),
+):
+    """Enregistre les consignes de la résidence. Du texte : la fiche l'échappe."""
+    return enregistrer_consignes(session, body.consignes)

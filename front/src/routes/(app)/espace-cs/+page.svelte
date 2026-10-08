@@ -34,6 +34,7 @@
 	import { accepterCommandeAcces, refuserCommandeAcces } from '$lib/commandes-acces';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import LienConsignes from '$lib/components/LienConsignes.svelte';
+	import ConsignesArrivant from '$lib/components/ConsignesArrivant.svelte';
 
 	$: _pc = getPageConfig($configStore, 'espace-cs', defautsDePage('espace-cs'));
 	$: _siteNom = $siteNomStore;
@@ -335,6 +336,14 @@
 	<OngletCourriels />
 {:else if onglet === 'annuaire'}
 	<LienConsignes />
+
+	<!--  Ce que la fiche imprime sous « Consignes de la copropriété » (#1727). -->
+	<section class="annuaire-section">
+		<div class="annuaire-section-header">
+			<h2 class="section-title">Consignes de la fiche arrivant</h2>
+		</div>
+		<ConsignesArrivant />
+	</section>
 
 	<section class="annuaire-section">
 		<div class="annuaire-section-header">
