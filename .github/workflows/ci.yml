@@ -540,6 +540,9 @@ jobs:
           # des liens de courriel — la décision se vérifie ici, la mesure se
           # fait devant la production (11/09/2026, 404 constaté à l'écran).
           bash scripts/lib/lib-precheck-liens.sh    --selftest
+          # Point 21 : les textes légaux SERVIS ne portent plus « À RENSEIGNER »
+          # (#1585) — réponse vide ou mauvaise → INCONNU, jamais OK.
+          bash scripts/lib/lib-precheck-legal.sh    --selftest
           # Le mode --post-mep (#1282) : P1 (déployé) et P3 (version servie),
           # dont les cas zéro — un journal illisible ne rend jamais OK.
           bash scripts/lib/lib-precheck-post.sh     --selftest
