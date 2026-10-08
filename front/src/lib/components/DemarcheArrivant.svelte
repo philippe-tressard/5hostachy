@@ -8,7 +8,7 @@
   servait que pour décider d'afficher la section.
 -->
 <script lang="ts">
-	import { auth as authApi } from '$lib/api';
+	import { auth as authApi, type User } from '$lib/api';
 	import { currentUser, setUser } from '$lib/stores/auth';
 	import { tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -30,7 +30,7 @@
 		initialiserDepuis($currentUser);
 	}
 
-	function initialiserDepuis(u: any) {
+	function initialiserDepuis(u: User) {
 		batimentNumero = u.batiment_nom?.replace(/[^0-9]/g, '') ?? '';
 		// Démarche arrivant : lire depuis la base (fallback localStorage pour migration)
 		if (u.demarche_arrivant === 'nouvel_arrivant' || u.demarche_arrivant === 'deja_resident') {

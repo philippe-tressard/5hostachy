@@ -43,6 +43,7 @@
 		prestataires as prestatairesApi,
 		type Ticket,
 	} from '$lib/api';
+	import type SectionDiffusion from '$lib/components/SectionDiffusion.svelte';
 	import { toast } from '$lib/components/Toast.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
 	import SectionTitre from '$lib/components/SectionTitre.svelte';
@@ -197,7 +198,7 @@
 		}
 		if ($isCS && sectionPresente(TICKET, etat, 'au_nom_de')) {
 			const [tous, e] = await essayer(adminApi.utilisateurs(), []);
-			usersActifs = tous.filter((u: any) => u.actif).sort(comparerParNom);
+			usersActifs = tous.filter((u) => u.actif).sort(comparerParNom);
 			erreurResidents = e;
 		}
 	});
@@ -243,7 +244,7 @@
 
 	//  ── L'aperçu avant diffusion (#498) — il compose avec le gabarit de la
 	//  NATURE (le serveur choisit `publication_syndic` pour une actualité).
-	let refDiffusion: any = null;
+	let refDiffusion: SectionDiffusion | null = null;
 	const brouillonApercu = () =>
 		ticketsApi.apercuDiffusion({
 			ticket_id: ticket?.id,

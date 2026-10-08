@@ -42,7 +42,7 @@
 	let savingRegle = false;
 
 	onMount(async () => {
-		[regles, eRegles] = await essayer<any[]>(reglesApi.list(), []);
+		[regles, eRegles] = await essayer(reglesApi.list(), []);
 		chargement = false;
 	});
 

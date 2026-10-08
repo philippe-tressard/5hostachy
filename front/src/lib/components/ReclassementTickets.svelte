@@ -37,11 +37,11 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { admin as adminApi } from '$lib/api';
+	import { admin as adminApi, type ReleveReclassement } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
-	let releve: any = null;
+	let releve: ReleveReclassement | null = null;
 	let chargement = true;
 	/**  Non vide = on n'a PAS pu regarder. Un relevé vide se lirait « tout est
 	 *   bien rangé », ce qui serait faux et rassurant (`standards/04`). */
@@ -58,8 +58,8 @@
 	});
 
 	$: propositions = releve?.propositions ?? [];
-	$: hautes = propositions.filter((p: any) => p.confiance === 'haute');
-	$: moyennes = propositions.filter((p: any) => p.confiance !== 'haute');
+	$: hautes = propositions.filter((p) => p.confiance === 'haute');
+	$: moyennes = propositions.filter((p) => p.confiance !== 'haute');
 </script>
 
 <h3 class="section-title">Catégories d’affaires à revoir</h3>
@@ -78,7 +78,7 @@
 {:else}
 	<p class="muted" style="margin-bottom:1rem">
 		<strong>{propositions.length}</strong> affaire{propositions.length > 1 ? 's' : ''} sur
-		{releve.total_tickets} pourrai{propositions.length > 1 ? 'ent' : 't'} changer de catégorie.
+		{releve?.total_tickets} pourrai{propositions.length > 1 ? 'ent' : 't'} changer de catégorie.
 		<strong>{hautes.length}</strong> proposition{hautes.length > 1 ? 's' : ''} à confiance haute.
 		<br />
 		<em

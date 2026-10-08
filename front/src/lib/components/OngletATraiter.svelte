@@ -23,7 +23,13 @@
 -->
 <script lang="ts">
 	import { nomAffiche } from '$lib/noms';
-	import { admin as adminApi, type CommandeAccesEnAttente } from '$lib/api';
+	import {
+		admin as adminApi,
+		type CommandeAccesEnAttente,
+		type CompteEnAttenteEnrichi,
+		type DemandeProfil,
+		type User,
+	} from '$lib/api';
 	import { badgeRole, badgeStatut, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { basculer } from '$lib/accordeon';
 	import { validerCompte } from '$lib/comptes';
@@ -36,14 +42,14 @@
 	import ValidationCompte from '$lib/components/ValidationCompte.svelte';
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
 
-	export let comptes: any[] = [];
+	export let comptes: CompteEnAttenteEnrichi[] = [];
 	export let comptesLoading = true;
 	/** Non vide = on n'a PAS pu regarder. Distinct de « la liste est vide ». */
 	export let erreurComptes = '';
 	export let commandes: CommandeAccesEnAttente[] = [];
 	export let commandesLoading = true;
 	export let erreurCommandes = '';
-	export let demandesProfil: any[] = [];
+	export let demandesProfil: DemandeProfil[] = [];
 	export let demandesProfilLoading = true;
 	export let erreurDemandesProfil = '';
 	export let batimentsMap: Record<number, string> = {};
@@ -53,7 +59,7 @@
 
 	//  Le compteur d'une section : `null` tant qu'on n'a pas regardé, ou si l'on
 	//  n'a pas pu — « 0 » se lirait « rien à traiter » (`SectionRepliee`).
-	const compteDe = (liste: any[], chargement: boolean, erreur: string) =>
+	const compteDe = (liste: readonly unknown[], chargement: boolean, erreur: string) =>
 		chargement || erreur ? null : liste.length;
 
 	//  Une seule fois, quand les trois files ont répondu : la première qui a
@@ -75,21 +81,21 @@
 		try {
 			await adminApi.traiterCompte(id, { action: 'refuser', motif });
 			toast('info', 'Compte refusé.');
-			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== id);
+			comptes = comptes.filter((c) => c.user.id !== id);
 		} catch (e) {
 			toast('error', messageErreur(e));
 		}
 	}
 
 	// Validation (comptes en attente + Nouvel Arrivant)
-	let cvModal: { user: any; lotsPrevus: number } | null = null;
+	let cvModal: { user: User; lotsPrevus: number } | null = null;
 	let cvNewArrivant = false;
 	let cvBatiment = '';
 	let cvAncienResident = '';
 	let cvSubmitting = false;
 
-	function openCompteValidation(item: any) {
-		const u = item.user ?? item;
+	function openCompteValidation(item: CompteEnAttenteEnrichi) {
+		const u = item.user;
 		cvModal = { user: u, lotsPrevus: item.lots_prevus ?? 0 };
 		cvNewArrivant = false;
 		cvBatiment = u.batiment_id ? (batimentsMap[u.batiment_id] ?? '') : '';
@@ -110,7 +116,7 @@
 				batiment: cvBatiment,
 				ancienResident: cvAncienResident,
 			});
-			comptes = comptes.filter((c) => (c.user?.id ?? c.id) !== u.id);
+			comptes = comptes.filter((c) => c.user.id !== u.id);
 			for (const a of annonces) toast(a.ton, a.texte);
 			cvModal = null;
 		} catch (e) {
@@ -193,8 +199,8 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each comptes as item ((item.user ?? item).id)}
-						{@const u = item.user ?? item}
+					{#each comptes as item (item.user.id)}
+						{@const u = item.user}
 						<tr>
 							<td style="font-weight:500"
 								>{nomAffiche(u)}
@@ -372,7 +378,9 @@
 							</td>
 							<td
 								><span style="font-size:var(--fs-md)"
-									>{LIBELLES_STATUT_ABREGE[d.statut_actuel] ?? d.statut_actuel ?? '—'}</span
+									>{(d.statut_actuel && LIBELLES_STATUT_ABREGE[d.statut_actuel]) ??
+										d.statut_actuel ??
+										'—'}</span
 								></td
 							>
 							<td><span style="font-size:var(--fs-md)">{d.batiment_actuel ?? '—'}</span></td>

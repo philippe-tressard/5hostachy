@@ -42,7 +42,7 @@
 -->
 <script lang="ts">
 	import FichiersUpload from '$lib/components/FichiersUpload.svelte';
-	import { documents as docsApi } from '$lib/api';
+	import { documents as docsApi, type Document } from '$lib/api';
 
 	/**  Le contrat dont on montre les pièces — `null` PENDANT SA CRÉATION.
 	 *
@@ -59,7 +59,7 @@
 	 *  toujours. */
 	export let contratId: number | null;
 	/** Les documents déjà attachés. */
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	/** Qui sait supprimer — l'écran, qui tient la table. */
 	export let onSupprimer: (contratId: number, docId: number) => void;
 	/** Qui sait recharger après un ajout. */

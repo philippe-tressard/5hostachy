@@ -31,7 +31,12 @@
 	import PastillesAffaire from '$lib/components/PastillesAffaire.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
-	import { documents as docsApi, type CorrespondanceAffaire, type Ticket } from '$lib/api';
+	import {
+		documents as docsApi,
+		type CorrespondanceAffaire,
+		type Document,
+		type Ticket,
+	} from '$lib/api';
 	import { safeHtml } from '$lib/sanitize';
 	import { attributsNature, lienTicket, ticketUrgent } from '$lib/tickets';
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
@@ -54,7 +59,7 @@
 	/**  Les documents des ANCIENNES publications — des entités `Document`, que
 	 *   la 0210 a rattachées à l'affaire. Une actualité récente n'en a pas : ses
 	 *   documents sont dans `fichiers_urls`. */
-	export let documents: any[] = [];
+	export let documents: Document[] = [];
 	/**  Le geste qui retire l'un d'eux (#1178) — `null` : pas de 🗑️ (hors conseil). */
 	export let onRetirerDocument: ((doc: { id: number }) => void) | null = null;
 	/**  Vrai quand la page affiche un formulaire à la place du contenu (édition,

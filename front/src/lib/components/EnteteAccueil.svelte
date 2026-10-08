@@ -8,6 +8,7 @@
   logement —, la page gardant le chargement.
 -->
 <script lang="ts">
+	import type { MonLot } from '$lib/api';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { libelleLogement } from '$lib/utils';
@@ -18,7 +19,7 @@
 	 *   (`relire`) : ici, elle serait figée au montage. */
 	export let salutation: string;
 	/** Les lots de l'utilisateur (`lots.mesList()`). */
-	export let lots: any[] = [];
+	export let lots: MonLot[] = [];
 	/** Vrai quand la page a chargé : l'en-tête entre alors en fondu. */
 	export let visible = false;
 
@@ -42,7 +43,7 @@
 		return labels.join(' · ');
 	})();
 
-	$: lotLabel = libelleLogement(lots, $currentUser as any);
+	$: lotLabel = libelleLogement(lots, $currentUser);
 </script>
 
 <div class="hero" class:hero-visible={visible}>

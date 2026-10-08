@@ -106,7 +106,7 @@
 					hors_copropriete: form.hors_copropriete,
 					ordre: Number(form.ordre) || 0,
 					actif: form.actif,
-				} as any);
+				});
 				await rechargerPerimetres();
 				edite = null;
 			},
@@ -145,7 +145,7 @@
 					libelle: nouveau.libelle.trim(),
 					description: nouveau.description,
 					parent: creation?.parent ?? null,
-				} as any);
+				});
 				await rechargerPerimetres();
 				creation = null;
 			},
@@ -173,7 +173,7 @@
 	async function deplacer(n: Perimetre, delta: number) {
 		await tenter(
 			async () => {
-				await perimetresApi.update(n.id, { ordre: (n.ordre ?? 0) + delta } as any);
+				await perimetresApi.update(n.id, { ordre: (n.ordre ?? 0) + delta });
 				await rechargerPerimetres();
 			},
 			undefined,

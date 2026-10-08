@@ -24,11 +24,12 @@
   appartenait pas.
 -->
 <script lang="ts">
+	import type { Ticket } from '$lib/api';
 	import ApercuCarte from './ApercuCarte.svelte';
 	import { separerFichiers } from '$lib/fichiers';
 
 	/** Le ticket, tel que l'API le renvoie (`apercu_pieces` compris). */
-	export let ticket: any;
+	export let ticket: Ticket;
 	/**  L'aperçu est rendu DANS l'en-tête de la carte (`slot="apercu"`), qui porte
 	 *   déjà son retrait : sans cela, le texte serait décalé de deux fois la marge.
 	 *   Relayé et non redécidé — c'est `ApercuCarte` qui sait ce que ça change. */

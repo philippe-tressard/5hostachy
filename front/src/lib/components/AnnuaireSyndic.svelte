@@ -43,7 +43,7 @@
 		nomSyndicSource = donnees.nom_syndic_source ?? 'aucune';
 		adresseSyndic = donnees.adresse ?? '';
 		siteWebSyndic = donnees.site_web ?? '';
-		return (donnees.membres ?? []).map((m: any): MembreSyndicForm => ({
+		return (donnees.membres ?? []).map((m): MembreSyndicForm => ({
 			genre: m.genre ?? 'Mme',
 			prenom: m.prenom ?? '',
 			nom: m.nom ?? '',

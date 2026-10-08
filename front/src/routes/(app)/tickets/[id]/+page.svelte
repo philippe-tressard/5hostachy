@@ -8,6 +8,7 @@
 	import {
 		tickets as ticketsApi,
 		ApiError,
+		type Ticket,
 		type TicketEvolution,
 		type TicketMessage,
 	} from '$lib/api';
@@ -37,7 +38,7 @@
 
 	$: _siteNom = $siteNomStore;
 
-	let ticket: any = null;
+	let ticket: Ticket | null = null;
 	let messages: TicketMessage[] = [];
 	let evolutions: TicketEvolution[] = [];
 	let erreurSuivi = '';
@@ -92,7 +93,7 @@
 	let repondreOuvert = false;
 	$: if (repondreOuvert) ouvrirGeste('affaire.repondre'); //  Le geste mesuré (#1633).
 	let msgVise: number | null = null;
-	$: clos = ticket && estTicketClos(ticket.statut);
+	$: clos = !!ticket && estTicketClos(ticket.statut);
 
 	async function loadEvolutions() {
 		try {
@@ -176,6 +177,7 @@
 	//  une **correction**, et la transition passe par l'endpoint qui la trace
 	//  vraiment : date, auteur, courriel à l'auteur du ticket.
 	async function updateStatus(s: string) {
+		if (!ticket) return;
 		//  Clore demande s'il faut absorber les affaires liées ouvertes (#1704).
 		const fusionner = await demanderFusion(ticket, s);
 		if (fusionner === null) return;
@@ -203,6 +205,7 @@
 	}
 
 	async function deleteTicket() {
+		if (!ticket) return;
 		if (!(await confirmer(SUPPRESSION(`${TICKET.libelle} #${ticket.numero}`)))) return;
 		try {
 			await ticketsApi.delete(ticketId);

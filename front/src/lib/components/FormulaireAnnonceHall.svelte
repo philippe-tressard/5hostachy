@@ -125,7 +125,7 @@
 	//  oublie : fournir `demanderApercu` NE SUFFIT PAS, il faut s'intercaler dans la
 	//  soumission. Le 31/08, l'oubli du second a fait partir une actualité que
 	//  personne n'a pu annuler — `npm run lint:apercu` le refuse depuis.
-	let refDiffusion: any = null;
+	let refDiffusion: SectionDiffusion | null = null;
 
 	const brouillonApercu = () =>
 		annoncesHallApi.apercuDiffusion({

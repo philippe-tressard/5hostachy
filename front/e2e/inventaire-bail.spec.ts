@@ -39,7 +39,7 @@ const BAIL = {
 };
 const LOTS = [{ id: 1, numero: '12', batiment_nom: 'Bât. 2', type: 'appartement', etage: 2 }];
 
-type Envoi = { quoi: string; corps: any };
+type Envoi = { quoi: string; corps: unknown };
 
 async function ouvrir(page: Page): Promise<Envoi[]> {
 	const envois: Envoi[] = [];

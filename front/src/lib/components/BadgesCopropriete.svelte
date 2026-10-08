@@ -220,7 +220,7 @@
 			//  Les porteurs proposés à la saisie. Chargés ici plutôt qu'à
 			//  l'ouverture du formulaire : une liste qui se remplit après le
 			//  premier rendu ferait clignoter le sélecteur.
-			porteurs = (await adminApi.utilisateurs()).map((u: any) => ({
+			porteurs = (await adminApi.utilisateurs()).map((u) => ({
 				id: u.id,
 				affiche: nomAffiche(u),
 				prenom: u.prenom ?? '',
@@ -273,7 +273,7 @@
 
 	/**  La valeur comparée pour une ligne. `localeCompare` avec `sensitivity`
 	 *   pour que « Ébert » se range après « Dupont » et non en fin de liste. */
-	function cle(a: any): string {
+	function cle(a: (typeof toutes)[number]): string {
 		if (triCol === 'type') return a.type ?? '';
 		if (triCol === 'lot') return a.lot_libelle ?? '';
 		//  ⚠️ Trié sur les CODES, pas sur le libellé : le libellé dépend de

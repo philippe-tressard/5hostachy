@@ -27,7 +27,7 @@
 		}
 	}
 
-	async function supprimer(ul: any) {
+	async function supprimer(ul: LienCompteLot) {
 		if (
 			!(await confirmer(
 				SUPPRESSION(
@@ -48,7 +48,7 @@
 	async function supprimerToutesPourUtilisateur(g: {
 		user_id: number;
 		user_nom: string;
-		lots: any[];
+		lots: LienCompteLot[];
 	}) {
 		if (!g.lots.length) return;
 		if (
@@ -88,7 +88,7 @@
 	$: grouped = (() => {
 		const map = new Map<
 			number,
-			{ user_id: number; user_nom: string; user_statut: string; lots: any[] }
+			{ user_id: number; user_nom: string; user_statut: string; lots: LienCompteLot[] }
 		>();
 		for (const r of filtered) {
 			if (!map.has(r.user_id))

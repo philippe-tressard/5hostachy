@@ -9,13 +9,13 @@
 -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Bail } from '$lib/api';
+	import type { Bail, MonLot } from '$lib/api';
 	import { nomLocataire } from '$lib/bail';
 	import BadgeStatutBail from '$lib/components/BadgeStatutBail.svelte';
 	import { fmtDateShort as fmt } from '$lib/date';
 	import { etageLabel, lotTypeComplet } from '$lib/utils';
 
-	export let lots: any[] = [];
+	export let lots: MonLot[] = [];
 	export let bauxActifs: Bail[] = [];
 	/** L'adresse de la gestion locative — la page la compose (`routeSousOnglet`). */
 	export let routeGestion: string;

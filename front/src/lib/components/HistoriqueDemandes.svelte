@@ -22,10 +22,11 @@
   vocabulaire divergeraient au premier libellé ajusté.
 -->
 <script lang="ts">
+	import type { MaDemandeProfil } from '$lib/api';
 	import { fmtDateShort as fmtDate } from '$lib/date';
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 
-	export let demandes: any[] = [];
+	export let demandes: MaDemandeProfil[] = [];
 	/** Vrai tant que la donnée n'est pas arrivée : on ne montre rien. */
 	export let chargement = false;
 	/** Le vocabulaire des types d'occupant — porté par la page (voir l'en-tête). */

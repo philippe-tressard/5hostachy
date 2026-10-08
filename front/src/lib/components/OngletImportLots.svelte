@@ -5,6 +5,7 @@
 	import { nomAffiche } from '$lib/noms';
 	import { onMount } from 'svelte';
 	import { lots as lotsApi, admin as adminApi } from '$lib/api';
+	import type { LigneImportLot, MonLot, StatsImportLots, UtilisateurAdmin } from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BarreImport from '$lib/components/BarreImport.svelte';
@@ -14,10 +15,10 @@
 
 	$: _siteNom = $siteNomStore;
 	// ── Données ─────────────────────────────────────────────────────────────
-	let imports: any[] = [];
-	let stats: any = null;
-	let utilisateurs: any[] = [];
-	let lots: any[] = [];
+	let imports: LigneImportLot[] = [];
+	let stats: StatsImportLots | null = null;
+	let utilisateurs: UtilisateurAdmin[] = [];
+	let lots: MonLot[] = [];
 	let loading = true;
 	let filtre = '';
 	let tri = 'copro'; // copro | batiment | numero
@@ -109,12 +110,12 @@
 		mandataire: { libelle: 'Mandataire', couleur: '#7c3aed' },
 	});
 
-	function openEdit(imp: any) {
+	function openEdit(imp: LigneImportLot) {
 		editId = imp.id;
 		editLot = String(imp.lot_id ?? '');
 		editNotes = imp.notes_admin ?? '';
 		if (imp.utilisateurs?.length) {
-			editOccupants = imp.utilisateurs.map((u: any) => ({
+			editOccupants = imp.utilisateurs.map((u) => ({
 				user_id: String(u.user_id ?? ''),
 				type_lien: u.type_lien ?? 'propriétaire',
 			}));

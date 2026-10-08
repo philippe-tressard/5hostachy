@@ -14,13 +14,14 @@
   s'afficherait deux fois sur toute carte ouverte.
 -->
 <script lang="ts">
+	import type { FluxItem } from '$lib/api';
 	import { fmtDatetimeShort } from '$lib/date';
 	import { typeVoirLabel } from '$lib/flux';
 	import { STATUT_TICKET_BADGE, statutTicketLabel } from '$lib/tickets';
 	import { safeHtml } from '$lib/sanitize';
 	import PiecesJointes from './PiecesJointes.svelte';
 
-	export let item: any;
+	export let item: FluxItem;
 	/**  L'adresse de l'écran d'origine — calculée par la carte, qui connaît déjà
 	 *   le type de l'élément. La recalculer ici la ferait diverger. */
 	export let lien: string | null;

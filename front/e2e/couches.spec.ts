@@ -21,6 +21,8 @@
 import { attendreHydratation, expect, test } from './aides';
 
 type Temoin = { overflow: string; fermees: string[] };
+/** Le témoin que `beforeEach` pose sur `window`. */
+type Couches = { poser: (nom: string) => void; fermees: string[] };
 
 test.describe('Les couches superposées', () => {
 	test.beforeEach(async ({ page }) => {
@@ -44,14 +46,14 @@ test.describe('Les couches superposées', () => {
 	const lire = (page: import('@playwright/test').Page) =>
 		page.evaluate((): Temoin => ({
 			overflow: document.body.style.overflow,
-			fermees: [...(window as any).__couches.fermees],
+			fermees: [...(window as unknown as { __couches: Couches }).__couches.fermees],
 		}));
 
 	test('Échap ne ferme que la couche du dessus, et le fond reste bloqué dessous', async ({
 		page,
 	}) => {
 		await page.evaluate(() => {
-			const c = (window as any).__couches;
+			const c = (window as unknown as { __couches: Couches }).__couches;
 			c.poser('modale');
 			c.poser('photo');
 		});
@@ -76,7 +78,7 @@ test.describe('Les couches superposées', () => {
 		page,
 	}) => {
 		await page.evaluate(() => {
-			const c = (window as any).__couches;
+			const c = (window as unknown as { __couches: Couches }).__couches;
 			c.poser('modale');
 			c.poser('photo');
 			//  Navigation : la modale se démonte sans être fermée — deux fois,

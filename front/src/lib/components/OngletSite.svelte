@@ -16,10 +16,11 @@
   donnerait deux vérités sur la configuration du site.
 -->
 <script lang="ts">
+	import type { UtilisateurAdmin } from '$lib/api';
 	import { GLYPHE_URGENCE } from '$lib/options-publication';
 	import { nomAffiche } from '$lib/noms';
 	import Icon from '$lib/components/Icon.svelte';
-	import { NOM_SITE_PAR_DEFAUT } from '$lib/configSite';
+	import { NOM_SITE_PAR_DEFAUT, type ConfigSite } from '$lib/configSite';
 	import ChampLogo from '$lib/components/ChampLogo.svelte';
 	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
 	import Pastille from '$lib/components/Pastille.svelte';
@@ -27,9 +28,9 @@
 	import { ELEMENTS_MASQUABLES, ELEMENTS_VERROUILLES } from '$lib/piedDePage';
 
 	/** Lié : la page porte l'état et l'enregistre. */
-	export let siteConfig: any;
+	export let siteConfig: ConfigSite;
 	export let siteSaving = false;
-	export let siteManagerUsers: any[] = [];
+	export let siteManagerUsers: UtilisateurAdmin[] = [];
 	export let saveSiteConfig: () => void;
 
 	/** Affiche ou masque un élément du pied de page — l'aperçu suit aussitôt. */

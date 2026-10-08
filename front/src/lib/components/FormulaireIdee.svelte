@@ -45,7 +45,7 @@
 
 	/**  L'idée à corriger, ou `null` pour un dépôt. C'est la SEULE prop qui
 	 *   distingue les deux gestes — tout le reste en découle. */
-	export let idee: any = null;
+	export let idee: Idee | null = null;
 
 	$: modeEdition = idee !== null;
 	/**  L'état du cadre #430. Il était écrit en CONSTANTE `'creation'`, avec ce
@@ -73,7 +73,7 @@
 		}
 		submitting = true;
 		try {
-			if (modeEdition) {
+			if (idee) {
 				//  ⚠️ Le ciblage n'est PAS renvoyé : `IdeeUpdate` ne l'accepte pas.
 				//  Restreindre après coup masquerait l'idée à des gens qui l'ont déjà
 				//  votée — même décision que pour le sondage. L'envoyer quand même

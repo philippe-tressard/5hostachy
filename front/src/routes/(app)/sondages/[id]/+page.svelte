@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import { page } from '$app/stores';
-	import { sondages as sondagesApi } from '$lib/api';
+	import { sondages as sondagesApi, type SondageDetail } from '$lib/api';
 	import { confirmer, confirmerPuis, SUPPRESSION } from '$lib/confirmation';
 	import { tenter, messageErreur } from '$lib/erreurs';
 	import { signaler } from '$lib/signalements';
@@ -18,7 +18,7 @@
 	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 	import ResultatsSondage from '$lib/components/ResultatsSondage.svelte';
 
-	let sondage: any = null;
+	let sondage: SondageDetail | null = null;
 	let loading = true;
 	let selectedOption: number | null = null;
 	let voting = false;
@@ -26,7 +26,7 @@
 	let commentaireVote = '';
 	let reponseLibre = '';
 
-	$: optionSelectionnee = sondage?.options?.find((o: any) => o.id === selectedOption);
+	$: optionSelectionnee = sondage?.options?.find((o) => o.id === selectedOption);
 	$: champLibreActif = !!optionSelectionnee?.champ_libre;
 
 	//  🔴 La correction passe par `FormulaireSondage`, le SEUL formulaire du
@@ -62,8 +62,7 @@
 	//  `nb_votes` est ABSENT quand les résultats sont masqués (l'API ne l'envoie
 	//  pas, plutôt que d'envoyer 0 qui se lirait « personne n'a voté ») : sans ce
 	//  repli la somme vaudrait NaN et les pourcentages aussi.
-	$: totalVotes =
-		sondage?.options?.reduce((sum: number, o: any) => sum + (o.nb_votes ?? 0), 0) ?? 0;
+	$: totalVotes = sondage?.options?.reduce((sum, o) => sum + (o.nb_votes ?? 0), 0) ?? 0;
 
 	async function voter() {
 		if (!selectedOption) {
@@ -102,10 +101,11 @@
 		//  la redemander ici ferait deux fenêtres pour un geste.
 		await tenter(async () => {
 			await sondagesApi.supprimerCommentaire(sondageId, commentaireId);
-			sondage = {
-				...sondage,
-				commentaires: sondage.commentaires.filter((c: any) => c.id !== commentaireId),
-			};
+			if (sondage)
+				sondage = {
+					...sondage,
+					commentaires: sondage.commentaires.filter((c) => c.id !== commentaireId),
+				};
 		}, 'Commentaire supprimé');
 	}
 
@@ -131,7 +131,7 @@
 			'Sondage clôturé',
 			async () => {
 				await sondagesApi.cloturer(sondageId);
-				sondage = { ...sondage, cloture: true, cloture_forcee: true };
+				if (sondage) sondage = { ...sondage, cloture: true, cloture_forcee: true };
 			},
 		);
 	}

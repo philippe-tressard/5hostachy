@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Batiment, Copropriete } from '$lib/api';
 	/**
 	 * Fiche d'identité de la résidence — adresse, immatriculation, lots,
 	 * assurance, et composition par bâtiment.
@@ -43,8 +44,8 @@
 		return echu ? ` — mandat échu depuis le ${fmt(date)}` : ` — mandat jusqu'au ${fmt(date)}`;
 	}
 
-	export let copropriete: any;
-	export let batiments: any[] = [];
+	export let copropriete: Copropriete;
+	export let batiments: Batiment[] = [];
 
 	$: hasOrphanLots = (copropriete?.nb_parkings_communs ?? 0) > 0;
 	$: totalAppart = batiments.reduce((s, b) => s + (b.nb_appartements ?? 0), 0);

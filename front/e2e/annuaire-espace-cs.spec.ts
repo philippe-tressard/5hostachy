@@ -69,7 +69,8 @@ const IMPORTS = [
 	{ nom_coproprietaire: 'BERNARD Luc', type_raw: 'AP', etage_raw: '1ER', lot_id: 9 },
 ];
 
-type Envoi = { chemin: string; corps: any };
+//  Ce que l'écran envoie, tel que les assertions le lisent.
+type Envoi = { chemin: string; corps: { membres: { id?: number; nom: string }[] } };
 
 async function ouvrir(page: Page, syndic: typeof SYNDIC = SYNDIC): Promise<Envoi[]> {
 	const envois: Envoi[] = [];
@@ -127,7 +128,7 @@ test('un nom saisi lie l’inscrit, localise le membre, et c’est ce qui part',
 	await conseil.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 	await expect.poll(() => envois.length).toBe(1);
 	expect(envois[0].chemin).toBe('/api/admin/annuaire/cs');
-	const ajoute = envois[0].corps.membres.find((m: any) => m.nom === 'Bernard');
+	const ajoute = envois[0].corps.membres.find((m) => m.nom === 'Bernard');
 	expect(ajoute).toMatchObject({ user_id: 42, batiment_id: 4, batiment_nom: '4', etage: 1 });
 });
 
@@ -159,7 +160,7 @@ test('le syndic se réordonne, l’ordre part au serveur, un seul principal', as
 	const syndic = section(page, 'Syndic');
 	await syndic.getByRole('button', { name: 'Descendre' }).first().click();
 	await expect.poll(() => envois.length).toBe(1);
-	expect(envois[0].corps.membres.map((m: any) => m.nom)).toEqual(['Morel', 'Martin']);
+	expect(envois[0].corps.membres.map((m) => m.nom)).toEqual(['Morel', 'Martin']);
 	//  Pas de « Monter » en tête ; « principal » se propose au seul membre qui ne l'est pas.
 	await expect(syndic.getByRole('button', { name: 'Monter' })).toHaveCount(1);
 	await expect(syndic.getByRole('button', { name: 'Définir interlocuteur principal' })).toHaveCount(

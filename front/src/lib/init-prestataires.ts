@@ -175,7 +175,8 @@ export function clePlanifiee(titre: string, mois: number): string {
 /** Une affaire déjà posée, telle que l'API la rend — seuls ces champs comptent. */
 export interface VisiteExistante {
 	titre: string;
-	debut: string | null;
+	/** Absent d'une affaire sans date : lu par un test de vérité, comme `null`. */
+	debut?: string | null;
 	categorie?: string;
 }
 
@@ -240,11 +241,13 @@ export interface ContratSource {
 export interface AffaireSource {
 	titre: string;
 	categorie: string;
-	prestataire_id: number | null;
+	/** Les champs facultatifs sont lus par un test de vérité ou `?? null` : absents
+	 *  d'un `Ticket`, ils s'y lisent comme `null`. */
+	prestataire_id?: number | null;
 	perimetre_cible?: string[] | null;
-	frequence_type: string | null;
-	frequence_valeur: number | null;
-	description: string | null;
+	frequence_type?: string | null;
+	frequence_valeur?: number | null;
+	description?: string | null;
 	archivee?: boolean;
 }
 

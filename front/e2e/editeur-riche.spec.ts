@@ -20,7 +20,7 @@ const LEGAL = {
 	politique_confidentialite: '<p>Vos données restent ici.</p>',
 };
 
-type Envoi = { quoi: string; corps: any };
+type Envoi = { quoi: string; corps: unknown };
 
 async function ouvrir(page: Page, chemin: string): Promise<Envoi[]> {
 	const envois: Envoi[] = [];
