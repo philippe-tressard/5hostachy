@@ -15,7 +15,16 @@
  * valeur lue, quelle que soit la configuration en base (une saisie directe par
  * l'API compte aussi). Le pied de page n'a donc pas à les tester un par un.
  * Le composant d'affichage est `PiedDePage.svelte`, celui du réglage est
- * l'onglet `OngletSite.svelte`.
+ * `ReglagePiedDePage.svelte` (Admin › Site).
+ *
+ * ## L'année et le texte libre (arbitrés à l'écran, 08/10/2026)
+ *
+ * - **L'année** : « © 2026 » l'année de création, « © 2026–2027 » les suivantes.
+ *   L'année de création se règle (`pied_de_page_annee_debut`) ; vide, seule
+ *   l'année en cours s'affiche — une autre résidence règle la sienne.
+ * - **Le texte libre** est un élément comme les autres, qui se masque, mais
+ *   dont la PLACE se choisit : il suit l'élément nommé par
+ *   `pied_de_page_texte_apres` (vide : en tête). Sans texte, il ne s'affiche pas.
  */
 import { NOM_PLATEFORME } from '$lib/plateforme';
 
@@ -27,10 +36,12 @@ export interface ElementPied {
 	verrouille?: string;
 }
 
-/** Les éléments du pied de page, dans leur ordre d'affichage. */
+/** Les éléments du pied de page, dans leur ordre d'affichage — le texte libre
+ *  y a sa place par défaut, que `pied_de_page_texte_apres` déplace. */
 export const ELEMENTS_PIED: readonly ElementPied[] = [
 	{ code: 'annee', libelle: '© Année' },
 	{ code: 'residence', libelle: 'Nom de la résidence' },
+	{ code: 'texte', libelle: 'Texte libre' },
 	{ code: 'version', libelle: 'Version' },
 	{ code: 'serveur', libelle: 'Serveur (RPi)' },
 	{
@@ -77,8 +88,93 @@ export function ecrireMasques(masques: readonly string[]): string {
 		.join(',');
 }
 
-/** Les codes affichés, dans l'ordre, une fois les masqués retirés. */
-export function elementsAffiches(masques: readonly string[]): string[] {
-	const retires = new Set(lireMasques(masques.join(',')));
-	return ELEMENTS_PIED.map((e) => e.code).filter((c) => !retires.has(c));
+/** Les quatre clés de configuration du pied de page — publiques : le pied de
+ *  page les lit dans `/config`. */
+export const CLES_PIED = {
+	masques: CLE_PIED_MASQUES,
+	anneeDebut: 'pied_de_page_annee_debut',
+	texte: 'pied_de_page_texte',
+	texteApres: 'pied_de_page_texte_apres',
+} as const;
+
+/** Le texte libre ne fait qu'une ligne de pied de page. */
+export const TEXTE_PIED_MAX = 120;
+
+/** Le réglage du pied de page, tel que l'administration le saisit. */
+export interface ReglagePied {
+	masques: string[];
+	/** L'année de création ; vide, seule l'année en cours s'affiche. */
+	anneeDebut: number | null;
+	texte: string;
+	/** Le code de l'élément que le texte libre suit ; vide : en tête. */
+	texteApres: string;
+}
+
+const AUTRES_CODES = ELEMENTS_PIED.map((e) => e.code).filter((c) => c !== 'texte');
+/** La place du texte libre quand rien n'est réglé : celle de `ELEMENTS_PIED`. */
+const TEXTE_APRES_DEFAUT =
+	ELEMENTS_PIED[ELEMENTS_PIED.findIndex((e) => e.code === 'texte') - 1].code;
+
+/** Une année plausible, ou null — une saisie vide ou fautive ne casse pas le pied de page. */
+function lireAnnee(valeur: string | number | null | undefined): number | null {
+	const n = Number(String(valeur ?? '').trim());
+	return Number.isInteger(n) && n >= 1900 && n <= 9999 ? n : null;
+}
+
+/** Configuration stockée → réglage. Tout ce qui est inconnu retombe sur le défaut. */
+export function lireReglagePied(cfg: Record<string, string | undefined>): ReglagePied {
+	const apres = cfg[CLES_PIED.texteApres] ?? TEXTE_APRES_DEFAUT;
+	return {
+		masques: lireMasques(cfg[CLES_PIED.masques]),
+		anneeDebut: lireAnnee(cfg[CLES_PIED.anneeDebut]),
+		texte: (cfg[CLES_PIED.texte] ?? '').trim().slice(0, TEXTE_PIED_MAX),
+		texteApres: apres === '' || AUTRES_CODES.includes(apres) ? apres : TEXTE_APRES_DEFAUT,
+	};
+}
+
+/** Réglage → configuration stockée. */
+export function ecrireReglagePied(r: ReglagePied): Record<string, string> {
+	return {
+		[CLES_PIED.masques]: ecrireMasques(r.masques),
+		[CLES_PIED.anneeDebut]: r.anneeDebut === null ? '' : String(lireAnnee(r.anneeDebut) ?? ''),
+		[CLES_PIED.texte]: r.texte.trim().slice(0, TEXTE_PIED_MAX),
+		[CLES_PIED.texteApres]: r.texteApres,
+	};
+}
+
+/** « © 2026 » l'année de création (ou sans elle), « © 2026–2027 » ensuite. */
+export function mentionAnnee(debut: number | null, courante: number): string {
+	return debut !== null && debut < courante ? `© ${debut}–${courante}` : `© ${courante}`;
+}
+
+/** Tous les codes, le texte libre à sa place, avant tout masquage — l'ordre
+ *  des pastilles du réglage comme celui du pied de page. */
+export function ordreComplet(texteApres: string): string[] {
+	const ordre = [...AUTRES_CODES];
+	ordre.splice(texteApres === '' ? 0 : ordre.indexOf(texteApres) + 1, 0, 'texte');
+	return ordre;
+}
+
+/** Les codes affichés, dans l'ordre, une fois les masqués retirés — et le texte
+ *  libre absent s'il est vide. */
+export function elementsAffiches(r: ReglagePied): string[] {
+	const retires = new Set(lireMasques(r.masques.join(',')));
+	return ordreComplet(r.texteApres).filter(
+		(c) => !retires.has(c) && (c !== 'texte' || r.texte.trim() !== ''),
+	);
+}
+
+/**
+ * Le texte libre avance (-1) ou recule (+1) d'un cran parmi les éléments
+ * AFFICHÉS : passer derrière un élément masqué ne changerait rien à l'écran.
+ * Rend la nouvelle valeur de `texteApres`, inchangée en bout de rangée.
+ */
+export function deplacerTexte(r: ReglagePied, sens: -1 | 1): string {
+	const visibles = elementsAffiches({ ...r, texte: r.texte || ' ' });
+	const i = visibles.indexOf('texte');
+	const voisin = visibles[i + sens];
+	if (i < 0 || voisin === undefined) return r.texteApres;
+	if (sens === 1) return voisin;
+	//  Avancer : se placer derrière l'élément qui précède le voisin, en tête sinon.
+	return visibles[i - 2] ?? '';
 }

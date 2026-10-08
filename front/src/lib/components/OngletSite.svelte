@@ -22,26 +22,13 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { NOM_SITE_PAR_DEFAUT, type ConfigSite } from '$lib/configSite';
 	import ChampLogo from '$lib/components/ChampLogo.svelte';
-	import LibelleGroupe from '$lib/components/LibelleGroupe.svelte';
-	import Pastille from '$lib/components/Pastille.svelte';
-	import PiedDePage from '$lib/components/PiedDePage.svelte';
-	import { ELEMENTS_MASQUABLES, ELEMENTS_VERROUILLES } from '$lib/piedDePage';
+	import ReglagePiedDePage from '$lib/components/ReglagePiedDePage.svelte';
 
 	/** Lié : la page porte l'état et l'enregistre. */
 	export let siteConfig: ConfigSite;
 	export let siteSaving = false;
 	export let siteManagerUsers: UtilisateurAdmin[] = [];
 	export let saveSiteConfig: () => void;
-
-	/** Affiche ou masque un élément du pied de page — l'aperçu suit aussitôt. */
-	function basculerPied(code: string) {
-		const masques: string[] = siteConfig.pied_de_page_masques;
-		siteConfig.pied_de_page_masques = masques.includes(code)
-			? masques.filter((c) => c !== code)
-			: [...masques, code];
-	}
-
-	const verrouilles = ELEMENTS_VERROUILLES.map((e) => e.libelle).join(', ');
 </script>
 
 <section class="card config-section">
@@ -157,41 +144,4 @@
 	</div>
 </section>
 
-<!--  Le pied de page : les éléments facultatifs se masquent, les trois que la loi
-      ou la licence imposent restent (`$lib/piedDePage`). L'aperçu est le VRAI
-      composant du squelette : il ne peut pas montrer autre chose que le site. -->
-<section class="card config-section">
-	<h2 class="config-section-title"><Icon name="pencil" size={17} />Pied de page</h2>
-	<div class="largeur-saisie">
-		<LibelleGroupe titre="Éléments affichés" id="pied-elements" classe="perimetre-pills">
-			{#each ELEMENTS_MASQUABLES as e (e.code)}
-				<Pastille
-					petite
-					bascule
-					active={!siteConfig.pied_de_page_masques.includes(e.code)}
-					on:click={() => basculerPied(e.code)}>{e.libelle}</Pastille
-				>
-			{/each}
-		</LibelleGroupe>
-		<p class="aide">
-			Toujours affichés : {verrouilles}. La licence du logiciel et la loi imposent qu’ils restent
-			accessibles depuis chaque page.
-		</p>
-		<div class="apercu-pied" role="group" aria-label="Aperçu du pied de page">
-			<PiedDePage masques={siteConfig.pied_de_page_masques} />
-		</div>
-	</div>
-	<div class="form-actions largeur-saisie">
-		<button class="btn btn-primary" on:click={saveSiteConfig} disabled={siteSaving}>
-			{siteSaving ? 'Enregistrement…' : 'Enregistrer'}
-		</button>
-	</div>
-</section>
-
-<style>
-	.apercu-pied {
-		margin-top: 0.75rem;
-		border: 1px dashed var(--color-border);
-		border-radius: var(--radius);
-	}
-</style>
+<ReglagePiedDePage bind:reglage={siteConfig.pied_de_page} {siteSaving} {saveSiteConfig} />

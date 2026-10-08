@@ -307,8 +307,14 @@ créer » qui n'existaient plus, ou pas encore.
 
 - La clé `pied_de_page_masques` (publique, liste de codes) porte les éléments
   **retirés**. Si elle est absente, tout s'affiche, y compris un élément ajouté plus tard.
-- **Masquables** : année, nom de la résidence (lien vers `site_url`), version,
-  serveur (`VITE_INSTANCE_ID`, absent sur le poste de développement).
+- **Masquables** : année, nom de la résidence (lien vers `site_url`), texte
+  libre, version, serveur (`VITE_INSTANCE_ID`, absent sur le poste de développement).
+- **L'année** : `pied_de_page_annee_debut` (publique) est l'année de création —
+  « © 2026 » cette année-là, « © 2026–2027 » ensuite ; vide, l'année en cours seule.
+- **Le texte libre** : `pied_de_page_texte` (publique, une ligne, 120 caractères,
+  bornée aussi par le serveur) ; il suit l'élément nommé par
+  `pied_de_page_texte_apres` (vide : en tête ; défaut : le nom de la résidence),
+  et se déplace avec ← → dans le réglage. Vide, il ne s'affiche pas.
 - **Verrouillés** : le lien vers le code source de la version en service
   (AGPLv3 §13), les mentions légales (LCEN, art. 6) et la politique de
   confidentialité (RGPD, art. 13). `lireMasques` les écarte quelle que soit la valeur en base.

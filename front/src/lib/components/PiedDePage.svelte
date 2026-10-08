@@ -14,20 +14,20 @@
 	import pkg from '../../../package.json';
 	import { configStore, siteNomStore } from '$lib/stores/pageConfig';
 	import { lienSource, NOM_PLATEFORME } from '$lib/plateforme';
-	import { elementsAffiches } from '$lib/piedDePage';
+	import { elementsAffiches, mentionAnnee, type ReglagePied } from '$lib/piedDePage';
 
-	/** Les codes masqués, déjà lus (`lireMasques`). */
-	export let masques: string[] = [];
+	/** Le réglage, déjà lu (`lireReglagePied`). */
+	export let reglage: ReglagePied;
 
 	const empreinte = import.meta.env.VITE_GIT_HASH ?? 'dev';
 	const serveur = import.meta.env.VITE_INSTANCE_ID || '';
 	const version = `v${pkg.version}`;
 	const build = [version, empreinte, import.meta.env.VITE_BUILD_DATE].filter(Boolean).join(' · ');
-	const annee = new Date().getFullYear();
+	const anneeCourante = new Date().getFullYear();
 
 	$: siteUrl = $configStore['site_url'] ?? '';
 	//  Sans identifiant de nœud (poste de développement), il n'y a rien à dire.
-	$: affiches = elementsAffiches(masques).filter((c) => c !== 'serveur' || serveur);
+	$: affiches = elementsAffiches(reglage).filter((c) => c !== 'serveur' || serveur);
 </script>
 
 <footer class="app-footer">
@@ -35,7 +35,10 @@
 	      écrit dans le balisage, il héritait des blancs du gabarit d'un seul côté. -->
 	{#each affiches as code (code)}
 		<span class="element"
-			>{#if code === 'annee'}© {annee}{:else if code === 'residence'}<a
+			>{#if code === 'annee'}{mentionAnnee(
+					reglage.anneeDebut,
+					anneeCourante,
+				)}{:else if code === 'texte'}{reglage.texte}{:else if code === 'residence'}<a
 					href={siteUrl}
 					target="_blank"
 					rel="noopener noreferrer">{$siteNomStore}</a

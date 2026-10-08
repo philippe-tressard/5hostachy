@@ -17,7 +17,7 @@
 	} from '$lib/telemetry';
 	import { lireSourceArrivee } from '$lib/arrivees';
 	import PiedDePage from '$lib/components/PiedDePage.svelte';
-	import { CLE_PIED_MASQUES, lireMasques } from '$lib/piedDePage';
+	import { lireReglagePied } from '$lib/piedDePage';
 
 	onMount(async () => {
 		initTelemetry();
@@ -63,7 +63,7 @@
 		trackPageView(window.location.pathname, lireSourceArrivee());
 	});
 
-	$: masquesPied = lireMasques($configStore[CLE_PIED_MASQUES]);
+	$: reglagePied = lireReglagePied($configStore);
 </script>
 
 <!--  🔴 LE LIEN D'ÉVITEMENT — premier élément focalisable de la page (#778).
@@ -85,7 +85,7 @@
 				<slot />
 			</div>
 		</main>
-		<PiedDePage masques={masquesPied} />
+		<PiedDePage reglage={reglagePied} />
 	</div>
 </div>
 

@@ -515,6 +515,9 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .perimetre-pills {
 	display: flex;
 	flex-wrap: wrap;
+	/*  Une pastille garde sa hauteur : un voisin plus haut (une cible tactile
+	    de 44 px) ne l'étire pas en ovale (08/10/2026, réglage du pied de page). */
+	align-items: center;
 	gap: 0.4rem;
 }
 
