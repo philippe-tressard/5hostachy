@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { onMount } from 'svelte';
 	import { relire } from '$lib/utils';
 	import KanbanTableauBord from '$lib/components/KanbanTableauBord.svelte';
@@ -47,8 +48,8 @@
 			else toast('error', 'Erreur chargement du flux');
 			if (lotsRes.status === 'fulfilled') userLots = lotsRes.value;
 			if (calRes.status === 'fulfilled') kanbanAffaires = calRes.value;
-		} catch (e: any) {
-			toast('error', 'Erreur chargement : ' + (e?.message ?? String(e)));
+		} catch (e) {
+			toast('error', 'Erreur chargement : ' + messageErreur(e));
 		} finally {
 			loading = false;
 			setTimeout(() => {
@@ -84,11 +85,11 @@
 		data = { ...data, items: data.items.filter((i) => i.id !== id) };
 		try {
 			await flux.masquer(id);
-		} catch (e: any) {
+		} catch (e) {
 			//  Rétabli à l'identique : un fil amputé sans que rien ne soit
 			//  enregistré serait un mensonge qui disparaît au rechargement.
 			data = { ...data, items: avant };
-			toast('error', e?.message ?? 'Retrait impossible');
+			toast('error', messageErreur(e, 'Retrait impossible'));
 		}
 	}
 

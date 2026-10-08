@@ -27,6 +27,7 @@
   changement d'onglet. Elle vivait dans la page, qui, elle, restait montée.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import Pastille from '$lib/components/Pastille.svelte';
 	import { TICKET } from '$lib/entites/ticket';
 	import { onMount, onDestroy, tick } from 'svelte';
@@ -38,7 +39,6 @@
 	} from '$lib/api';
 	import { toast } from '$lib/components/Toast.svelte';
 	import { fmtDatetime } from '$lib/date';
-	import { apiMessage } from '$lib/utils';
 	import {
 		REPORT_VUES,
 		type ReportVue,
@@ -183,8 +183,8 @@
 				});
 			}
 			reportingLoaded = true;
-		} catch (e: any) {
-			toast('error', apiMessage(e, 'Erreur chargement reporting'));
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur chargement reporting'));
 		} finally {
 			reportingLoading = false;
 		}

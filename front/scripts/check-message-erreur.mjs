@@ -75,7 +75,10 @@ const TERNAIRE = /(\w+)\s+instanceof\s+ApiError\s*\?\s*\1\.message/g;
  *   Toutes disent moins que `messageErreur` : ni session expirée, ni réseau. */
 //  Les noms d'une ERREUR seulement : `res.message ?? 'Vote enregistré'` est le
 //  message de succès qu'une réponse du serveur porte (`PageCommunaute`).
-const REPLI_LOCAL = /\b(e|err|erreur|error)\.message\s*\?\?/g;
+//  `e?.message ??` et `(e as …).message ??` sont la même lecture (08/10/2026) :
+//  treize copies à chaînage optionnel et le corps d'`apiMessage` y échappaient.
+//  `reason` : le rejet d'un `Promise.allSettled` (`OngletModelesEmail`).
+const REPLI_LOCAL = /(?:\b(?:e|err|erreur|error|reason)\??|\))\.message\s*\?\?/g;
 const TERNAIRE_ERROR = /(\w+)\s+instanceof\s+Error\s*\?\s*\1\.message/g;
 
 /**  Les lectures de `.message` qui ne SONT PAS un message à l'utilisateur, avec
@@ -126,6 +129,15 @@ if (process.argv.includes('--selftest')) {
 	t('variables différentes', 0, 'e instanceof ApiError ? autre.message : 0');
 	//  #1571 : les trois écritures que le motif d'origine laissait passer.
 	t('repli local', 1, "toast('error', e.message ?? 'Erreur');");
+	//  08/10/2026 : la forme à chaînage optionnel, et le corps d'`apiMessage`
+	//  (`$lib/utils`), seconde écriture de `messageErreur` qu'aucun motif ne voyait.
+	t('repli local optionnel', 1, "toast('error', e?.message ?? 'Erreur');");
+	t('rejet d’un allSettled', 1, "x = r.reason?.message ?? 'Chargement impossible';");
+	t(
+		'repli sur une erreur convertie',
+		1,
+		'return String((e as { message?: unknown }).message ?? repli);',
+	);
 	t('message de succès d’une réponse', 0, "toast('success', res.message ?? 'Vote enregistré');");
 	t('ternaire sur Error', 1, "toast('error', err instanceof Error ? err.message : 'x');");
 	t(

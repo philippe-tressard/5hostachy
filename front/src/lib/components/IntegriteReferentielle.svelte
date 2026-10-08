@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	/**
 	 * Les lignes de la base qui référencent un parent disparu — relevé et purge.
 	 *
@@ -41,9 +42,9 @@
 			//  sur une mesure qui n'a pas eu lieu.
 			if (releve.inconnu)
 				toast('error', `Mesure impossible : ${releve.erreur ?? 'raison inconnue'}`);
-		} catch (e: any) {
+		} catch (e) {
 			releve = null;
-			toast('error', e?.message ?? 'Analyse impossible');
+			toast('error', messageErreur(e, 'Analyse impossible'));
 		} finally {
 			enCours = false;
 		}
@@ -94,8 +95,8 @@
 				`${resultat.supprimees} ligne(s) supprimée(s), ${resultat.deliees} déliée(s).`,
 			);
 			await analyser();
-		} catch (e: any) {
-			toast('error', e?.message ?? 'Purge impossible');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Purge impossible'));
 		} finally {
 			enCours = false;
 		}

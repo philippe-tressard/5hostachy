@@ -31,6 +31,7 @@
   son activation.
 -->
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import { onMount } from 'svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { config as configApi, type LimitesUsageIA, type UsageIA } from '$lib/api';
@@ -157,8 +158,8 @@
 		try {
 			usages = await configApi.llmUsages();
 			relireLimites();
-		} catch (e: any) {
-			toast('error', e?.message ?? 'Les usages de l’assistant n’ont pas pu être lus');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Les usages de l’assistant n’ont pas pu être lus'));
 		}
 	});
 
@@ -198,8 +199,8 @@
 			catalogue = { etat: 'aucun', motif: '', modeles: [] };
 			//  Et les formulaires relisent la disponibilité de l'assistant.
 			oublierAssistant();
-		} catch (e: any) {
-			toast('error', e?.message ?? 'Erreur à l’enregistrement');
+		} catch (e) {
+			toast('error', messageErreur(e, 'Erreur à l’enregistrement'));
 		} finally {
 			enregistrement = false;
 		}
@@ -212,10 +213,10 @@
 			catalogue = r.listable
 				? { etat: 'pret', motif: '', modeles: r.modeles }
 				: { etat: 'indisponible', motif: r.motif, modeles: [] };
-		} catch (e: any) {
+		} catch (e) {
 			catalogue = {
 				etat: 'indisponible',
-				motif: e?.message ?? 'Liste indisponible',
+				motif: messageErreur(e, 'Liste indisponible'),
 				modeles: [],
 			};
 		}

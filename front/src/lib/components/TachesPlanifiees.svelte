@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageErreur } from '$lib/erreurs';
 	import Icon from '$lib/components/Icon.svelte';
 	//  Extrait de `admin/+page.svelte` (2577 lignes) le 11/08/2026, au fil de
 	//  l'eau : y ajouter la colonne « Tâche » aurait fait grossir un fichier déjà
@@ -70,9 +71,9 @@
 		erreur = '';
 		try {
 			sante = await adminApi.santeMaintenance();
-		} catch (e: any) {
+		} catch (e) {
 			sante = null;
-			erreur = e?.message ?? 'Chargement impossible';
+			erreur = messageErreur(e, 'Chargement impossible');
 		} finally {
 			santeLoading = false;
 		}
@@ -131,7 +132,7 @@
 			//  Les tables propres à une tâche ne savent pas se limiter côté serveur :
 			//  on tronque ici, à la même profondeur que les autres.
 			historiques = { ...historiques, [tache]: (lignes ?? []).slice(0, PROFONDEUR) };
-		} catch (e: any) {
+		} catch (e) {
 			//  🔴 `catch { historiques[tache] = [] }` était le motif de #519 écrit une
 			//  SECONDE fois dans ce fichier : un échec devenait « aucune exécution
 			//  enregistrée pour cette tâche », sur l'écran qui sert justement à
@@ -140,7 +141,7 @@
 			historiques = { ...historiques, [tache]: [] };
 			erreursTache = {
 				...erreursTache,
-				[tache]: e?.message ?? 'Historique illisible',
+				[tache]: messageErreur(e, 'Historique illisible'),
 			};
 		} finally {
 			enChargement = { ...enChargement, [tache]: false };
@@ -180,8 +181,8 @@
 			//  la PRISE EN COMPTE. C'est l'historique rechargé qui dira ce qui s'est
 			//  réellement passé — d'où le rechargement différé.
 			setTimeout(charger, 4000);
-		} catch (e: any) {
-			toast('error', e?.message ?? `Impossible de lancer ${LIBELLE_TACHE[tache]}`);
+		} catch (e) {
+			toast('error', messageErreur(e, `Impossible de lancer ${LIBELLE_TACHE[tache]}`));
 		} finally {
 			enCours = null;
 		}
