@@ -47,7 +47,17 @@ ADMISES = frozenset(
     }
 )
 
-A_VALIDER = "compatibilité avec la licence du projet À VALIDER par l'auteur"
+
+def _compatible(pourquoi: str) -> str:
+    """Le statut d'une exception dont la compatibilité est TRANCHÉE (#1726).
+
+    Le projet passe sous AGPL-3.0-or-later le 08/10/2026. Les exceptions dont la
+    compatibilité était « À VALIDER » avec l'ancienne licence ont été analysées
+    contre la nouvelle, et l'analyse a été validée par l'auteur. Elle n'est pas
+    un avis juridique : le motif est écrit pour être relu.
+    """
+    return f"compatible avec l'AGPL-3.0-or-later ({pourquoi}) — analyse du 08/10/2026, validée par l'auteur"
+
 
 # ── Exceptions nominatives ──────────────────────────────────────────────────
 #  `source` : front | whatsapp-bridge | api. `paquets` : noms, motifs `*`
@@ -64,7 +74,10 @@ EXCEPTIONS = (
             "fort. Il s'exécute dans le bridge, conteneur distinct de l'API et du "
             "front, avec lesquels il ne communique que par HTTP."
         ),
-        "statut": A_VALIDER,
+        "statut": _compatible(
+            "la GPLv3 et l'AGPLv3 se combinent l'une avec l'autre (§13 de chacune) ; "
+            "programme distinct, joint par HTTP"
+        ),
     },
     {
         "source": "whatsapp-bridge",
@@ -79,7 +92,7 @@ EXCEPTIONS = (
             "(traitement d'images). Copyleft faible ; une seule variante de plateforme "
             "est installée dans l'image (Linux musl). Même conteneur que libsignal."
         ),
-        "statut": A_VALIDER,
+        "statut": _compatible("la LGPL-3.0-or-later l'est par construction"),
     },
     {
         "source": "front",
@@ -90,7 +103,10 @@ EXCEPTIONS = (
             "de la construction (devDependencies). Licence de données, qui demande "
             "l'attribution."
         ),
-        "statut": "attribution portée par cet inventaire — à confirmer par l'auteur",
+        "statut": _compatible(
+            "la CC-BY-4.0 est compatible avec la GPLv3 ; outil de construction, non "
+            "distribué ; attribution portée par cet inventaire"
+        ),
     },
     {
         "source": "api",
@@ -100,7 +116,7 @@ EXCEPTIONS = (
             "Magasin de certificats racine (tiré par httpx). Copyleft faible au niveau "
             "du fichier ; utilisé sans modification."
         ),
-        "statut": A_VALIDER,
+        "statut": _compatible("la MPL-2.0 admet la GPL et l'AGPL comme « Secondary Licenses »"),
     },
     {
         "source": "api",
@@ -111,7 +127,7 @@ EXCEPTIONS = (
             "« GPL 2.0+/LGPL 2.1+/MPL 1.1 tri-license » (fichier LICENSE installé) ; "
             "ses dictionnaires viennent de LibreOffice sous GPL, LGPL et/ou MPL."
         ),
-        "statut": A_VALIDER,
+        "statut": _compatible("par son option GPL-2.0-or-later ou LGPL-2.1-or-later"),
     },
     {
         "source": "api",

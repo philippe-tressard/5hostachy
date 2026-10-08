@@ -3,8 +3,9 @@
 ## Pourquoi ce contrôle — 🔴 RANG 1 (`standards/14`)
 
 `CONTRIBUTING.md` promettait, en toutes lettres et depuis l'origine du dépôt, que
-« *contributions will be licensed under the MIT License* ». Le dépôt est sous
-**Licence 5Hostachy** — source-available, clauses commerciales, non reconnue OSI.
+« *contributions will be licensed under the MIT License* ». Le dépôt était alors
+sous Licence 5Hostachy — source-available, clauses commerciales — et il est,
+depuis le 08/10/2026 (#1726), sous **AGPL-3.0-or-later**.
 Un contributeur qui s'y fiait cédait son travail sous une attente **inverse** de
 la licence réelle.
 
@@ -17,21 +18,20 @@ textes publics **nomment** la bonne.
 
 | Source de vérité | Ce qu'elle porte |
 |---|---|
-| `REUSE.toml` | l'identifiant SPDX réellement accordé (`LicenseRef-5Hostachy`) |
+| `REUSE.toml` | l'identifiant SPDX réellement accordé (`AGPL-3.0-or-later`) |
 | `LICENSES/<identifiant>.txt` | le texte, exigé par REUSE à cet emplacement |
-| `LICENSE`, `LICENSE-5Hostachy.md` | le même texte, aux deux noms qu'exigent GitHub et `NOTICE.md` §2 |
+| `LICENSE` | le même texte, au nom que GitHub reconnaît |
 
 Le nom de la licence n'est **pas écrit ici** : il est dérivé de `REUSE.toml`.
 Un nom recopié dans un test diverge le jour où la licence change, et le contrôle
 défendrait alors l'ancienne (`standards/13` §1).
 
-## Les trois copies du texte, et pourquoi elles restent
+## Les deux copies du texte, et pourquoi elles restent
 
-Le texte de licence existe en **trois exemplaires identiques**. C'est une
+Le texte de licence existe en **deux exemplaires identiques**. C'est une
 duplication, et elle est **imposée de l'extérieur** : GitHub ne reconnaît que
-`LICENSE`, REUSE n'accepte que `LICENSES/<SPDX>.txt`, et `NOTICE.md` §2 fait de
-la conservation de `LICENSE-5Hostachy.md` une obligation de la licence elle-même.
-Aucun des trois ne peut partir sans casser quelque chose.
+`LICENSE`, REUSE n'accepte que `LICENSES/<SPDX>.txt`. Il y en avait trois sous
+la Licence 5Hostachy, qui exigeait en plus de conserver `LICENSE-5Hostachy.md`.
 
 Ce qui peut être supprimé, ce n'est pas la copie — c'est la **divergence** :
 `test_les_trois_copies_de_la_licence_sont_identiques` échoue à l'octet près. Une
@@ -58,15 +58,18 @@ import re
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
 
 #: Les fichiers publics qui *parlent* de la licence et de la méthode du projet.
-#: `LICENSE` en fait partie : c'est lui qui nomme sa propre nature.
-GOUVERNANCE = ("README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md", "LICENSE")
+#:
+#: `LICENSE` n'en fait plus partie (#1726) : c'est le texte OFFICIEL de
+#: l'AGPL, en anglais — la FSF ne reconnaît aucune traduction, et le modifier
+#: pour le franciser le rendrait faux. Il est tenu à l'octet près par
+#: `test_les_copies_de_la_licence_sont_identiques`, et sa nature par
+#: `test_le_texte_de_licence_est_celui_de_l_identifiant`.
+GOUVERNANCE = ("README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
 
 #: Les licences qu'un fichier de gouvernance ne peut pas promettre, puisque le
 #: dépôt ne les accorde pas.
 #:
-#: `AGPL` n'y est pas, et c'est voulu : la Licence 5Hostachy se déclare
-#: *fondée sur les principes de l'AGPLv3* et dit explicitement ne pas lui être
-#: compatible. La citer est exact ; promettre MIT ne l'était pas.
+#: `AGPL` n'y est pas : c'est la licence accordée depuis le 08/10/2026 (#1726).
 #:
 #: ⚠️ Le jour où `NOTICE.md` devrait nommer la licence d'une dépendance tierce,
 #: ce test échouerait — et l'exception s'écrirait alors, avec sa raison et sa
@@ -91,7 +94,7 @@ LICENCES_NON_ACCORDEES = (
 #: leur mention accompagne chaque copie. Le reste du fichier reste contrôlé, et
 #: le test échoue si la section disparaît : une exception qui ne sert plus se
 #: retire.
-SECTIONS_TIERS = {"NOTICE.md": "## 9. Composants tiers"}
+SECTIONS_TIERS = {"NOTICE.md": "## 6. Composants tiers"}
 
 #: Mots dont aucun n'a de sens en français. Ils ne mesurent pas un style : leur
 #: présence dit qu'une phrase entière est en anglais.
@@ -156,9 +159,8 @@ def identifiant_spdx_accorde() -> str:
 
 
 def nom_lisible_de_la_licence() -> str:
-    """« Licence 5Hostachy » — le titre du texte de licence, pas une constante."""
-    premiere_ligne = _lire("LICENSE").splitlines()[0]
-    return premiere_ligne.lstrip("# ").strip()
+    """« GNU AFFERO GENERAL PUBLIC LICENSE » — le titre du texte, pas une constante."""
+    return _lire("LICENSE").splitlines()[0].strip()
 
 
 def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
@@ -179,11 +181,15 @@ def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
 
 
 def test_contributing_nomme_la_licence_reelle_et_son_fichier():
-    """Ne pas promettre MIT ne suffit pas : il faut dire ce qui s'applique."""
+    """Ne pas promettre MIT ne suffit pas : il faut dire ce qui s'applique.
+
+    Le nom cherché est l'identifiant SPDX de `REUSE.toml` : le titre du texte
+    officiel est en capitales anglaises, qu'un document français ne recopie pas.
+    """
     contributing = _lire("CONTRIBUTING.md")
-    nom = nom_lisible_de_la_licence()
-    assert nom in contributing, (
-        f"CONTRIBUTING.md ne nomme pas « {nom} » : un contributeur ne peut pas "
+    spdx = identifiant_spdx_accorde()
+    assert spdx in contributing, (
+        f"CONTRIBUTING.md ne nomme pas « {spdx} » : un contributeur ne peut pas "
         "savoir sous quelle licence son travail est versé"
     )
 
@@ -194,26 +200,39 @@ def test_contributing_nomme_la_licence_reelle_et_son_fichier():
         assert cible.exists(), f"CONTRIBUTING.md renvoie vers « {lien} », qui n'existe pas"
 
 
-def test_les_trois_copies_de_la_licence_sont_identiques():
-    """Trois noms imposés de l'extérieur, un seul texte — vérifié à l'octet."""
+def test_les_copies_de_la_licence_sont_identiques():
+    """Deux noms imposés de l'extérieur, un seul texte — vérifié à l'octet."""
     spdx = identifiant_spdx_accorde()
-    copies = ("LICENSE", "LICENSE-5Hostachy.md", f"LICENSES/{spdx}.txt")
-    contenus = {nom: (_RACINE / nom).read_bytes() for nom in copies}
-
+    copies = ("LICENSE", f"LICENSES/{spdx}.txt")
     for nom in copies:
         assert (_RACINE / nom).exists(), (
-            f"{nom} a disparu. Les trois noms sont imposés : GitHub ne lit que "
-            "LICENSE, REUSE que LICENSES/<SPDX>.txt, et NOTICE.md §2 fait de "
-            "LICENSE-5Hostachy.md une obligation de la licence elle-même"
+            f"{nom} a disparu. Les deux noms sont imposés : GitHub ne lit que "
+            "LICENSE, REUSE que LICENSES/<SPDX>.txt"
         )
+    contenus = {nom: (_RACINE / nom).read_bytes() for nom in copies}
 
     reference = contenus["LICENSE"]
     divergentes = [nom for nom, octets in contenus.items() if octets != reference]
     assert not divergentes, (
         "Le texte de licence diverge entre ses copies : "
         f"{', '.join(divergentes)} ≠ LICENSE. La licence a été modifiée à un "
-        "endroit sur trois — c'est le défaut que REUSE.toml a déjà connu (#774)."
+        "endroit sur deux — c'est le défaut que REUSE.toml a déjà connu (#774)."
     )
+
+
+def test_le_texte_de_licence_est_celui_de_l_identifiant():
+    """Les copies concordent entre elles : encore faut-il qu'elles soient la BONNE licence.
+
+    Deux marques du texte officiel de l'AGPL v3 — son titre, et la clause
+    réseau (§13) qui est sa raison d'être — et l'option « ou ultérieure » que
+    l'identifiant `-or-later` promet (#1726).
+    """
+    spdx = identifiant_spdx_accorde()
+    assert spdx == "AGPL-3.0-or-later", f"REUSE.toml accorde {spdx} : ce test ne la connaît pas"
+    texte = _lire("LICENSE")
+    assert texte.startswith("GNU AFFERO GENERAL PUBLIC LICENSE"), "LICENSE n'est pas l'AGPL"
+    assert "13. Remote Network Interaction" in texte, "la clause réseau de l'AGPL manque"
+    assert "or (at your option) any later version" in texte
 
 
 def test_la_gouvernance_est_redigee_en_francais():

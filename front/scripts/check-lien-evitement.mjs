@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-FileCopyrightText: 2026 Philippe Tressard
-// SPDX-License-Identifier: LicenseRef-5Hostachy
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Le lien d'évitement clavier tient à QUATRE pièces, et aucune ne voit les autres.
  *

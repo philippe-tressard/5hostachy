@@ -23,7 +23,8 @@ se relit ici. La politique — liste blanche, exceptions et leurs motifs — vit
 
 > ⚠️ Ce document constate, il ne tranche rien de juridique. Les exceptions
 > ci-dessous sont des questions posées par écrit ; leur statut dit lesquelles
-> restent à valider par l'auteur.
+> restent à valider par l'auteur — aucune depuis le passage du projet à
+> l'AGPL-3.0-or-later (08/10/2026, #1726), dont l'analyse a été validée.
 """
 
 NOTE_API = (

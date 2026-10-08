@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Corriger une idée après son dépôt (#783) — et l'auteur qui se cachait sa propre idée.
 
 ## Pourquoi ce fichier

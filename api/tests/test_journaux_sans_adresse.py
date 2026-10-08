@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Aucune adresse e-mail entière dans les journaux — #777, verrouillé.
 
 ## Pourquoi ce test existe

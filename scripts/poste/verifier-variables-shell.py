@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Variables non assignées dans un script `set -u` — le défaut qui tue en production.
 
 ## Pourquoi ce contrôle existe

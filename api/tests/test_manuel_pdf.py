@@ -274,13 +274,13 @@ def test_les_mentions_identifient_l_editeur(document):
         "un nom de personne réapparaît dans un document distribuable"
     )
     #  ⚠️ Les blancs sont aplatis AVANT la recherche : WeasyPrint replie les
-    #  lignes, et « Licence 5Hostachy » peut s'y trouver coupé en deux. Chercher
+    #  lignes, et le nom de la licence peut s'y trouver coupé en deux. Chercher
     #  la chaîne brute échouerait sur une coupure, pas sur une absence.
     plat = " ".join(document.split())
-    assert "Licence 5Hostachy" in plat, "le feuillet ne dit plus sous quelle licence"
+    assert m.LICENCE_SPDX in plat, "le feuillet ne dit plus sous quelle licence"
     assert "auto-hébergée" in document, "le feuillet ne dit plus où vivent les données"
     #  🔴 UNE SEULE FOIS — voir le pourquoi dans le docstring.
-    assert plat.count("Licence 5Hostachy") == 1, (
+    assert plat.count(m.LICENCE_SPDX) == 1, (
         "la licence est écrite deux fois dans le feuillet : le corps la répète "
         "alors que les mentions la portent (`corps_du_manuel` doit retirer la "
         "section « Un logiciel libre »)."

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 Philippe Tressard
-# SPDX-License-Identifier: LicenseRef-5Hostachy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """La liste des idées rend CE QUE LA TABLE PORTE (#1660).
 
 ## Le défaut

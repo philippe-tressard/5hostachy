@@ -156,8 +156,10 @@ Une faille ne s'ouvre **pas** en ticket public : la conduite à tenir est dans
 
 ## Licence
 
-En contribuant, la contribution est versée sous la **Licence 5Hostachy** —
-consultable dans [LICENSE](LICENSE) : code source accessible, copyleft fondé sur
-les principes de l'AGPLv3, avec des clauses commerciales, **sans** compatibilité
-AGPLv3 ni reconnaissance OSI. Les obligations d'attribution et de redistribution
-sont détaillées dans [NOTICE.md](NOTICE.md).
+En contribuant, la contribution est versée sous la licence du projet,
+**AGPL-3.0-or-later** — la GNU Affero General Public License, version 3 ou
+ultérieure, dont le texte officiel est dans [LICENSE](LICENSE). C'est un logiciel
+libre : la contribution pourra être utilisée, modifiée et redistribuée par
+chacun, à condition que les versions modifiées restent sous la même licence.
+Les mentions de copyright et l'historique de la licence sont dans
+[NOTICE.md](NOTICE.md).

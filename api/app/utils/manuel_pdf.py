@@ -51,7 +51,7 @@ from pathlib import Path
 from app.utils import manuel_pdf_cache
 from app.utils.dates_fr import date_longue
 from app.utils.manuel_pdf_css import css_du_pdf
-from app.utils.plateforme import LICENCE_NOM, NOM_PLATEFORME
+from app.utils.plateforme import LICENCE_NOM, LICENCE_SPDX, NOM_PLATEFORME
 from app.utils.pdf_theme import (
     html_to_pdf,
     logo_svg,
@@ -284,10 +284,10 @@ def _mentions(site_nom: str, site_url: str, version: str, edite_le: date) -> str
     <dd>Document à usage interne, destiné aux résidents. Il décrit un site dont
         l'accès est réservé aux personnes inscrites.</dd>
     <dt>Licence</dt>
-    <dd>Ce site est servi par {NOM_PLATEFORME}, dont le code source est distribué
-        sous la <strong>{LICENCE_NOM}</strong> : consultable, modifiable et réutilisable par une autre
-        copropriété, une association ou un particulier. Tout usage commercial
-        requiert un accord préalable de l'auteur. Le présent document et les
+    <dd>Ce site est servi par {NOM_PLATEFORME}, un logiciel libre distribué sous la
+        {LICENCE_NOM} (<strong>{LICENCE_SPDX}</strong>) : chacun peut l'utiliser,
+        le modifier et le redistribuer, y compris à titre commercial, à condition
+        de publier ses modifications sous la même licence. Le présent document et les
         contenus publiés dans l'application restent la propriété de leurs
         auteurs.</dd>
     <dt>Hébergement</dt>

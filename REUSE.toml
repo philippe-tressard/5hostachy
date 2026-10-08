@@ -27,7 +27,7 @@ SPDX-PackageDownloadLocation = "https://github.com/philippe-tressard/5hostachy"
 path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Philippe TRESSARD"
-SPDX-License-Identifier = "LicenseRef-5Hostachy"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 #  ── Contenus repris de projets tiers (#1543, 02/10/2026) ──────────────────
 #  Les blocs ci-dessous sont les « exceptions futures » annoncées en tête : des
@@ -55,7 +55,7 @@ SPDX-FileCopyrightText = [
   "2026 Lucide Icons and Contributors",
   "2013-present Cole Bemis",
 ]
-SPDX-License-Identifier = "LicenseRef-5Hostachy AND ISC AND MIT AND CC0-1.0"
+SPDX-License-Identifier = "AGPL-3.0-or-later AND ISC AND MIT AND CC0-1.0"
 
 #  Le manuel utilisateur (deux exemplaires) et la page de maintenance
 #  Cloudflare : texte du projet, pictogrammes Lucide en SVG en ligne.
@@ -71,4 +71,4 @@ SPDX-FileCopyrightText = [
   "2026 Lucide Icons and Contributors",
   "2013-present Cole Bemis",
 ]
-SPDX-License-Identifier = "LicenseRef-5Hostachy AND ISC AND MIT"
+SPDX-License-Identifier = "AGPL-3.0-or-later AND ISC AND MIT"

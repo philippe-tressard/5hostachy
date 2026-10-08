@@ -1,87 +1,63 @@
-# NOTICE — 5Hostachy
+# NOTICE — CoproConnect
 
-**Projet** : 5Hostachy
+**Projet** : CoproConnect, né pour la résidence 5Hostachy (dépôt `5hostachy`)
 **Copyright** © 2024-2026 Philippe TRESSARD
-**Licence** : Licence 5Hostachy — source-available, fondée sur les principes de
-l'AGPLv3, avec clauses commerciales (voir [`LICENSE-5Hostachy.md`](LICENSE-5Hostachy.md))
+**Licence** : GNU Affero General Public License, version 3 ou (à votre choix)
+toute version ultérieure — `AGPL-3.0-or-later` (texte officiel : [`LICENSE`](LICENSE))
 **Site** : <https://5hostachy.fr>
 
 ---
 
 ## 1. De quoi il s'agit
 
-5Hostachy est un logiciel de gestion, de documentation et d'organisation pour
-les copropriétés et ensembles immobiliers. Son code source est **accessible**,
-mais soumis aux obligations détaillées dans la licence du projet.
+CoproConnect est un logiciel de gestion, de documentation et d'organisation pour
+les copropriétés et ensembles immobiliers. C'est un **logiciel libre** : chacun
+peut l'utiliser, l'étudier, le modifier et le redistribuer, y compris à titre
+commercial, dans les conditions de l'AGPL-3.0-or-later.
 
-Ce fichier porte les mentions d'attribution et les obligations minimales à
-conserver dans toute redistribution.
+Ce fichier porte les mentions de copyright du projet et rappelle, sans les
+remplacer, les obligations de la licence. **Seul le texte de [`LICENSE`](LICENSE)
+fait foi.** Il est en anglais : la Free Software Foundation ne reconnaît aucune
+traduction officielle.
 
-## 2. Attribution obligatoire
+## 2. Changement de licence (08/10/2026)
 
-Toute copie, modification ou redistribution doit inclure :
+Jusqu'à la version **2.115.0** comprise, le projet était distribué sous la
+« Licence 5Hostachy », source-available avec une clause d'usage commercial. Ces
+versions déjà publiées **restent** sous leur licence d'origine, lisible dans
+leur propre fichier `LICENSE`. À partir de la version **2.116.0**, le projet est
+sous AGPL-3.0-or-later, sans condition additionnelle (§7 de la licence).
 
-- la mention **« 5Hostachy — © Philippe TRESSARD »** ;
-- un lien vers <https://5hostachy.fr> ;
-- la conservation intégrale de **ce fichier** ;
-- la conservation intégrale de **`LICENSE-5Hostachy.md`**.
+Le changement a été possible parce que le projet n'a qu'un seul auteur : aucun
+contributeur extérieur n'a versé de code sous l'ancienne licence.
 
-L'attribution doit être visible dans la documentation, dans les pages « À
-propos » ou « Crédits », et dans les interfaces d'administration lorsque le
-logiciel est utilisé côté serveur.
+## 3. Ce que la licence demande, en bref
 
-## 3. Redistribution
+- **Conserver** les mentions de copyright et de licence, et ce fichier.
+- **Redistribuer** une version modifiée sous la même licence, en indiquant
+  qu'elle a été modifiée et quand (AGPL §5).
+- **Mise à disposition par le réseau** (AGPL §13) : qui fait fonctionner une
+  version modifiée comme service en ligne doit proposer à ses utilisateurs le
+  **code source correspondant** de la version qu'ils utilisent. Le site d'origine
+  le fait par le lien « CoproConnect » de son pied de page.
+- **Aucune garantie** : le logiciel est fourni « tel quel » (AGPL §15 et §16).
 
-Toute redistribution, modifiée ou non, doit :
+## 4. Noms et logo
 
-- inclure ce fichier et le fichier de licence ;
-- **indiquer clairement les modifications apportées** ;
-- rester conforme à l'obligation de publication du code source.
+La licence porte sur le **code**. Elle ne cède aucun droit sur les noms
+**5Hostachy** et **CoproConnect**, ni sur le logo ou l'identité visuelle. Leur
+politique d'usage est en cours de rédaction (ticket #1736).
 
-## 4. Mise à disposition via un réseau
+## 5. Contributions
 
-Quiconque met le logiciel à disposition via un service réseau doit en fournir le
-**code source complet**, ce qui comprend :
+Toute contribution est versée sous la même licence, AGPL-3.0-or-later. En
+proposant une modification, son auteur accepte qu'elle soit intégrée au projet
+sous ces conditions.
 
-- les fichiers d'origine ;
-- les fichiers modifiés ;
-- les scripts de déploiement nécessaires à l'exécution du service.
+## 6. Composants tiers
 
-## 5. Usage commercial
-
-L'usage commercial nécessite un **accord préalable avec l'auteur**. Sont
-considérés comme commerciaux : l'intégration dans un service payant,
-l'utilisation par une organisation à but lucratif, la revente ou la prestation
-fondée sur le logiciel, et la création d'un service concurrent ou dérivé destiné
-à générer des revenus.
-
-**Les particuliers, associations, copropriétés et syndicats de copropriétaires
-peuvent utiliser le logiciel gratuitement**, tant que l'usage n'est pas
-commercial.
-
-## 6. Marque et identité visuelle
-
-Le nom **5Hostachy**, son logo et son identité visuelle sont protégés. Ils ne
-peuvent servir à promouvoir un service concurrent, à laisser penser à une
-affiliation ou une certification, ni à présenter une version « officielle » non
-autorisée.
-
-## 7. Contributions
-
-Toute contribution est publiée sous la même licence. En proposant une
-modification, son auteur accepte qu'elle soit intégrée au projet sous ces
-conditions.
-
-## 8. Absence de garantie
-
-Le logiciel est fourni **« tel quel »**, sans garantie explicite ou implicite.
-L'auteur ne peut être tenu responsable des dommages directs ou indirects liés à
-son utilisation.
-
-## 9. Composants tiers
-
-5Hostachy s'appuie sur des bibliothèques et des contenus tiers. **Ils restent
-sous leur propre licence** : la licence 5Hostachy ne s'applique pas à eux, et
+CoproConnect s'appuie sur des bibliothèques et des contenus tiers. **Ils restent
+sous leur propre licence** : la licence du projet ne s'applique pas à eux, et
 leurs mentions se conservent avec eux.
 
 L'inventaire complet — chaque dépendance de `front/`, `whatsapp-bridge/` et
@@ -116,6 +92,7 @@ L'attribution de ces fichiers est déclarée dans `REUSE.toml`, et contrôlée p
 - Côté API : `certifi` (MPL-2.0) et `pyphen` (GPL 2.0+ / LGPL 2.1+ / MPL 1.1,
   selon son propre fichier de licence), tous deux utilisés sans modification.
 
-> ⚠️ **La compatibilité de ces usages avec la licence du projet reste à valider
-> par l'auteur.** Ce fichier constate où ces composants sont employés et
-> comment ; il n'affirme rien de juridique.
+Leur compatibilité avec l'AGPL-3.0-or-later a été analysée le 08/10/2026 et
+**validée par l'auteur** ; le motif de chacune est écrit dans
+`scripts/ci/licences_politique.py`. Ce fichier constate où ces composants sont
+employés et comment ; il ne constitue pas un avis juridique.

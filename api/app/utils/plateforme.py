@@ -17,8 +17,8 @@ désigner le logiciel de toutes.
 contextes de build `./api` et `./front` ne partagent aucun fichier.
 `tests/test_plateforme.py` échoue si les deux divergent.
 
-⚠️ La licence est celle **en vigueur** : son passage à l'AGPL-3.0-or-later est
-un lot séparé (#1726), qui ne changera que les deux dernières constantes.
+La licence est l'**AGPL-3.0-or-later** depuis le 08/10/2026 (#1726) : ses trois
+constantes sont tenues contre `REUSE.toml` et `LICENSE` par `test_plateforme.py`.
 """
 
 #: Le nom du logiciel — l'attribution, le titre de l'API, le `User-Agent`.
@@ -31,6 +31,8 @@ NOM_PLATEFORME = "CoproConnect"
 #: pour une seule résidence (exception déclarée de `test_nom_site.py`).
 DEPOT_SOURCE = "https://github.com/philippe-tressard/5hostachy"
 
-#: La licence en vigueur, telle qu'on la nomme et qu'on la lie.
-LICENCE_NOM = "Licence 5Hostachy"
-LICENCE_URL = f"{DEPOT_SOURCE}/blob/main/LICENSE-5Hostachy.md"
+#: La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
+#: foi est l'officiel, en anglais (`LICENSE`).
+LICENCE_SPDX = "AGPL-3.0-or-later"
+LICENCE_NOM = "GNU Affero General Public License, version 3 ou ultérieure"
+LICENCE_URL = f"{DEPOT_SOURCE}/blob/main/LICENSE"

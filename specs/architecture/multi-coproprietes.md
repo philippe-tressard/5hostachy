@@ -34,7 +34,7 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D4 | Moteur de base | **PostgreSQL**, une base **et un rôle** par copropriété | §4.3 ; SQLite est abandonné pour la plateforme |
 | D5 | Opérateur de plateforme | **aucun accès aux données** d'une copropriété, même pour l'assistance | §4.7 ; l'assistance passe par l'administrateur de la copro |
 | D6 | Canaux et services | **par copropriété**, et **chaque service se désactive** | §4.8 ; premier lot : #1718 |
-| D7 | Licence | **GNU AGPLv3 pure**, sans clause commerciale | §7 |
+| D7 | Licence | **GNU AGPLv3 pure**, sans clause commerciale — appliquée en v2.116.0 | §7 |
 | D8 | Une personne dans deux copros | le cas existe, **rare**. Lecture retenue, **à confirmer** : deux comptes indépendants, un par caisson | §4.7 |
 | D9 | Nom de la plateforme (07/10/2026) | **CoproConnect** ; la résidence garde le sien, « 5Hostachy » | §8, phase 1 : le nom de la **plateforme** (attribution, lien vers le source) et celui de la **résidence** (administrable) sont deux réglages distincts |
 | D10 | Variante de la licence (07/10/2026) | **`AGPL-3.0-or-later`** | §7 |
@@ -207,9 +207,9 @@ Le relevé ci-dessous **vieillit avec le code** : le revérifier avant de s'en s
 
 ## 7. La licence — GNU AGPLv3 (D7)
 
-La clause d'usage commercial de la licence actuelle disparaît. Le projet passe sous
-la **GNU AGPLv3**, une licence open source reconnue par l'OSI. ⚠️ Ce qui suit doit
-être **validé**, ce n'est pas un avis juridique.
+**Fait le 08/10/2026 en v2.116.0 (#1726).** La clause d'usage commercial de
+l'ancienne licence a disparu : le projet est sous la **GNU AGPLv3**, une licence
+libre reconnue par l'OSI et la FSF. ⚠️ Ce qui suit n'est pas un avis juridique.
 
 - **Assumé** : n'importe qui peut héberger le logiciel et le proposer comme service,
   y compris contre paiement, **à condition de publier ses modifications**. La
@@ -218,8 +218,8 @@ la **GNU AGPLv3**, une licence open source reconnue par l'OSI. ⚠️ Ce qui sui
 - **Obligation pour la plateforme** (AGPLv3 §13) : chaque utilisateur qui se sert
   du site par le réseau se voit **proposer le code source** de la version qui
   tourne. Un lien vers le source figure donc dans l'interface de chaque copro.
-- **L'attribution** peut subsister dans la limite des conditions additionnelles
-  que l'AGPLv3 §7 admet, et rien de plus restrictif.
+- **Aucune condition additionnelle** (AGPLv3 §7) — arbitré le 08/10/2026 :
+  « AGPLv3 pure ». L'attribution se limite aux mentions de copyright.
 - **Les versions déjà publiées** restent sous l'ancienne licence.
 - **Tranché le 07/10/2026 (D10)** : **`AGPL-3.0-or-later`**. Les versions ultérieures
   de l'AGPL publiées par la FSF s'appliqueront au choix de qui reçoit le code ;
@@ -228,9 +228,11 @@ la **GNU AGPLv3**, une licence open source reconnue par l'OSI. ⚠️ Ce qui sui
   de la résidence. Une recherche web du 07/10/2026 n'a trouvé aucun produit de ce
   nom ; elle **ne remplace pas** une recherche d'antériorité (INPI, EUIPO) avant de
   s'en servir publiquement.
-- **Avant le changement** : vérifier qu'aucun contributeur extérieur n'existe dans
-  l'historique antérieur au 07/09/2026, et réexaminer contre l'AGPLv3 les
-  exceptions « à valider » de `docs/licences-tierces.md`.
+- **Vérifié avant le changement** (08/10/2026) : un seul auteur humain dans tout
+  l'historique, aucun contributeur extérieur ; les cinq exceptions « à valider »
+  de `docs/licences-tierces.md` analysées compatibles, analyse validée par
+  l'auteur (motifs : `scripts/ci/licences_politique.py`).
+- **La politique de marque** reste à écrire : #1736.
 
 ## 8. Le phasage
 
