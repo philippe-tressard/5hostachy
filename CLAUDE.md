@@ -250,6 +250,15 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   `foreign_key` dans le modèle non plus — sinon base neuve et base migrée
   divergent. `api/tests/test_migrations.py` le refuse.
 - `start.sh` a `set -e` : une migration qui crash = conteneur bloqué
+- 🔴 **Une migration reste compatible avec la version précédente du code** (#1757,
+  08/10/2026) : revenir en arrière doit n'être qu'un changement d'image, sans
+  restaurer la base. **Ajouter, puis retirer — jamais dans la même version** : une
+  colonne neuve est nullable ou porte un `server_default` ; retirer une table ou
+  une colonne, renommer, passer à `nullable=False` est un **second temps**, annoncé
+  dans `CONTRACTIONS` par le lot où le code cesse d'en dépendre, et fait dans une
+  version ultérieure. Pas de SQL brut qui retire ou renomme. 🔒
+  `test_migrations_compatibles.py` (l'historique, jusqu'à 0271, n'est pas jugé ; il
+  vérifie aussi qu'aucun modèle ne déclare plus ce qui est retiré).
 
 ### Dépendances d'auth
 | Dependency | Usage |
