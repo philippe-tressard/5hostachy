@@ -85,7 +85,12 @@ if (!process.env.E2E_PORT) {
 	process.env.E2E_PORT = String(5300 + (process.pid % 600));
 }
 const PORT = Number(process.env.E2E_PORT);
-const BASE = `http://localhost:${PORT}`;
+//  🔴 UNE adresse, IPv4, la même pour Vite (`--host`, plus bas) et pour les
+//  tests (#1732, 08/10/2026). Avec `localhost`, Vite écoutait sur `::1` seul et
+//  le navigateur tentait aussi `127.0.0.1` : connexions refusées par
+//  intermittence, un spec différent à chaque passage. `lint:e2e-serveur` refuse
+//  `localhost` ici.
+const BASE = `http://127.0.0.1:${PORT}`;
 
 /*
  *  ## Le nombre de workers, réglable par `E2E_WORKERS` (#1665, 04/10/2026)
@@ -131,7 +136,7 @@ export default defineConfig({
 		{ name: 'mobile', use: { ...devices['Pixel 5'] } },
 	],
 	webServer: {
-		command: `npm run dev -- --port ${PORT} --strictPort`,
+		command: `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`,
 		url: BASE,
 		reuseExistingServer: false,
 		timeout: 120_000,

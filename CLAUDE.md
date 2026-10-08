@@ -692,6 +692,13 @@ déclare dans `REPONSES_PAR_DEFAUT` (`e2e/aides.ts`), avec le type qu'elle imite
 Pourquoi — un titre figé par une exception que personne n'écoutait, et quatre
 specs verts qui en cachaient une : `standards/05` §13, #1475.
 
+🔒 **Le serveur des tests écoute sur `127.0.0.1`, et les tests le visent là**
+(#1732, 08/10/2026). Avec `localhost`, Vite n'écoutait que sur `::1` et le
+navigateur tentait aussi `127.0.0.1` : `ERR_CONNECTION_REFUSED`, ou « Failed to
+fetch dynamically imported module …/app.js », un spec différent à chaque passage
+— une suite complète sur deux échouait sur le poste. `npm run lint:e2e-serveur`
+refuse `localhost` dans `playwright.config.ts`.
+
 Lancer en local : `cd front && npm run e2e`.
 Un délai d'hydratation dépassé se lit avec le bilan **⏱ hydratation** en fin de
 sortie (et `test-results/hydratation.json`) : la durée du test fautif comparée à
