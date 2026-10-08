@@ -162,7 +162,7 @@ def test_un_nom_force_ne_sort_pas_du_dossier_du_logo(moteur, tmp_path):
 
 def test_un_document_porte_le_neutre_ou_le_logo_televerse():
     assert logo_html(None, 40).startswith("<svg"), "sans logo : le dessin neutre"
-    assert "C9983A" not in logo_html(None, 40), "la vague de cette résidence est revenue"
+    assert "C9983A" not in logo_html(None, 40), "la touche dorée de l'ancien logo est revenue"
     avec = logo_html(_png(), 40)
     assert avec.startswith('<img src="data:image/png;base64,') and 'width="40"' in avec
 
