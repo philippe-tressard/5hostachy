@@ -35,10 +35,11 @@
 
 	/** Côté du logo de la résidence, en pixels. Il était de 22 px, la taille
 	 *  d'une icône du menu : un logo téléversé est une vignette pleine, et son
-	 *  dessin s'y réduisait à une tache (demandé à l'écran, 08/10/2026).
-	 *  L'en-tête mobile ne fait que 3,25 rem — 39 px au téléphone — d'où une
-	 *  taille à part, qui y laisse une marge. 🔒 `e2e/logo-menu.spec.ts` */
-	const TAILLE_LOGO = { barre: 36, mobile: 30 };
+	 *  dessin s'y réduisait à une tache. « Doublé ou triplé » sur la barre
+	 *  latérale (arbitré à l'écran, 08/10/2026). L'en-tête mobile ne fait que
+	 *  3,25 rem — 39 px au téléphone —, d'où une taille à part, qui y laisse
+	 *  une marge. 🔒 `e2e/logo-menu.spec.ts` */
+	const TAILLE_LOGO = { barre: 64, mobile: 30 };
 
 	let menuOpen = false;
 
@@ -258,8 +259,11 @@
 	    héritait de ce rembourrage asymétrique — son logo montait hors de la barre. */
 	.brand {
 		display: flex;
-		align-items: center;
-		gap: 0.6rem;
+		/*  Le logo AU-DESSUS du nom : à 64 px, les deux ne tiennent pas côte à
+		    côte dans les 185 px de la barre, et le nom passait à la ligne. */
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.4rem;
 		padding: 0.5rem 1.25rem 1.25rem;
 		border-bottom: 1px solid var(--color-border);
 		margin-bottom: 0.5rem;

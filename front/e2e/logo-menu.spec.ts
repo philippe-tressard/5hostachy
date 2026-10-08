@@ -4,7 +4,7 @@
  *  Demandé à l'écran le 08/10/2026, le logo une fois téléversé (#1728) : il
  *  s'affichait à 22 px, la taille d'une icône du menu. Un logo téléversé est
  *  une vignette pleine, et son dessin s'y réduisait à une tache. Il fait
- *  désormais 36 px sur la barre latérale et 30 dans l'en-tête mobile
+ *  désormais 64 px sur la barre latérale et 30 dans l'en-tête mobile
  *  (`TAILLE_LOGO`, `Nav.svelte`), qui ne fait que 39 px de haut. Ce test passe
  *  sur les deux profils, mesure le logo que le profil AFFICHE, et vérifie qu'il
  *  tient dans sa barre : le lien mobile héritait du rembourrage de la barre
@@ -23,7 +23,7 @@ test('le logo téléversé s’affiche en grand dans le menu, et tient dans sa b
 	const logo = page.locator('.brand-link:visible img.logo-residence');
 	await expect(logo).toHaveCount(1);
 	const boite = await logo.boundingBox();
-	const attendu = info.project.name === 'mobile' ? 30 : 36;
+	const attendu = info.project.name === 'mobile' ? 30 : 64;
 	expect(boite!.width).toBe(attendu);
 	expect(boite!.height).toBe(attendu);
 	if (info.project.name === 'mobile') {
