@@ -14,6 +14,12 @@ elle suit les versions promues sur la branche `replica`
 ⚠️ **Aujourd'hui, une installation sert UNE copropriété.** Plusieurs copropriétés
 isolées dans une même installation, c'est la phase 2 du chantier (en cours).
 
+**Une installation tient sur un seul serveur** (cloud ou hébergeur — décision D15) :
+il n'y a ni nœud de secours ni bascule. Une mise à jour coupe le service le temps
+de redémarrer, et une panne du serveur l'interrompt jusqu'à sa remise en route.
+Le filet, ce sont le retour à la version précédente et une sauvegarde copiée
+**hors de la machine** (voir « Sauvegarder »).
+
 ## Ce qu'il faut
 
 - Docker et Docker Compose **2.24 ou plus récent** (pour `!reset`) ;
