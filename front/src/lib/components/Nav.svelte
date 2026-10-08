@@ -33,6 +33,13 @@
 		return { href, icon: cfg.icone ?? def.icone, label: cfg.navLabel ?? def.navLabel };
 	}
 
+	/** Côté du logo de la résidence, en pixels. Il était de 22 px, la taille
+	 *  d'une icône du menu : un logo téléversé est une vignette pleine, et son
+	 *  dessin s'y réduisait à une tache (demandé à l'écran, 08/10/2026).
+	 *  L'en-tête mobile ne fait que 3,25 rem — 39 px au téléphone — d'où une
+	 *  taille à part, qui y laisse une marge. 🔒 `e2e/logo-menu.spec.ts` */
+	const TAILLE_LOGO = { barre: 36, mobile: 30 };
+
 	let menuOpen = false;
 
 	function toggleMenu() {
@@ -147,7 +154,7 @@
 <!-- ─── Sidebar desktop ─────────────────────────────────────────────────── -->
 <nav class="sidebar">
 	<a href="/tableau-de-bord" class="brand brand-link">
-		<span class="brand-icon"><LogoResidence taille={22} /></span>
+		<span class="brand-icon"><LogoResidence taille={TAILLE_LOGO.barre} /></span>
 		<span class="brand-name">{siteNom}</span>
 	</a>
 
@@ -186,7 +193,7 @@
 		class="brand-link"
 		style="display:flex;align-items:center;gap:.4rem;text-decoration:none;color:inherit"
 	>
-		<span class="brand-icon"><LogoResidence taille={22} /></span>
+		<span class="brand-icon"><LogoResidence taille={TAILLE_LOGO.mobile} /></span>
 		<span class="brand-name">{siteNom}</span>
 	</a>
 	<button class="hamburger" on:click={toggleMenu} aria-label="Menu" aria-expanded={menuOpen}>
@@ -247,8 +254,9 @@
 		z-index: 100;
 	}
 
-	.brand,
-	.brand-link {
+	/*  `.brand` seul : le lien de l'en-tête mobile porte aussi `.brand-link`, et
+	    héritait de ce rembourrage asymétrique — son logo montait hors de la barre. */
+	.brand {
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
