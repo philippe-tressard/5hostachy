@@ -232,7 +232,9 @@
 		border-right: 1px solid var(--color-border);
 		display: flex;
 		flex-direction: column;
-		padding: 1rem 0;
+		/*  Le haut est réduit de moitié avec la marque (arbitré à l'écran, 08/10/2026) :
+		    le logo, à 64 px, porte déjà son propre blanc. */
+		padding: 0.5rem 0 1rem;
 		z-index: 100;
 	}
 
