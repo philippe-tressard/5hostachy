@@ -1,19 +1,22 @@
 # Multi-copropriétés — architecture cible
 
 > 🧭 **Spécification de CIBLE, en conception — la phase 1 en découle (v2.113.0
-> à v2.117.0), la phase 2 est découpée en lots (§8 bis).** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
+> à v2.117.0), la phase 2 et la distribution sont découpées en lots (§8 bis,
+> §8 ter).** Contrairement aux autres fichiers de `specs/`, qui décrivent le produit
 > tel qu'il a été conçu à l'origine, celui-ci décrit **où le produit va**. Il est
 > rédigé le 07/10/2026, à partir des arbitrages de l'auteur pris le même jour.
 >
 > Le **travail** vit dans les tickets : phase 1 à partir de #1718, phase 2 de #1743
-> à #1751. Ce document en
+> à #1751, distribution de #1753 à #1759. Ce document en
 > porte les **décisions** et leurs raisons. Il se met à jour **à chaque arbitrage**,
 > daté. Toute décision qui n'y figure pas n'est pas prise.
 
 ## 1. L'objectif et l'exigence
 
-Rendre le site capable de servir **plusieurs dizaines de copropriétés**, hébergées
-dans le cloud, chacune dans un **caisson étanche**.
+Rendre le site capable de servir **plusieurs dizaines de copropriétés**, réparties
+sur autant d'installations que nécessaire — le cloud compris —, chacune dans un
+**caisson étanche**. 5Hostachy, sur ses Raspberry Pi, reste le **maître** sur lequel
+le produit se développe, et converge vers CoproConnect (§4.10).
 
 **Caisson étanche** = aucune donnée, aucun fichier, aucun courriel, aucune session,
 aucun coût d'IA d'une copropriété ne peut être lu, modifié ou déduit depuis une
@@ -25,12 +28,12 @@ Le critère qui départage les architectures : **combien de lignes de code faut-
 oublier pour qu'une fuite se produise ?** Une architecture où un seul `WHERE`
 oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 
-## 2. Les décisions prises (07/10/2026)
+## 2. Les décisions prises (07 et 08/10/2026)
 
 | # | Sujet | Décision | Conséquence directe |
 |---|---|---|---|
 | D1 | Échelle | **plusieurs dizaines** de copropriétés | une installation par copro (option A) devient inexploitable comme modèle général |
-| D2 | Hébergement | **cloud** | la plateforme quitte les Raspberry Pi ; la haute disponibilité maison (bascule, verrou, réplication de `app.db`) ne se transpose pas : elle se **remplace** par celle de l'hébergeur |
+| D2 | Hébergement | **cloud** pour les installations CoproConnect ; **révisée le 08/10/2026** par D11 : le maître, 5Hostachy, reste sur les Raspberry Pi | la haute disponibilité maison (bascule, verrou, réplication) reste celle du maître ; une installation dans le cloud s'appuie sur celle de son hébergeur |
 | D3 | Architecture | **option B** : une application, **une base par copropriété** | §3 et §4 |
 | D4 | Moteur de base | **PostgreSQL**, une base **et un rôle** par copropriété | §4.3 ; SQLite est abandonné pour la plateforme |
 | D5 | Opérateur de plateforme | **aucun accès aux données** d'une copropriété, même pour l'assistance | §4.7 ; l'assistance passe par l'administrateur de la copro |
@@ -39,6 +42,10 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D8 | Une personne dans deux copros | le cas existe, **rare** : **deux comptes indépendants**, un par caisson — confirmé le 08/10/2026 | §4.7 |
 | D9 | Nom de la plateforme (07/10/2026) | **CoproConnect** ; la résidence garde le sien, « 5Hostachy » | §8, phase 1 : le nom de la **plateforme** (attribution, lien vers le source) et celui de la **résidence** (administrable) sont deux réglages distincts |
 | D10 | Variante de la licence (07/10/2026) | **`AGPL-3.0-or-later`** | §7 |
+| D11 | Maître et canaux (08/10/2026) | **5Hostachy est le maître**, sur les Raspberry Pi : le développement s'y fait, il suit `main` (canal continu). Une branche **`stable`** reçoit les versions de `main` **choisies** par l'auteur ; les installations CoproConnect la suivent | §4.10 ; `stable` n'a **aucun commit propre** |
+| D12 | Ce qui est distribué (08/10/2026) | des **images construites et signées par la CI**, une par version taggée — jamais un `git pull` suivi d'un build sur la machine | §4.10 ; #1753, #1758 |
+| D13 | Un seul produit (08/10/2026) | **un seul chemin de code** (5Hostachy est un CoproConnect à une copropriété) et **un seul moteur de base**, PostgreSQL, maître compris ; le produit se sépare de l'exploitation des RPi | §4.10 ; #1755, #1759 |
+| D14 | Mise à jour des installations (08/10/2026) | **chaque nuit, automatique, réversible seule** : sauvegarde, migrations base par base, santé, retour à l'image précédente ; migrations **compatibles sur une version** | §4.10 ; #1756, #1757 |
 
 ## 3. Les trois architectures comparées
 
@@ -54,9 +61,11 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 une exploitation tenable à plusieurs dizaines. Son point faible, la mémoire du
 processus partagée, se ferme par les règles du §4.5.
 
-**A reste la solution de repli** pour une copropriété qui exigerait un hébergement
-dédié : un code propre pour B l'est aussi pour A. **C est écartée** : elle repose sur
-la discipline, pas sur la structure.
+**A et B se combinent** (D11, 08/10/2026) : chaque installation CoproConnect
+sert plusieurs copropriétés (B), et l'on installe CoproConnect **autant de fois
+que nécessaire** (A) — par hébergeur, par exploitant, ou pour une copropriété qui
+exigerait un hébergement dédié. Un code propre pour B l'est aussi pour A.
+**C est écartée** : elle repose sur la discipline, pas sur la structure.
 
 ## 4. L'architecture cible
 
@@ -181,6 +190,68 @@ pas les autres**. Chaque exécution est journalisée par copro.
 - **Départ d'une copropriété** : elle repart avec sa base et ses fichiers, puis
   ceux-ci sont supprimés de la plateforme.
 
+### 4.10 La distribution — un maître, une branche stable, N installations (D11 à D14)
+
+Arbitré le 08/10/2026, à la demande de l'auteur : *« 5hostachy est le master
+(hébergé sur les RPi), le dev est fait dessus, il converge petit à petit vers
+CoproConnect. CoproConnect pourra être installé autant de fois que nécessaire et
+gérera plusieurs copropriétés de façon isolée ; les installations se
+synchronisent chaque nuit sur une branche qui reçoit des versions choisies et
+stables de main. »*
+
+```
+        développement (sessions, PR)
+                  │
+                  ▼
+   main ── chaque version vX.Y.Z (tag) ──► 5Hostachy sur les RPi (canal continu)
+                  │                                  │ rodage de N jours sans incident
+                  │     promotion, décidée par l'auteur
+                  ▼
+   branche « stable » (avance rapide seulement, aucun commit propre)
+                  │  images de la version : construites et signées par la CI
+                  ▼
+   registre d'images ── chaque nuit ──► installation CoproConnect n° 1 (copros A, B…)
+                                     ──► installation CoproConnect n° 2 (copros C, D…)
+```
+
+**Les règles :**
+
+1. **`stable` est un pointeur, pas une branche de travail.** Elle n'avance qu'en
+   avance rapide vers un tag de `main`, et ne porte aucun commit propre. Un
+   correctif urgent passe par `main`, puis se promeut. Le jour où un correctif se
+   ferait sur `stable`, il y aurait deux produits.
+2. **Un seul chemin de code.** 5Hostachy est un CoproConnect à **une**
+   copropriété (le registre de §4.2 n'a qu'une entrée), jamais un « mode mono »
+   à côté d'un « mode multi » : sinon le canal stable livrerait du code que la
+   production du maître n'a jamais exécuté. C'est l'objet de la phase 2.
+3. **Un seul moteur de base**, PostgreSQL, maître compris (#1759) : un moteur
+   que seul le canal stable exercerait ne serait éprouvé nulle part.
+4. **On distribue des images, pas des sources.** La CI construit une fois les
+   images d'une version taggée, les signe et les publie (#1753) ; une
+   installation les tire **par empreinte** — ni build, ni git, ni clé de dépôt
+   sur la machine. Le maître fait de même (#1758). Le lien vers le source exigé
+   par l'AGPL (§7) pointe vers le tag de la version.
+5. **La promotion est une décision de l'auteur, appuyée sur des faits** (#1754) :
+   CI verte, version en production sur le maître depuis N jours sans incident,
+   post-check vert. Elle publie des notes de version pour exploitants tiers.
+6. **La mise à jour nocturne revient en arrière seule** (#1756) : sauvegarde par
+   copropriété, image vérifiée, migrations base par base avec arrêt au premier
+   échec, contrôle de santé, et retour à l'image précédente sinon. Déploiement
+   **échelonné** (une installation pilote d'abord) ; une installation peut
+   **épingler** sa version.
+7. **Les migrations sont compatibles sur une version** (#1757) : une version
+   ajoute, la suivante retire. L'image précédente tourne alors sur le schéma
+   migré, et le retour arrière n'est qu'un changement d'image — sans quoi il
+   faudrait restaurer la sauvegarde et perdre les écritures de la nuit.
+8. **Le produit se sépare de l'exploitation des RPi** (#1755) : la bascule,
+   `health-watch`, les points d'entrée et les crontabs restent dans le dépôt, mais
+   ne partent pas avec une installation ; celle-ci a son déploiement standard.
+9. **Une installation n'envoie rien par défaut** — ni version, ni santé — sans
+   l'accord de son exploitant (RGPD, D5).
+10. **Le canal stable est une porte vers toutes les installations à la fois** :
+    tags protégés, images signées, seule la CI publie. Une compromission de
+    `stable` les compromettrait toutes en une nuit.
+
 ## 5. Les garde-fous
 
 1. **Test d'étanchéité permanent** : deux copropriétés aux **identifiants
@@ -254,15 +325,16 @@ elle.
 | 0 | Décisions restantes (§9) | — |
 | 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproConnect, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices. Neuf lots, §8 bis (#1743 à #1751) | phase 1 |
-| 3 | **Plateforme cloud** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), outillage de flotte (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
+| 2 bis | **Distribution** (§4.10, §8 ter) : tags et images signées, branche `stable` et promotion, déploiement standard, migrations compatibles sur une version ; le maître tire son image et passe sous PostgreSQL | phase 2 en partie (§8 ter) |
+| 3 | **Première installation CoproConnect** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), mise à jour nocturne réversible (§4.10), outillage d'installation (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
 | 4 | **Copropriété pilote** : une seconde résidence réelle et volontaire | phase 3 |
 | 5 | Accueil autonome des copropriétés ; facturation selon le modèle économique | modèle économique |
 
 ## 8 bis. La phase 2 en lots (proposition du 08/10/2026)
 
 **Le chemin retenu : transformer 5Hostachy en CoproConnect, pas migrer.** Le même
-dépôt devient le code de la plateforme ; la résidence en serait la première
-copropriété (question 7, §9). C'est la suite logique de B (§3) : un code propre
+dépôt devient le code de la plateforme ; la résidence en est le **maître**, sur ses
+Raspberry Pi (D11, question 7 tranchée). C'est la suite logique de B (§3) : un code propre
 pour B l'est aussi pour A, et la licence (§7) est déjà celle de la plateforme.
 
 La phase 2 se mène **entièrement sur les Raspberry Pi, avec SQLite et une seule
@@ -286,10 +358,32 @@ soumis à accord, lot par lot.
 **Ce que la phase 2 ne fait pas, exprès :**
 
 - **aucune colonne `copropriete_id`** : ce serait l'option C, écartée (§3) ;
-- **pas de PostgreSQL en production sur les Raspberry Pi** : la phase 3 le
-  ferait deux fois, et la base actuelle courrait un risque pour rien ;
+- ~~**pas de PostgreSQL en production sur les Raspberry Pi**~~ — **révisé le
+  08/10/2026** (D13) : le maître restant durablement sur les RPi, il passe lui aussi
+  sous PostgreSQL, **après** la phase 2 (#1759), pour qu'un seul moteur soit
+  exercé en production ;
 - **pas d'outillage de flotte** (créer, migrer, sauvegarder N copros) avant le
   choix de l'hébergeur : il en dépend.
+
+## 8 ter. La distribution en lots (arbitrage du 08/10/2026)
+
+Consignée et ouverte le 08/10/2026 (« consigne l'architecture dans la spec et
+ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lot.
+
+| Lot | Contenu | Taille | Prérequis | Ticket |
+|---|---|---|---|---|
+| DI-1 | **Un tag par version**, posé par la CI ; images construites, **signées**, publiées avec leur SBOM | M | — | #1753 |
+| DI-2 | **Branche `stable`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version | S | DI-1 | #1754 |
+| DI-3 | **Déploiement standard** d'une installation, séparé de l'exploitation des RPi ; aucune donnée de la résidence dans une image | M | DI-1 | #1755 |
+| DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
+| DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou | S | — | #1757 |
+| DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi | M | DI-1 | #1758 |
+| DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
+
+**Ordre conseillé** : DI-5 dès maintenant (il sert aussi au retour arrière du
+maître) ; DI-1 puis DI-6, qui suppriment les builds sur les RPi ; DI-2 et DI-3 ;
+DI-7 après la CI PostgreSQL ; DI-4 en dernier, avec la première installation
+(phase 3).
 
 ## 9. Les questions encore ouvertes
 
@@ -297,8 +391,8 @@ soumis à accord, lot par lot.
    traitement), l'opérateur devient **sous-traitant**. Il faudra un contrat de
    sous-traitance, un registre, des mentions légales et une politique de
    confidentialité **par copro**, et un hébergeur conforme. À faire valider.
-2. **Hébergeur** : PostgreSQL géré, stockage objet, coffre à secrets, localisation
-   des données.
+2. **Hébergeur** des installations CoproConnect : PostgreSQL géré, stockage objet,
+   coffre à secrets, localisation des données. Et le **registre d'images** (#1753).
 3. ~~**Nom du produit**~~ — tranché le 07/10/2026 : **CoproConnect** (D9). Reste la
    recherche d'antériorité de la marque (§7).
 4. ~~**D8**~~ — confirmée le 08/10/2026 : **deux comptes indépendants**.
@@ -306,8 +400,8 @@ soumis à accord, lot par lot.
    de marque et les vérifications d'avant changement (§7).
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
    l'hébergement ; elle interdit seulement d'en fermer le code.
-7. **La résidence actuelle** : devient-elle une copropriété de la plateforme, ou
-   reste-t-elle sur les Raspberry Pi ? *Recommandation du 08/10/2026, non
-   tranchée* : la première copropriété de la plateforme, qui sert de copro de
-   non-régression ; la haute disponibilité des Raspberry Pi s'éteint alors en
-   phase 3.
+7. ~~**La résidence actuelle**~~ — tranché le 08/10/2026 (D11) : elle **reste sur
+   les Raspberry Pi**, comme **maître** du produit ; sa haute disponibilité est
+   conservée.
+8. **Durée de rodage** avant qu'une version soit proposée à la promotion (§4.10) :
+   N jours à fixer.
