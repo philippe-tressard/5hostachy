@@ -1,5 +1,5 @@
 <!--
-  Reporting CS — **relance syndic** : les tickets adressés au syndic, ceux que le
+  Reporting CS — **relance syndic** : toutes les affaires en cours, celles que le
   délai rend éligibles à une relance, et l'envoi groupé.
 
   Extrait d'`espace-cs/+page.svelte` avec #453. Autonome : c'est la seule vue dont
@@ -31,8 +31,6 @@
 	let relanceLoaded = false;
 	let relanceSelected: Set<number> = new Set();
 	let relanceSending = false;
-	let relanceNonRelancableEditing: number | null = null;
-	let relanceMotifTemp = '';
 
 	/** Lu par la barre d'outils du parent — ne pas écrire depuis l'extérieur. */
 	export let chargement = false;
@@ -83,18 +81,11 @@
 			await loadRelanceSyndic(true);
 		} catch (e) {
 			toast('error', messageErreur(e, 'Erreur envoi relance'));
+			//  Le serveur refuse une affaire close, archivée ou fusionnée depuis
+			//  l'ouverture de l'écran : la liste rechargée ne la propose plus.
+			await loadRelanceSyndic(true);
 		} finally {
 			relanceSending = false;
-		}
-	}
-
-	async function saveNonRelancable(t: Ticket, val: boolean, motif: string) {
-		try {
-			await ticketsApi.update(t.id, { non_relancable: val, non_relancable_motif: motif || null });
-			relanceNonRelancableEditing = null;
-			await loadRelanceSyndic(true);
-		} catch (e) {
-			toast('error', messageErreur(e, 'Erreur mise à jour ticket'));
 		}
 	}
 
@@ -164,15 +155,15 @@
 		{erreur}
 		vide={relanceList.length === 0}
 		titreErreur="Impossible d’afficher les tickets syndic"
-		titreVide="✅ Aucun ticket syndic en cours"
-		messageVide="Aucun ticket adressé au syndic n'est actuellement ouvert ou en cours."
+		titreVide="✅ Aucune affaire en cours"
+		messageVide="Aucune affaire n'est ouverte ou en cours : rien à relancer."
 	/>
 {:else}
 	{@const eligibles = relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
 	<section class="report-card carte-espacee">
 		<h3>🔔 Affaires syndic — suivi des relances</h3>
 		<p class="report-intro">
-			{relanceList.length} affaire(s) adressée(s) au syndic en cours.
+			{relanceList.length} affaire(s) en cours.
 			{#if eligibles.length > 0}
 				<strong>{eligibles.length} éligible(s) à la relance</strong> (sans modification depuis plus
 				de {relanceDelaiJours} jours).
@@ -186,7 +177,6 @@
 				{@const jours = daysSince(t.mis_a_jour_le)}
 				{@const eligible = jours >= relanceDelaiJours}
 				{@const selected = relanceSelected.has(t.id)}
-				{@const isEditingMotif = relanceNonRelancableEditing === t.id}
 				<div
 					class="relance-item"
 					class:relance-item-unselected={!selected}
@@ -225,62 +215,11 @@
 							{/if}
 						</div>
 					</div>
-					<!-- Tag non-relançable -->
 					<div class="relance-item-meta">
 						<span class="badge {TK_STATUT_BADGE[t.statut] ?? 'badge-gray'}"
 							>{TK_STATUT_LABELS[t.statut] ?? t.statut}</span
 						>
 						<span class="badge badge-gray">{categorieTicketLabel(t.categorie)}</span>
-						{#if t.non_relancable}
-							<span class="badge badge-red"
-								>🚫 Non relançable{t.non_relancable_motif
-									? ` — ${t.non_relancable_motif}`
-									: ''}</span
-							>
-						{/if}
-						{#if !isEditingMotif}
-							<!-- Libellé à l'infinitif : posé au milieu des badges d'état, « Non
-							     relançable » se lisait comme un ÉTAT alors que c'est l'ACTION de
-							     le poser. Les sept lignes l'affichaient sans qu'aucun ticket ne
-							     le soit (signalé le 04/08/2026). -->
-							<button
-								class="btn-icon relance-tag-action no-print"
-								title={t.non_relancable
-									? 'Retirer le tag non-relançable'
-									: 'Marquer comme non-relançable'}
-								aria-label={t.non_relancable
-									? `Retirer le tag non-relançable du ticket « ${t.titre} »`
-									: `Marquer le ticket « ${t.titre} » comme non-relançable`}
-								on:click={() => {
-									if (t.non_relancable) {
-										saveNonRelancable(t, false, '');
-									} else {
-										relanceNonRelancableEditing = t.id;
-										relanceMotifTemp = t.non_relancable_motif ?? '';
-									}
-								}}
-							>
-								{t.non_relancable ? '✅ Réactiver' : '🚫 Marquer non relançable'}
-							</button>
-						{:else}
-							<div class="saisie-ref">
-								<input
-									type="text"
-									placeholder="Motif"
-									aria-label="Motif de la mise hors relance"
-									bind:value={relanceMotifTemp}
-									class="champ-ref"
-								/>
-								<button
-									class="btn btn-sm btn-primary"
-									on:click={() => saveNonRelancable(t, true, relanceMotifTemp)}>Confirmer</button
-								>
-								<button
-									class="btn btn-sm btn-outline"
-									on:click={() => (relanceNonRelancableEditing = null)}>Annuler</button
-								>
-							</div>
-						{/if}
 					</div>
 				</div>
 			{/each}
@@ -330,14 +269,6 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 		margin-top: 0.4rem;
-	}
-	/* `nowrap` comme `.relance-numero` juste en dessous : sans lui le libellé se
-     coupait entre « Non » et « relançable », et la seconde ligne chevauchait le
-     badge voisin — à l'écran comme à l'impression. */
-	.relance-tag-action {
-		font-size: var(--fs-xs);
-		padding: 1px 6px;
-		white-space: nowrap;
 	}
 	.relance-numero {
 		font-size: var(--fs-sm);
@@ -431,20 +362,5 @@
 		cursor: pointer;
 		flex: 1;
 		min-width: 0;
-	}
-	.saisie-ref {
-		display: flex;
-		gap: 0.4rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-	/*  Nommé `input.` : c'est la recomposition tolérée `controle-saisie` de
-	    `lint:styles`, qui ne la verrait plus sous une classe seule. */
-	input.champ-ref {
-		font-size: var(--fs-sm);
-		padding: 2px 6px;
-		border: 1px solid var(--color-border);
-		border-radius: 4px;
-		width: 180px;
 	}
 </style>
