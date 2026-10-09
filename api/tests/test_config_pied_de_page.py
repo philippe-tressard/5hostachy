@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from app.models.core import RoleUtilisateur
-from app.routers.config import PREFIXE_NOM_MAX, TEXTE_PIED_MAX
+from app.utils.pied_de_page import PREFIXE_NOM_MAX, TEXTE_PIED_MAX
 from tests.aides_http import base_http, client_http
 
 _CLES = (
