@@ -22,9 +22,18 @@
  * - **L'année** : « © 2026 » l'année de création, « © 2026–2027 » les suivantes.
  *   L'année de création se règle (`pied_de_page_annee_debut`) ; vide, seule
  *   l'année en cours s'affiche — une autre résidence règle la sienne.
- * - **Le texte libre** est un élément comme les autres, qui se masque, mais
- *   dont la PLACE se choisit : il suit l'élément nommé par
- *   `pied_de_page_texte_apres` (vide : en tête). Sans texte, il ne s'affiche pas.
+ * - **Le texte libre** est un élément comme les autres, qui se masque ; vide,
+ *   il ne s'affiche pas.
+ *
+ * ## L'ordre et le préfixe du nom (arbitrés à l'écran, 09/10/2026)
+ *
+ * - **Tous les éléments se réordonnent**, verrouillés compris : la loi et la
+ *   licence imposent qu'ils SOIENT là, pas où. L'ordre se stocke en entier
+ *   (`pied_de_page_ordre`) ; un code inconnu s'ignore, un élément absent de la
+ *   valeur — ajouté plus tard — se range en fin.
+ * - **Un préfixe devant le nom** (`pied_de_page_prefixe_nom`) : « Résidence »
+ *   donne « Résidence 5Hostachy », sans séparateur, et le nom du site reste
+ *   « 5Hostachy » partout ailleurs (menu, courriels).
  */
 import { NOM_PLATEFORME } from '$lib/plateforme';
 
@@ -36,8 +45,8 @@ export interface ElementPied {
 	verrouille?: string;
 }
 
-/** Les éléments du pied de page, dans leur ordre d'affichage — le texte libre
- *  y a sa place par défaut, que `pied_de_page_texte_apres` déplace. */
+/** Les éléments du pied de page, dans leur ordre PAR DÉFAUT — que
+ *  `pied_de_page_ordre` remplace. */
 export const ELEMENTS_PIED: readonly ElementPied[] = [
 	{ code: 'annee', libelle: '© Année' },
 	{ code: 'residence', libelle: 'Nom de la résidence' },
@@ -65,13 +74,9 @@ export const ELEMENTS_PIED: readonly ElementPied[] = [
 /** La clé de configuration — publique : le pied de page la lit dans `/config`. */
 export const CLE_PIED_MASQUES = 'pied_de_page_masques';
 
-const MASQUABLES = new Set(ELEMENTS_PIED.filter((e) => !e.verrouille).map((e) => e.code));
-
-/** Les éléments masquables, ceux que le réglage propose. */
-export const ELEMENTS_MASQUABLES = ELEMENTS_PIED.filter((e) => !e.verrouille);
-
-/** Les éléments verrouillés, que le réglage ne propose pas et nomme à part. */
-export const ELEMENTS_VERROUILLES = ELEMENTS_PIED.filter((e) => e.verrouille);
+/** Les éléments masquables — les verrouillés se déplacent, ils ne se masquent pas. */
+const ELEMENTS_MASQUABLES = ELEMENTS_PIED.filter((e) => !e.verrouille);
+const MASQUABLES = new Set(ELEMENTS_MASQUABLES.map((e) => e.code));
 
 /** Valeur stockée → codes masqués. Les codes inconnus ou verrouillés sont ignorés. */
 export function lireMasques(valeur: string | undefined | null): string[] {
@@ -88,17 +93,20 @@ export function ecrireMasques(masques: readonly string[]): string {
 		.join(',');
 }
 
-/** Les quatre clés de configuration du pied de page — publiques : le pied de
- *  page les lit dans `/config`. */
+/** Les clés de configuration du pied de page — publiques : le pied de page
+ *  les lit dans `/config`. */
 export const CLES_PIED = {
 	masques: CLE_PIED_MASQUES,
 	anneeDebut: 'pied_de_page_annee_debut',
 	texte: 'pied_de_page_texte',
-	texteApres: 'pied_de_page_texte_apres',
+	ordre: 'pied_de_page_ordre',
+	prefixeNom: 'pied_de_page_prefixe_nom',
 } as const;
 
 /** Le texte libre ne fait qu'une ligne de pied de page. */
 export const TEXTE_PIED_MAX = 120;
+/** Le préfixe du nom est un mot ou deux (« Résidence », « Copropriété du »). */
+export const PREFIXE_NOM_MAX = 40;
 
 /** Le réglage du pied de page, tel que l'administration le saisit. */
 export interface ReglagePied {
@@ -106,14 +114,13 @@ export interface ReglagePied {
 	/** L'année de création ; vide, seule l'année en cours s'affiche. */
 	anneeDebut: number | null;
 	texte: string;
-	/** Le code de l'élément que le texte libre suit ; vide : en tête. */
-	texteApres: string;
+	/** Tous les codes, dans l'ordre d'affichage. */
+	ordre: string[];
+	/** Écrit devant le nom de la résidence, sans séparateur. */
+	prefixeNom: string;
 }
 
-const AUTRES_CODES = ELEMENTS_PIED.map((e) => e.code).filter((c) => c !== 'texte');
-/** La place du texte libre quand rien n'est réglé : celle de `ELEMENTS_PIED`. */
-const TEXTE_APRES_DEFAUT =
-	ELEMENTS_PIED[ELEMENTS_PIED.findIndex((e) => e.code === 'texte') - 1].code;
+const CODES = ELEMENTS_PIED.map((e) => e.code);
 
 /** Une année plausible, ou null — une saisie vide ou fautive ne casse pas le pied de page. */
 function lireAnnee(valeur: string | number | null | undefined): number | null {
@@ -121,14 +128,26 @@ function lireAnnee(valeur: string | number | null | undefined): number | null {
 	return Number.isInteger(n) && n >= 1900 && n <= 9999 ? n : null;
 }
 
+/** Valeur stockée → ordre complet : codes connus, sans doublon, les absents en fin. */
+export function lireOrdre(valeur: string | undefined | null): string[] {
+	const lus = (valeur ?? '').split(',').map((c) => c.trim());
+	const ordre = [...new Set(lus.filter((c) => CODES.includes(c)))];
+	return [...ordre, ...CODES.filter((c) => !ordre.includes(c))];
+}
+
+/** Une ligne, bornée — la même règle pour le texte libre et le préfixe. */
+function uneLigne(valeur: string | undefined | null, max: number): string {
+	return (valeur ?? '').split(/\s+/).filter(Boolean).join(' ').slice(0, max);
+}
+
 /** Configuration stockée → réglage. Tout ce qui est inconnu retombe sur le défaut. */
 export function lireReglagePied(cfg: Record<string, string | undefined>): ReglagePied {
-	const apres = cfg[CLES_PIED.texteApres] ?? TEXTE_APRES_DEFAUT;
 	return {
 		masques: lireMasques(cfg[CLES_PIED.masques]),
 		anneeDebut: lireAnnee(cfg[CLES_PIED.anneeDebut]),
-		texte: (cfg[CLES_PIED.texte] ?? '').trim().slice(0, TEXTE_PIED_MAX),
-		texteApres: apres === '' || AUTRES_CODES.includes(apres) ? apres : TEXTE_APRES_DEFAUT,
+		texte: uneLigne(cfg[CLES_PIED.texte], TEXTE_PIED_MAX),
+		ordre: lireOrdre(cfg[CLES_PIED.ordre]),
+		prefixeNom: uneLigne(cfg[CLES_PIED.prefixeNom], PREFIXE_NOM_MAX),
 	};
 }
 
@@ -137,8 +156,9 @@ export function ecrireReglagePied(r: ReglagePied): Record<string, string> {
 	return {
 		[CLES_PIED.masques]: ecrireMasques(r.masques),
 		[CLES_PIED.anneeDebut]: r.anneeDebut === null ? '' : String(lireAnnee(r.anneeDebut) ?? ''),
-		[CLES_PIED.texte]: r.texte.trim().slice(0, TEXTE_PIED_MAX),
-		[CLES_PIED.texteApres]: r.texteApres,
+		[CLES_PIED.texte]: uneLigne(r.texte, TEXTE_PIED_MAX),
+		[CLES_PIED.ordre]: lireOrdre(r.ordre.join(',')).join(','),
+		[CLES_PIED.prefixeNom]: uneLigne(r.prefixeNom, PREFIXE_NOM_MAX),
 	};
 }
 
@@ -147,34 +167,21 @@ export function mentionAnnee(debut: number | null, courante: number): string {
 	return debut !== null && debut < courante ? `© ${debut}–${courante}` : `© ${courante}`;
 }
 
-/** Tous les codes, le texte libre à sa place, avant tout masquage — l'ordre
- *  des pastilles du réglage comme celui du pied de page. */
-export function ordreComplet(texteApres: string): string[] {
-	const ordre = [...AUTRES_CODES];
-	ordre.splice(texteApres === '' ? 0 : ordre.indexOf(texteApres) + 1, 0, 'texte');
-	return ordre;
-}
-
 /** Les codes affichés, dans l'ordre, une fois les masqués retirés — et le texte
  *  libre absent s'il est vide. */
 export function elementsAffiches(r: ReglagePied): string[] {
 	const retires = new Set(lireMasques(r.masques.join(',')));
-	return ordreComplet(r.texteApres).filter(
+	return lireOrdre(r.ordre.join(',')).filter(
 		(c) => !retires.has(c) && (c !== 'texte' || r.texte.trim() !== ''),
 	);
 }
 
-/**
- * Le texte libre avance (-1) ou recule (+1) d'un cran parmi les éléments
- * AFFICHÉS : passer derrière un élément masqué ne changerait rien à l'écran.
- * Rend la nouvelle valeur de `texteApres`, inchangée en bout de rangée.
- */
-export function deplacerTexte(r: ReglagePied, sens: -1 | 1): string {
-	const visibles = elementsAffiches({ ...r, texte: r.texte || ' ' });
-	const i = visibles.indexOf('texte');
-	const voisin = visibles[i + sens];
-	if (i < 0 || voisin === undefined) return r.texteApres;
-	if (sens === 1) return voisin;
-	//  Avancer : se placer derrière l'élément qui précède le voisin, en tête sinon.
-	return visibles[i - 2] ?? '';
+/** L'ordre, l'élément `code` monté (-1) ou descendu (+1) d'un cran ; inchangé en bout de liste. */
+export function deplacer(ordre: readonly string[], code: string, sens: -1 | 1): string[] {
+	const i = ordre.indexOf(code);
+	const j = i + sens;
+	if (i < 0 || j < 0 || j >= ordre.length) return [...ordre];
+	const suite = [...ordre];
+	[suite[i], suite[j]] = [suite[j], suite[i]];
+	return suite;
 }

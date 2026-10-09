@@ -1,1 +1,1 @@
-CoproFirst — application web de gestion de copropriété pour les résidents et le conseil syndical (affaires, documents, badges, carnet d'entretien). Logiciel libre sous AGPL-3.0-or-later.
+CoproFirst — application web de gestion de copropriétés pour les résidents et le conseil syndical (affaires, documents, badges, carnet d'entretien). Logiciel libre sous AGPL-3.0-or-later.

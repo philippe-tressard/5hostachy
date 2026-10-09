@@ -41,7 +41,7 @@
 			>{#if code === 'annee'}{mentionAnnee(
 					reglage.anneeDebut,
 					anneeCourante,
-				)}{:else if code === 'texte'}{reglage.texte}{:else if code === 'residence'}<a
+				)}{:else if code === 'texte'}{reglage.texte}{:else if code === 'residence'}{#if reglage.prefixeNom}{reglage.prefixeNom}&nbsp;{/if}<a
 					href={siteUrl}
 					target="_blank"
 					rel="noopener noreferrer">{$siteNomStore}</a

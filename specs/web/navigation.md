@@ -312,9 +312,12 @@ créer » qui n'existaient plus, ou pas encore.
 - **L'année** : `pied_de_page_annee_debut` (publique) est l'année de création —
   « © 2026 » cette année-là, « © 2026–2027 » ensuite ; vide, l'année en cours seule.
 - **Le texte libre** : `pied_de_page_texte` (publique, une ligne, 120 caractères,
-  bornée aussi par le serveur) ; il suit l'élément nommé par
-  `pied_de_page_texte_apres` (vide : en tête ; défaut : le nom de la résidence),
-  et se déplace avec ← → dans le réglage. Vide, il ne s'affiche pas.
+  bornée aussi par le serveur). Vide, il ne s'affiche pas.
+- **L'ordre** : `pied_de_page_ordre` (publique, liste de codes) porte l'ordre de TOUS
+  les éléments, verrouillés compris — ils se déplacent, ils ne se masquent pas ;
+  un élément absent de la valeur se range en fin. Le réglage le change avec ↑ ↓.
+- **Le préfixe du nom** : `pied_de_page_prefixe_nom` (publique, 40 caractères) s'écrit
+  devant le nom, sans séparateur (« Résidence 5Hostachy ») ; `site_nom` ne change pas.
 - **Verrouillés** : le lien vers le code source de la version en service
   (AGPLv3 §13), les mentions légales (LCEN, art. 6) et la politique de
   confidentialité (RGPD, art. 13). `lireMasques` les écarte quelle que soit la valeur en base.
