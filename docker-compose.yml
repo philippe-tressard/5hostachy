@@ -92,6 +92,62 @@ services:
     networks:
       - hostachy
 
+  #  🐘 PostgreSQL — DI-7 (#1759), chantier multi-copropriétés (D4, D13 : un seul
+  #  moteur partout). ÉTEINT PAR DÉFAUT : le profil `postgresql` ne démarre que
+  #  si `.env` le demande (`COMPOSE_PROFILES=postgresql`), et l'API ne s'y branche
+  #  que si `DATABASE_URL` le désigne. Tant que la bascule des données (DI-7c)
+  #  n'est pas faite, la production reste sous SQLite et ce service n'existe pas.
+  #
+  #  Réglages DOUX POUR LA CARTE SD (arbitrage du 09/10/2026) : points de contrôle
+  #  espacés (`checkpoint_timeout`, `max_wal_size`) et WAL compressé — moins
+  #  d'écritures, sans rien céder sur la durabilité (`fsync` et
+  #  `synchronous_commit` restent à leur défaut, ACTIFS). `wal_level=replica` et
+  #  `max_wal_senders` préparent la réplication en continu vers le standby (DI-7b).
+  #
+  #  Aucun port publié : seule l'API, sur le réseau `hostachy`, l'atteint.
+  #  🔴 Pas de mot de passe par défaut (#776) : sans `POSTGRES_PASSWORD`, l'image
+  #  REFUSE d'initialiser la base — elle ne démarre pas avec un secret connu.
+  postgres:
+    image: postgres:17.11
+    container_name: hostachy_postgres
+    profiles: ["postgresql"]
+    restart: unless-stopped
+    stop_grace_period: 60s
+    shm_size: 256mb
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - TZ=Europe/Paris
+      - POSTGRES_USER=coprofirst
+      - POSTGRES_DB=coprofirst
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+    command:
+      - postgres
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - max_wal_size=1GB
+      - -c
+      - wal_compression=on
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=4
+      - -c
+      - shared_buffers=256MB
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coprofirst -d coprofirst"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - hostachy
+
   whatsapp-bridge:
     build:
       context: ./whatsapp-bridge
@@ -135,6 +191,7 @@ volumes:
   uploads:
   backups:
   whatsapp_auth:
+  pg_data:
 
 networks:
   hostachy:

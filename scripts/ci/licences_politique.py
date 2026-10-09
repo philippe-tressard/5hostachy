@@ -110,6 +110,21 @@ EXCEPTIONS = (
     },
     {
         "source": "api",
+        "paquets": ("psycopg", "psycopg-binary"),
+        "licences": ("LGPL-3.0-only",),
+        "motif": (
+            "Pilote PostgreSQL (DI-7, #1759 ; tests depuis P2-5, #1747), employé tel "
+            "quel par SQLAlchemy. Copyleft faible ; les roues binaires embarquent libpq "
+            "(licence PostgreSQL) et ses dépendances. Seul pilote qui rend une clé "
+            "violée en `IntegrityError` — pg8000, sous BSD, ne le faisait pas."
+        ),
+        "statut": _compatible(
+            "la LGPL-3.0 permet l'usage d'une bibliothèque par une œuvre sous GPLv3 ou "
+            "AGPLv3 (§4 et §5 de la LGPL), qui la distribue avec sa licence et son source"
+        ),
+    },
+    {
+        "source": "api",
         "paquets": ("certifi",),
         "licences": ("MPL-2.0",),
         "motif": (
