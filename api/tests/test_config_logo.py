@@ -19,7 +19,7 @@ from sqlmodel import Session
 from app.models.core import ConfigSite, RoleUtilisateur
 from app.utils import logo
 from app.utils.images import carre_png
-from app.utils.pdf_theme import logo_html
+from app.utils.pdf_theme import logo_html, logo_svg
 from tests.aides_http import base_http, client_http
 
 
@@ -161,8 +161,10 @@ def test_un_nom_force_ne_sort_pas_du_dossier_du_logo(moteur, tmp_path):
 
 
 def test_un_document_porte_le_neutre_ou_le_logo_televerse():
-    assert logo_html(None, 40).startswith("<svg"), "sans logo : le dessin neutre"
-    assert "C9983A" not in logo_html(None, 40), "la touche dorée de l'ancien logo est revenue"
+    #  Sans logo : le dessin neutre, celui de la marque du logiciel (09/10/2026). La
+    #  règle du 08/10 — « sans la touche dorée, qui évoquait cette résidence » —
+    #  ne tient plus : l'or de la fenêtre allumée appartient à la marque.
+    assert logo_html(None, 40) == logo_svg(40), "sans logo : le dessin neutre"
     avec = logo_html(_png(), 40)
     assert avec.startswith('<img src="data:image/png;base64,') and 'width="40"' in avec
     #  WeasyPrint ignore l'attribut : sans le style, le PNG sort à sa taille native.

@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import mimetypes
+import re
 from pathlib import Path
 
 logger = logging.getLogger("hostachy.pdf_theme")
@@ -107,28 +108,24 @@ def regle_page(
 # ── Logo ─────────────────────────────────────────────────────────────────────
 
 
+#: Le dessin du logo NEUTRE, **copie octet pour octet** de `front/static/favicon.svg`
+#: — les contextes de build Docker sont `./api` et `./front`, aucun fichier de la
+#: racine n'entre dans les images. `test_logo_neutre.py` tient les deux égaux.
+LOGO_NEUTRE_SVG = Path(__file__).with_name("logo-neutre.svg")
+
+
 def logo_svg(size: int = 36) -> str:
-    """Le logo NEUTRE de CoproFirst en SVG inline — un immeuble sur fond bleu.
+    """Le logo NEUTRE du logiciel en SVG inline, à `size` px de côté.
 
     C'est le repli quand la résidence n'a pas téléversé le sien (#1728) : un
     logo propre à une résidence ne s'écrit pas dans le code, une autre l'aurait
     porté. Le logo réellement affiché se demande à `utils/logo`
-    (`logo_document`), jamais ici. `front/static/favicon.svg` est le même dessin.
+    (`logo_televerse_png`), jamais ici.
+
+    Le commentaire du fichier (provenance, couleurs) ne part pas dans le document.
     """
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" '
-        f'width="{size}" height="{size}">\n'
-        '  <rect width="64" height="64" rx="14" fill="#1E3A5F"/>\n'
-        '  <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" '
-        'stroke-linejoin="round">\n'
-        '    <path d="M18 54V18a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v36Z"/>\n'
-        '    <path d="M18 34h-6a4 4 0 0 0-4 4v16h10"/>\n'
-        '    <path d="M46 30h6a4 4 0 0 1 4 4v20H46"/>\n'
-        '    <path d="M25 22h14"/><path d="M25 30h14"/><path d="M25 38h14"/>'
-        '<path d="M25 46h14"/>\n'
-        "  </g>\n"
-        "</svg>"
-    )
+    svg = re.sub(r"\s*<!--.*?-->", "", LOGO_NEUTRE_SVG.read_text(encoding="utf-8"), flags=re.S)
+    return svg.strip().replace("<svg ", f'<svg width="{size}" height="{size}" ', 1)
 
 
 def logo_html(logo_png: bytes | None, size: int = 36) -> str:
