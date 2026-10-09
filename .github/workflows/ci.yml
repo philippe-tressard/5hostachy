@@ -518,6 +518,9 @@ jobs:
           bash scripts/lib/lib-replication.sh       --selftest
           bash scripts/lib/lib-promotion.sh         --selftest
           bash scripts/exploitation/reconstruire-replique.sh --selftest
+          bash scripts/exploitation/basculer-donnees.sh --selftest
+          bash scripts/lib/lib-env-base.sh --selftest
+          bash scripts/exploitation/retour-sqlite.sh --selftest
           # La commande SSH entre les nœuds et le diagnostic d'une clé d'hôte
           # non épinglée (#1598) — fichier absent, vide, entrée hachée.
           bash scripts/lib/lib-ssh-noeuds.sh        --selftest
