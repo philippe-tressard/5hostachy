@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="docs/images/coprofirst.png" alt="CoproFirst" width="240" />
+  <img src="docs/images/coprofirst.png" alt="CoproFirst" width="160" />
 </h1>
 
 <p align="center">
