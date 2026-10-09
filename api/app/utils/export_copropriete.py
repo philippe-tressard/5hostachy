@@ -51,9 +51,22 @@ from enum import Enum
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy import Date, DateTime, LargeBinary, Numeric, Time, inspect, select, text
+from sqlalchemy import (
+    Date,
+    DateTime,
+    LargeBinary,
+    Numeric,
+    Time,
+    and_,
+    exists,
+    func,
+    inspect,
+    select,
+    text,
+)
 from sqlmodel import SQLModel
 
+from app.dialecte import differer_cles_etrangeres
 from app.utils import horloge
 import app.models.core  # noqa: F401 — enregistre TOUTES les tables (#1157)
 
@@ -244,6 +257,43 @@ def _recaler_sequences(connexion) -> None:
             )
 
 
+def lignes_jsonl(octets: bytes) -> list[dict]:
+    """PURE. Les enregistrements d'un `.jsonl` de l'archive — coupés sur « \\n » SEUL.
+
+    🔴 Jamais `splitlines()` : il coupe aussi sur U+2028, U+0085, U+000B…, que
+    `json.dumps(ensure_ascii=False)` laisse tels quels dans une chaîne. Un texte
+    de la résidence en contenait : la répétition de la bascule des données sur
+    l'archive réelle (09/10/2026) s'est arrêtée sur une ligne JSON coupée en deux.
+    Le saut de ligne, lui, est toujours échappé par `json.dumps`.
+    """
+    return [json.loads(li) for li in octets.decode().split("\n") if li]
+
+
+def lignes_sans_parent(connexion) -> list[str]:
+    """Chaque clé étrangère dont des lignes désignent un parent absent : « table.col → parent (n) ».
+
+    Portable — une requête par clé, sur les métadonnées des modèles —, parce que
+    PostgreSQL, ses clés différées par `differer_cles_etrangeres`, ne vérifie plus
+    rien de lui-même le temps de l'import. Une clé dont une colonne est NULL ne
+    désigne rien : elle n'est pas orpheline.
+    """
+    fautes = []
+    for t in tables():
+        for cle in t.foreign_key_constraints:
+            parent = cle.referred_table.alias()
+            designe = and_(*[parent.c[e.column.name] == e.parent for e in cle.elements])
+            n = connexion.execute(
+                select(func.count())
+                .select_from(t)
+                .where(*[c.isnot(None) for c in cle.columns])
+                .where(~exists(select(1).select_from(parent).where(designe)))
+            ).scalar()
+            if n:
+                colonnes = ", ".join(c.name for c in cle.columns)
+                fautes.append(f"{t.name}.{colonnes} → {cle.referred_table.name} ({n})")
+    return fautes
+
+
 def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> Bilan:
     """Écrit l'archive dans une base CIBLE au schéma posé et vide, puis la VÉRIFIE.
 
@@ -260,16 +310,14 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
             raise ImportRefuse(f"tables absentes des modèles de ce code : {inconnues}")
         bilan = Bilan()
         with moteur.connect() as connexion, connexion.begin():
+            #  Huit tables se citent en cycle (copropriété, bâtiment, lot…) : aucun
+            #  ordre d'écriture ne satisfait leurs clés ligne à ligne. Elles se
+            #  vérifient donc À LA FIN, par le relevé ci-dessous (DI-7c, 09/10/2026).
+            differer_cles_etrangeres(connexion)
             for t in tables():
                 if t.name not in manifeste["tables"]:
                     continue
-                lignes = [
-                    json.loads(li)
-                    for li in archive.extractfile(f"tables/{t.name}.jsonl")
-                    .read()
-                    .decode()
-                    .splitlines()
-                ]
+                lignes = lignes_jsonl(archive.extractfile(f"tables/{t.name}.jsonl").read())
                 if lignes:
                     colonnes = {c.name: c for c in t.columns}
                     connexion.execute(
@@ -279,6 +327,9 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
                 bilan.tables += 1
                 bilan.lignes += len(lignes)
             _recaler_sequences(connexion)
+            orphelines = lignes_sans_parent(connexion)
+            if orphelines:
+                raise ImportRefuse("clés sans parent : " + "; ".join(orphelines))
             relu, _ignorees, _rev = lire(connexion)
             for nom, attendu in manifeste["tables"].items():
                 obtenu = relu.get(nom, [])

@@ -243,3 +243,73 @@ def test_l_import_en_ligne_de_commande_verifie_et_le_dit(tmp_path):
         cwd=os.getcwd(),
     )
     assert r.returncode != 0 and "IMPORT REFUSÉ" in r.stderr
+
+
+# ── Les clés étrangères ACTIVES (DI-7c, première bascule du 09/10/2026) ─────────
+#
+#  La bascule des données a été refusée sur `batiment` → `copropriete` : huit
+#  tables se citent en cycle, `sorted_tables` les range sans ordre valable, et
+#  PostgreSQL vérifie chaque clé ligne à ligne. Ces tests-ci ne l'avaient pas
+#  vu : leur cible avait les clés DÉSACTIVÉES (le régime par défaut de
+#  `moteur_memoire`). Ici, la cible les vérifie, comme la production.
+
+
+def _copropriete_et_batiment(moteur, *, copropriete_id=None):
+    from app.models.copropriete import Batiment, Copropriete
+
+    with Session(moteur) as s:
+        if copropriete_id is None:
+            copro = Copropriete(nom="Résidence d'essai", adresse="1 rue de l'Essai")
+            s.add(copro)
+            s.commit()
+            copropriete_id = copro.id
+        s.add(Batiment(copropriete_id=copropriete_id, numero="A"))
+        s.commit()
+
+
+def test_des_tables_en_cycle_s_importent_clefs_actives(tmp_path):
+    source = _base_peuplee()
+    _copropriete_et_batiment(source)
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+    ordre = [t.name for t in ex.tables()]
+    assert ordre.index("batiment") < ordre.index("copropriete"), (
+        "cas zéro : l'enfant n'est plus écrit avant son parent — ce test ne reproduit "
+        "plus la panne du 09/10/2026"
+    )
+
+    cible = moteur_memoire(cles_etrangeres=True)
+    bilan = ex.importer(archive, cible)
+    assert bilan.ecarts == []
+    with cible.connect() as c:
+        assert ex.lignes_sans_parent(c) == []
+
+
+def test_une_ligne_sans_parent_est_refusee_et_la_cible_reste_vide(tmp_path):
+    source = _base_peuplee()  # clés désactivées : l'orphelin peut s'y écrire
+    _copropriete_et_batiment(source, copropriete_id=99)
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+
+    cible = moteur_memoire(cles_etrangeres=True)
+    with pytest.raises(ex.ImportRefuse, match=r"batiment\.copropriete_id → copropriete \(1\)"):
+        ex.importer(archive, cible)
+    with Session(cible) as s:
+        assert s.exec(select(Utilisateur)).all() == [], "la transaction est annulée"
+
+
+def test_un_separateur_unicode_dans_un_texte_ne_coupe_pas_la_ligne(tmp_path):
+    """U+2028 et U+0085 restent tels quels dans le JSON : `splitlines()` coupait là."""
+    texte = "Avant pendant\u0085après\nfin"
+    source = _base_peuplee()
+    with Session(source) as s:
+        s.add(FaqItem(categorie="Vie pratique", question="Séparateurs ?", reponse=texte))
+        s.commit()
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+
+    cible = moteur_memoire(cles_etrangeres=True)
+    assert ex.importer(archive, cible).ecarts == []
+    with Session(cible) as s:
+        relu = s.exec(select(FaqItem).where(FaqItem.question == "Séparateurs ?")).one()
+        assert relu.reponse == texte

@@ -530,14 +530,21 @@ les deux coexistent : PostgreSQL se réplique et se promeut, SQLite sert encore
 |---|---|
 | La réplication va-t-elle bien ? | **C37** (`check-reliability`, `lib-replication.sh`) et le **point 22** du pré-check — deux primaires, réplique absente, déconnectée, en retard, rôles inversés |
 | Le rôle de la base d'un nœud ? | `docker exec hostachy_postgres psql -U coprofirst -d coprofirst -Atc "select pg_is_in_recovery()"` — `t` réplique, `f` primaire |
-| Refaire la réplique du standby | `bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh` (simulation), puis `--oui` — efface la base LOCALE et la copie du primaire (`pg_basebackup -R`) ; refuse sur l'actif, sans primaire joignable |
+| Refaire la réplique du standby | `sudo bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh` (simulation), puis `--oui` — efface la base LOCALE et la copie du primaire (`pg_basebackup -R`) ; refuse sur l'actif, sans primaire joignable |
 | Changer d'actif | la bascule promeut la réplique du pair (phases 3-4), le failover et `boot-role-guard` aussi ; l'ancien primaire est reconstruit en réplique — tout passe par `lib-promotion.sh` |
 | Deux primaires (C37 FAIL) | isoler celui qui ne sert PAS (`docker compose stop postgres` sur le standby), puis `reconstruire-replique.sh --oui` sur lui ; ses écritures depuis la promotion sont perdues — c'est le prix, et C37 le dit |
 | L'intégrité | sommes de contrôle de pages (`--data-checksums` à l'initialisation) ; `GET /admin/db/integrite` lit `pg_stat_database.checksum_failures` |
 | La sauvegarde | `backup.py` met l'**export vérifié** (`base-export.tar.gz`, P2-7) dans l'archive, réimporté dans une base jetable avant d'être déclaré réussi ; l'export hors site relit chaque table sur le poste |
 | La maintenance | pas d'arrêt de l'API : l'autovacuum compacte en ligne (`maintenance.sh` lit le moteur de `.env`) |
-| Passer la résidence à PostgreSQL (DI-7c) | sur l'**actif**, dans une fenêtre choisie : `bash /opt/5hostachy/scripts/exploitation/basculer-donnees.sh` (simulation), puis `--oui`. Site coupé : API arrêtée, export vérifié de la base SQLite (`/backups/bascule-donnees-*.tar.gz`), schéma posé, import vérifié, `DATABASE_URL` réécrit sur les **deux** `.env` (`lib-env-base.sh`), l'ancienne valeur gardée en `# RETOUR_SQLITE=` datée. Refuse sans réplique saine ; tout échec remet SQLite |
-| Revenir à SQLite (7 jours) | `bash /opt/5hostachy/scripts/exploitation/retour-sqlite.sh` puis `--oui` : les écritures faites sous PostgreSQL repartent dans une base SQLite neuve (export, schéma, import) — rien n'est perdu. Au-delà de 7 jours il refuse : c'est une décision, pas un geste |
+| Passer la résidence à PostgreSQL (DI-7c) | sur l'**actif**, dans une fenêtre choisie : `sudo bash /opt/5hostachy/scripts/exploitation/basculer-donnees.sh` (simulation), puis `--oui`. Site coupé : API arrêtée, export vérifié de la base SQLite (`/backups/bascule-donnees-*.tar.gz`), schéma posé, import vérifié, `DATABASE_URL` réécrit sur les **deux** `.env` (`lib-env-base.sh`), l'ancienne valeur gardée en `# RETOUR_SQLITE=` datée. Refuse sans réplique saine ; tout échec remet SQLite |
+| Revenir à SQLite (7 jours) | `sudo bash /opt/5hostachy/scripts/exploitation/retour-sqlite.sh` puis `--oui` : les écritures faites sous PostgreSQL repartent dans une base SQLite neuve (export, schéma, import) — rien n'est perdu. Au-delà de 7 jours il refuse : c'est une décision, pas un geste |
+
+🔑 Ces trois outils se lancent **en root** (`sudo bash …`, depuis une session SSH
+`ptressard`) : ils joignent le pair par la clé inter-nœuds, que seul root lit, et
+`ssh_noeud_exiger_root` refuse sinon, en le disant. Lancé en ptressard le
+09/10/2026, `reconstruire-replique.sh` lisait la base du pair « illisible » et
+refusait sans dire pourquoi (#1781). Une session Claude n'a pas ce sudo : la
+commande se donne à l'utilisateur.
 
 ⚠️ La réplication passe par le LAN : port lié à `PG_ECOUTE` (l'IP du nœud, jamais
 `0.0.0.0`), `infra/postgresql/pg_hba.conf` (scram partout, rôle `replication` depuis
