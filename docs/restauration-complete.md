@@ -20,7 +20,7 @@
 |---|---|
 | **Matériel** | Raspberry Pi 5 — Raspberry Pi OS Lite 64-bit (Debian Bookworm) |
 | **Réseau** | IP fixe `192.168.1.222` (rpi1) ou `192.168.1.223` (rpi2), accès Internet |
-| **GitHub** | Repo `philippe-tressard/5hostachy` (branche `main`) |
+| **GitHub** | Repo `philippe-tressard/coproconnect` (branche `main`) |
 | **Backup .env** | Conserver une copie sécurisée du fichier `/opt/5hostachy/.env` (clés secrètes, tokens, SMTP, etc.) |
 | **Backup SQLite** | Dernier fichier `app_*.db.gz` depuis `/data/5hostachy/backups/` |
 | **Token Cloudflare** | Token du tunnel Cloudflare |
@@ -89,7 +89,7 @@ EOF
 # Cloner
 sudo mkdir -p /opt/5hostachy
 sudo chown ptressard:ptressard /opt/5hostachy
-git clone git@github.com:philippe-tressard/5hostachy.git /opt/5hostachy
+git clone git@github.com:philippe-tressard/coproconnect.git /opt/5hostachy
 cd /opt/5hostachy
 ```
 

@@ -37,7 +37,7 @@
 # =============================================================================
 set -euo pipefail
 
-DEPOT="philippe-tressard/5hostachy"
+DEPOT="philippe-tressard/coproconnect"
 REGISTRE="ghcr.io/philippe-tressard"
 SERVICES="api front caddy whatsapp-bridge"
 SANTE_MAX_S=180
@@ -160,9 +160,9 @@ sante() {  # → ok | ko, en sondant jusqu'à SANTE_MAX_S
 }
 
 # ── 1–2. La version à installer, et la décision ───────────────────────────────
-CIBLE=$(curl -fsS -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
+CIBLE=$(curl -fsSL -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
     | sed -n 's/^[[:space:]]*"version": *"\([^"]*\)".*/\1/p' | head -1 || true)
-PUBLIEE=$(curl -fsS -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
+PUBLIEE=$(curl -fsSL -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
     | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
 AGE=""
 [ -n "${PUBLIEE:-}" ] && AGE=$(( ( $(date +%s) - $(date -d "${PUBLIEE:-}" +%s) ) / 86400 ))

@@ -1,4 +1,4 @@
-# Contribuer à 5Hostachy
+# Contribuer à CoproConnect
 
 Merci de l'intérêt porté au projet. Ce document décrit la méthode **réellement**
 suivie — pas une méthode générique : les commandes ci-dessous sont celles que
@@ -26,8 +26,8 @@ derrière elle.
 ## 2. Démarrer en local
 
 ```bash
-git clone https://github.com/philippe-tressard/5hostachy.git
-cd 5hostachy
+git clone https://github.com/philippe-tressard/coproconnect.git
+cd coproconnect
 cp .env.example .env          # puis renseigner SECRET_KEY (32 caractères au moins)
 docker compose up --build -d
 ```

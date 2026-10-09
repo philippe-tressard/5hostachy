@@ -21,9 +21,9 @@
 /** Le nom du logiciel — l'attribution et le lien vers le source. */
 export const NOM_PLATEFORME = 'CoproConnect';
 
-/** Le dépôt public du code source. Son nom est historique : le logiciel est né
- *  pour une seule résidence (source déclarée de `lint:nom-residence`). */
-export const DEPOT_SOURCE = 'https://github.com/philippe-tressard/5hostachy';
+/** Le dépôt public du code source, au nom du logiciel depuis le 09/10/2026
+ *  (#1772) : il portait celui de la résidence, et l'ancienne adresse redirige. */
+export const DEPOT_SOURCE = 'https://github.com/philippe-tressard/coproconnect';
 
 /** La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
  *  foi est l'officiel, en anglais (`LICENSE`). */

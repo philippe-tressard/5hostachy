@@ -27,9 +27,10 @@ constantes sont tenues contre `REUSE.toml` et `LICENSE` par `test_plateforme.py`
 #: front, seul à connaître l'empreinte du build (`lienSource`, `VITE_GIT_HASH`).
 NOM_PLATEFORME = "CoproConnect"
 
-#: Le dépôt public du code source. Son nom est historique : le logiciel est né
-#: pour une seule résidence (exception déclarée de `test_nom_site.py`).
-DEPOT_SOURCE = "https://github.com/philippe-tressard/5hostachy"
+#: Le dépôt public du code source, au nom du logiciel depuis le 09/10/2026
+#: (#1772) : il portait celui de la résidence, et l'ancienne adresse redirige.
+#: `scripts/ci/descriptif_depot.py` vérifie que GitHub le sert à cette adresse.
+DEPOT_SOURCE = "https://github.com/philippe-tressard/coproconnect"
 
 #: La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
 #: foi est l'officiel, en anglais (`LICENSE`).

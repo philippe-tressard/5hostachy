@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="front/static/favicon.svg" alt="5Hostachy" width="80" />
+  <img src="front/static/favicon.svg" alt="CoproConnect" width="80" />
 </p>
 
-<h1 align="center">5Hostachy</h1>
+<h1 align="center">CoproConnect</h1>
 
 <p align="center">
   <em>Application web de gestion de copropriété — côté résidents et conseil syndical.</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://github.com/philippe-tressard/coproconnect/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/coproconnect/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg" alt="Licence AGPL-3.0-or-later — logiciel libre" /></a>
-  <a href="https://api.reuse.software/info/github.com/philippe-tressard/5hostachy"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/5hostachy" alt="REUSE compliant" /></a>
+  <a href="https://api.reuse.software/info/github.com/philippe-tressard/coproconnect"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/coproconnect" alt="REUSE compliant" /></a>
   <img src="https://img.shields.io/badge/python-3.12-3776ab.svg" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/node-22+-339933.svg" alt="Node 22+" />
 </p>
@@ -21,7 +21,7 @@
 > **Votre résidence a désormais son appli.**
 > Signalez un problème, suivez les travaux, consultez vos documents, commandez un badge ou échangez entre voisins — tout se fait depuis un seul espace, sécurisé et accessible 24 h/24.
 
-**Deux noms, deux choses.** Le logiciel s'appelle **CoproConnect** ; « 5Hostachy » est la résidence pour laquelle il est né, et le nom de ce dépôt. Rien dans le code ne nomme la résidence : son nom, son adresse et ses textes légaux se règlent dans l'administration, et l'application installée sur un téléphone porte le nom de **la résidence qui la sert**. Le pied de chaque page renvoie au code source de la version en service. Le chantier qui mène à plusieurs copropriétés sur une même plateforme : [`specs/architecture/multi-coproprietes.md`](specs/architecture/multi-coproprietes.md).
+**Deux noms, deux choses.** Le logiciel s'appelle **CoproConnect** ; « 5Hostachy » est la résidence pour laquelle il est né, et le nom que ce dépôt a porté jusqu'au 09/10/2026 (les anciennes adresses redirigent ici). Rien dans le code ne nomme la résidence : son nom, son adresse et ses textes légaux se règlent dans l'administration, et l'application installée sur un téléphone porte le nom de **la résidence qui la sert**. Le pied de chaque page renvoie au code source de la version en service. Le chantier qui mène à plusieurs copropriétés sur une même plateforme : [`specs/architecture/multi-coproprietes.md`](specs/architecture/multi-coproprietes.md).
 
 ## Fonctionnalités
 
@@ -72,7 +72,7 @@
 | CDN / Tunnel | Cloudflare Tunnel + Worker (maintenance page) |
 
 ```
-5hostachy/
+coproconnect/
 ├── api/               # Backend FastAPI
 │   ├── app/           # Code applicatif (routers, models, utils)
 │   └── alembic/       # Migrations de base de données
@@ -105,8 +105,8 @@
 ### Installation
 
 ```bash
-git clone https://github.com/philippe-tressard/5hostachy.git
-cd 5hostachy
+git clone https://github.com/philippe-tressard/coproconnect.git
+cd coproconnect
 
 # Configurer l'environnement
 cp .env.example .env

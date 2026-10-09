@@ -1,6 +1,6 @@
 # NOTICE — CoproConnect
 
-**Projet** : CoproConnect, né pour la résidence 5Hostachy (dépôt `5hostachy`)
+**Projet** : CoproConnect, né pour la résidence 5Hostachy (dépôt `coproconnect`, nommé `5hostachy` jusqu'au 09/10/2026)
 **Copyright** © 2024-2026 Philippe TRESSARD
 **Licence** : GNU Affero General Public License, version 3 ou (à votre choix)
 toute version ultérieure — `AGPL-3.0-or-later` (texte officiel : [`LICENSE`](LICENSE))

@@ -15,7 +15,12 @@
  *      `NOM_SITE_PAR_DEFAUT` (`$lib/configSite`) ;
  *    - la PLATEFORME : `$lib/plateforme` — le logiciel s'appelle CoproConnect
  *      (D9), et ce module porte aussi l'adresse du dépôt et la licence en
- *      vigueur, qui gardent le nom historique.
+ *      vigueur.
+ *
+ *  Le dépôt portait le nom de la résidence jusqu'au 09/10/2026 : l'adresse
+ *  du code source était alors la SEULE ligne admise, et `plateforme.ts` le
+ *  témoin qui devait la porter. Renommé en `coproconnect` (#1772), il n'y a
+ *  plus de témoin — aucune ligne de `src/` n'a le droit d'écrire « hostachy ».
  *
  *  Le pendant serveur est `api/tests/test_nom_site.py`.
  *
@@ -32,7 +37,7 @@ const MOTIF = /hostachy/i;
 
 const code = controler({
 	extensions: ['.svelte', '.ts', '.js', '.css'],
-	temoin: 'src/lib/plateforme.ts',
+	temoin: null,
 	exceptions: {
 		'src/lib/stores/locale.ts':
 			'`hostachy_locale` : la clé de stockage de la langue choisie. La renommer ' +
