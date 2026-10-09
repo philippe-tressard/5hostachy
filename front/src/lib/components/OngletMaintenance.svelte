@@ -10,6 +10,7 @@
 <script lang="ts">
 	import CarteInstallation from '$lib/components/CarteInstallation.svelte';
 	import ControleSante from '$lib/components/ControleSante.svelte';
+	import CarteExportCopropriete from '$lib/components/CarteExportCopropriete.svelte';
 	import ControlesFiabilite from '$lib/components/ControlesFiabilite.svelte';
 	import ConsommationIA from '$lib/components/ConsommationIA.svelte';
 	import IntegriteReferentielle from '$lib/components/IntegriteReferentielle.svelte';
@@ -37,3 +38,4 @@
 <ConsommationIA />
 <IntegriteReferentielle />
 <ControleSante />
+<CarteExportCopropriete />

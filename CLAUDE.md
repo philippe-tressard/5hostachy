@@ -60,6 +60,12 @@ swap de fichier → **stopper l'API d'abord** (0 writer).
 Signature de diagnostic, conduite à tenir et historique des trois incidents :
 `.claude/skills/infra-rpi`.
 
+**Exporter la base pendant que l'API tourne** (#1749) : par l'administration —
+`POST /admin/export-copropriete` (archive complète) et `…/verifier` (réimport dans une
+base jetable) —, qui lisent dans le processus de l'API, en une transaction. Jamais par
+`python -m app.utils.export_copropriete` dans le conteneur : cette commande ne sert qu'à
+**importer** une archive dans une base CIBLE neuve (DI-7).
+
 > 📖 `standards/06-donnees-et-integrite.md` §1 — le principe généralisé à **tout état
 > multi-fichiers qu'un processus tient ouvert**, pas seulement une base : il s'est
 > reproduit à l'identique sur l'état d'authentification WhatsApp (24/07/2026).

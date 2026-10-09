@@ -62,7 +62,7 @@
       C'est la règle la plus déployée qui l'emporte : `SectionFormulaire` porte
       l'intitulé, le filet et l'espacement pour tout le site. -->
 <section class="card config-section">
-	<div class="entete">
+	<div class="entete config-section-entete">
 		<div>
 			<SectionFormulaire titre="Contrôle de santé" icone="activity" />
 			<p class="muted">
@@ -102,13 +102,6 @@
 </section>
 
 <style>
-	.entete {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-	}
 	/*  Le `<h3>` local a cédé la place à `SectionFormulaire`, et sa règle de
 	    typographie avec lui : elle redisait ce que la charte dit déjà. */
 	.entete p {

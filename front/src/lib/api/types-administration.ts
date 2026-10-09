@@ -498,3 +498,27 @@ export interface EtatInstallation {
 	retard: number;
 	detail: string;
 }
+
+/**  `POST /admin/export-copropriete/verifier` (#1749) : la base exportée puis
+ *   réimportée dans une base jetable — se restaure-t-elle à l'identique ? */
+export interface VerificationRestauration {
+	restaurable: boolean;
+	tables: number;
+	lignes: number;
+	revision: string | null;
+	/** Tables présentes en base mais absentes des modèles : NON exportées. */
+	ignorees: string[];
+	ecarts: string[];
+	duree_secondes: number;
+}
+
+/**  `GET /admin/export-copropriete/dernier` : le dernier export entier du volume
+ *   des sauvegardes, lu dans son manifeste ; tout à zéro s'il n'y en a aucun. */
+export interface DernierExport {
+	archive: string | null;
+	octets: number;
+	cree_le: string | null;
+	tables: number;
+	lignes: number;
+	fichiers: number;
+}
