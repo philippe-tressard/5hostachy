@@ -61,11 +61,12 @@ _PUBLIC_KEYS = {
     "login_sous_titre",  # sous-titre de l'écran de connexion
     "pages_order",  # ordre des entrées de navigation
     #  Le pied de page (`$lib/piedDePage`) : éléments retirés, année de création,
-    #  texte libre et sa place — tout ce qu'il affiche est déjà public.
+    #  texte libre, ordre, préfixe du nom — tout ce qu'il affiche est déjà public.
     "pied_de_page_masques",
     "pied_de_page_annee_debut",
     "pied_de_page_texte",
-    "pied_de_page_texte_apres",
+    "pied_de_page_ordre",
+    "pied_de_page_prefixe_nom",
 }
 # Titres et descriptifs des pages, consommés par `getPageConfig()` côté front.
 _PUBLIC_PREFIXES = ("page_config_",)
@@ -111,13 +112,20 @@ def _valeur_pour_admin(cle: str, valeur: str) -> str:
 #: une restauration peut la ramener, et rien n'oblige à passer par cet écran. On
 #: normalise aux DEUX bouts — ici pour que la donnée soit propre, là-bas pour que
 #: le lien le soit même quand elle ne l'est pas.
-#: Le texte libre du pied de page tient sur une ligne, et il est PUBLIC : borné
-#: ici comme à la saisie (`TEXTE_PIED_MAX`, `$lib/piedDePage`).
+#: Le texte libre du pied de page et le préfixe du nom tiennent sur une ligne,
+#: et ils sont PUBLICS : bornés ici comme à la saisie (`$lib/piedDePage`).
 TEXTE_PIED_MAX = 120
+PREFIXE_NOM_MAX = 40
+
+
+def _une_ligne(valeur: str, maximum: int) -> str:
+    return " ".join(str(valeur).split())[:maximum]
+
 
 _NORMALISEURS = {
     "site_url": lambda v: base_site(str(v)),
-    "pied_de_page_texte": lambda v: " ".join(str(v).split())[:TEXTE_PIED_MAX],
+    "pied_de_page_texte": lambda v: _une_ligne(v, TEXTE_PIED_MAX),
+    "pied_de_page_prefixe_nom": lambda v: _une_ligne(v, PREFIXE_NOM_MAX),
     #  L'activation d'un service ne s'écrit que `"1"` ou `"0"` (#1718) : la
     #  lecture unique (`service_actif`) n'en accepte pas d'autre.
     **{cle: normaliser_activation for cle in CLES_ACTIVATION},

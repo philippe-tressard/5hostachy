@@ -44,14 +44,17 @@ test('un élément masqué disparaît ; un élément verrouillé reste', async (
 test('Admin › Site : la pastille masque l’élément dans l’aperçu', async ({ page }) => {
 	await simulerApi(page, (chemin) => (chemin === '/api/auth/me' ? ADMIN : undefined));
 	await page.goto('/admin?onglet=site');
-	const groupe = page.getByRole('group', { name: 'Éléments affichés' });
+	const groupe = page.getByRole('group', { name: 'Éléments, dans l’ordre' });
 	const apercu = page.getByRole('group', { name: 'Aperçu du pied de page' });
-	const annee = groupe.getByRole('button', { name: '© Année' });
+	const annee = groupe.getByRole('button', { name: '© Année', exact: true });
 
 	await expect(annee).toHaveAttribute('aria-pressed', 'true');
 	await expect(apercu).toContainText('©');
-	//  Les éléments verrouillés ne se proposent pas.
-	await expect(groupe.getByRole('button', { name: 'Mentions légales' })).toHaveCount(0);
+	//  Un élément verrouillé ne se masque pas — il n'a pas de pastille — mais il se déplace.
+	await expect(groupe.getByRole('button', { name: 'Mentions légales', exact: true })).toHaveCount(
+		0,
+	);
+	await expect(groupe.getByRole('button', { name: 'Monter « Mentions légales »' })).toBeEnabled();
 
 	await annee.click();
 	await expect(annee).toHaveAttribute('aria-pressed', 'false');
@@ -59,39 +62,46 @@ test('Admin › Site : la pastille masque l’élément dans l’aperçu', async
 	await expect(apercu).toContainText('Mentions légales');
 });
 
-test('l’année de création fait « © 2026–… » ; le texte libre suit l’élément choisi', async ({
+test('l’ordre, le préfixe du nom et l’année de création se lisent dans le pied de page', async ({
 	page,
 }) => {
 	const courante = new Date().getFullYear();
 	await simulerApi(page, (chemin) =>
 		chemin === '/api/config'
 			? {
-					site_nom: 'Résidence témoin',
+					site_nom: '5Hostachy',
 					pied_de_page_annee_debut: String(courante - 1),
-					pied_de_page_texte: 'Texte du conseil',
-					pied_de_page_texte_apres: 'annee',
+					pied_de_page_ordre: 'annee,source,version,residence',
+					pied_de_page_prefixe_nom: 'Résidence',
 				}
 			: undefined,
 	);
 	await page.goto('/tableau-de-bord');
 	const elements = page.locator('footer.app-footer > .element');
 	await expect(elements.nth(0)).toHaveText(`© ${courante - 1}–${courante}`);
-	await expect(elements.nth(1)).toHaveText('Texte du conseil');
-	await expect(elements.nth(2)).toHaveText('Résidence témoin');
+	await expect(elements.nth(1)).toHaveText('CoproConnect');
+	await expect(elements.nth(2)).toHaveText(/^v\d+\.\d+\.\d+$/);
+	await expect(elements.nth(3)).toHaveText('Résidence 5Hostachy');
+	//  Les éléments absents de l'ordre réglé viennent ensuite : rien ne disparaît.
+	await expect(page.locator('footer.app-footer')).toContainText('Mentions légales');
 });
 
-test('Admin › Site : le texte libre paraît dans l’aperçu et s’y déplace', async ({ page }) => {
+test('Admin › Site : un élément monte et descend, l’aperçu suit', async ({ page }) => {
 	await simulerApi(page, (chemin) => (chemin === '/api/auth/me' ? ADMIN : undefined));
 	await page.goto('/admin?onglet=site');
-	const apercu = page.getByRole('group', { name: 'Aperçu du pied de page' });
-	const elements = apercu.locator('.element');
+	const groupe = page.getByRole('group', { name: 'Éléments, dans l’ordre' });
+	const elements = page.getByRole('group', { name: 'Aperçu du pied de page' }).locator('.element');
+	const rang = async () => (await elements.allTextContents()).indexOf('CoproConnect');
+	//  L'aperçu se rend après le chargement de la configuration : attendre qu'il y soit.
+	await expect
+		.poll(rang, { message: 'CoproConnect doit paraître dans l’aperçu' })
+		.toBeGreaterThan(0);
+	//  Un élément VERROUILLÉ se déplace aussi : CoproConnect monte jusqu'en tête.
+	const monter = groupe.getByRole('button', { name: 'Monter « CoproConnect (code source) »' });
+	while (await monter.isEnabled()) await monter.click();
+	await expect.poll(rang).toBe(0);
+	await groupe.getByRole('button', { name: 'Descendre « CoproConnect (code source) »' }).click();
+	await expect.poll(rang).toBe(1);
 	await page.getByLabel('Texte libre', { exact: true }).fill('Texte du conseil');
-	//  Sa place par défaut : juste après le nom de la résidence.
-	const rang = async () => (await elements.allTextContents()).indexOf('Texte du conseil');
-	const avant = await rang();
-	expect(avant, 'le texte libre doit paraître dans l’aperçu').toBeGreaterThan(0);
-	await page.getByRole('button', { name: 'Avancer le texte libre' }).click();
-	await expect.poll(rang).toBe(avant - 1);
-	await page.getByRole('button', { name: 'Reculer le texte libre' }).click();
-	await expect.poll(rang).toBe(avant);
+	await expect(elements).toContainText(['Texte du conseil']);
 });

@@ -1,13 +1,14 @@
 <!--
-  Le réglage du PIED DE PAGE, dans Admin › Site (08/10/2026).
+  Le réglage du PIED DE PAGE, dans Admin › Site.
 
-  Les éléments facultatifs se masquent, les trois que la loi ou la licence
-  imposent restent ; l'année de création fait « © 2026–2027 » les années
-  suivantes ; le texte libre est une pastille parmi les autres, qui se place
-  avec ← → (arbitrés à l'écran). La règle vit dans `$lib/piedDePage`.
+  Une liste, dans l'ordre d'affichage : chaque élément monte ou descend (↑ ↓),
+  les facultatifs s'affichent ou se masquent (leur pastille), les trois que la
+  loi ou la licence imposent restent — mais se déplacent comme les autres
+  (arbitré à l'écran, 09/10/2026). Dessous, l'année de création, le préfixe du
+  nom et le texte libre. La règle vit dans `$lib/piedDePage`.
 
   L'aperçu est le VRAI composant du squelette : il ne peut pas montrer autre
-  chose que le site. Extrait d'`OngletSite`, qui le portait en ligne.
+  chose que le site.
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
@@ -15,10 +16,9 @@
 	import Pastille from '$lib/components/Pastille.svelte';
 	import PiedDePage from '$lib/components/PiedDePage.svelte';
 	import {
-		deplacerTexte,
-		ELEMENTS_MASQUABLES,
-		ELEMENTS_VERROUILLES,
-		ordreComplet,
+		deplacer,
+		ELEMENTS_PIED,
+		PREFIXE_NOM_MAX,
 		TEXTE_PIED_MAX,
 		type ReglagePied,
 	} from '$lib/piedDePage';
@@ -28,14 +28,7 @@
 	export let siteSaving = false;
 	export let saveSiteConfig: () => void;
 
-	const libelles = new Map(ELEMENTS_MASQUABLES.map((e) => [e.code, e.libelle]));
-	const verrouilles = ELEMENTS_VERROUILLES.map((e) => e.libelle).join(', ');
-
-	//  Les pastilles dans l'ordre du pied de page : le texte libre y est à SA place.
-	$: pastilles = ordreComplet(reglage.texteApres).filter((c) => libelles.has(c));
-	$: texteActif = !reglage.masques.includes('texte');
-	$: avant = deplacerTexte(reglage, -1);
-	$: apres = deplacerTexte(reglage, 1);
+	const parCode = new Map(ELEMENTS_PIED.map((e) => [e.code, e]));
 
 	/** Affiche ou masque un élément — l'aperçu suit aussitôt. */
 	function basculer(code: string) {
@@ -44,53 +37,61 @@
 			? masques.filter((c) => c !== code)
 			: [...masques, code];
 	}
+
+	function bouger(code: string, sens: -1 | 1) {
+		reglage.ordre = deplacer(reglage.ordre, code, sens);
+	}
 </script>
 
 <section class="card config-section">
 	<h2 class="config-section-title"><Icon name="pencil" size={17} />Pied de page</h2>
 	<div class="largeur-saisie">
-		<LibelleGroupe titre="Éléments affichés" id="pied-elements" classe="perimetre-pills">
-			{#each pastilles as code (code)}
-				{#if code === 'texte' && texteActif}
-					<!--  Les flèches font 44 px au doigt : groupées avec leur pastille, elles
-					      n'étirent plus toute la rangée à leur hauteur. -->
-					<span class="texte-place">
-						<button
-							type="button"
-							class="btn-icon deplacer"
-							aria-label="Avancer le texte libre"
-							title="Avancer le texte libre"
-							disabled={avant === reglage.texteApres}
-							on:click={() => (reglage.texteApres = avant)}>←</button
-						>
-						<Pastille petite bascule active on:click={() => basculer(code)}
-							>{libelles.get(code)}</Pastille
-						>
-						<button
-							type="button"
-							class="btn-icon deplacer"
-							aria-label="Reculer le texte libre"
-							title="Reculer le texte libre"
-							disabled={apres === reglage.texteApres}
-							on:click={() => (reglage.texteApres = apres)}>→</button
-						>
-					</span>
-				{:else}
-					<Pastille
-						petite
-						bascule
-						active={!reglage.masques.includes(code)}
-						on:click={() => basculer(code)}>{libelles.get(code)}</Pastille
-					>
-				{/if}
-			{/each}
+		<LibelleGroupe titre="Éléments, dans l’ordre" id="pied-elements">
+			<ol class="liste-pied">
+				{#each reglage.ordre as code, i (code)}
+					{@const e = parCode.get(code)}
+					{#if e}
+						<li>
+							<button
+								type="button"
+								class="btn-icon deplacer"
+								aria-label="Monter « {e.libelle} »"
+								title="Monter"
+								disabled={i === 0}
+								on:click={() => bouger(code, -1)}>↑</button
+							>
+							<button
+								type="button"
+								class="btn-icon deplacer"
+								aria-label="Descendre « {e.libelle} »"
+								title="Descendre"
+								disabled={i === reglage.ordre.length - 1}
+								on:click={() => bouger(code, 1)}>↓</button
+							>
+							{#if e.verrouille}
+								<span class="fixe" title="Toujours affiché : {e.verrouille}"
+									><Icon name="lock" size={13} />{e.libelle}</span
+								>
+							{:else}
+								<Pastille
+									petite
+									bascule
+									active={!reglage.masques.includes(code)}
+									on:click={() => basculer(code)}>{e.libelle}</Pastille
+								>
+							{/if}
+						</li>
+					{/if}
+				{/each}
+			</ol>
 		</LibelleGroupe>
 		<p class="aide">
-			Toujours affichés : {verrouilles}. La licence du logiciel et la loi imposent qu’ils restent
-			accessibles depuis chaque page.
+			Une pastille pleine est affichée, une pastille vide masquée. Les éléments au cadenas restent
+			toujours : la licence du logiciel et la loi imposent qu’ils soient accessibles depuis chaque
+			page — ils se déplacent comme les autres.
 		</p>
 		<div class="champs-pied">
-			<label class="field champ-court">
+			<label class="field">
 				Année de création
 				<input
 					type="number"
@@ -104,12 +105,22 @@
 				>
 			</label>
 			<label class="field">
+				Texte avant le nom
+				<input
+					type="text"
+					bind:value={reglage.prefixeNom}
+					maxlength={PREFIXE_NOM_MAX}
+					placeholder="Résidence"
+				/>
+				<span class="aide">Écrit devant le nom de la résidence, sans séparateur.</span>
+			</label>
+			<label class="field champ-large">
 				Texte libre
 				<input
 					type="text"
 					bind:value={reglage.texte}
 					maxlength={TEXTE_PIED_MAX}
-					placeholder="Un texte court, placé avec ← → parmi les éléments"
+					placeholder="Un texte court, placé dans la liste comme les autres éléments"
 				/>
 			</label>
 		</div>
@@ -125,25 +136,43 @@
 </section>
 
 <style>
-	.champs-pied {
+	.liste-pied {
+		list-style: none;
+		margin: 0;
+		padding: 0;
 		display: grid;
-		grid-template-columns: minmax(8rem, 12rem) 1fr;
-		gap: 0.75rem;
-		margin-top: 0.75rem;
+		gap: 0.3rem;
 	}
-	@media (max-width: 767px) {
-		.champs-pied {
-			grid-template-columns: 1fr;
-		}
-	}
-	.texte-place {
-		display: inline-flex;
+	.liste-pied li {
+		display: flex;
 		align-items: center;
 		gap: 0.25rem;
 	}
 	.deplacer:disabled {
 		opacity: 0.25;
 		cursor: not-allowed;
+	}
+	.fixe {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-left: 0.3rem;
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+	}
+	.champs-pied {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.75rem;
+		margin-top: 0.75rem;
+	}
+	.champs-pied .champ-large {
+		grid-column: 1 / -1;
+	}
+	@media (max-width: 767px) {
+		.champs-pied {
+			grid-template-columns: 1fr;
+		}
 	}
 	.apercu-pied {
 		margin-top: 0.75rem;
