@@ -62,7 +62,7 @@ L'application le sert aussi elle-même, à l'adresse `/manuel-utilisateur.html`.
 
 | Composant | Technologie |
 |---|---|
-| Backend | [FastAPI](https://fastapi.tiangolo.com/) · SQLModel · SQLite (WAL) · Alembic |
+| Backend | [FastAPI](https://fastapi.tiangolo.com/) · SQLModel · SQLite (WAL) en production, PostgreSQL 17 prêt (profil `postgresql`, bascule à venir) · Alembic |
 | Frontend | [SvelteKit](https://kit.svelte.dev/) · TypeScript · Vite · PWA (installable ; écrans précachés, contenus toujours en ligne) |
 | Reverse proxy | [Caddy](https://caddyserver.com/) |
 | Messaging | WhatsApp Bridge (Baileys) |

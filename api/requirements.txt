@@ -15,6 +15,11 @@ pydantic-settings==2.15.0
 #  dernière publiée) : aucun changement (#1570, même cas que #1048).
 email-validator==2.3.0
 sqlalchemy==2.0.54
+#  Le pilote PostgreSQL (#1759, DI-7) : l'image sait se brancher sur PostgreSQL
+#  dès que `DATABASE_URL` le désigne. Roues binaires (libpq embarquée, aarch64
+#  compris) ; LGPL-3.0. Celui des tests depuis P2-5 — pg8000 rendait une clé
+#  violée en `ProgrammingError`, et non en `IntegrityError`.
+psycopg[binary]==3.3.6
 alembic==1.20.0
 PyJWT==2.15.1
 passlib[bcrypt]==1.7.4

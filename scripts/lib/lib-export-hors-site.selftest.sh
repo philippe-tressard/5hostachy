@@ -87,6 +87,15 @@
   # Le cas qui a coûté l'incident du 26/07 ailleurs : l'absence de contrôle
   # lue comme un succès. Ici, ne pas savoir vaut échec.
   check "intégrité non vérifiable"  "erreur"      "$(verdict_archive 1024 oui oui inconnue | cut -d'|' -f1)"
+  #  Base serveur (PostgreSQL, DI-7b) : l'export vérifié remplace app.db.
+  check "export présent, lignes justes" "succes"  "$(verdict_archive 1024 oui export ok | cut -d'|' -f1)"
+  check "export aux lignes manquantes"  "erreur"  "$(verdict_archive 1024 oui export 'écarts : lot 3/4' | cut -d'|' -f1)"
+  check "export non vérifié"            "erreur"  "$(verdict_archive 1024 oui export inconnue | cut -d'|' -f1)"
+  check "export repéré dans le listing" "oui"     "$(contient_export_base $'uploads/\nbase-export.tar.gz')"
+  check "uploads/base-export… ne compte pas" "non" "$(contient_export_base 'uploads/base-export.tar.gz')"
+  check "résumé juste"                  "ok"      "$(verdict_export_base $'lot 4 4\nticket 12 12')"
+  check "une table incomplète"          "écarts : lot 3/4" "$(verdict_export_base $'lot 3 4\nticket 12 12')"
+  check "résumé vide → inconnue, jamais ok" "inconnue" "$(verdict_export_base '')"
 
   LISTE=$'a\nb\nc\nd\ne'
   check "rotation garde 3"          $'a\nb'       "$(echo "$LISTE" | archives_a_supprimer 3)"

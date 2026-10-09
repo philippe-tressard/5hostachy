@@ -133,13 +133,28 @@ def point_de_controle(conn, mode: str = "TRUNCATE"):
 def verifier_integrite(conn) -> str:
     """Le verdict d'intégrité du moteur : « ok » si sain, sinon ce qu'il signale.
 
-    ⚠️ Sur un moteur que ce module ne sait pas mesurer, le verdict le DIT — un
-    contrôle qui ne peut pas s'exécuter n'est jamais vert (`standards/04` §1).
+    - Base-fichier : `quick_check`, qui relit la structure du fichier.
+    - PostgreSQL : les SOMMES DE CONTRÔLE de pages (`--data-checksums`, posé à
+      l'initialisation par docker-compose.yml, DI-7b). Chaque page lue est
+      vérifiée ; `pg_stat_database.checksum_failures` compte les échecs depuis
+      l'origine. Zéro, sommes actives : « ok ». Sommes absentes : la base ne
+      SAIT pas détecter une page abîmée — le verdict le dit, il n'est pas vert.
+    - Tout autre moteur : « non mesurée » — un contrôle qui ne peut pas
+      s'exécuter n'est jamais vert (`standards/04` §1).
     """
-    if not est_fichier(conn):
-        return f"non mesurée sur {dialecte_de(conn)}"
-    ligne = conn.execute(text("PRAGMA quick_check")).first()
-    return ligne[0] if ligne else "(aucun résultat)"
+    dialecte = dialecte_de(conn)
+    if est_fichier(conn):
+        ligne = conn.execute(text("PRAGMA quick_check")).first()
+        return ligne[0] if ligne else "(aucun résultat)"
+    if dialecte == "postgresql":
+        actives = conn.execute(text("SHOW data_checksums")).scalar()
+        if actives != "on":
+            return "sommes de contrôle de pages désactivées — corruption non détectable"
+        echecs = conn.execute(
+            text("SELECT coalesce(sum(checksum_failures), 0) FROM pg_stat_database")
+        ).scalar()
+        return "ok" if not echecs else f"{echecs} page(s) en échec de somme de contrôle"
+    return f"non mesurée sur {dialecte}"
 
 
 def compacter(conn) -> None:

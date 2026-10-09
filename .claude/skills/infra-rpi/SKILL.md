@@ -516,7 +516,30 @@ un build qui démarrerait pile à cet instant.
 correctif du 30/07/2026 (garde sur la sortie vide). Elle vit maintenant dans
 `scripts/lib/lib-sonde.sh`, et nulle part ailleurs.
 
+## PostgreSQL : primaire, réplique, promotion (DI-7b, #1781)
+
+Actif tant que `.env` le désigne (`COMPOSE_PROFILES=postgresql`, `DATABASE_URL`
+`postgresql+psycopg://…`) ; avant DI-7c, la production est sous SQLite et ces
+outils se déclarent sans objet. La règle d'or de cette forme : `CLAUDE.md`.
+
+| Question | Où, comment |
+|---|---|
+| La réplication va-t-elle bien ? | **C37** (`check-reliability`, `lib-replication.sh`) et le **point 22** du pré-check — deux primaires, réplique absente, déconnectée, en retard, rôles inversés |
+| Le rôle de la base d'un nœud ? | `docker exec hostachy_postgres psql -U coprofirst -d coprofirst -Atc "select pg_is_in_recovery()"` — `t` réplique, `f` primaire |
+| Refaire la réplique du standby | `bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh` (simulation), puis `--oui` — efface la base LOCALE et la copie du primaire (`pg_basebackup -R`) ; refuse sur l'actif, sans primaire joignable |
+| Changer d'actif | la bascule promeut la réplique du pair (phases 3-4), le failover et `boot-role-guard` aussi ; l'ancien primaire est reconstruit en réplique — tout passe par `lib-promotion.sh` |
+| Deux primaires (C37 FAIL) | isoler celui qui ne sert PAS (`docker compose stop postgres` sur le standby), puis `reconstruire-replique.sh --oui` sur lui ; ses écritures depuis la promotion sont perdues — c'est le prix, et C37 le dit |
+| L'intégrité | sommes de contrôle de pages (`--data-checksums` à l'initialisation) ; `GET /admin/db/integrite` lit `pg_stat_database.checksum_failures` |
+| La sauvegarde | `backup.py` met l'**export vérifié** (`base-export.tar.gz`, P2-7) dans l'archive, réimporté dans une base jetable avant d'être déclaré réussi ; l'export hors site relit chaque table sur le poste |
+| La maintenance | pas d'arrêt de l'API : l'autovacuum compacte en ligne (`maintenance.sh` lit le moteur de `.env`) |
+
+⚠️ La réplication passe par le LAN : port lié à `PG_ECOUTE` (l'IP du nœud, jamais
+`0.0.0.0`), `infra/postgresql/pg_hba.conf` (scram partout, rôle `replication` depuis
+l'autre nœud seulement), `PG_REPLICATION_PASSWORD` identique sur les deux `.env`.
+
 ## Sync DB manuelle (sans basculer)
+
+> SQLite seulement. Sous PostgreSQL, la réplique EST la synchronisation : voir la section précédente.
 ⚠️ Copier `app.db` pendant que l'API écrit = copie potentiellement déchirée. On stoppe
 l'API le temps de la copie (≈ qq s) → fichier cohérent garanti (cf. règle d'or ci-dessus).
 ```bash

@@ -3,7 +3,9 @@
 import glob
 import os
 import tarfile
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from app.utils import horloge
 
 from sqlmodel import Session, select
@@ -72,9 +74,77 @@ def horodatage_archive(nom_fichier: str) -> datetime | None:
     return horloge.de_paris(lu) if paris else lu
 
 
+#: Le nom, DANS l'archive, de l'export vérifié d'une base serveur (DI-7b).
+#: `scripts/lib/lib-export-hors-site.sh` le reconnaît : même valeur, tenue par
+#: `tests/test_sauvegarde_base_serveur.py`.
+NOM_EXPORT_BASE = "base-export.tar.gz"
+
+#: Les fichiers téléversés, sauvegardés avec la base.
+UPLOADS = "/app/uploads"
+
+
+def _integrite() -> str:
+    """Le verdict du moteur, « ok » si sain — une erreur de lecture n'est pas « ok »."""
+    try:
+        with engine.connect() as connexion:
+            return verifier_integrite(connexion)
+    except Exception as exc:
+        return f"contrôle d'intégrité en échec : {exc}"
+
+
+def _annuler(session: Session, entry: HistoriqueSauvegarde, verdict: str) -> None:
+    """Ne jamais écraser les sauvegardes saines (rotation) par celle d'une base abîmée.
+
+    Cf. corruption telemetry_event du 17/06/2026 : le backup de 01:00 contenait
+    déjà la table malformée, devenu inutilisable.
+    """
+    entry.statut = StatutSauvegarde.echouee
+    entry.message_erreur = (
+        f"Sauvegarde annulée — base corrompue ({verdict}). "
+        f"Backups sains préservés (pas de rotation)."
+    )
+    entry.terminee_le = horloge.maintenant()
+    session.add(entry)
+    session.commit()
+
+
+def _exporter_et_verifier(export: Path, dossier: Path) -> None:
+    """Exporte la base, puis la RÉIMPORTE dans une base jetable : un écart lève.
+
+    `ImportRefuse` (compte ou empreinte d'une table) fait échouer la sauvegarde —
+    une archive qui ne se restaure pas n'est pas une sauvegarde.
+    """
+    from sqlmodel import SQLModel
+
+    from app.dialecte import moteur_jetable
+    from app.utils.export_copropriete import exporter, importer
+
+    exporter(engine, export)
+    cible = moteur_jetable(dossier / "verification.db")
+    try:
+        SQLModel.metadata.create_all(cible)
+        importer(export, cible)
+    finally:
+        cible.dispose()
+
+
+def _reussie(session: Session, entry: HistoriqueSauvegarde, nom: str, chemin: str) -> None:
+    entry.statut = StatutSauvegarde.reussie
+    entry.fichier_nom = nom
+    entry.fichier_chemin = chemin
+    entry.taille_octets = os.path.getsize(chemin)
+    entry.terminee_le = horloge.maintenant()
+    _rotate_backups(session)
+    session.add(entry)
+    session.commit()
+
+
 def run_backup(history_id: int | None = None):
     """
-    Lance une sauvegarde : app.db + répertoire uploads → .tar.gz
+    Lance une sauvegarde : la base + le répertoire uploads → .tar.gz.
+    Base-fichier : `app.db`, après point de contrôle et `quick_check`. Base
+    serveur : son export vérifié (`base-export.tar.gz`), après le contrôle des
+    sommes de pages.
     Met à jour l'entrée HistoriqueSauvegarde correspondante.
     """
     with Session(engine) as session:
@@ -95,6 +165,25 @@ def run_backup(history_id: int | None = None):
             fichier = chemin_fichier(settings.database_url)
             db_path = str(fichier) if fichier else ""
 
+            #  🔴 Une base SERVEUR (PostgreSQL, DI-7b, #1781) n'a pas de fichier à
+            #  copier : sans cette branche, l'archive partait SANS la base et
+            #  marquée « réussie ». Elle reçoit l'EXPORT vérifié (P2-7) — format
+            #  neutre, réimporté dans une base jetable AVANT d'être déclaré bon.
+            if fichier is None:
+                verdict = _integrite()
+                if verdict != "ok":
+                    _annuler(session, entry, verdict)
+                    return
+                with tempfile.TemporaryDirectory() as dossier:
+                    export = Path(dossier) / NOM_EXPORT_BASE
+                    _exporter_et_verifier(export, Path(dossier))
+                    with tarfile.open(dest, "w:gz") as tar:
+                        tar.add(export, arcname=NOM_EXPORT_BASE)
+                        if os.path.exists(UPLOADS):
+                            tar.add(UPLOADS, arcname="uploads")
+                _reussie(session, entry, filename, dest)
+                return
+
             # WAL checkpoint avant copie : garantit que app.db contient
             # toutes les transactions committées (le WAL peut être en avance)
             if os.path.exists(db_path):
@@ -105,37 +194,19 @@ def run_backup(history_id: int | None = None):
                 # les backups sains (rotation) par un snapshot d'une base corrompue.
                 # Cf. corruption telemetry_event du 17/06/2026 : le backup de 01:00
                 # contenait déjà la table malformée, devenu inutilisable.
-                try:
-                    with engine.connect() as _conn:
-                        verdict = verifier_integrite(_conn)
-                except Exception as exc:
-                    verdict = f"quick_check a échoué : {exc}"
+                verdict = _integrite()
                 if verdict != "ok":
-                    entry.statut = StatutSauvegarde.echouee
-                    entry.message_erreur = (
-                        f"Sauvegarde annulée — base corrompue (quick_check : {verdict}). "
-                        f"Backups sains préservés (pas de rotation)."
-                    )
-                    entry.terminee_le = horloge.maintenant()
-                    session.add(entry)
-                    session.commit()
+                    _annuler(session, entry, verdict)
                     return
 
             with tarfile.open(dest, "w:gz") as tar:
                 if os.path.exists(db_path):
                     tar.add(db_path, arcname="app.db")
-                uploads = "/app/uploads"
-                if os.path.exists(uploads):
-                    tar.add(uploads, arcname="uploads")
+                if os.path.exists(UPLOADS):
+                    tar.add(UPLOADS, arcname="uploads")
 
-            size = os.path.getsize(dest)
-            entry.statut = StatutSauvegarde.reussie
-            entry.fichier_nom = filename
-            entry.fichier_chemin = dest
-            entry.taille_octets = size
-            entry.terminee_le = horloge.maintenant()
-
-            _rotate_backups(session)
+            _reussie(session, entry, filename, dest)
+            return
 
         except Exception as exc:
             entry.statut = StatutSauvegarde.echouee

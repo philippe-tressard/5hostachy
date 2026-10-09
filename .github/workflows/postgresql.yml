@@ -43,6 +43,8 @@ jobs:
           POSTGRES_USER: essai
           POSTGRES_PASSWORD: essai
           POSTGRES_DB: essai
+          #  Comme en production (docker-compose.yml) : l'intégrité s'y mesure.
+          POSTGRES_INITDB_ARGS: --data-checksums
         ports:
           - 5432:5432
         options: >-

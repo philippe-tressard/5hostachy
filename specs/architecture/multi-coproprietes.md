@@ -47,6 +47,7 @@ oublié suffit n'est pas étanche, elle n'est que *disciplinée*.
 | D13 | Un seul produit (08/10/2026) | **un seul chemin de code** (5Hostachy est un CoproFirst à une copropriété) et **un seul moteur de base**, PostgreSQL, maître compris ; le produit se sépare de l'exploitation des RPi | §4.10 ; #1755, #1759 |
 | D14 | Mise à jour des installations (08/10/2026) | **chaque nuit, automatique, réversible seule** : sauvegarde, migrations base par base, santé, retour à l'image précédente ; migrations **compatibles sur une version** | §4.10 ; #1756, #1757 |
 | D15 | Serveurs d'une réplique (08/10/2026) | **un seul serveur par défaut**, cloud ou hébergeur — « les instances replica ne seront installées par défaut que sur un seul serveur ». La haute disponibilité à deux nœuds reste **propre au maître** | §4.10, règle 12 ; la réversibilité d'une mise à jour (D14) et la sauvegarde **hors de la machine** (§4.9) deviennent le seul filet d'une réplique |
+| D16 | PostgreSQL sur les RPi (09/10/2026) | **réplication en continu** vers le standby (un PostgreSQL en réplique, promu au basculement), plutôt que la copie à la bascule ; données sur la **carte SD**, réglages qui limitent les écritures sans céder la durabilité ; livré en **trois lots** (7a, 7b, 7c) | §8 ter ; #1759, #1781, #1782 |
 
 ## 3. Les trois architectures comparées
 
@@ -400,7 +401,9 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 | DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable. **Livré en v2.120.0** | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou `test_migrations_compatibles.py`. **Livré en v2.119.1** | S | — | #1757 |
 | DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi ; construction locale en secours, avec alerte. **Livré en v2.122.0** | M | DI-1 | #1758 |
-| DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
+| DI-7a | **L'image et le compose savent tourner sur PostgreSQL** — service `postgres` sous profil, éteint par défaut ; pilote psycopg dans l'image ; `start.sh` attend la base et ne migre jamais une base illisible. La production reste sous SQLite | S | P2-5, P2-7 | #1759 |
+| DI-7b | **L'exploitation sous PostgreSQL** : réplication en continu vers le standby, bascule et failover par promotion, sauvegarde `pg_dump` vérifiée, maintenance, contrôles, règle d'or réécrite — éprouvés avant la bascule (D16) | L | DI-7a | #1781 |
+| DI-7c | **La résidence passe à PostgreSQL** : fenêtre choisie, export vérifié de `app.db`, import vérifié, retour arrière gardé quelques jours | M | DI-7b | #1782 |
 | DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica`. **Livré en v2.125.0** : `ROLE_INSTALLATION`, service *Vérification de la version* coupé par défaut | #1761 |
 
 **Ordre conseillé** : DI-5 dès maintenant (il sert aussi au retour arrière du

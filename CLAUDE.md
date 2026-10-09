@@ -60,6 +60,27 @@ swap de fichier → **stopper l'API d'abord** (0 writer).
 Signature de diagnostic, conduite à tenir et historique des trois incidents :
 `.claude/skills/infra-rpi`.
 
+### …et sous PostgreSQL (DI-7b, #1781) — la règle change de forme, pas de rang
+
+La règle ci-dessus vaut tant que `.env` désigne SQLite. Sous PostgreSQL, lire la
+base depuis un autre processus redevient permis : le serveur sert ses lecteurs
+(`docker exec hostachy_postgres psql`, C37, la sauvegarde). Les gestes qui
+détruisent sont **autres**, et ils sont interdits au même rang :
+
+- **Jamais deux primaires.** Un ancien primaire ne se relance JAMAIS tel quel après
+  une promotion : il s'isole, puis se reconstruit en réplique
+  (`scripts/exploitation/reconstruire-replique.sh --oui`, sur le standby).
+- **Jamais une base absente démarrée sur un nœud qui prend la main** : l'image
+  l'initialiserait en primaire VIDE. Un `docker compose up -d` complet sur un standby
+  sans réplique fait exactement cela — passer par `lib-promotion.sh`
+  (`decider_prise_de_main`), comme la bascule, le failover et la garde au démarrage.
+- **Jamais `docker compose stop` sans liste sur le standby** : il arrêterait la
+  réplique. `docker compose stop $SERVICES_APPLICATIFS` (`lib-applicatifs.sh`).
+- **Jamais `docker volume rm 5hostachy_pg_data`**, ni une écriture sur la réplique.
+
+🔒 C37 (`lib-replication.sh`) et le point 22 du pré-check disent deux primaires, une
+réplique absente, déconnectée ou en retard. Conduite à tenir : `.claude/skills/infra-rpi`.
+
 **Exporter la base pendant que l'API tourne** (#1749) : par l'administration —
 `POST /admin/export-copropriete` (archive complète) et `…/verifier` (réimport dans une
 base jetable) —, qui lisent dans le processus de l'API, en une transaction. Jamais par

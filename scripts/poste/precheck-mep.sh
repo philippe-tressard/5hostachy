@@ -94,6 +94,7 @@ sur() { timeout 25 ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" "$2" 2>/dev/nul
 #  point 1 pouvait donc afficher un code vide, que rien ne distingue d un OK.
 # shellcheck source=../lib/lib-sonde.sh
 . "$RACINE_DEPOT/scripts/lib/lib-sonde.sh"
+. "$RACINE_DEPOT/scripts/lib/lib-applicatifs.sh"   # l'application, la base mise à part (DI-7b)
 
 #  `--post-mep` (#1282) : après la fusion, les points du LOT échouent par
 #  construction. Ce mode juge la production seule, ajoute P1 et P3, et
@@ -117,13 +118,14 @@ rapporter 1 "$(verdict_http "$CODE")" "Site public" "HTTP ${CODE:-?}"
 # 2 et 3 — rôle actif cohérent, pas de split-brain
 A1=$(sur "$RPI1" 'cat /opt/5hostachy/.active')
 A2=$(sur "$RPI2" 'cat /opt/5hostachy/.active')
-C1=$(sur "$RPI1" 'docker ps -q --filter name=hostachy | wc -l')
-C2=$(sur "$RPI2" 'docker ps -q --filter name=hostachy | wc -l')
+C1=$(sur "$RPI1" "$COMPTER_APPLICATIFS")
+C2=$(sur "$RPI2" "$COMPTER_APPLICATIFS")
 rapporter 2 "$(verdict_role "$A1" "$A2" "$C1" "$C2")" "Rôle actif cohérent et conforme au réel" \
           "rpi1='${A1:-?}'/${C1:-?}c  rpi2='${A2:-?}'/${C2:-?}c"
 rapporter 3 "$(verdict_standby "${A1:-}" "${C1:-}" "${C2:-}")" "Pas de split-brain"           "actif déclaré=${A1:-?} — conteneurs rpi1=${C1:-?} rpi2=${C2:-?}"
 
-#  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs.
+#  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs
+#  de l'APPLICATION (la réplique de la base vit sur le standby, DI-7b).
 if [ "${C1:-0}" != "0" ]; then ACTIF="$RPI1"; STANDBY="$RPI2"; else ACTIF="$RPI2"; STANDBY="$RPI1"; fi
 #  P1 et P3 : ils ont besoin de l'actif, déduit juste au-dessus.
 if [ -n "$MODE_POST_MEP" ]; then
@@ -139,6 +141,29 @@ if [ -z "$WAL" ]; then V4=INCONNU
 elif [ "$WAL" -lt 2 ]; then V4=FAIL          # WAL/SHM unlinkés = signature de corruption
 else V4=$(verdict_compte "${IO:-}" 0); fi
 rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "wal+shm=${WAL:-?}  io=${IO:-?}"
+
+# 22 — Réplication PostgreSQL (DI-7b, #1781) : un primaire sur l'actif, une
+#      réplique qui reçoit le journal sur le standby. Sans objet tant que la
+#      production est sous SQLite. Collecte et décision : `lib-replication.sh`,
+#      les mêmes que C37 — un pré-check qui jugerait autrement divergerait.
+. "$RACINE_DEPOT/scripts/lib/lib-replication.sh"
+#  Séparés par « | » : `read` fusionne les blancs consécutifs (tabulation
+#  comprise), et un champ vide décalerait les suivants.
+champs_replication() {  # $1 = nœud → « present|recovery|flux|retard|recepteur| »
+  local brut
+  brut=$(sur "$1" "$COLLECT_REPLICATION")
+  [ -n "$brut" ] || { echo ""; return; }
+  for c in pg_present pg_recovery pg_flux pg_retard pg_recepteur; do
+    printf '%s|' "$(printf '%s\n' "$brut" | sed -n "s/^$c=//p")"
+  done
+}
+IFS='|' read -r RA1 RA2 RA3 RA4 RA5 <<< "$(champs_replication "$ACTIF")"
+IFS='|' read -r RS1 RS2 RS3 RS4 RS5 <<< "$(champs_replication "$STANDBY")"
+V22=$(verdict_precheck_replication "${RA1:-}" "${RA2:-}" "${RA3:-}" "${RA4:-}" "${RA5:-}"                                    "${RS1:-}" "${RS2:-}" "${RS3:-}" "${RS4:-}" "${RS5:-}")
+case "$V22" in
+  SANS_OBJET) rapporter 22 OK "Réplication PostgreSQL" "sans objet — la production est sous SQLite" ;;
+  *) rapporter 22 "$V22" "Réplication PostgreSQL"        "actif: base=${RA1:-?} réplique=${RA2:-?} flux=${RA3:-?} retard=${RA4:-?}o · standby: base=${RS1:-?} réplique=${RS2:-?} réception=${RS5:-?}" ;;
+esac
 
 # 5 — WhatsApp : le bridge tourne-t-il, ET sa dernière connexion est-elle
 #     postérieure à la dernière fermeture ?
