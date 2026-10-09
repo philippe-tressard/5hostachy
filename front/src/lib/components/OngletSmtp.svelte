@@ -235,13 +235,13 @@
 				placeholder="Nouveau mot de passe SMTP"
 				aide="Requis si le serveur exige une authentification."
 			/>
-			<label class="field champ-double">
-				<span class="choix-chiffrement">
-					<span class="option-chiffrement">
+			<label class="field champ-double chiffrement">
+				<span>
+					<span>
 						<input type="checkbox" bind:checked={smtpConfig.starttls} class="case-chiffrement" />
 						STARTTLS (port 587)
 					</span>
-					<span class="option-chiffrement">
+					<span>
 						<input type="checkbox" bind:checked={smtpConfig.ssl_tls} class="case-chiffrement" />
 						SSL/TLS (port 465)
 					</span>
@@ -335,13 +335,15 @@
 <style>
 	/*  Le résultat du test : un encadré, pas un `toast`. Un toast disparaît, et
 	    c'est précisément ce message qu'on relit en corrigeant un paramètre. */
-	.choix-chiffrement {
+	/*  Les `span` restent SANS classe : `lint:casse-libelles` les lit comme du libellé,
+	    dont ils gardent les capitales — le rendu d'avant, quand le style était en ligne. */
+	.chiffrement > span:first-child {
 		display: flex;
 		align-items: center;
 		gap: 1.5rem;
 		flex-wrap: wrap;
 	}
-	.option-chiffrement {
+	.chiffrement > span:first-child > span {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
