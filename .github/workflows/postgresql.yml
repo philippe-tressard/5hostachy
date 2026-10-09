@@ -54,6 +54,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      #  Le même rendu PDF que le job pytest de la CI : sans elles, les tests de
+      #  rendu échouent ici et nulle part ailleurs (`scripts/ci/bibliotheques-pdf.sh`).
+      - name: Bibliothèques système pour le rendu PDF
+        run: bash scripts/ci/bibliotheques-pdf.sh
+
       - name: Install dependencies
         working-directory: api
         run: pip install -r requirements-dev.txt

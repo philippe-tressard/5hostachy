@@ -75,7 +75,7 @@
 				<dt>En service depuis</dt>
 				<dd>{fmtDatetime(etat.demarree_le)}</dd>
 				<dt>À jour&nbsp;?</dt>
-				<dd class="ton-{e.ton}">
+				<dd class:ton-ok={e.ton === 'ok'} class:ton-alerte={e.ton === 'alerte'}>
 					{e.texte}
 					{#if !etat.verification_active && etat.branche}
 						<p class="aide">
