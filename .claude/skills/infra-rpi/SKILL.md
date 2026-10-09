@@ -590,8 +590,10 @@ alors que sa base est synchronisée à chaque bascule. Un failover cette nuit-l�
 aurait servi du code v2.90.0 sur une base migrée en 0154.
 
 **Ce que fait le standby désormais** : `git reset --hard origin/main` puis
-`construire_images` (`lib-parite.sh` — la seule porte de build, qui exporte
-`GIT_HASH`, #1684). Et rien d'autre — **aucun conteneur démarré** (ce serait
+`obtenir_images` (`lib-images-ci.sh`, #1758) — il **tire** les images que la CI
+a publiées pour ce commit (`ghcr.io/philippe-tressard/coproconnect-*:sha-<commit>`)
+et ne les construit (`construire_images`, `lib-parite.sh`, qui exporte
+`GIT_HASH`, #1684) qu'en **secours**, 30 min après le commit, avec une alerte. Et rien d'autre — **aucun conteneur démarré** (ce serait
 le split-brain), **aucune migration appliquée** (sa base est une copie que la
 bascule écrase ; migrer ici divergerait en silence).
 
@@ -616,6 +618,19 @@ restées vieilles — distinction que le point 10 ne sait pas faire.
 recréer le front, borné par `API_PRETE_MAX_S`. Au journal, « API prête en N s »
 ou « ⚠ API sans réponse 200 … le reste est recréé quand même » — la seconde ne
 bloque jamais le déploiement, elle dit qu'il faut lire `docker logs hostachy_api`.
+
+### Les images viennent de la CI (#1758, 08/10/2026)
+
+| Ce que dit `/var/log/hostachy-deploy.log` | Ce que ça veut dire | Conduite |
+|---|---|---|
+| `… en attente des images de la CI` | le workflow « Images » n'a pas encore publié ce commit | rien : le passage suivant réessaie |
+| `Déployé: <sha> (images tirees, …)` | servi depuis le registre | — |
+| `⚠ Secours : … construites localement` + alerte | 30 min sans images | regarder le run « Images » (Actions), puis la visibilité **publique** des paquets `coproconnect-*` |
+| `⚠ ÉCHEC du build` | le secours lui-même a échoué | comme avant : C27 le dit FAIL |
+
+⚠️ **Les paquets doivent être PUBLICS** (arbitrage du 08/10/2026) : un paquet ghcr.io
+privé se refuse au `docker pull` anonyme, et chaque déploiement tomberait dans le
+secours. `MaJ-Hostachy.sh` (reprise en main) construit toujours localement.
 
 ## Le noyau du standby se met à jour seul (#1395 — 27/09/2026)
 

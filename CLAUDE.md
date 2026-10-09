@@ -938,16 +938,28 @@ Instanciation 5Hostachy :
 - Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
 - **Chaque commit de `main` publie ses images, le bump y ajoute le tag** (#1753) :
   le workflow `images.yml` publie les images signées des quatre services sur
-  `ghcr.io/philippe-tressard/coproconnect-*` (amd64 et arm64), étiquetées
-  `sha-<commit>` ; une version bumpée reçoit en plus le tag git `vX.Y.Z` (par
-  `scripts/ci/tag-version.sh`, jamais à la main) et l'étiquette d'image `X.Y.Z`.
+  `ghcr.io/philippe-tressard/coproconnect-*` (amd64 et arm64, publiques d'office :
+  liées au dépôt public), étiquetées `sha-<commit>` ; une version bumpée reçoit en
+  plus le tag git `vX.Y.Z` (par `scripts/ci/tag-version.sh`, jamais à la main) et
+  l'étiquette d'image `X.Y.Z`. 🔒 `test_images_publiees.py` : la matrice publie
+  exactement ce que `docker-compose.yml` construit.
+- **Le maître TIRE ces images, il ne les construit plus** (#1758) : `auto-deploy.sh`
+  et la bascule passent par `obtenir_images` (`scripts/lib/lib-images-ci.sh`), qui
+  tire `sha-<commit>` et les ré-étiquette sous les noms de Compose ; tant qu'elles
+  ne sont pas publiées, le journal dit « en attente des images de la CI », et au-delà
+  de 30 min le nœud construit en **secours** et alerte (arbitrage du 08/10/2026).
+  ⚠️ La fusion n'est donc plus le build : `Déployé:` arrive après la CI « Images »,
+  une quinzaine de minutes.
 - **Les répliques suivent `replica`, et une version y passe par PROMOTION** (#1754) :
   le workflow « Promotion », lancé à la main par l'auteur (`gh workflow run
   promotion.yml -f version=X.Y.Z`), avance `replica` en avance rapide vers le tag
   et publie les notes de version (release GitHub). `replica` n'a **aucun commit
-  propre** — un correctif passe par `main` puis se promeut ; elle est protégée par
-  une règle du dépôt. Je ne promeus **jamais** de moi-même : c'est la décision de
-  l'auteur, après rodage sur le maître (spec §9, question 8).
+  propre** — un correctif passe par `main` puis se promeut. Ce qui est VERROUILLÉ
+  par les règles du dépôt : `replica` ni supprimée ni réécrite de force, un tag
+  `v*` ni déplacé ni supprimé. Ce qui ne l'est PAS — un dépôt personnel ne peut
+  pas exempter GitHub Actions (`standards/08` §5 bis) : qui avance `replica` et qui
+  pose un tag ; c'est une consigne. Je ne promeus **jamais** de moi-même : c'est la
+  décision de l'auteur, après rodage sur le maître (spec §9, question 8).
 - **Une réplique s'installe par `deploiement/standard/`** (#1755) : la surcouche
   `compose.images.yml` (`build: !reset`, image publiée à `COPROCONNECT_VERSION`)
   se pose sur le `docker-compose.yml` de la racine, qui reste la **seule**
@@ -962,8 +974,6 @@ Instanciation 5Hostachy :
   `mise_a_jour` (courriel de 06:00 en cas d'échec, `utils/sante_mise_a_jour`).
   Ce retour arrière tient parce que `start.sh` **saute les migrations d'une base
   en avance sur le code** (`utils/revision_base`) : sans lui, l'ancienne image
-  s'arrêtait en boucle sur une révision inconnue. 🔒 `test_images_publiees.py` :
-  la matrice publie exactement ce que `docker-compose.yml` construit. Aucune
-  installation ne tire encore ces images (DI-6, #1758).
+  s'arrêtait en boucle sur une révision inconnue.
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.

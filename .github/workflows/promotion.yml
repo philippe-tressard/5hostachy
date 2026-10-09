@@ -12,8 +12,10 @@ name: Promotion
 #  refuse ce qui casserait la règle : une version sans tag, hors de `main`, ou
 #  qui ne serait pas en avant de `replica` (`scripts/ci/promotion.sh`).
 #
-#  🔒 La branche `replica` est protégée par une règle du dépôt : aucune
-#  suppression, aucune réécriture, et seul ce workflow la fait avancer.
+#  🔒 La branche `replica` est protégée par une règle du dépôt : ni suppression,
+#  ni réécriture forcée. ⚠️ « Seul ce workflow la fait avancer » n'est PAS
+#  verrouillé : un dépôt personnel ne peut pas exempter GitHub Actions d'une
+#  règle (`standards/08` §5 bis, constaté le 09/10/2026). C'est une consigne.
 #  🔒 `api/tests/test_promotion_replica.py` tient la forme de ce fichier.
 on:
   workflow_dispatch:

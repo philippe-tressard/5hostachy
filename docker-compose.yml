@@ -44,7 +44,6 @@ services:
       dockerfile: Dockerfile
       args:
         GIT_HASH: ${GIT_HASH:-dev}
-        INSTANCE_ID: ${INSTANCE_ID:-}
     container_name: hostachy_front
     labels:
       - "git.hash=${GIT_HASH:-dev}"
@@ -57,6 +56,10 @@ services:
     environment:
       - NODE_ENV=production
       - PUBLIC_API_URL=http://api:8000
+      # Le nœud qui sert (« RPi1 » au pied de page), lu à l'EXÉCUTION et non
+      # gravé au build : une même image sert les deux nœuds, et les images
+      # viennent de la CI, qui ne sait pas où elles tourneront (#1758).
+      - PUBLIC_INSTANCE_ID=${INSTANCE_ID:-}
       - ORIGIN=${ORIGIN:-http://localhost}
       - TZ=Europe/Paris
     depends_on:

@@ -192,6 +192,13 @@ construire_images() {
     docker compose build "$@"
 }
 
+# ── Obtenir les images : les TIRER de la CI, construire en secours (#1758) ──
+# `obtenir_images` est la porte d'auto-deploy et de la bascule ; elle appelle
+# `construire_images` quand les images de la CI manquent. Elle vit dans son
+# module, avec sa décision et son self-test.
+# shellcheck source=lib-images-ci.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib-images-ci.sh"
+
 # ── Démarrer les conteneurs : UNE porte, elle aussi (#1697) ──────────────────
 #
 # 🔴 `docker-compose.yml` pose l'étiquette `git.hash=${GIT_HASH:-dev}` du front
