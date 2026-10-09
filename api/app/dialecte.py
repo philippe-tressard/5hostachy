@@ -15,6 +15,7 @@ jamais la commande d'un moteur.
 | Question | SQLite | PostgreSQL |
 |---|---|---|
 | clés étrangères | `PRAGMA foreign_keys=ON` à chaque connexion | toujours vérifiées : rien à poser |
+| différer les clés (écriture en bloc) | `defer_foreign_keys` : vérifiées au commit | `session_replication_role = replica` : à relever soi-même |
 | réglages de durabilité | WAL, `synchronous=FULL`, `busy_timeout` | ceux du serveur |
 | vider le journal | `wal_checkpoint` | rien à vider (`None`) |
 | la base est-elle saine ? | `quick_check` | **non mesuré** — le verdict le dit, jamais « ok » |
@@ -200,6 +201,24 @@ def cles_de_table(conn, table: str) -> dict[int, list[str]]:
     for f in conn.execute(text(f'PRAGMA foreign_key_list("{table}")')):  # noqa: S608 — nom lu dans le moteur
         cles.setdefault(f[0], []).append(f[3])
     return cles
+
+
+def differer_cles_etrangeres(conn) -> None:
+    """Les clés ne se vérifient plus ligne à ligne pendant cette TRANSACTION.
+
+    Pour une écriture en bloc (l'import d'une archive, DI-7c) : des tables qui se
+    citent en cycle n'ont aucun ordre d'écriture qui satisfasse toutes leurs clés
+    — `batiment` a été refusé avant `copropriete` à la première bascule des
+    données, le 09/10/2026. SQLite vérifie alors au COMMIT ; PostgreSQL ne
+    vérifie plus du tout le temps de la transaction (ses clés ne sont pas
+    `DEFERRABLE`), d'où le relevé explicite des orphelins que l'appelant DOIT
+    faire avant de valider (`export_copropriete.lignes_sans_parent`).
+    ⚠️ PostgreSQL exige un rôle superutilisateur — celui de l'image l'est.
+    """
+    if est_fichier(conn):
+        conn.execute(text("PRAGMA defer_foreign_keys=ON"))
+    else:
+        conn.execute(text("SET LOCAL session_replication_role = replica"))
 
 
 @contextmanager
