@@ -5,7 +5,7 @@
 <h1 align="center">CoproFirst</h1>
 
 <p align="center">
-  <em>Application web de gestion de copropriété — côté résidents et conseil syndical.</em>
+  <em>Application web de gestion de copropriétés — côté résidents et conseil syndical.</em>
 </p>
 
 <p align="center">
@@ -50,14 +50,11 @@
   l'écran
 - **Liens partageables** — Chaque onglet et sous-onglet a son **adresse propre** (`/annonces`, `/idees`, `/tickets/kanban`, `/mon-lot/location/archives`…) : l'adresse du navigateur suit ce qu'on regarde, elle se copie et s'envoie. Chaque publication porte une icône 🔗 qui copie **son** lien — annonce, actualité, affaire, idée, sondage, question de FAQ, document, rapport de diagnostic, contrat, prestataire. Le lien n'ouvre aucun droit : le destinataire doit être connecté et ne voit que ce qui le concerne. Les anciennes adresses (`?onglet=…`) restent servies, en redirection permanente
 
-## Captures d'écran
+## Manuel utilisateur
 
-> 🖼 **Les captures d'écran ont été retirées** le 02/09/2026, du manuel d'abord et
-> d'ici ensuite (#1038) : `docs/img/` n'existait plus, et les six images de ce
-> tableau ne s'affichaient nulle part. Une capture périme au premier changement
-> d'écran, et personne ne s'en aperçoit — c'est ce que le manuel a constaté avant
-> ce fichier. Pour voir les écrans, le **manuel utilisateur** les décrit un par
-> un : [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html).
+Le **manuel utilisateur** décrit chaque écran : ce qu'il contient, les gestes
+qu'il permet et qui peut le voir — [docs/manuel-utilisateur.html](docs/manuel-utilisateur.html).
+L'application le sert aussi elle-même, à l'adresse `/manuel-utilisateur.html`.
 
 ## Stack technique
 
