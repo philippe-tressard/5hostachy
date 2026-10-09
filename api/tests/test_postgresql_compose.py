@@ -66,7 +66,8 @@ def test_le_role_de_replication_exige_son_mot_de_passe():
     script = (RACINE / "infra" / "postgresql" / "initdb" / "10-replication.sh").read_text(
         encoding="utf-8"
     )
-    assert 'if [ -z "${PG_REPLICATION_PASSWORD:-}" ]' in script and "exit 1" in script
+    assert "mdp=${PG_REPLICATION_PASSWORD:-}" in script
+    assert 'if [ -z "$mdp" ]; then' in script and "exit 1" in script
     environnement = dict(e.split("=", 1) for e in PG["environment"])
     assert environnement["PG_REPLICATION_PASSWORD"] == "${PG_REPLICATION_PASSWORD:-}"
 

@@ -10,12 +10,21 @@
 # =============================================================================
 set -euo pipefail
 
-if [ -z "${PG_REPLICATION_PASSWORD:-}" ]; then
+#  Lues ici, une fois : l'image les pose. Une absence s'arrête en disant son nom
+#  plutôt qu'en « unbound variable » sous `set -u`.
+mdp=${PG_REPLICATION_PASSWORD:-}
+utilisateur=${POSTGRES_USER:-}
+base=${POSTGRES_DB:-}
+
+if [ -z "$mdp" ]; then
     echo "10-replication.sh : PG_REPLICATION_PASSWORD absent — rôle de réplication NON créé." >&2
     exit 1
 fi
+if [ -z "$utilisateur" ] || [ -z "$base" ]; then
+    echo "10-replication.sh : POSTGRES_USER ou POSTGRES_DB absent — appelé hors de l'image ?" >&2
+    exit 1
+fi
 
-psql -v ON_ERROR_STOP=1 -v mdp="$PG_REPLICATION_PASSWORD" \
-     --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
+psql -v ON_ERROR_STOP=1 -v mdp="$mdp" --username "$utilisateur" --dbname "$base" <<'SQL'
 CREATE ROLE replication WITH REPLICATION LOGIN PASSWORD :'mdp';
 SQL
