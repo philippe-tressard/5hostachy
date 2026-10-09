@@ -191,7 +191,9 @@ FICHIERS_RACINE_EXPLOITATION = ("CLAUDE.md", "boot-role-guard.sh")
 #: 42 depuis DI-7b (#1781) : `infra/postgresql/pg_hba.conf` admet la réplication
 #: depuis l'IP de l'autre nœud ; `reconstruire-replique.sh` et `lib-promotion.sh`
 #: lisent le rôle de la base du pair par SSH.
-FICHIERS_EXPLOITATION_ATTENDUS = 42
+#: 45 depuis DI-7c (#1782) : `basculer-donnees.sh` et `retour-sqlite.sh` (se lancent
+#: « en ptressard »), et `lib-env-base.sh`, qui réécrit le `.env` du pair par SSH.
+FICHIERS_EXPLOITATION_ATTENDUS = 45
 
 
 def _fichiers_avec_identifiants_exploitation() -> list[str]:

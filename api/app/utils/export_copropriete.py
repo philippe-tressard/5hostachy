@@ -332,16 +332,47 @@ def verifier_restauration(moteur_source, dossier: Path) -> tuple[dict, Bilan]:
 #  Pour le passage à PostgreSQL (DI-7, #1759) : la cible est une base NEUVE, au
 #  schéma posé. 🔴 Jamais la base qui sert : l'export, lui, ne se lance que par
 #  l'administration, dans le processus de l'API (règle d'or).
+def adresse(argument: str) -> str:
+    """L'URL d'une base, en clair ou lue dans l'environnement (`env:NOM`).
+
+    `env:` garde le mot de passe d'une base serveur hors de la ligne de commande —
+    donc hors de `ps` et des journaux (DI-7c, `scripts/exploitation/basculer-donnees.sh`).
+    """
+    if argument.startswith("env:"):
+        nom = argument.removeprefix("env:")
+        valeur = os.environ.get(nom, "")
+        if not valeur:
+            raise SystemExit(f"variable d'environnement {nom} absente ou vide")
+        return valeur
+    return argument
+
+
+_USAGE = (
+    "usage : python -m app.utils.export_copropriete exporter <url-source> <archive>\n"
+    "        python -m app.utils.export_copropriete importer <archive> <url-cible> [<fichiers>]\n"
+    "        (une URL peut s'écrire env:NOM — lue dans l'environnement)"
+)
+
 if __name__ == "__main__":
     import sys
 
     from sqlmodel import create_engine
 
-    if len(sys.argv) < 4 or sys.argv[1] != "importer":
-        sys.exit(
-            "usage : python -m app.utils.export_copropriete importer <archive> <url-cible> [<fichiers>]"
+    if len(sys.argv) < 4 or sys.argv[1] not in ("exporter", "importer"):
+        sys.exit(_USAGE)
+    if sys.argv[1] == "exporter":
+        #  🔴 La base SOURCE doit être au repos : l'appelant arrête l'API avant
+        #  (règle d'or, CLAUDE.md). Cette commande lit, elle ne fige rien.
+        _source = create_engine(adresse(sys.argv[2]))
+        _manifeste = exporter(_source, Path(sys.argv[3]))
+        _source.dispose()
+        _lignes = sum(t["lignes"] for t in _manifeste["tables"].values())
+        print(
+            f"Exporté : {len(_manifeste['tables'])} tables, {_lignes} lignes, révision "
+            f"{_manifeste['revision']} ; non exportées : {_manifeste['ignorees'] or 'aucune'}."
         )
-    _cible = create_engine(sys.argv[3])
+        sys.exit(0)
+    _cible = create_engine(adresse(sys.argv[3]))
     SQLModel.metadata.create_all(_cible)
     try:
         _bilan = importer(

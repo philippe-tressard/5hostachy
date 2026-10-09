@@ -89,6 +89,15 @@ AJUSTEMENTS_DECLARES: dict[tuple[str, str], str] = {
     ("notes-de-version.sh", "printf 'A=1\\nB=2\\n' > .env.example"): (
         "self-test : version 2 du gabarit, dans un dépôt jetable"
     ),
+    #  La bascule des données (DI-7c, #1782) et son retour changent UNE ligne,
+    #  `DATABASE_URL`, sur les deux nœuds — et gardent l'ancienne en commentaire
+    #  daté. Un ajustement de la base servie, jamais une régénération du `.env`.
+    ("lib-env-base.sh", '"$t" > "$REPO/.env"'): (
+        "DATABASE_URL de ce nœud (bascule des données DI-7c et son retour)"
+    ),
+    ("lib-env-base.sh", "cat > /opt/5hostachy/.env.tmp"): (
+        "DATABASE_URL du pair, réécrit en 600 (bascule des données DI-7c et son retour)"
+    ),
 }
 
 

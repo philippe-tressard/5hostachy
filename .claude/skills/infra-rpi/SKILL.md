@@ -518,9 +518,13 @@ correctif du 30/07/2026 (garde sur la sortie vide). Elle vit maintenant dans
 
 ## PostgreSQL : primaire, réplique, promotion (DI-7b, #1781)
 
-Actif tant que `.env` le désigne (`COMPOSE_PROFILES=postgresql`, `DATABASE_URL`
-`postgresql+psycopg://…`) ; avant DI-7c, la production est sous SQLite et ces
-outils se déclarent sans objet. La règle d'or de cette forme : `CLAUDE.md`.
+Deux questions distinctes, lues dans `.env` : **PostgreSQL tourne-t-il ?**
+(`COMPOSE_PROFILES` contient `postgresql` — `base_postgresql_activee`) et **où
+l'application écrit-elle ?** (`DATABASE_URL` — `moteur_configure`). La première
+gouverne la réplique et sa promotion, la seconde la sauvegarde, la maintenance et
+la copie de la base SQLite. Entre l'essai de réplication et la bascule des données,
+les deux coexistent : PostgreSQL se réplique et se promeut, SQLite sert encore
+(v2.127.3). La règle d'or de cette forme : `CLAUDE.md`.
 
 | Question | Où, comment |
 |---|---|
@@ -532,6 +536,8 @@ outils se déclarent sans objet. La règle d'or de cette forme : `CLAUDE.md`.
 | L'intégrité | sommes de contrôle de pages (`--data-checksums` à l'initialisation) ; `GET /admin/db/integrite` lit `pg_stat_database.checksum_failures` |
 | La sauvegarde | `backup.py` met l'**export vérifié** (`base-export.tar.gz`, P2-7) dans l'archive, réimporté dans une base jetable avant d'être déclaré réussi ; l'export hors site relit chaque table sur le poste |
 | La maintenance | pas d'arrêt de l'API : l'autovacuum compacte en ligne (`maintenance.sh` lit le moteur de `.env`) |
+| Passer la résidence à PostgreSQL (DI-7c) | sur l'**actif**, dans une fenêtre choisie : `bash /opt/5hostachy/scripts/exploitation/basculer-donnees.sh` (simulation), puis `--oui`. Site coupé : API arrêtée, export vérifié de la base SQLite (`/backups/bascule-donnees-*.tar.gz`), schéma posé, import vérifié, `DATABASE_URL` réécrit sur les **deux** `.env` (`lib-env-base.sh`), l'ancienne valeur gardée en `# RETOUR_SQLITE=` datée. Refuse sans réplique saine ; tout échec remet SQLite |
+| Revenir à SQLite (7 jours) | `bash /opt/5hostachy/scripts/exploitation/retour-sqlite.sh` puis `--oui` : les écritures faites sous PostgreSQL repartent dans une base SQLite neuve (export, schéma, import) — rien n'est perdu. Au-delà de 7 jours il refuse : c'est une décision, pas un geste |
 
 ⚠️ La réplication passe par le LAN : port lié à `PG_ECOUTE` (l'IP du nœud, jamais
 `0.0.0.0`), `infra/postgresql/pg_hba.conf` (scram partout, rôle `replication` depuis
