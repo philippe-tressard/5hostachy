@@ -109,6 +109,23 @@ tail -f /var/log/hostachy-health-watch.log
 
 ---
 
+## Sous PostgreSQL : la réplique en continu (DI-7b, #1781)
+
+Quand `.env` désigne PostgreSQL (après la bascule des données, DI-7c), la base ne se
+copie plus à la bascule : le standby porte une **réplique en continu** du primaire
+(port lié à l'IP du LAN, `infra/postgresql/pg_hba.conf`).
+
+| Geste | SQLite | PostgreSQL |
+|---|---|---|
+| Bascule, phases 3-4 | `wal_checkpoint`, `integrity_check`, copie `app.db` vers le pair | la réplique du pair rattrape, le primaire local s'arrête, le pair est **promu** |
+| Bascule, phase 7 | — | l'ancien primaire est reconstruit en réplique (`reconstruire-replique.sh`) |
+| Failover (`health-watch.sh`) | base du standby = dernière copie de la nuit | l'ancien actif est isolé, la réplique **promue** — à jour, au retard près |
+| Retour d'un nœud (`boot-role-guard.sh`) | arrêt de ses conteneurs | sa base, si elle est encore primaire, est isolée puis reconstruite en réplique |
+| Surveillance | point 4 (WAL d'`app.db`) | **C37** et le point 22 : rôle, réplication, retard |
+
+Le standby porte donc **un conteneur** (`hostachy_postgres`) : les comptes « le standby
+n'en porte aucun » ne comptent que ceux de l'application (`lib-applicatifs.sh`).
+
 ## Délais de rétablissement
 
 | Scénario | Délai |
