@@ -35,12 +35,14 @@ où lire les droits (`standards/03` §1).
 from __future__ import annotations
 
 import os
-from typing import Optional, Type, TypeVar
+from typing import Mapping, Optional, Type, TypeVar
 
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
 T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
 
 
 def ou_404(
@@ -97,6 +99,32 @@ def premier_ou_404(session: Session, modele: Type[T], detail: str) -> T:
     if not objet:
         raise HTTPException(404, detail)
     return objet
+
+
+def connu_ou_404(table: Mapping[K, V], cle: K, detail: str) -> V:
+    """La valeur de `cle` dans une **table déclarée**, ou un 404 qui dit `detail`.
+
+    Une adresse qui nomme une entrée d'un registre du code (un type de source
+    d'affiche, une section de contrat) : l'entrée inconnue n'existe pas. Écrite
+    deux fois à la main (#1571). ⚠️ Pas pour une liste blanche d'ACCÈS — celle-là
+    décide d'un droit et reste chez la route qui la porte (`compteurs.py`).
+    """
+    if cle not in table:
+        raise HTTPException(404, detail)
+    return table[cle]
+
+
+def present_ou_404(valeur: Optional[T], detail: str) -> T:
+    """`valeur`, ou un 404 qui dit `detail` quand elle vaut `None`.
+
+    Pour un résultat que l'appelant a déjà calculé — une requête filtrée, une
+    résolution — et dont l'absence se dit en 404. `is None`, jamais un test de
+    vérité : un dictionnaire vide ou un 0 sont des résultats. Écrite trois fois
+    à la main (#1571).
+    """
+    if valeur is None:
+        raise HTTPException(404, detail)
+    return valeur
 
 
 #: La FENÊTRE d'un historique d'exploitation : on ne lit que les derniers

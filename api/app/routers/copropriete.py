@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -21,7 +21,7 @@ from app.utils.destinataires import syndic_principal
 from app.utils.document_contrat import id_document_designe
 from app.utils.echeance_contrat import echeance_du_contrat
 from app.utils.lecture import lire_objet
-from app.utils.recuperer import premier_ou_404
+from app.utils.recuperer import connu_ou_404, premier_ou_404
 from app.utils.syndic import nom_du_syndic
 
 router = APIRouter(prefix="/copropriete", tags=["copropriété"])
@@ -419,9 +419,7 @@ def contrats_candidats(
     parfois un mandat échu le temps d'en signer un nouveau, et les masquer
     obligerait à les réactiver pour les choisir — donc à mentir sur leur état.
     """
-    if section not in SECTIONS_CONTRAT:
-        raise HTTPException(404, "Section inconnue")
-    _, type_equipement = SECTIONS_CONTRAT[section]
+    _, type_equipement = connu_ou_404(SECTIONS_CONTRAT, section, "Section inconnue")
     copro = premier_ou_404(session, Copropriete, COPROPRIETE_ABSENTE)
     contrats = session.exec(
         select(ContratEntretien)

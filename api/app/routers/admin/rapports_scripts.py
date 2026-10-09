@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from app.utils import horloge
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -30,6 +30,7 @@ from app.utils.sante_taches import STATUT_EN_COURS
 
 from .exploitation import _purger_anciens_rapports
 from app.utils.maintenance import purger
+from app.utils.recuperer import present_ou_404
 
 router = APIRouter()
 
@@ -197,16 +198,17 @@ def maintenance_battement(
     le passage suivant envoie un rapport complet.
     """
     exiger_cle_maintenance(x_maintenance_key)
-    ligne = session.exec(
-        select(HistoriqueMaintenance)
-        .where(
-            HistoriqueMaintenance.tache == body.tache,
-            HistoriqueMaintenance.noeud == body.noeud,
-        )
-        .order_by(HistoriqueMaintenance.cree_le.desc())
-    ).first()
-    if ligne is None:
-        raise HTTPException(status_code=404, detail="Aucun rapport à prolonger pour ce nœud")
+    ligne = present_ou_404(
+        session.exec(
+            select(HistoriqueMaintenance)
+            .where(
+                HistoriqueMaintenance.tache == body.tache,
+                HistoriqueMaintenance.noeud == body.noeud,
+            )
+            .order_by(HistoriqueMaintenance.cree_le.desc())
+        ).first(),
+        "Aucun rapport à prolonger pour ce nœud",
+    )
     ligne.terminee_le = horloge.maintenant()
     session.add(ligne)
     session.commit()
