@@ -24,6 +24,19 @@ def SessionLocal() -> Session:
     return Session(engine)
 
 
+def moteur_jetable(chemin):
+    """Un moteur sur une base NEUVE, au fichier `chemin`, dans le dialecte de l'application.
+
+    Ce qui ouvre une base de travail — la vérification d'une restauration
+    (`utils/export_copropriete`, #1749) — la demande ici, sans écrire d'URL : le
+    dialecte ne se nomme que dans ce module (#1747, D4). Les clés étrangères y
+    sont vérifiées comme sur la base de l'application.
+    """
+    moteur = create_engine(f"sqlite:///{chemin.as_posix()}")
+    activer_cles_etrangeres(moteur)
+    return moteur
+
+
 def activer_cles_etrangeres(moteur) -> None:
     """Fait poser `PRAGMA foreign_keys=ON` sur CHAQUE connexion de `moteur`.
 

@@ -66,7 +66,7 @@
 				</dd>
 				<dt>Version</dt>
 				<dd>
-					v{pkg.version}{#if etat.empreinte}{' · '}<a
+					v{pkg.version}{#if etat.empreinte}&nbsp;·&nbsp;<a
 							href={lienSource(etat.empreinte)}
 							target="_blank"
 							rel="noopener noreferrer"><code>{etat.empreinte}</code></a

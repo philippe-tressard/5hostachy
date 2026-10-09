@@ -5,8 +5,8 @@ Lot P2-7 du chantier multi-copropriétés (`specs/architecture/multi-copropriete
 
 - **aujourd'hui** : prouver qu'une base se RESTAURE, au lieu de le supposer
   (`verifier_restauration`, bouton d'Administration › Maintenance) ;
-- **demain** : faire passer la résidence de SQLite à PostgreSQL (DI-7, #1759) —
-  le format ne doit rien à SQLite ;
+- **demain** : faire changer la résidence de moteur de base, vers PostgreSQL
+  (DI-7, #1759) — le format ne doit rien au moteur d'origine ;
 - **ensuite** : rendre ses données à une copropriété qui part (réversibilité).
 
 ## Le format
@@ -303,17 +303,17 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
 
 
 def verifier_restauration(moteur_source, dossier: Path) -> tuple[dict, Bilan]:
-    """Exporte la base (sans fichiers) puis la réimporte dans une base SQLite neuve.
+    """Exporte la base (sans fichiers) puis la réimporte dans une base neuve et jetable.
 
     Rend le manifeste et le bilan. Une base qui ne se restaure pas lève
     `ImportRefuse` : c'est précisément ce que ce geste doit dire.
     """
-    from sqlmodel import create_engine
+    from app.database import moteur_jetable
 
     archive = dossier / "verification.tar.gz"
     cible = dossier / "verification.db"
     manifeste = exporter(moteur_source, archive)
-    moteur_cible = create_engine(f"sqlite:///{cible.as_posix()}")
+    moteur_cible = moteur_jetable(cible)
     try:
         SQLModel.metadata.create_all(moteur_cible)
         bilan = importer(archive, moteur_cible)
