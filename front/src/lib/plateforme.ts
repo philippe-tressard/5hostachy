@@ -8,8 +8,8 @@
  * | la résidence | celle qu'on habite | `site_nom`, en base — `siteNomStore` |
  * | la plateforme | le logiciel, le même pour toutes | ICI, et nulle part ailleurs |
  *
- * Arbitrage du 07/10/2026 (`specs/architecture/multi-coproprietes.md`, D9) : la
- * plateforme s'appelle CoproConnect.
+ * Arbitrage du 07/10/2026, revu le 09/10/2026 (`specs/architecture/multi-coproprietes.md`,
+ * D9) : la plateforme s'appelle CoproFirst (« CoproConnect » du 07 au 09/10/2026, abandonné : une startup du même domaine porte déjà ce nom (#1772)).
  *
  * 🔴 L'API porte la MÊME déclaration (`api/app/utils/plateforme.py`) : les
  * contextes de build `./api` et `./front` ne partagent aucun fichier.
@@ -19,11 +19,11 @@
  */
 
 /** Le nom du logiciel — l'attribution et le lien vers le source. */
-export const NOM_PLATEFORME = 'CoproConnect';
+export const NOM_PLATEFORME = 'CoproFirst';
 
 /** Le dépôt public du code source, au nom du logiciel depuis le 09/10/2026
  *  (#1772) : il portait celui de la résidence, et l'ancienne adresse redirige. */
-export const DEPOT_SOURCE = 'https://github.com/philippe-tressard/coproconnect';
+export const DEPOT_SOURCE = 'https://github.com/philippe-tressard/coprofirst';
 
 /** La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
  *  foi est l'officiel, en anglais (`LICENSE`). */

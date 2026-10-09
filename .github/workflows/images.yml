@@ -5,7 +5,7 @@ name: Images
 #
 #  Chaque commit de `main` reçoit les images de ses quatre services, construites
 #  UNE fois, pour amd64 et arm64 (les Raspberry Pi), publiées sur
-#  ghcr.io/philippe-tressard/coproconnect-<service> et étiquetées `sha-<commit>` :
+#  ghcr.io/philippe-tressard/coprofirst-<service> et étiquetées `sha-<commit>` :
 #  le canal continu, que tire le maître (DI-6, #1758). Une version bumpée reçoit
 #  EN PLUS le tag git `vX.Y.Z`, posé ici et jamais à la main
 #  (`scripts/ci/tag-version.sh`), et l'étiquette d'image `X.Y.Z` — arbitrage du
@@ -13,7 +13,7 @@ name: Images
 #  - une attestation de provenance SIGNÉE (Sigstore, par le jeton OIDC du run)
 #    et une SBOM par image.
 #
-#  Vérifier une image : gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:X.Y.Z --owner philippe-tressard
+#  Vérifier une image : gh attestation verify oci://ghcr.io/philippe-tressard/coprofirst-api:X.Y.Z --owner philippe-tressard
 #
 #  ⚠️ Aucune installation ne tire encore ces images : le maître les tirera au lot
 #  DI-6 (#1758), les répliques au lot DI-4 (#1756). Ce workflow ne change donc
@@ -117,13 +117,13 @@ jobs:
           build-args: |
             GIT_HASH=${{ needs.version.outputs.empreinte }}
           labels: |
-            org.opencontainers.image.title=coproconnect-${{ matrix.service.nom }}
+            org.opencontainers.image.title=coprofirst-${{ matrix.service.nom }}
             org.opencontainers.image.version=${{ needs.version.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=AGPL-3.0-or-later
             git.hash=${{ needs.version.outputs.empreinte }}
-          outputs: type=image,name=${{ env.REGISTRE }}/coproconnect-${{ matrix.service.nom }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.REGISTRE }}/coprofirst-${{ matrix.service.nom }},push-by-digest=true,name-canonical=true,push=true
           sbom: true
           provenance: mode=max
 
@@ -171,7 +171,7 @@ jobs:
       - name: Étiqueter les deux architectures (commit, et version si elle change)
         id: index
         env:
-          IMAGE: ${{ env.REGISTRE }}/coproconnect-${{ matrix.service }}
+          IMAGE: ${{ env.REGISTRE }}/coprofirst-${{ matrix.service }}
           VERSION: ${{ needs.version.outputs.version }}
           VERSIONNER: ${{ needs.version.outputs.versionner }}
           COMMIT: ${{ github.sha }}
@@ -193,7 +193,7 @@ jobs:
       - name: Attester la provenance (signée)
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-name: ${{ env.REGISTRE }}/coproconnect-${{ matrix.service }}
+          subject-name: ${{ env.REGISTRE }}/coprofirst-${{ matrix.service }}
           subject-digest: ${{ steps.index.outputs.digest }}
           push-to-registry: true
 
@@ -219,7 +219,7 @@ jobs:
       #  et pied de page disent alors la même chose, ou le run échoue.
       - name: Lire la version dans le client de l'image
         env:
-          IMAGE: ${{ env.REGISTRE }}/coproconnect-front:sha-${{ github.sha }}
+          IMAGE: ${{ env.REGISTRE }}/coprofirst-front:sha-${{ github.sha }}
         run: |
           id=$(docker create --platform linux/amd64 "$IMAGE")
           docker cp "$id:/app/build/client" "$RUNNER_TEMP/client"

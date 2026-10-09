@@ -10,7 +10,7 @@
 #  Lot DI-6 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
 #  §4.10, règle 4, D12). Le workflow `images.yml` (#1753) publie, pour chaque
 #  commit de `main`, les images des quatre services sous
-#  `ghcr.io/philippe-tressard/coproconnect-<service>:sha-<commit>`. Le maître —
+#  `ghcr.io/philippe-tressard/coprofirst-<service>:sha-<commit>`. Le maître —
 #  les deux RPi — exécute alors EXACTEMENT les octets que les répliques
 #  recevront à la promotion, et cesse de construire : plus de build concurrent,
 #  plus d'image périmée à la bascule, plus de cache de build de 40 Go.
@@ -80,10 +80,10 @@ image_locale() {
 tirer_images() {
     local commit="${1:?commit}" s ref
     for s in $SERVICES_IMAGES; do
-        docker pull --quiet "$REGISTRE_IMAGES/coproconnect-$s:sha-$commit" >/dev/null 2>&1 || return 1
+        docker pull --quiet "$REGISTRE_IMAGES/coprofirst-$s:sha-$commit" >/dev/null 2>&1 || return 1
     done
     for s in $SERVICES_IMAGES; do
-        ref="$REGISTRE_IMAGES/coproconnect-$s:sha-$commit"
+        ref="$REGISTRE_IMAGES/coprofirst-$s:sha-$commit"
         docker tag "$ref" "$(image_locale "$s")" || return 1
         #  Retire l'étiquette du registre, garde le contenu (porté par l'étiquette
         #  locale) : sans cela, chaque commit laisserait quatre images référencées
@@ -147,7 +147,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     echo "== self-test : tout ou rien =="
     #  Docker simulé : le front n'est pas publié. Aucune étiquette ne doit être posée.
     vu=$(bash -c "source '${BASH_SOURCE[0]}'
-        docker() { case \"\$1 \$*\" in *coproconnect-front*) [ \"\$1\" = pull ] && return 1 ;; esac; echo \"\$1\"; }
+        docker() { case \"\$1 \$*\" in *coprofirst-front*) [ \"\$1\" = pull ] && return 1 ;; esac; echo \"\$1\"; }
         cd / ; COMPOSE_PROJECT_NAME=5hostachy tirer_images abc && echo tire || echo refuse" | tr '\n' ' ')
     case "$vu" in
         *tag*) echo "FAIL  une étiquette a été posée alors qu'une image manquait — « $vu »"; fail=1 ;;

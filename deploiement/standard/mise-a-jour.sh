@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-#  mise-a-jour.sh — La mise à jour nocturne d'une réplique CoproConnect,
+#  mise-a-jour.sh — La mise à jour nocturne d'une réplique CoproFirst,
 #  réversible seule (#1756, 08/10/2026)
 #
 #  Lot DI-4 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
@@ -14,7 +14,7 @@
 #      (échelonnement), version illisible, ou mettre à jour ;
 #   3. télécharger l'archive de déploiement de la version, tirer ses images,
 #      vérifier leur signature — le service tourne toujours ;
-#   4. arrêter l'API, SAUVEGARDER les volumes dans `COPROCONNECT_SAUVEGARDES`,
+#   4. arrêter l'API, SAUVEGARDER les volumes dans `COPROFIRST_SAUVEGARDES`,
 #      vérifier la sauvegarde (archive lisible, `PRAGMA integrity_check`) ;
 #   5. poser les fichiers et la version, `up -d` (l'API migre en démarrant) ;
 #   6. sonder `/api/health` ;
@@ -27,17 +27,17 @@
 #  🔴 Une réplique tient sur UN serveur (D15) : pas de standby, pas de bascule.
 #  Le retour arrière et la sauvegarde hors de la machine sont tout son filet.
 #
-#  Réglages lus dans `.env` : COPROCONNECT_VERSION (la version installée),
-#  COPROCONNECT_SAUVEGARDES (dossier OBLIGATOIRE, de préférence monté hors de
-#  la machine), COPROCONNECT_EPINGLEE=oui (ne pas suivre), COPROCONNECT_DELAI_JOURS
-#  (0 pour l'installation pilote, 1 par défaut), COPROCONNECT_SIGNATURE
+#  Réglages lus dans `.env` : COPROFIRST_VERSION (la version installée),
+#  COPROFIRST_SAUVEGARDES (dossier OBLIGATOIRE, de préférence monté hors de
+#  la machine), COPROFIRST_EPINGLEE=oui (ne pas suivre), COPROFIRST_DELAI_JOURS
+#  (0 pour l'installation pilote, 1 par défaut), COPROFIRST_SIGNATURE
 #  (`exigee` ou `si-possible`, défaut), MAINTENANCE_KEY (pour rendre compte).
 #
 #  Test : bash deploiement/standard/mise-a-jour.sh --selftest
 # =============================================================================
 set -euo pipefail
 
-DEPOT="philippe-tressard/coproconnect"
+DEPOT="philippe-tressard/coprofirst"
 REGISTRE="ghcr.io/philippe-tressard"
 SERVICES="api front caddy whatsapp-bridge"
 SANTE_MAX_S=180
@@ -107,7 +107,7 @@ fi
 #  bash lit un script AU FIL de son exécution ; réécrire le fichier en cours de
 #  route ferait exécuter un mélange des deux versions.
 if [ -z "${MAJ_COPIE:-}" ]; then
-    copie=$(mktemp /tmp/coproconnect-maj.XXXXXX)
+    copie=$(mktemp /tmp/coprofirst-maj.XXXXXX)
     cp "$0" "$copie"
     MAJ_COPIE="$copie" exec bash "$copie" "$(cd "$(dirname "$0")/../.." && pwd)"
 fi
@@ -115,7 +115,7 @@ trap 'rm -f "$MAJ_COPIE"' EXIT
 
 DOSSIER="${1:?dossier manquant}"
 cd "$DOSSIER"
-exec 9>/tmp/coproconnect-maj.lock
+exec 9>/tmp/coprofirst-maj.lock
 flock -n 9 || { echo "$(date '+%F %T') Une mise à jour tourne déjà — rien à faire."; exit 0; }
 
 journal() { echo "$(date '+%F %T') $*"; }
@@ -124,10 +124,10 @@ COMPOSE=(docker compose -f docker-compose.yml -f deploiement/standard/compose.im
 DEBUT=$(date +%s)
 PROJET=$(printf '%s' "${COMPOSE_PROJECT_NAME:-$(basename "$DOSSIER")}" | tr '[:upper:]' '[:lower:]')
 
-COURANTE=$(lire_env COPROCONNECT_VERSION)
-SAUVEGARDES=$(lire_env COPROCONNECT_SAUVEGARDES)
-SIGNATURE=$(lire_env COPROCONNECT_SIGNATURE); SIGNATURE=${SIGNATURE:-si-possible}
-DELAI=$(lire_env COPROCONNECT_DELAI_JOURS); DELAI=${DELAI:-1}
+COURANTE=$(lire_env COPROFIRST_VERSION)
+SAUVEGARDES=$(lire_env COPROFIRST_SAUVEGARDES)
+SIGNATURE=$(lire_env COPROFIRST_SIGNATURE); SIGNATURE=${SIGNATURE:-si-possible}
+DELAI=$(lire_env COPROFIRST_DELAI_JOURS); DELAI=${DELAI:-1}
 
 rendre_compte() {  # $1 statut (succes|erreur) · $2 erreur (vide si succès) · $3 vers
     local cle erreur corps
@@ -166,40 +166,40 @@ PUBLIEE=$(curl -fsSL -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$
     | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
 AGE=""
 [ -n "${PUBLIEE:-}" ] && AGE=$(( ( $(date +%s) - $(date -d "${PUBLIEE:-}" +%s) ) / 86400 ))
-DECISION=$(decider_cible "$COURANTE" "$CIBLE" "$(lire_env COPROCONNECT_EPINGLEE)" "$AGE" "$DELAI")
+DECISION=$(decider_cible "$COURANTE" "$CIBLE" "$(lire_env COPROFIRST_EPINGLEE)" "$AGE" "$DELAI")
 case "$DECISION" in
     a-jour)    journal "À jour en $COURANTE."; exit 0 ;;
-    epinglee)  journal "Version épinglée sur $COURANTE (COPROCONNECT_EPINGLEE=oui) : $CIBLE n'est pas installée."; exit 0 ;;
+    epinglee)  journal "Version épinglée sur $COURANTE (COPROFIRST_EPINGLEE=oui) : $CIBLE n'est pas installée."; exit 0 ;;
     attendre)  journal "$CIBLE promue il y a ${AGE:-?} jour(s), délai $DELAI : installée une nuit prochaine."; exit 0 ;;
     inconnue)  echouer "version de replica illisible (« $CIBLE ») : dépôt injoignable ?" ;;
     retrograde) echouer "replica porte $CIBLE, plus ancienne que $COURANTE : anomalie, rien n'est fait." ;;
 esac
 [ -n "$SAUVEGARDES" ] && [ -d "$SAUVEGARDES" ] && [ -w "$SAUVEGARDES" ] \
-    || echouer "COPROCONNECT_SAUVEGARDES absent ou non inscriptible : pas de mise à jour sans sauvegarde (D15)."
+    || echouer "COPROFIRST_SAUVEGARDES absent ou non inscriptible : pas de mise à jour sans sauvegarde (D15)."
 journal "Mise à jour $COURANTE → $CIBLE."
 
 # ── 3. Tout préparer pendant que le service tourne ────────────────────────────
 TRAVAIL=$(mktemp -d)
 curl -fsSL -m 120 -o "$TRAVAIL/archive.tar.gz" \
-    "https://github.com/$DEPOT/releases/download/v$CIBLE/coproconnect-deploiement-$CIBLE.tar.gz" \
+    "https://github.com/$DEPOT/releases/download/v$CIBLE/coprofirst-deploiement-$CIBLE.tar.gz" \
     || echouer "archive de déploiement de $CIBLE introuvable."
 tar -xzf "$TRAVAIL/archive.tar.gz" -C "$TRAVAIL" || echouer "archive de $CIBLE illisible."
-NOUVEAUX="$TRAVAIL/coproconnect-$CIBLE"
+NOUVEAUX="$TRAVAIL/coprofirst-$CIBLE"
 for s in $SERVICES; do
     if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-        gh attestation verify "oci://$REGISTRE/coproconnect-$s:$CIBLE" --owner "${DEPOT%%/*}" >/dev/null 2>&1 \
-            || echouer "signature de coproconnect-$s:$CIBLE refusée."
+        gh attestation verify "oci://$REGISTRE/coprofirst-$s:$CIBLE" --owner "${DEPOT%%/*}" >/dev/null 2>&1 \
+            || echouer "signature de coprofirst-$s:$CIBLE refusée."
     elif [ "$SIGNATURE" = exigee ]; then
         echouer "signature exigée, mais gh n'est pas installé ou pas connecté."
     else
-        journal "⚠ Signature de coproconnect-$s:$CIBLE NON vérifiée (gh absent) — COPROCONNECT_SIGNATURE=si-possible."
+        journal "⚠ Signature de coprofirst-$s:$CIBLE NON vérifiée (gh absent) — COPROFIRST_SIGNATURE=si-possible."
     fi
 done
-COPROCONNECT_VERSION="$CIBLE" "${COMPOSE[@]}" pull --quiet || echouer "images de $CIBLE introuvables."
+COPROFIRST_VERSION="$CIBLE" "${COMPOSE[@]}" pull --quiet || echouer "images de $CIBLE introuvables."
 
 # ── 4. Sauvegarder, l'API arrêtée (aucun écrivain) ────────────────────────────
-IMAGE_API="$REGISTRE/coproconnect-api:$COURANTE"
-ARCHIVE="coproconnect_${COURANTE:-neuve}_vers_${CIBLE}_$(date +%Y%m%d_%H%M%S).tar.gz"
+IMAGE_API="$REGISTRE/coprofirst-api:$COURANTE"
+ARCHIVE="coprofirst_${COURANTE:-neuve}_vers_${CIBLE}_$(date +%Y%m%d_%H%M%S).tar.gz"
 VOLUMES=(-v "${PROJET}_app_data:/donnees/app_data" -v "${PROJET}_uploads:/donnees/uploads" -v "$SAUVEGARDES:/sortie")
 "${COMPOSE[@]}" stop api >/dev/null
 if ! docker run --rm "${VOLUMES[@]}" --entrypoint tar "$IMAGE_API" -czf "/sortie/$ARCHIVE" -C /donnees . \
@@ -220,8 +220,8 @@ rm -rf "$PRECEDENT" && mkdir -p "$PRECEDENT"
     cp "$NOUVEAUX/$f" "$DOSSIER/$f"
 done
 cp -p .env "$PRECEDENT/.env"
-sed -i "s/^COPROCONNECT_VERSION=.*/COPROCONNECT_VERSION=$CIBLE/" .env
-grep -q "^COPROCONNECT_VERSION=" .env || echo "COPROCONNECT_VERSION=$CIBLE" >> .env
+sed -i "s/^COPROFIRST_VERSION=.*/COPROFIRST_VERSION=$CIBLE/" .env
+grep -q "^COPROFIRST_VERSION=" .env || echo "COPROFIRST_VERSION=$CIBLE" >> .env
 "${COMPOSE[@]}" up -d --remove-orphans >/dev/null 2>&1 || true
 NEUVE=$(sante)
 

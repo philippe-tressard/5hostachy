@@ -89,7 +89,7 @@ def test_aucun_nom_de_copropriete_en_dur():
     """Le nom de cette copropriété ne s'écrit pas dans le code (#1725).
 
     Le nom de la RÉSIDENCE se lit dans la configuration (`nom_site`), celui de la
-    PLATEFORME dans `utils/plateforme` — le logiciel s'appelle CoproConnect
+    PLATEFORME dans `utils/plateforme` — le logiciel s'appelle CoproFirst
     (`specs/architecture/multi-coproprietes.md`, D9).
     """
     fautes = []

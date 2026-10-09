@@ -302,7 +302,7 @@ créer » qui n'existaient plus, ou pas encore.
 **Rendu par défaut :**
 
 ```
-© 2026 · {site_nom} · v2.118.1 · RPi1 · CoproConnect · Mentions légales · Politique de confidentialité
+© 2026 · {site_nom} · v2.118.1 · RPi1 · CoproFirst · Mentions légales · Politique de confidentialité
 ```
 
 - La clé `pied_de_page_masques` (publique, liste de codes) porte les éléments

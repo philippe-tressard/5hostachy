@@ -13,20 +13,20 @@
  *  Deux noms, deux sources — jamais un littéral :
  *    - la RÉSIDENCE : `siteNomStore` (`$lib/stores/pageConfig`), repli neutre
  *      `NOM_SITE_PAR_DEFAUT` (`$lib/configSite`) ;
- *    - la PLATEFORME : `$lib/plateforme` — le logiciel s'appelle CoproConnect
+ *    - la PLATEFORME : `$lib/plateforme` — le logiciel s'appelle CoproFirst
  *      (D9), et ce module porte aussi l'adresse du dépôt et la licence en
  *      vigueur.
  *
  *  Le dépôt portait le nom de la résidence jusqu'au 09/10/2026 : l'adresse
  *  du code source était alors la SEULE ligne admise, et `plateforme.ts` le
- *  témoin qui devait la porter. Renommé en `coproconnect` (#1772), il n'y a
+ *  témoin qui devait la porter. Renommé en `coprofirst` (#1772), il n'y a
  *  plus de témoin — aucune ligne de `src/` n'a le droit d'écrire « hostachy ».
  *
  *  Le pendant serveur est `api/tests/test_nom_site.py`.
  *
  *  🔴 `static/` aussi (#1755, 08/10/2026) : ce dossier part tel quel dans l'image
  *  du front, donc chez TOUTES les installations. Le manuel utilisateur y nommait
- *  le produit « 5Hostachy » huit fois ; il nomme la plateforme, CoproConnect
+ *  le produit « 5Hostachy » huit fois ; il nomme la plateforme, CoproFirst
  *  (arbitrage du 08/10/2026). Ce que `src/` ne voyait pas.
  *
  *  Lancer : node scripts/check-nom-residence.mjs [--selftest]
@@ -71,12 +71,12 @@ const livre = controler({
 	fautes: lignesPortant(MOTIF),
 	cas: [
 		['  <title>Manuel utilisateur · 5Hostachy</title>', 1],
-		['  <title>Manuel utilisateur · CoproConnect</title>', 0],
+		['  <title>Manuel utilisateur · CoproFirst</title>', 0],
 	],
 	ok: 'Nom de la résidence : absent du contenu livré tel quel (static/)',
 	ko: 'ligne(s) du contenu livré qui écrivent « hostachy »',
 	conseil:
-		'Le manuel décrit la plateforme : « CoproConnect ». Une maquette d’écran montre ' +
+		'Le manuel décrit la plateforme : « CoproFirst ». Une maquette d’écran montre ' +
 		'« Ma résidence », jamais le nom de celle-ci.',
 });
 

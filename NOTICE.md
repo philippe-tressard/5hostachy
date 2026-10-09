@@ -1,6 +1,6 @@
-# NOTICE — CoproConnect
+# NOTICE — CoproFirst
 
-**Projet** : CoproConnect, né pour la résidence 5Hostachy (dépôt `coproconnect`, nommé `5hostachy` jusqu'au 09/10/2026)
+**Projet** : CoproFirst, né pour la résidence 5Hostachy (dépôt `coprofirst`, nommé `5hostachy` jusqu'au 09/10/2026)
 **Copyright** © 2024-2026 Philippe TRESSARD
 **Licence** : GNU Affero General Public License, version 3 ou (à votre choix)
 toute version ultérieure — `AGPL-3.0-or-later` (texte officiel : [`LICENSE`](LICENSE))
@@ -10,7 +10,7 @@ toute version ultérieure — `AGPL-3.0-or-later` (texte officiel : [`LICENSE`](
 
 ## 1. De quoi il s'agit
 
-CoproConnect est un logiciel de gestion, de documentation et d'organisation pour
+CoproFirst est un logiciel de gestion, de documentation et d'organisation pour
 les copropriétés et ensembles immobiliers. C'est un **logiciel libre** : chacun
 peut l'utiliser, l'étudier, le modifier et le redistribuer, y compris à titre
 commercial, dans les conditions de l'AGPL-3.0-or-later.
@@ -39,13 +39,13 @@ contributeur extérieur n'a versé de code sous l'ancienne licence.
 - **Mise à disposition par le réseau** (AGPL §13) : qui fait fonctionner une
   version modifiée comme service en ligne doit proposer à ses utilisateurs le
   **code source correspondant** de la version qu'ils utilisent. Le site d'origine
-  le fait par le lien « CoproConnect » de son pied de page.
+  le fait par le lien « CoproFirst » de son pied de page.
 - **Aucune garantie** : le logiciel est fourni « tel quel » (AGPL §15 et §16).
 
 ## 4. Noms et logo
 
 La licence porte sur le **code**. Elle ne cède aucun droit sur les noms
-**5Hostachy** et **CoproConnect**, ni sur le logo ou l'identité visuelle. Leur
+**5Hostachy** et **CoproFirst**, ni sur le logo ou l'identité visuelle. Leur
 politique d'usage est en cours de rédaction (ticket #1736).
 
 ## 5. Contributions
@@ -56,7 +56,7 @@ sous ces conditions.
 
 ## 6. Composants tiers
 
-CoproConnect s'appuie sur des bibliothèques et des contenus tiers. **Ils restent
+CoproFirst s'appuie sur des bibliothèques et des contenus tiers. **Ils restent
 sous leur propre licence** : la licence du projet ne s'applique pas à eux, et
 leurs mentions se conservent avec eux.
 

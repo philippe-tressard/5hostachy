@@ -4,7 +4,7 @@ name: Promotion
 #  (`specs/architecture/multi-coproprietes.md` §4.10, règles 1 et 5, D11).
 #
 #  Promouvoir une version de `main` sur `replica`, la branche que suivent les
-#  installations CoproConnect (les répliques). Le maître, lui, suit `main`.
+#  installations CoproFirst (les répliques). Le maître, lui, suit `main`.
 #
 #  Le geste est DÉCIDÉ par l'auteur : il se lance à la main (Actions ›
 #  Promotion › Run workflow, ou `gh workflow run promotion.yml -f version=X.Y.Z`).

@@ -10,7 +10,7 @@ Arbitré le 08/10/2026 :
 | Question | Réponse |
 |---|---|
 | formats | PNG ou JPEG seulement — famille « logo » de `utils/fichiers` |
-| sans logo | le dessin sans la touche dorée, logo neutre de CoproConnect |
+| sans logo | le dessin sans la touche dorée, logo neutre de CoproFirst |
 | menu, connexion | le logo remplace l'icône du catalogue s'il existe |
 | courriels | une image par adresse publique, servie par `GET /config/logo.png` |
 
@@ -44,7 +44,7 @@ DOSSIER = "logo"
 #: double densité), sans liste à recopier côté front.
 TAILLE_MIN, TAILLE_MAX = 16, 512
 
-#: Le logo neutre de CoproConnect en PNG 512 px — le dessin de `pdf_theme.logo_svg`,
+#: Le logo neutre de CoproFirst en PNG 512 px — le dessin de `pdf_theme.logo_svg`,
 #: rasterisé une fois (les icônes de l'application installée et les courriels
 #: ne prennent pas de SVG).
 NEUTRE_PNG = Path(__file__).with_name("logo-neutre.png")

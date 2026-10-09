@@ -335,7 +335,7 @@ function toggleItem(id: number) {
 
 ## Logotype
 
-- **Le logo est celui de la RÉSIDENCE** : il se téléverse dans *Admin › Paramétrage site* (PNG ou JPEG, carré, 512 px), et le site en dérive le menu, l'écran de connexion, l'onglet, l'icône de l'application installée, les documents et les courriels (#1728). Sans logo, le logo neutre de CoproConnect : un immeuble blanc sur fond bleu.
+- **Le logo est celui de la RÉSIDENCE** : il se téléverse dans *Admin › Paramétrage site* (PNG ou JPEG, carré, 512 px), et le site en dérive le menu, l'écran de connexion, l'onglet, l'icône de l'application installée, les documents et les courriels (#1728). Sans logo, le logo neutre de CoproFirst : un immeuble blanc sur fond bleu.
 - **Celui de 5Hostachy** (08/10/2026) : un immeuble au trait bleu marine sur fond blanc, une fenêtre et le sol dorés — sobre et institutionnel.
 - **Nom affiché :** « 5Hostachy » ou « Résidence du Parc »
 - **Déclinaisons à produire :**

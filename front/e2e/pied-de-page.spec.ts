@@ -36,7 +36,7 @@ test('un élément masqué disparaît ; un élément verrouillé reste', async (
 	//  Cas zéro : le pied de page est bien rendu avant qu'on y cherche une absence.
 	await expect(pied).toContainText('Mentions légales');
 	await expect(pied).toContainText('Politique de confidentialité');
-	await expect(pied).toContainText('CoproConnect');
+	await expect(pied).toContainText('CoproFirst');
 	await expect(pied).not.toContainText('©');
 	await expect(pied).not.toContainText(/v\d+\.\d+\.\d+/);
 });
