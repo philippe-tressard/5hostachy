@@ -59,6 +59,20 @@ decider_prise_de_main() {
     esac
 }
 
+# ── PURE : un nœud prend la main — que DÉMARRE-t-il ? ─────────────────────────
+#  $1 décision de `decider_prise_de_main` · $2 moteur de l'APPLICATION
+#  → TOUT | APPLICATION | RIEN
+#  Quand la base ne peut pas être prise (ABSTENIR), on ne la démarre JAMAIS —
+#  elle s'initialiserait en primaire VIDE. Mais si l'application écrit ailleurs
+#  (SQLite, pendant l'essai de la réplication), elle sert quand même : on la
+#  démarre SEULE. Si elle écrit dans PostgreSQL, il n'y a rien à servir.
+decider_demarrage() {
+    case "${1%%:*}" in
+        PROMOUVOIR|GARDER) echo TOUT ;;
+        *) [ "${2:-}" = postgresql ] && echo RIEN || echo APPLICATION ;;
+    esac
+}
+
 # ── PURE : la réplique a-t-elle rejoué tout le journal du primaire ? ──────────
 #  $1 position du primaire, $2 position rejouée par la réplique (octets)
 #  → oui | non | inconnu
@@ -172,6 +186,12 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "AUCUNE base → abstention"           ABSTENIR   decider_prise_de_main absente
     t "illisible → abstention"             ABSTENIR   decider_prise_de_main illisible
     t "rien lu → abstention"               ABSTENIR   decider_prise_de_main ""
+    echo "== que démarrer en prenant la main =="
+    t "réplique promue"                        TOUT        decider_demarrage PROMOUVOIR sqlite
+    t "déjà primaire"                          TOUT        decider_demarrage GARDER postgresql
+    t "pas de base, application sous SQLite"   APPLICATION decider_demarrage "ABSTENIR:aucune base" sqlite
+    t "pas de base, application sous PostgreSQL" RIEN      decider_demarrage "ABSTENIR:aucune base" postgresql
+    t "moteur inconnu : l'application seule"   APPLICATION decider_demarrage "ABSTENIR:x" inconnu
     echo "== rattrapage =="
     t "rejouée jusqu'au bout"              oui     decider_rattrapage 1000 1000
     t "rejouée au-delà (point final)"      oui     decider_rattrapage 1000 1040

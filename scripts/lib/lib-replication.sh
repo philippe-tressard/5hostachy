@@ -40,6 +40,27 @@ moteur_configure() {
     moteur_de_url "$(grep -m1 '^DATABASE_URL=' "$1/.env" 2>/dev/null | cut -d= -f2-)"
 }
 
+# ── PURE : une base PostgreSQL est-elle GÉRÉE ici — le profil est-il allumé ? ──
+#  DEUX questions distinctes, et les confondre a failli coûter l'essai réel :
+#    • `moteur_configure` — sur quelle base L'APPLICATION écrit-elle ? (sauvegarde,
+#      maintenance, intégrité) ;
+#    • `base_postgresql_activee` — un PostgreSQL tourne-t-il, avec sa réplique, à
+#      basculer et à promouvoir ? (bascule, failover, garde au démarrage).
+#  Pendant l'essai de la réplication (DI-7b), l'application reste sous SQLite ET
+#  PostgreSQL tourne : la bascule copie `app.db` ET promeut la réplique.
+#  $1 = valeur de COMPOSE_PROFILES → oui|non
+profil_postgresql() {
+    case ",$(printf '%s' "${1:-}" | tr -d '"[:space:]' | tr -d "'")," in
+        *,postgresql,*) echo oui ;;
+        *)              echo non ;;
+    esac
+}
+
+#  $1 = chemin du dépôt → code 0 si le profil `postgresql` est allumé dans son `.env`.
+base_postgresql_activee() {
+    [ "$(profil_postgresql "$(grep -m1 '^COMPOSE_PROFILES=' "$1/.env" 2>/dev/null | cut -d= -f2-)")" = oui ]
+}
+
 # ── Collecte (insérée dans COLLECT : SANS apostrophe) ────────────────────────
 #  pg_present  1 si le conteneur de la base tourne, 0 sinon
 #  pg_recovery t (réplique) | f (primaire) | vide (illisible)
@@ -168,6 +189,13 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "PostgreSQL par psycopg"            postgresql moteur_de_url "postgresql+psycopg://u:p@postgres:5432/coprofirst"
     t "PostgreSQL sans pilote nommé"      postgresql moteur_de_url "postgresql://u:p@h/b"
     t "variable absente → inconnu"        inconnu    moteur_de_url ""
+    echo "== le profil PostgreSQL =="
+    t "profil seul"                       oui profil_postgresql "postgresql"
+    t "parmi d'autres"                    oui profil_postgresql "outils,postgresql"
+    t "entre guillemets"                  oui profil_postgresql '"postgresql"'
+    t "absent"                            non profil_postgresql ""
+    t "un autre profil seulement"         non profil_postgresql "outils"
+    t "un nom qui le contient sans l'être" non profil_postgresql "postgresql-essai"
     echo "== le point 22 du pré-check =="
     t "aucune base : sans objet"              SANS_OBJET verdict_precheck_replication 0 "" "" "" "" 0 "" "" "" ""
     t "primaire + réplique saines"            OK         verdict_precheck_replication 1 f 1 0 "" 1 t "" "" streaming
