@@ -105,6 +105,10 @@ test('Admin › Site : un élément monte et descend, l’aperçu suit', async (
 		.getByRole('button', { name: `Descendre « ${NOM_PLATEFORME} (code source) »` })
 		.click();
 	await expect.poll(rang).toBe(1);
+	//  Pas de texte d'exemple qui se lise comme une valeur saisie (09/10/2026).
+	for (const champ of ['Année de création', 'Texte avant le nom']) {
+		await expect(page.getByLabel(champ)).not.toHaveAttribute('placeholder');
+	}
 	await page.getByLabel('Texte libre', { exact: true }).fill('Texte du conseil');
 	await expect(elements).toContainText(['Texte du conseil']);
 });

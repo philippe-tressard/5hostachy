@@ -9,6 +9,11 @@
 
   L'aperçu est le VRAI composant du squelette : il ne peut pas montrer autre
   chose que le site.
+
+  ⚠️ Pas de texte d'exemple dans l'année ni dans le préfixe : « 2026 » et
+  « Résidence », grisés, se lisaient comme des valeurs saisies — l'année n'a
+  pas été enregistrée en production pour cette raison (09/10/2026). L'aide
+  sous le champ porte l'exemple.
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
@@ -93,25 +98,14 @@
 		<div class="champs-pied">
 			<label class="field">
 				Année de création
-				<input
-					type="number"
-					bind:value={reglage.anneeDebut}
-					min="1900"
-					max="9999"
-					placeholder="2026"
-				/>
+				<input type="number" bind:value={reglage.anneeDebut} min="1900" max="9999" />
 				<span class="aide"
 					>« © 2026 » cette année, « © 2026–2027 » l’an prochain. Vide : l’année en cours seule.</span
 				>
 			</label>
 			<label class="field">
 				Texte avant le nom
-				<input
-					type="text"
-					bind:value={reglage.prefixeNom}
-					maxlength={PREFIXE_NOM_MAX}
-					placeholder="Résidence"
-				/>
+				<input type="text" bind:value={reglage.prefixeNom} maxlength={PREFIXE_NOM_MAX} />
 				<span class="aide">Écrit devant le nom de la résidence, sans séparateur.</span>
 			</label>
 			<label class="field champ-large">
