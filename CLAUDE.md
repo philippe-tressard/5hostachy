@@ -564,7 +564,9 @@ coupant. 🔴 **Les courriels de sécurité ne sont pas un service**
       valeurs-là sont **refusées**, sans plafond (`ux-patterns` §18)
 - [ ] Un style s'écrit dans le `<style>` du composant ou dans `src/styles/`, jamais
       en attribut `style="…"` — sauf une valeur tirée des données (`width:{pct}%`).
-      Plafond décroissant : `npm run lint:styles-en-ligne` (#1329)
+      `npm run lint:styles-en-ligne` le refuse : plafond à **zéro** depuis le
+      08/10/2026 (#1571, 524 au départ). Une classe pèse moins qu'un attribut :
+      si une règle globale plus forte vise l'élément, qualifier le sélecteur
 - [ ] Bloc pliable (carte, section, année, `<details>`…) : **un seul déplié à la
       fois**, par `$lib/accordeon` — jamais un `Set` d'ouverture. Exceptions
       arbitrées : section modifiée, carte en correction (`npm run lint:accordeon`,
