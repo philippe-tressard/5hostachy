@@ -1,6 +1,6 @@
-# Installer CoproConnect — le déploiement standard
+# Installer CoproFirst — le déploiement standard
 
-Ce dossier décrit une **installation CoproConnect** à partir des images publiées,
+Ce dossier décrit une **installation CoproFirst** à partir des images publiées,
 sans rien construire sur la machine. C'est l'installation d'une **réplique** :
 elle suit les versions promues sur la branche `replica`
 (`specs/architecture/multi-coproprietes.md` §4.10).
@@ -33,7 +33,7 @@ Le filet, ce sont le retour à la version précédente et une sauvegarde copiée
 ## Les fichiers
 
 Chaque version promue publie, dans ses notes de version (onglet *Releases* du
-dépôt), l'archive `coproconnect-deploiement-X.Y.Z.tar.gz`. Elle contient,
+dépôt), l'archive `coprofirst-deploiement-X.Y.Z.tar.gz`. Elle contient,
 **dans l'état exact de cette version** :
 
 | Fichier | Rôle |
@@ -48,17 +48,17 @@ dépôt), l'archive `coproconnect-deploiement-X.Y.Z.tar.gz`. Elle contient,
 
 ## Installer
 
-1. Décompresser l'archive dans un dossier dédié, par exemple `/opt/coproconnect`.
+1. Décompresser l'archive dans un dossier dédié, par exemple `/opt/coprofirst`.
 2. `cp .env.example .env`, puis renseigner au moins `SECRET_KEY` (32 caractères
    au minimum), `WHATSAPP_API_KEY` (16 au minimum, même si le service WhatsApp
    n'est pas employé), `ORIGIN` (l'adresse publique) et la configuration SMTP.
 3. Ajouter **la version à installer** dans `.env` :
    ```
-   COPROCONNECT_VERSION=2.119.1
+   COPROFIRST_VERSION=2.119.1
    ```
 4. Vérifier la provenance des images (facultatif, recommandé) :
    ```bash
-   gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:2.119.1 --owner philippe-tressard
+   gh attestation verify oci://ghcr.io/philippe-tressard/coprofirst-api:2.119.1 --owner philippe-tressard
    ```
 5. Démarrer :
    ```bash
@@ -74,7 +74,7 @@ dépôt), l'archive `coproconnect-deploiement-X.Y.Z.tar.gz`. Elle contient,
 
 ## Mettre à jour
 
-Changer `COPROCONNECT_VERSION` dans `.env` pour la version promue suivante, puis :
+Changer `COPROFIRST_VERSION` dans `.env` pour la version promue suivante, puis :
 
 ```bash
 docker compose -f docker-compose.yml -f deploiement/standard/compose.images.yml pull
@@ -85,7 +85,7 @@ Les migrations de la base s'appliquent au démarrage de l'API. Lire d'abord les
 notes de la version : elles listent les migrations et les réglages ajoutés ou
 retirés.
 
-**Revenir à la version précédente** : remettre l'ancienne `COPROCONNECT_VERSION`
+**Revenir à la version précédente** : remettre l'ancienne `COPROFIRST_VERSION`
 et relancer `up -d`. C'est sûr parce qu'une migration reste compatible avec la
 version précédente du code (on ajoute, puis on retire à la version suivante —
 `api/tests/test_migrations_compatibles.py`).
@@ -100,7 +100,7 @@ démarre pas. Il ne touche **à rien** tant que tout n'est pas prêt :
    (échelonnement), ou à installer ;
 2. il télécharge l'archive de la version, tire ses images et vérifie leur
    signature — le site tourne toujours ;
-3. il arrête l'API, **sauvegarde** les volumes dans `COPROCONNECT_SAUVEGARDES`
+3. il arrête l'API, **sauvegarde** les volumes dans `COPROFIRST_SAUVEGARDES`
    et vérifie la sauvegarde (archive lisible, intégrité de la base) ;
 4. il pose les fichiers et la version, redémarre, et sonde `/api/health` ;
 5. en échec, il revient aux fichiers et aux images précédents — la base
@@ -113,17 +113,17 @@ démarre pas. Il ne touche **à rien** tant que tout n'est pas prêt :
 
 | Réglage | Rôle |
 |---|---|
-| `COPROCONNECT_SAUVEGARDES` | **obligatoire** — le dossier des sauvegardes d'avant mise à jour, à monter **hors de la machine** : sans lui, rien n'est installé |
+| `COPROFIRST_SAUVEGARDES` | **obligatoire** — le dossier des sauvegardes d'avant mise à jour, à monter **hors de la machine** : sans lui, rien n'est installé |
 | `MAINTENANCE_KEY` | la clé qui permet au script de rendre compte à l'administration |
-| `COPROCONNECT_DELAI_JOURS` | `0` pour l'installation pilote (dès la promotion), `1` par défaut (la nuit suivante) |
-| `COPROCONNECT_EPINGLEE` | `oui` pour rester sur la version installée |
-| `COPROCONNECT_SIGNATURE` | `exigee` pour refuser une image dont la signature n'a pas pu être vérifiée (il faut `gh`, connecté) ; `si-possible` par défaut |
+| `COPROFIRST_DELAI_JOURS` | `0` pour l'installation pilote (dès la promotion), `1` par défaut (la nuit suivante) |
+| `COPROFIRST_EPINGLEE` | `oui` pour rester sur la version installée |
+| `COPROFIRST_SIGNATURE` | `exigee` pour refuser une image dont la signature n'a pas pu être vérifiée (il faut `gh`, connecté) ; `si-possible` par défaut |
 
 **Le lancer chaque nuit**, à une heure creuse — une mise à jour coupe le site
 le temps de redémarrer (crontab de l'utilisateur qui pilote Docker) :
 
 ```
-30 4 * * * /opt/coproconnect/deploiement/standard/mise-a-jour.sh >> /var/log/coproconnect-maj.log 2>&1
+30 4 * * * /opt/coprofirst/deploiement/standard/mise-a-jour.sh >> /var/log/coprofirst-maj.log 2>&1
 ```
 
 ## Sauvegarder

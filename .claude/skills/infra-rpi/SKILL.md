@@ -591,7 +591,7 @@ aurait servi du code v2.90.0 sur une base migrée en 0154.
 
 **Ce que fait le standby désormais** : `git reset --hard origin/main` puis
 `obtenir_images` (`lib-images-ci.sh`, #1758) — il **tire** les images que la CI
-a publiées pour ce commit (`ghcr.io/philippe-tressard/coproconnect-*:sha-<commit>`)
+a publiées pour ce commit (`ghcr.io/philippe-tressard/coprofirst-*:sha-<commit>`)
 et ne les construit (`construire_images`, `lib-parite.sh`, qui exporte
 `GIT_HASH`, #1684) qu'en **secours**, 30 min après le commit, avec une alerte. Et rien d'autre — **aucun conteneur démarré** (ce serait
 le split-brain), **aucune migration appliquée** (sa base est une copie que la
@@ -625,7 +625,7 @@ bloque jamais le déploiement, elle dit qu'il faut lire `docker logs hostachy_ap
 |---|---|---|
 | `… en attente des images de la CI` | le workflow « Images » n'a pas encore publié ce commit | rien : le passage suivant réessaie |
 | `Déployé: <sha> (images tirees, …)` | servi depuis le registre | — |
-| `⚠ Secours : … construites localement` + alerte | 30 min sans images | regarder le run « Images » (Actions), puis la visibilité **publique** des paquets `coproconnect-*` |
+| `⚠ Secours : … construites localement` + alerte | 30 min sans images | regarder le run « Images » (Actions), puis la visibilité **publique** des paquets `coprofirst-*` |
 | `⚠ ÉCHEC du build` | le secours lui-même a échoué | comme avant : C27 le dit FAIL |
 
 ⚠️ **Les paquets doivent être PUBLICS** (arbitrage du 08/10/2026) : un paquet ghcr.io

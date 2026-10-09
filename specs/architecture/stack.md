@@ -144,8 +144,8 @@ volumes:
 sudo apt update && sudo apt install -y docker.io docker-compose-plugin
 
 # 2. Cloner le dépôt
-git clone https://github.com/[org]/5hostachy.git
-cd 5hostachy
+git clone https://github.com/philippe-tressard/coprofirst.git
+cd coprofirst
 
 # 3. Configurer l'environnement
 cp .env.example .env

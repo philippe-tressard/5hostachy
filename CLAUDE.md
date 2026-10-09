@@ -938,7 +938,7 @@ Instanciation 5Hostachy :
 - Bump **avant** le push final sur `dev`, commit dédié `chore(version): bump vX.Y.Z`.
 - **Chaque commit de `main` publie ses images, le bump y ajoute le tag** (#1753) :
   le workflow `images.yml` publie les images signées des quatre services sur
-  `ghcr.io/philippe-tressard/coproconnect-*` (amd64 et arm64, publiques d'office :
+  `ghcr.io/philippe-tressard/coprofirst-*` (amd64 et arm64, publiques d'office :
   liées au dépôt public), étiquetées `sha-<commit>` ; une version bumpée reçoit en
   plus le tag git `vX.Y.Z` (par `scripts/ci/tag-version.sh`, jamais à la main) et
   l'étiquette d'image `X.Y.Z`. 🔒 `test_images_publiees.py` : la matrice publie
@@ -961,13 +961,13 @@ Instanciation 5Hostachy :
   pose un tag ; c'est une consigne. Je ne promeus **jamais** de moi-même : c'est la
   décision de l'auteur, après rodage sur le maître (spec §9, question 8).
 - **Une réplique s'installe par `deploiement/standard/`** (#1755) : la surcouche
-  `compose.images.yml` (`build: !reset`, image publiée à `COPROCONNECT_VERSION`)
+  `compose.images.yml` (`build: !reset`, image publiée à `COPROFIRST_VERSION`)
   se pose sur le `docker-compose.yml` de la racine, qui reste la **seule**
   description des services ; le mode d'emploi est son `LISEZMOI.md`, et l'archive
   de la version est jointe aux notes de version. Les scripts des RPi ne s'y
   déplacent pas (arbitrage du 08/10/2026 : ils ne partent déjà pas avec une
   installation). Le contenu de `front/static/` part tel quel chez toutes : il ne
-  nomme jamais la résidence (`npm run lint:nom-residence`, le manuel dit CoproConnect).
+  nomme jamais la résidence (`npm run lint:nom-residence`, le manuel dit CoproFirst).
 - **Une réplique se met à jour seule chaque nuit** (#1756) :
   `deploiement/standard/mise-a-jour.sh` — sauvegarde vérifiée AVANT tout geste,
   retour à l'image précédente puis à la sauvegarde si la santé reste KO, rapport

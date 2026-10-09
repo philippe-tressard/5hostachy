@@ -11,7 +11,7 @@
 #  - les réglages ajoutés ou retirés dans `.env.example`.
 #
 #  Elle joint l'archive du DÉPLOIEMENT STANDARD de la version (#1755) :
-#  `coproconnect-deploiement-X.Y.Z.tar.gz`, tirée du commit promu par
+#  `coprofirst-deploiement-X.Y.Z.tar.gz`, tirée du commit promu par
 #  `git archive` — les fichiers exacts de cette version, rien du poste.
 #
 #  Entrées (environnement) : VERSION, COMMIT, PRECEDENT (vide à la première
@@ -36,12 +36,12 @@ FICHIERS_DEPLOIEMENT=(
 
 #  $1 commit · $2 version · $3 dossier de sortie → chemin de l'archive
 archiver_deploiement() {
-    local sortie="$3/coproconnect-deploiement-$2.tar.gz" f
+    local sortie="$3/coprofirst-deploiement-$2.tar.gz" f
     #  `git archive` ne refuse pas un chemin absent du commit : il l'omet.
     for f in "${FICHIERS_DEPLOIEMENT[@]}"; do
         git cat-file -e "$1:$f" 2>/dev/null || { echo "::error::$f absent de $1" >&2; return 1; }
     done
-    git archive --format=tar.gz --prefix="coproconnect-$2/" -o "$sortie" "$1" -- "${FICHIERS_DEPLOIEMENT[@]}"
+    git archive --format=tar.gz --prefix="coprofirst-$2/" -o "$sortie" "$1" -- "${FICHIERS_DEPLOIEMENT[@]}"
     echo "$sortie"
 }
 
@@ -49,7 +49,7 @@ archiver_deploiement() {
 #  $1 précédent (vide : première promotion) · $2 commit promu · $3 version
 composer_notes() {
     local precedent="$1" commit="$2" version="$3" plage migrations reglages
-    echo "# CoproConnect $version"
+    echo "# CoproFirst $version"
     echo
     if [ -z "$precedent" ]; then
         echo "Première version promue sur \`replica\`."
@@ -82,7 +82,7 @@ if [ "${1:-}" = "--selftest" ]; then
     )
     p=$(git -C "$DEPOT" rev-parse HEAD~1); c=$(git -C "$DEPOT" rev-parse HEAD)
     notes=$(cd "$DEPOT" && composer_notes "$p" "$c" 2.0.0)
-    for attendu in "# CoproConnect 2.0.0" "- v2 — ajoute B" "- 0272_neuve.py" "- ajouté : B=2" "- retiré : C=3"; do
+    for attendu in "# CoproFirst 2.0.0" "- v2 — ajoute B" "- 0272_neuve.py" "- ajouté : B=2" "- retiré : C=3"; do
         if printf '%s\n' "$notes" | grep -qxF -- "$attendu"; then echo "PASS  « $attendu »"
         else echo "FAIL  « $attendu » absent"; fail=1; fi
     done
@@ -95,7 +95,7 @@ if [ "${1:-}" = "--selftest" ]; then
     SORTIE=$(mktemp -d)
     archive=$(cd "$DEPOT" && archiver_deploiement "$c3" 3.0.0 "$SORTIE")
     n=$(tar -tzf "$archive" | grep -cv '/$')
-    if [ "$n" -eq "${#FICHIERS_DEPLOIEMENT[@]}" ]; then echo "PASS  archive : $n fichiers, préfixe coproconnect-3.0.0/"
+    if [ "$n" -eq "${#FICHIERS_DEPLOIEMENT[@]}" ]; then echo "PASS  archive : $n fichiers, préfixe coprofirst-3.0.0/"
     else echo "FAIL  archive : $n fichier(s) pour ${#FICHIERS_DEPLOIEMENT[@]}"; fail=1; fi
     if (cd "$DEPOT" && archiver_deploiement "$c" 2.0.0 "$SORTIE") >/dev/null 2>&1; then
         echo "FAIL  archive d'un commit où il manque des fichiers : acceptée"; fail=1
@@ -117,4 +117,4 @@ fi
 notes=$(mktemp)
 composer_notes "${PRECEDENT:-}" "$COMMIT" "$VERSION" > "$notes"
 archive=$(archiver_deploiement "$COMMIT" "$VERSION" "$(mktemp -d)")
-gh release create "v$VERSION" --verify-tag --title "CoproConnect $VERSION" --notes-file "$notes" "$archive"
+gh release create "v$VERSION" --verify-tag --title "CoproFirst $VERSION" --notes-file "$notes" "$archive"

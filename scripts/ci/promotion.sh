@@ -4,7 +4,7 @@
 #  (#1754, 08/10/2026)
 #
 #  Lot DI-2 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
-#  §4.10, règles 1 et 5, D11). Les répliques CoproConnect suivent `replica` ;
+#  §4.10, règles 1 et 5, D11). Les répliques CoproFirst suivent `replica` ;
 #  le maître suit `main`. Une version passe de l'un à l'autre par ce geste,
 #  décidé par l'auteur et lancé à la main (workflow « Promotion »).
 #

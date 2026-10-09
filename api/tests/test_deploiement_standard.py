@@ -1,4 +1,4 @@
-"""Le déploiement standard de CoproConnect : des images, jamais un build (#1755).
+"""Le déploiement standard de CoproFirst : des images, jamais un build (#1755).
 
 Lot DI-3 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
 §4.10, règle 8, D13). `deploiement/standard/compose.images.yml` se pose PAR-DESSUS
@@ -11,7 +11,7 @@ Ce que ce test tient :
 - sa construction est retirée (`build: !reset`) — sans quoi une image introuvable
   serait construite en silence sur la machine ;
 - son image est celle que la CI publie (`images.yml`), à la version
-  `COPROCONNECT_VERSION`, exigée ;
+  `COPROFIRST_VERSION`, exigée ;
 - l'archive jointe aux notes de version emporte tout ce que le mode d'emploi cite.
 
 Le comportement de Compose sur ces fichiers (`!reset` compris) a été éprouvé sur
@@ -60,7 +60,7 @@ def test_chaque_service_construit_prend_son_image():
     for nom, service in surcouche.items():
         assert service.get("build") == "!reset", f"{nom} : la construction n'est pas retirée"
         attendu = re.compile(
-            rf"^{re.escape(registre)}/coproconnect-{re.escape(nom)}:\$\{{COPROCONNECT_VERSION:\?.+\}}$"
+            rf"^{re.escape(registre)}/coprofirst-{re.escape(nom)}:\$\{{COPROFIRST_VERSION:\?.+\}}$"
         )
         assert attendu.match(service["image"]), f"{nom} : image inattendue « {service['image']} »"
 
@@ -68,7 +68,7 @@ def test_chaque_service_construit_prend_son_image():
 def test_l_archive_emporte_ce_que_le_mode_d_emploi_cite():
     script = NOTES.read_text(encoding="utf-8")
     #  Le tableau des FICHIERS : une première colonne qui porte un chemin. Le
-    #  tableau des réglages (`COPROCONNECT_…`) n'en est pas un.
+    #  tableau des réglages (`COPROFIRST_…`) n'en est pas un.
     cites = {
         c
         for c in re.findall(r"^\| `([^`]+)` \|", LISEZMOI.read_text(encoding="utf-8"), re.M)
@@ -115,9 +115,9 @@ def test_la_mise_a_jour_sauvegarde_avant_de_toucher_au_service():
         "pull --quiet",  # images tirées, service intact
         "stop api",  # premier geste qui coupe
         "integrity_check",  # la sauvegarde est vérifiée…
-        'sed -i "s/^COPROCONNECT_VERSION=',  # … avant de poser la version
+        'sed -i "s/^COPROFIRST_VERSION=',  # … avant de poser la version
         "up -d --remove-orphans",
     ]
     positions = [texte.index(m) for m in ordre]
     assert positions == sorted(positions), dict(zip(ordre, positions))
-    assert "COPROCONNECT_SAUVEGARDES absent" in texte, "pas de mise à jour sans sauvegarde"
+    assert "COPROFIRST_SAUVEGARDES absent" in texte, "pas de mise à jour sans sauvegarde"

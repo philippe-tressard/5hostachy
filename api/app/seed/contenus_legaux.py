@@ -7,7 +7,7 @@ rédactionnelle — cf. `standards/14-conformite-juridique.md`.
 
 ## 🔴 LE SEED PORTE LE PRODUIT, LA BASE PORTE L'INSTANCE (03/09/2026)
 
-Le logiciel (CoproConnect, `utils/plateforme`) peut être déployé ailleurs. Écrire ICI le nom
+Le logiciel (CoproFirst, `utils/plateforme`) peut être déployé ailleurs. Écrire ICI le nom
 d'un éditeur ou d'un hébergeur les imposerait à tout autre déploiement, qui
 publierait alors des mentions **fausses** — pire que des mentions vagues. Les
 mentions de CETTE instance vivent en base (migration 0170).

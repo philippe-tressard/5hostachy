@@ -19,9 +19,9 @@
 #  C'est le seul cas où un second bloc dit quelque chose que le premier ne dit
 #  pas ; sinon, il le répète.
 version = 1
-SPDX-PackageName = "5Hostachy"
-SPDX-PackageSupplier = "https://github.com/philippe-tressard/5hostachy/issues"
-SPDX-PackageDownloadLocation = "https://github.com/philippe-tressard/5hostachy"
+SPDX-PackageName = "CoproFirst"
+SPDX-PackageSupplier = "https://github.com/philippe-tressard/coprofirst/issues"
+SPDX-PackageDownloadLocation = "https://github.com/philippe-tressard/coprofirst"
 
 [[annotations]]
 path = "**"

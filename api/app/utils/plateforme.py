@@ -7,8 +7,8 @@ Deux noms, deux réglages, et les confondre est le défaut que ce module ferme :
 | **la résidence** | celle qu'on habite, « 5Hostachy » ici | `site_nom`, en base — `liens.nom_site` |
 | **la plateforme** | le logiciel, le même pour toutes | ICI, et nulle part ailleurs |
 
-Arbitrage du 07/10/2026 (`specs/architecture/multi-coproprietes.md`, D9) : la
-plateforme s'appelle **CoproConnect**. Le nom de la résidence, lui, était écrit
+Arbitrage du 07/10/2026, revu le 09/10/2026 (`specs/architecture/multi-coproprietes.md`,
+D9) : la plateforme s'appelle **CoproFirst** (« CoproConnect » du 07 au 09/10/2026, abandonné : une startup du même domaine porte déjà ce nom (#1772)). Le nom de la résidence, lui, était écrit
 « 5Hostachy » dans le titre de l'API, le `User-Agent` des appels sortants, les
 mentions légales et le manuel PDF : le nom d'une copropriété employé pour
 désigner le logiciel de toutes.
@@ -25,11 +25,12 @@ constantes sont tenues contre `REUSE.toml` et `LICENSE` par `test_plateforme.py`
 #:
 #: Le lien vers le source de la VERSION qui tourne (AGPLv3 §13) se compose côté
 #: front, seul à connaître l'empreinte du build (`lienSource`, `VITE_GIT_HASH`).
-NOM_PLATEFORME = "CoproConnect"
+NOM_PLATEFORME = "CoproFirst"
 
-#: Le dépôt public du code source. Son nom est historique : le logiciel est né
-#: pour une seule résidence (exception déclarée de `test_nom_site.py`).
-DEPOT_SOURCE = "https://github.com/philippe-tressard/5hostachy"
+#: Le dépôt public du code source, au nom du logiciel depuis le 09/10/2026
+#: (#1772) : il portait celui de la résidence, et l'ancienne adresse redirige.
+#: `scripts/ci/descriptif_depot.py` vérifie que GitHub le sert à cette adresse.
+DEPOT_SOURCE = "https://github.com/philippe-tressard/coprofirst"
 
 #: La licence, telle qu'on l'identifie, la nomme et la lie. Le texte qui fait
 #: foi est l'officiel, en anglais (`LICENSE`).

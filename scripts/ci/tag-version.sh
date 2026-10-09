@@ -71,7 +71,7 @@ case "$verdict" in
     creer)
         git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            tag -a "$tag" -m "CoproConnect $tag" "$head"
+            tag -a "$tag" -m "CoproFirst $tag" "$head"
         git push origin "refs/tags/$tag"
         echo "Tag $tag posé sur $head."
         versionner=true ;;

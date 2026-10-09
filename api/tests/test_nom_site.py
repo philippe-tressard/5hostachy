@@ -37,11 +37,10 @@ _SOURCE = APP / "utils" / "liens.py"
 #: Ce qui a le droit d'écrire « hostachy » dans un littéral de `app/` :
 #: chemin → (nombre exact d'occurrences, raison). Une exception qui cesse de
 #: servir — ou qui sert davantage — fait échouer le contrôle.
+#:
+#: `utils/plateforme.py` n'y est plus depuis le 09/10/2026 (#1772) : le dépôt
+#: porte le nom du logiciel, et son adresse ne nomme plus la résidence.
 EXCEPTIONS_HOSTACHY: dict[str, tuple[int, str]] = {
-    "utils/plateforme.py": (
-        1,
-        "la SOURCE : l'adresse du dépôt public porte le nom historique",
-    ),
     "utils/backup.py": (
         1,
         "`hostachy_backup_` : le préfixe des archives DÉJÀ sur disque, que la rotation "
@@ -90,7 +89,7 @@ def test_aucun_nom_de_copropriete_en_dur():
     """Le nom de cette copropriété ne s'écrit pas dans le code (#1725).
 
     Le nom de la RÉSIDENCE se lit dans la configuration (`nom_site`), celui de la
-    PLATEFORME dans `utils/plateforme` — le logiciel s'appelle CoproConnect
+    PLATEFORME dans `utils/plateforme` — le logiciel s'appelle CoproFirst
     (`specs/architecture/multi-coproprietes.md`, D9).
     """
     fautes = []

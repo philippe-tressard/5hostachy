@@ -19,6 +19,11 @@ version). Ce script ne juge rien de plus — il confronte deux faits à GitHub :
 2. la licence que GitHub détecte dans `LICENSE` est celle que `REUSE.toml`
    accorde (GitHub ne distingue pas `-or-later` : « AGPL-3.0 » pour
    « AGPL-3.0-or-later »).
+3. l'adresse sous laquelle GitHub sert le dépôt est `DEPOT_SOURCE`
+   (`api/app/utils/plateforme.py`), le lien « code source » de l'AGPL §13 que
+   montre le pied de page. Après un renommage (#1772), l'ancienne adresse
+   redirige — le lien marcherait encore, et dirait faux sans que rien ne le
+   signale.
 
 Un descriptif modifié dans l'interface de GitHub fait donc échouer la PR
 suivante, avec la commande qui réaligne : c'est le seul moment où l'écart se
@@ -32,7 +37,7 @@ Sur le poste, le rejeu passe l'expression `${{ … }}` telle quelle : elle est
 ignorée, et `gh auth token` la remplace s'il est disponible.
 
 Usage : python scripts/ci/descriptif_depot.py [--selftest]
-    0 = GitHub affiche le descriptif et la licence du dépôt
+    0 = GitHub affiche le descriptif, la licence et l'adresse du dépôt
     1 = écart
     2 = INCONNU (GitHub n'a pas répondu, ou le dépôt est illisible)
 """
@@ -56,6 +61,7 @@ from licences_spdx import licence_du_projet  # noqa: E402
 
 RACINE = pathlib.Path(__file__).resolve().parents[2]
 DESCRIPTIF = ".github/descriptif-depot.txt"
+PLATEFORME = "api/app/utils/plateforme.py"
 _SUFFIXES_SPDX = re.compile(r"-(?:only|or-later)$")
 
 
@@ -83,6 +89,16 @@ def confronter(
             f"REUSE.toml accorde « {licence_accordee} »"
         )
     return ecarts
+
+
+def confronter_adresse(source_declaree: str, adresse_servie: str | None) -> list[str]:
+    """L'écart entre `DEPOT_SOURCE` et l'adresse que GitHub sert, s'il y en a un."""
+    if (adresse_servie or "").rstrip("/").lower() == source_declaree.rstrip("/").lower():
+        return []
+    return [
+        f"GitHub sert le dépôt à « {adresse_servie or 'aucune adresse'} », "
+        f"DEPOT_SOURCE ({PLATEFORME}) dit « {source_declaree} »"
+    ]
 
 
 # ── Lecture ──────────────────────────────────────────────────────────────────
@@ -127,8 +143,24 @@ def _jeton() -> str | None:
     return jeton_utilisable(sortie.stdout) if sortie.returncode == 0 else None
 
 
-def lire_github(depot: str) -> tuple[str | None, str | None]:
-    """(descriptif, identifiant SPDX de la licence détectée) du dépôt."""
+def source_declaree() -> str:
+    """`DEPOT_SOURCE`, lu dans le module de l'API sans l'importer (ni FastAPI ni base)."""
+    import ast
+
+    arbre = ast.parse((RACINE / PLATEFORME).read_text(encoding="utf-8"))
+    for noeud in arbre.body:
+        if (
+            isinstance(noeud, ast.Assign)
+            and any(isinstance(c, ast.Name) and c.id == "DEPOT_SOURCE" for c in noeud.targets)
+            and isinstance(noeud.value, ast.Constant)
+            and isinstance(noeud.value.value, str)
+        ):
+            return noeud.value.value
+    raise ValueError(f"DEPOT_SOURCE introuvable dans {PLATEFORME}")
+
+
+def lire_github(depot: str) -> tuple[str | None, str | None, str | None]:
+    """(descriptif, identifiant SPDX de la licence détectée, adresse servie) du dépôt."""
     requete = urllib.request.Request(
         f"https://api.github.com/repos/{depot}",
         headers={"Accept": "application/vnd.github+json", "User-Agent": "descriptif-depot"},
@@ -141,7 +173,8 @@ def lire_github(depot: str) -> tuple[str | None, str | None]:
             donnees = json.load(reponse)
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as erreur:
         raise Inconnu(f"GitHub n'a pas répondu pour {depot} : {erreur}") from erreur
-    return donnees.get("description"), (donnees.get("license") or {}).get("spdx_id")
+    licence = (donnees.get("license") or {}).get("spdx_id")
+    return donnees.get("description"), licence, donnees.get("html_url")
 
 
 # ── Autotest ─────────────────────────────────────────────────────────────────
@@ -156,7 +189,7 @@ def selftest() -> int:
         echecs += not ok
         print(f"  {'OK ' if ok else 'KO '} {nom}" + ("" if ok else f" — {obtenu!r} ≠ {attendu!r}"))
 
-    texte, agpl = "CoproConnect — sous AGPL-3.0-or-later.", "AGPL-3.0-or-later"
+    texte, agpl = "CoproFirst — sous AGPL-3.0-or-later.", "AGPL-3.0-or-later"
     t("identique : aucun écart", confronter(texte, texte, "AGPL-3.0", agpl), [])
     t("espaces de fin ignorés", confronter(texte + "\n", texte, "AGPL-3.0", agpl), [])
     t("descriptif modifié dans GitHub", len(confronter(texte, "v1.0.0", "AGPL-3.0", agpl)), 1)
@@ -166,6 +199,16 @@ def selftest() -> int:
     t("autre licence détectée", len(confronter(texte, texte, "MIT", agpl)), 1)
     t("GPL n'est pas AGPL", len(confronter(texte, texte, "GPL-3.0", agpl)), 1)
     t("identifiant exact accepté", confronter(texte, texte, "MIT", "MIT"), [])
+
+    depot = "https://github.com/philippe-tressard/coprofirst"
+    t("adresse identique : aucun écart", confronter_adresse(depot, depot), [])
+    t("casse et barre finale ignorées", confronter_adresse(depot, depot.upper() + "/"), [])
+    t(
+        "dépôt renommé, DEPOT_SOURCE resté à l'ancien nom",
+        len(confronter_adresse("https://github.com/philippe-tressard/5hostachy", depot)),
+        1,
+    )
+    t("adresse absente : un écart", len(confronter_adresse(depot, None)), 1)
 
     t("jeton fourni : gardé", jeton_utilisable(" abc "), "abc")
     t("jeton vide : aucun", jeton_utilisable(""), None)
@@ -196,15 +239,16 @@ def main(argv: list[str]) -> int:
     try:
         declare = (RACINE / DESCRIPTIF).read_text(encoding="utf-8")
         licence = licence_du_projet((RACINE / "REUSE.toml").read_text(encoding="utf-8"))
+        source = source_declaree()
         depot = _depot()
-        affiche, detectee = lire_github(depot)
+        affiche, detectee, adresse = lire_github(depot)
     except (OSError, ValueError, Inconnu) as erreur:
         print(f"INCONNU — {erreur}")
         return 2
 
-    ecarts = confronter(declare, affiche, detectee, licence)
+    ecarts = confronter(declare, affiche, detectee, licence) + confronter_adresse(source, adresse)
     if not ecarts:
-        print(f"OK — {depot} affiche le descriptif du dépôt, sous {detectee}")
+        print(f"OK — {adresse} affiche le descriptif du dépôt, sous {detectee}")
         return 0
     print(f"ÉCART — ce que GitHub montre de {depot} n'est pas ce que le dépôt déclare :")
     for ecart in ecarts:

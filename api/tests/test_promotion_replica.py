@@ -1,7 +1,7 @@
 """La promotion d'une version sur `replica` (#1754, 08/10/2026).
 
 Lot DI-2 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
-§4.10, règles 1 et 5, D11). Les répliques CoproConnect suivent `replica` ; une
+§4.10, règles 1 et 5, D11). Les répliques CoproFirst suivent `replica` ; une
 version y passe par le workflow « Promotion », lancé à la main par l'auteur.
 
 Ce que ce test tient, sur la forme du workflow :

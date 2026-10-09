@@ -2,7 +2,7 @@
 
 Lot DI-1 du chantier multi-copropriétés (`specs/architecture/multi-coproprietes.md`
 §4.10, D12) : le workflow `.github/workflows/images.yml` pose le tag `vX.Y.Z` et
-publie, signées, les images de chaque service. Une installation CoproConnect —
+publie, signées, les images de chaque service. Une installation CoproFirst —
 et le maître, au lot DI-6 — n'aura QUE ces images : un service construit par
 `docker-compose.yml` mais absent de la matrice manquerait à toutes, sans que
 rien ne le dise avant le jour de l'installation.

@@ -40,6 +40,6 @@ def problemes_mise_a_jour(session: Session) -> list[str]:
     return [
         "La mise à jour nocturne a échoué : "
         + (dernier.erreur or "cause non transmise")
-        + ". Le script a remis la version précédente ; lire /var/log/coproconnect-maj.log "
+        + ". Le script a remis la version précédente ; lire /var/log/coprofirst-maj.log "
         "sur le serveur avant de relancer."
     ]

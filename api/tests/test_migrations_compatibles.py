@@ -12,7 +12,7 @@ le code de N-1. Sinon, revenir en arrière demande de restaurer la sauvegarde �
 perd tout ce qui a été écrit depuis la mise à jour.
 
 C'est vrai dès aujourd'hui pour 5Hostachy (le retour arrière de `mep-precheck`),
-et ce sera vrai chaque nuit pour chaque installation CoproConnect (#1756).
+et ce sera vrai chaque nuit pour chaque installation CoproFirst (#1756).
 
 ## La règle : ajouter, puis retirer — jamais dans la même version
 

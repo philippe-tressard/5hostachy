@@ -108,7 +108,7 @@ def regle_page(
 
 
 def logo_svg(size: int = 36) -> str:
-    """Le logo NEUTRE de CoproConnect en SVG inline — un immeuble sur fond bleu.
+    """Le logo NEUTRE de CoproFirst en SVG inline — un immeuble sur fond bleu.
 
     C'est le repli quand la résidence n'a pas téléversé le sien (#1728) : un
     logo propre à une résidence ne s'écrit pas dans le code, une autre l'aurait

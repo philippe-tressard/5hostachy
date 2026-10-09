@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="front/static/favicon.svg" alt="5Hostachy" width="80" />
+  <img src="front/static/favicon.svg" alt="CoproFirst" width="80" />
 </p>
 
-<h1 align="center">5Hostachy</h1>
+<h1 align="center">CoproFirst</h1>
 
 <p align="center">
   <em>Application web de gestion de copropriété — côté résidents et conseil syndical.</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/5hostachy/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://github.com/philippe-tressard/coprofirst/actions/workflows/ci.yml"><img src="https://github.com/philippe-tressard/coprofirst/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-blue.svg" alt="Licence AGPL-3.0-or-later — logiciel libre" /></a>
-  <a href="https://api.reuse.software/info/github.com/philippe-tressard/5hostachy"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/5hostachy" alt="REUSE compliant" /></a>
+  <a href="https://api.reuse.software/info/github.com/philippe-tressard/coprofirst"><img src="https://api.reuse.software/badge/github.com/philippe-tressard/coprofirst" alt="REUSE compliant" /></a>
   <img src="https://img.shields.io/badge/python-3.12-3776ab.svg" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/node-22+-339933.svg" alt="Node 22+" />
 </p>
@@ -21,7 +21,7 @@
 > **Votre résidence a désormais son appli.**
 > Signalez un problème, suivez les travaux, consultez vos documents, commandez un badge ou échangez entre voisins — tout se fait depuis un seul espace, sécurisé et accessible 24 h/24.
 
-**Deux noms, deux choses.** Le logiciel s'appelle **CoproConnect** ; « 5Hostachy » est la résidence pour laquelle il est né, et le nom de ce dépôt. Rien dans le code ne nomme la résidence : son nom, son adresse et ses textes légaux se règlent dans l'administration, et l'application installée sur un téléphone porte le nom de **la résidence qui la sert**. Le pied de chaque page renvoie au code source de la version en service. Le chantier qui mène à plusieurs copropriétés sur une même plateforme : [`specs/architecture/multi-coproprietes.md`](specs/architecture/multi-coproprietes.md).
+**Deux noms, deux choses.** Le logiciel s'appelle **CoproFirst** ; « 5Hostachy » est la résidence pour laquelle il est né, et le nom que ce dépôt a porté jusqu'au 09/10/2026 (les anciennes adresses redirigent ici). Rien dans le code ne nomme la résidence : son nom, son adresse et ses textes légaux se règlent dans l'administration, et l'application installée sur un téléphone porte le nom de **la résidence qui la sert**. Le pied de chaque page renvoie au code source de la version en service. Le chantier qui mène à plusieurs copropriétés sur une même plateforme : [`specs/architecture/multi-coproprietes.md`](specs/architecture/multi-coproprietes.md).
 
 ## Fonctionnalités
 
@@ -37,7 +37,7 @@
 - **Annonces de hall** — Production d'une **affiche PDF** aux couleurs de la résidence pour les panneaux d'affichage, au **plus petit format qui accueille le texte** (A4 à A7, trait de découpe en dessous de l'A4). Elle se rédige directement ou se **pré-remplit depuis une actualité ou une affaire** (titre, contenu, périmètre, photos) — et **réciproquement** : une actualité se pré-remplit depuis une annonce de hall déjà produite, le conseil composant souvent l'affiche d'abord. Sa **diffusion** se choisit case par case comme partout ailleurs — groupe WhatsApp, syndic, conseil syndical, copie à soi —, toutes décochées d'origine : le conseil syndical du périmètre et le syndic reçoivent le PDF en pièce jointe, le groupe WhatsApp un lien vers l'actualité d'origine. Historique consultable, archivable, avec renvoi possible
 - **Courriels affaires** — onglet de l'Espace CS : chaque message reçu à l'adresse des affaires (réponses du syndic, fils transférés par le conseil), une **pliure par message** avec son verdict — ajouté au fil, transmis au conseil, refusé, ignoré — et **pourquoi**, jamais le texte (90 jours). Un transfert refusé pour un numéro d'affaire mal tapé propose le bon. Le conseil lit le nom de l'expéditeur, l'administrateur son adresse ; le nombre de lignes (20 par défaut) est un paramètre de Paramétrage › SMTP
 - **Questions au règlement** — onglet de l'Espace CS : le conseil syndical pose la question d'un résident (« ai-je le droit de… ? ») et l'assistant IA répond **en juriste**, d'après le texte du règlement de copropriété chargé en **Markdown** sur la même page **par l'administration seule** (versionné, jamais publié ni versé au dépôt) — verdict, réponse argumentée, **extraits cités mot pour mot**, réserves. Chaque extrait est **recherché dans le texte par le site** : retrouvé, il porte son acte et sa page, lus dans la transcription ; sinon il est signalé ⚠️. Les questions restent dans un historique — que l'administration peut élaguer —, et une réponse **relue** peut rejoindre la FAQ. Avis indicatif, qui ne se substitue pas aux actes authentiques
-- **Administration** — **Services de la copropriété** sur un seul écran (assistant IA, diffusion WhatsApp, réponses par courriel : état, ce qu'on perd en coupant, interrupteur ; l'envoi des courriels y figure sans interrupteur, il porte ceux de sécurité), paramétrage du site (le **nom de la résidence**, repris par la connexion, le menu, les courriels et l'application installée, et son **logo** — PNG ou JPEG téléversé, qui remplace partout le logo neutre de CoproConnect : menu, onglet, application installée, documents imprimables, courriels), comptes (dont la **purge automatique des comptes inactifs** : deux ans sans connexion, un avertissement par courriel, la suppression trente jours plus tard — jamais un compte d'administration), SMTP (envoi, relève des réponses par courriel et nombre de messages affichés dans l'onglet **Courriels** de l'Espace CS), WhatsApp, **assistant IA** (un bloc commun — fournisseur, clé, adresse, délai — et un bloc par usage — modèle, effort de raisonnement, prompt modifiable, plafond, activation, test — : synthèse de contrat, rédaction d'une description, **mise en forme automatique des réponses du syndic reçues par courriel**, le texte reçu restant consultable, **synthèse automatique d'une affaire close**, livrée désactivée, et **question au règlement de copropriété**, livrée désactivée ; la clé n'est jamais renvoyée par l'API). Chaque usage a ses **limites d'appels** — par mois, et par heure et par personne ; atteintes, l'appel est refusé avant l'envoi —, le coût de son **premier essai** avec le modèle et l'effort enregistrés, qui en chiffre l'estimation du mois, et son **tarif**, qui chiffre la consommation — trois prix en dollars — envoyés, produits, lus en cache —, qu'un ✨ à côté du modèle cherche dans la grille publiée par le fournisseur (usage *Tarif d'un modèle*) et enregistre
+- **Administration** — **Services de la copropriété** sur un seul écran (assistant IA, diffusion WhatsApp, réponses par courriel : état, ce qu'on perd en coupant, interrupteur ; l'envoi des courriels y figure sans interrupteur, il porte ceux de sécurité), paramétrage du site (le **nom de la résidence**, repris par la connexion, le menu, les courriels et l'application installée, et son **logo** — PNG ou JPEG téléversé, qui remplace partout le logo neutre de CoproFirst : menu, onglet, application installée, documents imprimables, courriels), comptes (dont la **purge automatique des comptes inactifs** : deux ans sans connexion, un avertissement par courriel, la suppression trente jours plus tard — jamais un compte d'administration), SMTP (envoi, relève des réponses par courriel et nombre de messages affichés dans l'onglet **Courriels** de l'Espace CS), WhatsApp, **assistant IA** (un bloc commun — fournisseur, clé, adresse, délai — et un bloc par usage — modèle, effort de raisonnement, prompt modifiable, plafond, activation, test — : synthèse de contrat, rédaction d'une description, **mise en forme automatique des réponses du syndic reçues par courriel**, le texte reçu restant consultable, **synthèse automatique d'une affaire close**, livrée désactivée, et **question au règlement de copropriété**, livrée désactivée ; la clé n'est jamais renvoyée par l'API). Chaque usage a ses **limites d'appels** — par mois, et par heure et par personne ; atteintes, l'appel est refusé avant l'envoi —, le coût de son **premier essai** avec le modèle et l'effort enregistrés, qui en chiffre l'estimation du mois, et son **tarif**, qui chiffre la consommation — trois prix en dollars — envoyés, produits, lus en cache —, qu'un ✨ à côté du modèle cherche dans la grille publiée par le fournisseur (usage *Tarif d'un modèle*) et enregistre
 - **Périmètres** — arborescence de la copropriété (bâtiments et leurs espaces, parking, AFUL, espaces verts, cheminements, locaux techniques) servant à localiser affaires, actualités, **sondages** et annonces. Sa **pastille prend la couleur de son bâtiment** : « Ascenseur » du bâtiment 1 porte la teinte du bâtiment 1, partout où elle s'affiche — on lit *où ça se passe* sans lire le libellé. Sur une affaire, il n'est pas figé à l'ouverture : une entrée du fil de suivi peut le **préciser** à mesure qu'on cherche, et l'historique garde la trace du resserrement. Entièrement éditable depuis l'administration, sans déploiement. Le périmètre dit *de quoi* il s'agit, pas *qui peut lire* — sauf sur une actualité **🔒 Réservée au périmètre sélectionné**, où il redevient restrictif (lecture réservée au périmètre visé, affiche de hall alors impossible) — et sur une affaire suivie, qui l'est d'office
 - **WhatsApp** — Notifications automatiques programmées vers le groupe de la résidence. ⚠️ Le pont passe par un client non officiel (Baileys) : WhatsApp peut déconnecter ou **bloquer le numéro** appairé ; le contrôle quotidien distingue ce cas d'une coupure ordinaire, et le courriel reste le canal de repli (conduite à tenir : `.claude/skills/infra-rpi`)
 - **Maintenance** — Tâches automatiques (purge tokens, archivage, logs, **images de base des
@@ -72,7 +72,7 @@
 | CDN / Tunnel | Cloudflare Tunnel + Worker (maintenance page) |
 
 ```
-5hostachy/
+coprofirst/
 ├── api/               # Backend FastAPI
 │   ├── app/           # Code applicatif (routers, models, utils)
 │   └── alembic/       # Migrations de base de données
@@ -105,8 +105,8 @@
 ### Installation
 
 ```bash
-git clone https://github.com/philippe-tressard/5hostachy.git
-cd 5hostachy
+git clone https://github.com/philippe-tressard/coprofirst.git
+cd coprofirst
 
 # Configurer l'environnement
 cp .env.example .env
@@ -120,10 +120,10 @@ docker compose up --build -d
 L'application est accessible sur `http://localhost`.
 
 > 📦 **Images publiées.** Chaque version reçoit un tag `vX.Y.Z` et des images
-> signées (amd64 et arm64) : `ghcr.io/philippe-tressard/coproconnect-api`, `-front`,
+> signées (amd64 et arm64) : `ghcr.io/philippe-tressard/coprofirst-api`, `-front`,
 > `-caddy` et `-whatsapp-bridge`, étiquetées par version (et chaque commit de `main`
 > par `sha-<commit>`). Vérifier une image :
-> `gh attestation verify oci://ghcr.io/philippe-tressard/coproconnect-api:<version> --owner philippe-tressard`.
+> `gh attestation verify oci://ghcr.io/philippe-tressard/coprofirst-api:<version> --owner philippe-tressard`.
 > Les versions choisies pour les autres installations sont **promues** sur la branche
 > `replica`, avec leurs notes de version (onglet *Releases*).
 > **Installer sans construire** : [`deploiement/standard/LISEZMOI.md`](deploiement/standard/LISEZMOI.md)
@@ -209,7 +209,7 @@ Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 **[AGPL-3.0-or-later](LICENSE)** — GNU Affero General Public License, version 3
 ou ultérieure. © Philippe TRESSARD, 2024-2026.
 
-CoproConnect est un **logiciel libre** : chacun peut l'utiliser, l'étudier, le
+CoproFirst est un **logiciel libre** : chacun peut l'utiliser, l'étudier, le
 modifier et le redistribuer, y compris à titre commercial — à condition de
 publier ses modifications sous la même licence, **y compris** quand il le fait
 fonctionner comme service en ligne (AGPL §13). Aucune condition additionnelle.
