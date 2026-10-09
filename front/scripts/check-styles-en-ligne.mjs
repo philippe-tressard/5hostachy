@@ -52,8 +52,15 @@ import { fileURLToPath } from 'node:url';
  *  suppression remplacées par `SUPPRESSION` (#779).
  *  Puis 416 : `LegalEditor` fondu dans `RichEditor` — son espaceur
  *  `style="flex:1"` part avec lui (#1539).
+ *  08/10/2026 (#1571) : 394 → 206. Les combinaisons qui avaient leur classe
+ *  globale y passent (`.muted`, `.text-muted-sm`, et `-md`, `-base`, `.texte-code`,
+ *  `.champ-double`, l'essai d'un canal d'administration, créées pour l'occasion) ;
+ *  vingt-cinq écrans reçoivent des classes locales aux déclarations identiques.
+ *  ⚠️ Une classe pèse MOINS qu'un attribut : là où une règle globale plus forte
+ *  visait l'élément (`.field input[type='checkbox']`, `.field textarea`), le
+ *  sélecteur est qualifié pour la battre comme l'attribut la battait.
  */
-const PLAFOND = 394;
+const PLAFOND = 206;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

@@ -210,6 +210,12 @@
 .field.champ-large {
 	grid-column: 1 / -1;
 }
+/*  DEUX colonnes de la grille — ni une, ni toute la ligne. Les réglages de
+    l'administration (site, SMTP, WhatsApp, réception des réponses…) l'écrivaient
+    en ligne, `style="grid-column:span 2"`, une vingtaine de fois (#1571). */
+.field.champ-double {
+	grid-column: span 2;
+}
 /*  TROIS largeurs, et trois seulement — arbitré à l'écran le 19/08/2026 (#489).
     « Deux se retiennent, quatre se réinventent » : il y en avait quatre, toutes
     écrites EN LIGNE dans les pages (120px, 100px, 200px, 9rem), chacune

@@ -272,12 +272,12 @@
 						<div>
 							<div style="font-weight:700;font-size:1rem">{nomLocataire(premierBail)}</div>
 							{#if premierBail.locataire_email}
-								<div style="font-size:var(--fs-md);color:var(--color-text-muted)">
+								<div class="text-muted-md">
 									{premierBail.locataire_email}
 								</div>
 							{/if}
 							{#if premierBail.locataire_telephone}
-								<div style="font-size:var(--fs-md);color:var(--color-text-muted)">
+								<div class="text-muted-md">
 									{premierBail.locataire_telephone}
 								</div>
 							{/if}

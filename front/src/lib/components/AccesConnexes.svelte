@@ -54,27 +54,23 @@
 
 <!-- Accès reçus du bailleur (locataires uniquement) -->
 {#if $isLocataire}
-	<section class="section card" style="margin-top:1rem;border-left:3px solid var(--color-primary)">
+	<section class="section card section-acces-recus">
 		<div class="section-header">
 			<h2 class="section-title">&#x1F3E0; Accès confiés par votre bailleur</h2>
 		</div>
 		{#if accesRecus.length === 0}
-			<p style="font-size:var(--fs-md);color:var(--color-text-muted)">
-				Aucun accès ne vous a encore été confié par votre propriétaire.
-			</p>
+			<p class="text-muted-md">Aucun accès ne vous a encore été confié par votre propriétaire.</p>
 		{:else}
-			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.75rem">
+			<p class="intro">
 				Ces accès vous ont été confiés par votre propriétaire pour la durée de votre bail.
 			</p>
-			<table class="table" style="table-layout:fixed;width:100%">
-				<colgroup
-					><col style="width:30%" /><col style="width:10rem" /><col style="width:9rem" /></colgroup
-				>
+			<table class="table table-acces">
+				<colgroup><col class="col-1" /><col class="col-2" /><col class="col-3" /></colgroup>
 				<thead><tr><th>Code</th><th>Type</th><th>Statut</th></tr></thead>
 				<tbody>
 					{#each accesRecus as a (a.id)}
 						<tr>
-							<td style="font-family:monospace">{a.code}</td>
+							<td class="texte-code">{a.code}</td>
 							<td>{typeAccesLabel(a.type)}</td>
 							<td
 								><span class="badge {statutAccesBadge(a.statut)}">{statutAccesLabel(a.statut)}</span
@@ -109,5 +105,27 @@
 	}
 	.section {
 		padding: 1.25rem;
+	}
+	.section-acces-recus {
+		margin-top: 1rem;
+		border-left: 3px solid var(--color-primary);
+	}
+	.intro {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.table-acces {
+		table-layout: fixed;
+		width: 100%;
+	}
+	.col-1 {
+		width: 30%;
+	}
+	.col-2 {
+		width: 10rem;
+	}
+	.col-3 {
+		width: 9rem;
 	}
 </style>

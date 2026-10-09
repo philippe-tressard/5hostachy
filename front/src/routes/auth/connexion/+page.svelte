@@ -75,7 +75,7 @@
 				{#if emailNotVerified}
 					<div style="margin-top:.5rem">
 						{#if resendDone}
-							<span style="color:var(--color-text-muted); font-size:var(--fs-md)"
+							<span class="text-muted-md"
 								>Un nouveau lien a été envoyé si un compte non vérifié existe pour cette adresse.</span
 							>
 						{:else}

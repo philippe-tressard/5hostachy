@@ -40,18 +40,18 @@
 				<thead>
 					<tr>
 						<th>Page</th>
-						<th style="text-align:right">Vues</th>
-						<th style="text-align:right">Utilisateurs</th>
-						<th style="text-align:right">%</th>
+						<th class="num">Vues</th>
+						<th class="num">Utilisateurs</th>
+						<th class="num">%</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each pages as p (p.page)}
 						<tr>
-							<td><code style="font-size:var(--fs-md)">{p.page}</code></td>
-							<td style="text-align:right;font-weight:600">{p.total}</td>
-							<td style="text-align:right;color:var(--color-text-muted)">{p.uniques}</td>
-							<td style="text-align:right;color:var(--color-text-muted)">
+							<td><code class="chemin">{p.page}</code></td>
+							<td class="num-fort">{p.total}</td>
+							<td class="num-attenue">{p.uniques}</td>
+							<td class="num-attenue">
 								{((p.total / diviseur) * 100).toFixed(1)}%
 							</td>
 						</tr>
@@ -60,8 +60,8 @@
 				<tfoot>
 					<tr class="total">
 						<td>Total — {pages.length} page{pages.length > 1 ? 's' : ''}</td>
-						<td style="text-align:right">{totalVues}</td>
-						<td style="text-align:right;color:var(--color-text-muted)">
+						<td class="num">{totalVues}</td>
+						<td class="num-attenue">
 							<!--  Additionner la colonne serait FAUX : un même utilisateur compte
 						      dans chaque page qu'il a vue, et la somme dirait « 17 personnes »
 						      là où il n'y en a qu'une. Le nombre réel d'utilisateurs distincts
@@ -71,7 +71,7 @@
 								>—</span
 							>
 						</td>
-						<td style="text-align:right;color:var(--color-text-muted)">
+						<td class="num-attenue">
 							{totalVues > 0 ? '100.0%' : '—'}
 						</td>
 					</tr>
@@ -102,5 +102,19 @@
 		border-top: 2px solid var(--color-border);
 		font-weight: 700;
 		padding-top: 0.5rem;
+	}
+	.num {
+		text-align: right;
+	}
+	.chemin {
+		font-size: var(--fs-md);
+	}
+	.num-fort {
+		text-align: right;
+		font-weight: 600;
+	}
+	.num-attenue {
+		text-align: right;
+		color: var(--color-text-muted);
 	}
 </style>

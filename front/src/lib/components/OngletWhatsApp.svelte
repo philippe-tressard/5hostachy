@@ -153,7 +153,7 @@
 	</h2>
 	<SectionFormulaire premiere icone="settings" titre="Connexion au bridge">
 		<div class="form-grid largeur-saisie">
-			<label class="field" style="grid-column:span 2">
+			<label class="field champ-double">
 				<span class="case">
 					<input type="checkbox" bind:checked={waConfig.enabled} />
 					Activer l'envoi WhatsApp
@@ -192,10 +192,9 @@
 
 	<SectionFormulaire icone="activity" titre="Tester la configuration">
 		<div class="largeur-saisie">
-			<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+			<div class="etat-bridge">
 				<button
-					class="btn btn-outline"
-					style="font-size:var(--fs-xs);padding:.15rem .5rem"
+					class="btn btn-outline btn-mini"
 					on:click={checkWaStatus}
 					disabled={waStatusLoading}
 				>
@@ -219,58 +218,39 @@
 			{#if waStatus?.state === 'waiting_qr'}
 				<div class="qr-attente">
 					<EncartAvertissement>
-						<p style="margin:0 0 .5rem;font-weight:600">
+						<p class="titre-qr">
 							&#x26A0;&#xFE0F; Bridge déconnecté — scannez ce QR code avec WhatsApp
 						</p>
-						<p style="margin:0 0 .75rem;font-size:var(--fs-sm)">
-							WhatsApp → Appareils connectés → Connecter un appareil
-						</p>
-						<img
-							src={configApi.whatsappQrUrl(waQrTimestamp)}
-							alt="QR code WhatsApp"
-							style="display:block;width:220px;height:220px;border-radius:4px;border:1px solid var(--color-warning)"
-						/>
-						<div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center">
-							<button
-								class="btn btn-outline"
-								style="font-size:var(--fs-xs);padding:.15rem .5rem"
-								type="button"
-								on:click={refreshWaQr}
-							>
+						<p class="consigne-qr">WhatsApp → Appareils connectés → Connecter un appareil</p>
+						<img src={configApi.whatsappQrUrl(waQrTimestamp)} alt="QR code WhatsApp" class="qr" />
+						<div class="actions-qr">
+							<button class="btn btn-outline btn-mini" type="button" on:click={refreshWaQr}>
 								&#x1F504; Rafraîchir le QR
 							</button>
-							<button
-								class="btn btn-outline"
-								style="font-size:var(--fs-xs);padding:.15rem .5rem"
-								type="button"
-								on:click={checkWaStatus}
-							>
+							<button class="btn btn-outline btn-mini" type="button" on:click={checkWaStatus}>
 								&#x2705; Vérifier la connexion
 							</button>
 						</div>
 					</EncartAvertissement>
 				</div>
 			{/if}
-			<div style="display:flex;gap:.5rem;align-items:start;flex-wrap:wrap">
-				<div class="field champ-en-ligne" style="flex:1;min-width:220px">
+			<div class="ligne-test">
+				<div class="field champ-en-ligne champ-essai">
 					<textarea
 						bind:value={waTestMessage}
 						rows="2"
 						placeholder="Message de test..."
-						style="resize:vertical"></textarea>
+						class="message-test"></textarea>
 				</div>
 				<button
-					class="btn btn-outline"
+					class="btn btn-outline btn-test"
 					on:click={sendWaTest}
 					disabled={waTesting || !waTestMessage.trim()}
-					style="white-space:nowrap"
 				>
 					{waTesting ? 'Envoi...' : '\u{1F4E8} Envoyer le test'}
 				</button>
 			</div>
-			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:.3rem">
-				Envoie le message ci-dessus sur le groupe WhatsApp configuré.
-			</p>
+			<p class="note-essai">Envoie le message ci-dessus sur le groupe WhatsApp configuré.</p>
 		</div>
 	</SectionFormulaire>
 
@@ -292,8 +272,7 @@
 					bind:value={footer}
 					rows="2"
 					placeholder="— Le Conseil Syndical"
-					style="width:100%;resize:vertical;font-size:var(--fs-md);font-family:monospace"
-				></textarea>
+					class="saisie-gabarit"></textarea>
 				<span class="aide"
 					>Texte qui finalise chaque message (markdown WhatsApp autorisé : *gras*, _italique_,
 					~barré~).</span
@@ -320,5 +299,48 @@
 	.qr-attente {
 		margin-top: 0.75rem;
 		max-width: 360px;
+	}
+	.etat-bridge {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+	.btn-mini {
+		font-size: var(--fs-xs);
+		padding: 0.15rem 0.5rem;
+	}
+	.titre-qr {
+		margin: 0 0 0.5rem;
+		font-weight: 600;
+	}
+	.consigne-qr {
+		margin: 0 0 0.75rem;
+		font-size: var(--fs-sm);
+	}
+	.qr {
+		display: block;
+		width: 220px;
+		height: 220px;
+		border-radius: 4px;
+		border: 1px solid var(--color-warning);
+	}
+	.actions-qr {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		align-items: center;
+	}
+	.ligne-test {
+		display: flex;
+		gap: 0.5rem;
+		align-items: start;
+		flex-wrap: wrap;
+	}
+	.message-test {
+		resize: vertical;
+	}
+	.btn-test {
+		white-space: nowrap;
 	}
 </style>

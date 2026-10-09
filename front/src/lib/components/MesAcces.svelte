@@ -76,12 +76,8 @@
 		<p class="mes-acces-vide">{messageVide}</p>
 	{:else}
 		<div class="table-wrap">
-			<table class="table" style="table-layout:fixed;width:100%">
-				<colgroup
-					><col style="width:28%" /><col style="width:8rem" /><col /><col
-						style="width:9rem"
-					/></colgroup
-				>
+			<table class="table table-acces">
+				<colgroup><col class="col-1" /><col class="col-2" /><col /><col class="col-4" /></colgroup>
 				<thead><tr><th>Code</th><th>Statut</th><th>Accès</th><th>Actions</th></tr></thead>
 				<tbody>
 					{#each items as item (item.id)}
@@ -135,5 +131,18 @@
 		display: flex;
 		gap: 0.35rem;
 		flex-wrap: wrap;
+	}
+	.table-acces {
+		table-layout: fixed;
+		width: 100%;
+	}
+	.col-1 {
+		width: 28%;
+	}
+	.col-2 {
+		width: 8rem;
+	}
+	.col-4 {
+		width: 9rem;
 	}
 </style>

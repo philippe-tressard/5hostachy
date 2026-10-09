@@ -351,6 +351,42 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	font-size: 0.8rem;
 	color: var(--color-text-muted);
 }
+/*  Sa jumelle d'un cran au-dessus : onze `style="font-size:var(--fs-md);
+    color:var(--color-text-muted)"` l'écrivaient en ligne (#1571, 08/10/2026). */
+.text-muted-md {
+	font-size: var(--fs-md);
+	color: var(--color-text-muted);
+}
+.text-muted-base {
+	font-size: var(--fs-base);
+	color: var(--color-text-muted);
+}
+/*  Un code, un numéro de lot, un identifiant : la chasse fixe aligne les
+    caractères. Écrite en ligne dans trois écrans (#1571). */
+.texte-code {
+	font-family: monospace;
+}
+/*  L'ESSAI d'un canal de l'administration — SMTP et WhatsApp portent la même
+    rangée « champ + bouton d'envoi », sa note, et un gabarit de message en
+    chasse fixe. Les deux écrans l'écrivaient en ligne, à l'identique (#1571). */
+.champ-essai {
+	flex: 1;
+	min-width: 220px;
+}
+.note-essai {
+	font-size: var(--fs-sm);
+	color: var(--color-text-muted);
+	margin-top: 0.3rem;
+}
+/*  ⚠️ Qualifiée par `.field textarea` : posée seule (0,1,0), elle perdait contre
+    `.field textarea` (0,1,1) et sa taille de texte — que l'attribut en ligne, lui,
+    battait. Une classe qui remplace un `style="…"` doit peser autant que lui. */
+.field textarea.saisie-gabarit {
+	width: 100%;
+	resize: vertical;
+	font-size: var(--fs-md);
+	font-family: monospace;
+}
 /*  🔴 `.perimetre-pills` retirée d'ICI le 28/08/2026 : elle était définie DEUX
     fois dans la charte elle-même, à l'identique — ici et dans `composants.css`,
     où elle reste. Une charte qui se duplique ne peut rien reprocher aux écrans,

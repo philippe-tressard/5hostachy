@@ -89,8 +89,8 @@
 	}
 </script>
 
-<div style="margin-bottom:1.25rem">
-	<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+<div class="bloc-types">
+	<div class="choix-types">
 		{#each compteurConfigs as cfg (cfg.type_compteur)}
 			<button
 				class="btn btn-sm"
@@ -115,7 +115,7 @@
 	</div>
 
 	{#if currentCompteur && $isCS}
-		<div class="compteur-config-row" style="margin-top:.6rem">
+		<div class="compteur-config-row ligne-config">
 			{#if editCompteurId === currentCompteur.id}
 				<!--  Un petit formulaire STANDARD (#1329) : champ libellé, pied commun.
 				      Les boutons étaient écrits à la main, sur la même ligne. -->
@@ -147,10 +147,9 @@
 					? prestataires.find((p) => p.id === currentCompteur.prestataire_id)
 					: null}
 				{#if prest}
-					<span class="badge badge-blue" style="font-size:var(--fs-sm)">🔧 {prest.nom}</span>
+					<span class="badge badge-blue prestataire-compteur">🔧 {prest.nom}</span>
 				{:else}
-					<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">Aucun fournisseur</span
-					>
+					<span class="text-muted-sm">Aucun fournisseur</span>
 				{/if}
 				<button
 					class="btn-icon-edit"
@@ -198,5 +197,20 @@
 	.compteur-champ {
 		flex: 1;
 		margin: 0;
+	}
+	.bloc-types {
+		margin-bottom: 1.25rem;
+	}
+	.choix-types {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+	.ligne-config {
+		margin-top: 0.6rem;
+	}
+	.prestataire-compteur {
+		font-size: var(--fs-sm);
 	}
 </style>
