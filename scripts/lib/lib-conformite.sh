@@ -225,4 +225,11 @@ conformite_verdicts() {
   #  Il disparaissait à chaque déploiement ; il est désormais un fichier du volume
   #  `caddy_logs`. Mesure, seuil et constats : `lib-journal-acces.sh`.
   acces_caddy_verdicts
+
+  # ── C37. La base PostgreSQL est-elle répliquée vers le standby ? (#1781) ─────
+  #  Sous PostgreSQL (D16), un primaire sur l'actif, une réplique en continu sur
+  #  le standby. Deux primaires, une réplique déconnectée ou en retard : le
+  #  failover promouvrait une base périmée. Sans objet tant que la production
+  #  est sous SQLite. Collecte, décision et constats : `lib-replication.sh`.
+  replication_verdicts
 }

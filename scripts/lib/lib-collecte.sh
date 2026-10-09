@@ -253,6 +253,12 @@ COLLECT="$COLLECT$COLLECT_HW"
 . "$(dirname "${BASH_SOURCE[0]}")/lib-maintenance-trace.sh"
 COLLECT="$COLLECT$(collecte_maintenance "$MAINT_LOG")"
 
+# C37 (#1781) : la replication PostgreSQL — role de la base, repliques, retard.
+# Collecte, decision et constats vivent ensemble, dans `lib-replication.sh` ;
+# `replication_verdicts` y est donc defini aussi.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-replication.sh"
+COLLECT="$COLLECT$COLLECT_REPLICATION"
+
 # C32 (#1593) : les ports TCP a l ecoute sur toutes les interfaces. La mesure,
 # la liste blanche declaree et la decision vivent ensemble, dans
 # `lib-ports-ecoute.sh` ; `ports_ecoute_verdicts` y est donc defini aussi.

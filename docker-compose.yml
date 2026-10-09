@@ -104,9 +104,17 @@ services:
   #  `synchronous_commit` restent à leur défaut, ACTIFS). `wal_level=replica` et
   #  `max_wal_senders` préparent la réplication en continu vers le standby (DI-7b).
   #
-  #  Aucun port publié : seule l'API, sur le réseau `hostachy`, l'atteint.
+  #  Le port n'est lié qu'à `PG_ECOUTE` — l'IP du LAN du nœud, posée dans son
+  #  `.env` pour la réplication en continu vers l'autre Pi (DI-7b) ; 127.0.0.1
+  #  sinon, donc fermé au réseau. Jamais à toutes les interfaces. Qui peut s'y
+  #  connecter, et comment : `infra/postgresql/pg_hba.conf` (scram partout, la
+  #  réplication depuis l'autre nœud seulement).
   #  🔴 Pas de mot de passe par défaut (#776) : sans `POSTGRES_PASSWORD`, l'image
-  #  REFUSE d'initialiser la base — elle ne démarre pas avec un secret connu.
+  #  REFUSE d'initialiser la base — elle ne démarre pas avec un secret connu ; sans
+  #  `PG_REPLICATION_PASSWORD`, `initdb/10-replication.sh` refuse aussi.
+  #  `wal_keep_size` : le journal gardé pour une réplique qui a pris du retard —
+  #  BORNÉ, plutôt qu'un emplacement de réplication qui le retiendrait sans limite
+  #  sur la carte SD si la réplique s'arrêtait.
   postgres:
     image: postgres:17.11
     container_name: hostachy_postgres
@@ -124,6 +132,9 @@ services:
       - POSTGRES_USER=coprofirst
       - POSTGRES_DB=coprofirst
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+      - PG_REPLICATION_PASSWORD=${PG_REPLICATION_PASSWORD:-}
+    ports:
+      - "${PG_ECOUTE:-127.0.0.1}:5432:5432"
     command:
       - postgres
       - -c
@@ -138,8 +149,14 @@ services:
       - max_wal_senders=4
       - -c
       - shared_buffers=256MB
+      - -c
+      - wal_keep_size=512MB
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./infra/postgresql/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./infra/postgresql/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U coprofirst -d coprofirst"]
       interval: 10s

@@ -142,6 +142,29 @@ elif [ "$WAL" -lt 2 ]; then V4=FAIL          # WAL/SHM unlinkés = signature de 
 else V4=$(verdict_compte "${IO:-}" 0); fi
 rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "wal+shm=${WAL:-?}  io=${IO:-?}"
 
+# 22 — Réplication PostgreSQL (DI-7b, #1781) : un primaire sur l'actif, une
+#      réplique qui reçoit le journal sur le standby. Sans objet tant que la
+#      production est sous SQLite. Collecte et décision : `lib-replication.sh`,
+#      les mêmes que C37 — un pré-check qui jugerait autrement divergerait.
+. "$RACINE_DEPOT/scripts/lib/lib-replication.sh"
+#  Séparés par « | » : `read` fusionne les blancs consécutifs (tabulation
+#  comprise), et un champ vide décalerait les suivants.
+champs_replication() {  # $1 = nœud → « present|recovery|flux|retard|recepteur| »
+  local brut
+  brut=$(sur "$1" "$COLLECT_REPLICATION")
+  [ -n "$brut" ] || { echo ""; return; }
+  for c in pg_present pg_recovery pg_flux pg_retard pg_recepteur; do
+    printf '%s|' "$(printf '%s\n' "$brut" | sed -n "s/^$c=//p")"
+  done
+}
+IFS='|' read -r RA1 RA2 RA3 RA4 RA5 <<< "$(champs_replication "$ACTIF")"
+IFS='|' read -r RS1 RS2 RS3 RS4 RS5 <<< "$(champs_replication "$STANDBY")"
+V22=$(verdict_precheck_replication "${RA1:-}" "${RA2:-}" "${RA3:-}" "${RA4:-}" "${RA5:-}"                                    "${RS1:-}" "${RS2:-}" "${RS3:-}" "${RS4:-}" "${RS5:-}")
+case "$V22" in
+  SANS_OBJET) rapporter 22 OK "Réplication PostgreSQL" "sans objet — la production est sous SQLite" ;;
+  *) rapporter 22 "$V22" "Réplication PostgreSQL"        "actif: base=${RA1:-?} réplique=${RA2:-?} flux=${RA3:-?} retard=${RA4:-?}o · standby: base=${RS1:-?} réplique=${RS2:-?} réception=${RS5:-?}" ;;
+esac
+
 # 5 — WhatsApp : le bridge tourne-t-il, ET sa dernière connexion est-elle
 #     postérieure à la dernière fermeture ?
 #

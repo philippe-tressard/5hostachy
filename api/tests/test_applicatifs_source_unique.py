@@ -74,7 +74,9 @@ def test_aucun_script_ne_recompte_tout_hostachy():
 
 
 def test_aucun_arret_complet_du_compose_sans_raison():
-    motif = re.compile(r"docker compose (stop|down)(?!\s+\$SERVICES_APPLICATIFS)\b")
+    #  Un arrêt COMPLET : `stop|down` sans aucun service nommé derrière. Un arrêt
+    #  ciblé (`stop postgres`, `stop $SERVICES_APPLICATIFS`) n'en est pas un.
+    motif = re.compile(r"docker compose (stop|down)\s*($|[;&|>\"')]|2>)")
     vus = {
         p.relative_to(RACINE).as_posix()
         for p in _scripts()

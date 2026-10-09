@@ -515,6 +515,8 @@ jobs:
         run: |
           bash scripts/lib/lib-role.sh              --selftest
           bash scripts/lib/lib-applicatifs.sh       --selftest
+          bash scripts/lib/lib-replication.sh       --selftest
+          bash scripts/exploitation/reconstruire-replique.sh --selftest
           # La commande SSH entre les nœuds et le diagnostic d'une clé d'hôte
           # non épinglée (#1598) — fichier absent, vide, entrée hachée.
           bash scripts/lib/lib-ssh-noeuds.sh        --selftest

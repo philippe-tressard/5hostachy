@@ -9,6 +9,7 @@ durabilité.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -30,9 +31,42 @@ def test_le_service_est_eteint_par_defaut():
     )
 
 
-def test_aucun_port_n_est_publie():
-    assert "ports" not in PG, "seule l'API l'atteint, par le réseau `hostachy`"
+def test_le_port_n_est_lie_qu_a_l_ip_du_lan_ou_a_la_boucle_locale():
+    """La réplication passe par le LAN (DI-7b) ; jamais toutes les interfaces."""
+    assert PG["ports"] == ["${PG_ECOUTE:-127.0.0.1}:5432:5432"], (
+        "le port se lie à `PG_ECOUTE` (l'IP du nœud), 127.0.0.1 par défaut — "
+        "jamais `5432:5432` nu, qui écouterait sur toutes les interfaces"
+    )
     assert PG["networks"] == ["hostachy"]
+
+
+def test_l_acces_reseau_exige_scram_et_la_replication_vient_de_l_autre_noeud():
+    hba = (RACINE / "infra" / "postgresql" / "pg_hba.conf").read_text(encoding="utf-8")
+    lignes = [l.split() for l in hba.splitlines() if l.strip() and not l.lstrip().startswith("#")]
+    assert lignes, "pg_hba.conf vide : tout serait refusé, ou le contrôle ne mesure plus rien"
+    for champs in lignes:
+        if champs[0] == "local":
+            continue
+        assert champs[-1] == "scram-sha-256", f"accès réseau sans scram : {champs}"
+    replication = [c for c in lignes if c[1] == "replication"]
+    #  Les IP des nœuds se lisent dans `lib-role.sh`, seule table « nœud ⇄ IP » :
+    #  ce test ne les recopie pas (le dépôt est public, `test_hygiene_depot`).
+    role = (RACINE / "scripts" / "lib" / "lib-role.sh").read_text(encoding="utf-8")
+    ips = set(re.findall(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b", role))
+    assert len(ips) == 2, f"lib-role.sh devrait nommer les deux nœuds : {ips}"
+    assert {c[3] for c in replication} == {f"{ip}/32" for ip in ips}
+    assert {c[2] for c in replication} == {"replication"}
+    assert any(v.startswith("hba_file=") for v in PG["command"])
+    assert "./infra/postgresql/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro" in PG["volumes"]
+
+
+def test_le_role_de_replication_exige_son_mot_de_passe():
+    script = (RACINE / "infra" / "postgresql" / "initdb" / "10-replication.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'if [ -z "${PG_REPLICATION_PASSWORD:-}" ]' in script and "exit 1" in script
+    environnement = dict(e.split("=", 1) for e in PG["environment"])
+    assert environnement["PG_REPLICATION_PASSWORD"] == "${PG_REPLICATION_PASSWORD:-}"
 
 
 def test_aucun_mot_de_passe_par_defaut():
@@ -61,6 +95,8 @@ def test_les_reglages_menagent_la_carte_sans_ceder_la_durabilite():
     assert reglages["wal_compression"] == "on"
     #  La réplication en continu vers le standby (DI-7b) en a besoin.
     assert reglages["wal_level"] == "replica"
+    #  Le journal gardé pour une réplique en retard : borné, sur une carte SD.
+    assert reglages["wal_keep_size"] == "512MB"
     #  🔴 Jamais au prix d'un commit perdu : ces deux-là restent à leur défaut, actifs.
     for interdit in ("fsync", "synchronous_commit", "full_page_writes"):
         assert interdit not in reglages, f"`{interdit}` ne se règle pas ici : la durabilité prime"

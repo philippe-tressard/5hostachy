@@ -188,7 +188,10 @@ ZONES_EXPLOITATION = ("scripts/", "infra/", "docs/", ".claude/")
 FICHIERS_RACINE_EXPLOITATION = ("CLAUDE.md", "boot-role-guard.sh")
 #: Nombre de fichiers suivis qui les portent. Échoue dans les deux sens : un de plus
 #: est une propagation à relire, un de moins est une valeur à baisser.
-FICHIERS_EXPLOITATION_ATTENDUS = 39
+#: 41 depuis DI-7b (#1781) : `infra/postgresql/pg_hba.conf` admet la réplication
+#: depuis l'IP de l'autre nœud, et `reconstruire-replique.sh` copie le primaire
+#: par SSH.
+FICHIERS_EXPLOITATION_ATTENDUS = 41
 
 
 def _fichiers_avec_identifiants_exploitation() -> list[str]:
