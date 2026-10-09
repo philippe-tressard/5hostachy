@@ -371,9 +371,9 @@ soumis à accord, lot par lot.
 | P2-2 | **Un seul accès aux ressources** d'une copropriété — base, fichiers, secret, expéditeur, services — par un module `contexte` qui lit `settings` tant qu'il n'y a qu'une copro ; garde-fou contre l'accès direct (§4.1, règle 3). Les états « à indexer » de P2-1 s'y soldent | L | P2-1 | #1744 |
 | P2-3 | **Tâches planifiées par copropriété** : une enveloppe, un journal par copro, l'échec de l'une ne bloque pas les autres (§4.6) | M | P2-2 | #1745 |
 | P2-4 | **Test d'étanchéité** sur deux copros factices aux identifiants identiques, avec cas zéro et témoin (§5.1, §5.3) | M | P2-2 | #1746 |
-| P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3). **Premier temps livré en v2.124.0** : la suite se rejoue sur PostgreSQL (`TESTS_BASE_URL`) et le workflow « PostgreSQL » mesure l'écart ; l'adhérence à SQLite est sous plafond | M | — | #1747 |
+| P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3). **Premier temps livré en v2.125.0** : la suite se rejoue sur PostgreSQL (`TESTS_BASE_URL`) et le workflow « PostgreSQL » mesure l'écart ; l'adhérence à SQLite est sous plafond | M | — | #1747 |
 | P2-6 | **Stockage des fichiers** derrière une interface, disque local puis stockage objet, préfixe par copro (§4.4). Décision à y prendre : `/uploads/*` n'est plus servi en statique par Caddy | M | P2-2 | #1748 |
-| P2-7 | **Export / import vérifié** d'une copro (comptes et sommes de contrôle par table) : sauvegarde vérifiée aujourd'hui, passage à PostgreSQL demain, réversibilité ensuite (§4.3, §4.9) | M | — | #1749 |
+| P2-7 | **Export / import vérifié** d'une copro (comptes et sommes de contrôle par table) : sauvegarde vérifiée aujourd'hui, passage à PostgreSQL demain, réversibilité ensuite (§4.3, §4.9). **Livré en v2.125.0** : `utils/export_copropriete` — archive tar.gz au format neutre (manifeste, une table JSONL par modèle avec son empreinte SHA-256, fichiers du volume) ; l'import réécrit dans une base CIBLE neuve et refuse tout écart de compte ou d'empreinte ; *Admin › Maintenance › Export vérifié* prouve la restauration dans une base jetable | M | — | #1749 |
 | P2-8 | **Scission du rôle `admin`** : administrateur de copro et opérateur de plateforme, sans donnée personnelle (§4.7, §5.5) | M | — (D8 confirmée le 08/10/2026) | #1750 |
 | P2-9 | **Résolution par nom d'hôte** (§4.1, règles 1 et 2). ⚠️ Le standby est servi par son IP locale (`ORIGIN`) : le registre rattache **plusieurs hôtes** à une même copro. En dernier | S | P2-2 | #1751 |
 
@@ -401,7 +401,7 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou `test_migrations_compatibles.py`. **Livré en v2.119.1** | S | — | #1757 |
 | DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi ; construction locale en secours, avec alerte. **Livré en v2.122.0** | M | DI-1 | #1758 |
 | DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
-| DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica`. **Livré en v2.123.0** : `ROLE_INSTALLATION`, service *Vérification de la version* coupé par défaut | #1761 |
+| DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica`. **Livré en v2.125.0** : `ROLE_INSTALLATION`, service *Vérification de la version* coupé par défaut | #1761 |
 
 **Ordre conseillé** : DI-5 dès maintenant (il sert aussi au retour arrière du
 maître) ; DI-1 puis DI-6, qui suppriment les builds sur les RPi ; DI-2 et DI-3 ;
