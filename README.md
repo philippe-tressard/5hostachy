@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="front/static/favicon.svg" alt="CoproFirst" width="80" />
-</p>
-
-<h1 align="center">CoproFirst</h1>
+<h1 align="center">
+  <img src="docs/images/coprofirst.png" alt="CoproFirst" width="240" />
+</h1>
 
 <p align="center">
   <em>Application web de gestion de copropriétés — côté résidents et conseil syndical.</em>

@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({ fetch }) => {
 	const manifeste = {
 		name: nom,
 		short_name: nom,
-		description: 'Application de gestion de copropriété',
+		description: 'Application de gestion de copropriétés',
 		//  Les couleurs du navigateur autour de l'application installée : celles
 		//  de la charte (`--color-primary`, fond de page), que le manifeste ne
 		//  peut pas lire par une variable CSS.
