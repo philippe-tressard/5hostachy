@@ -107,15 +107,24 @@ def _depot() -> str:
     return trouve.group(1)
 
 
+def jeton_utilisable(valeur: str | None) -> str | None:
+    """Le jeton tel quel, ou None s'il est vide ou n'est qu'une expression `${{ … }}` non résolue."""
+    valeur = (valeur or "").strip()
+    return valeur if valeur and "${{" not in valeur else None
+
+
 def _jeton() -> str | None:
-    jeton = os.environ.get("GH_TOKEN", "")
-    if jeton and "${{" not in jeton:
+    jeton = jeton_utilisable(os.environ.get("GH_TOKEN"))
+    if jeton:
         return jeton
+    #  `gh auth token` RELIT `GH_TOKEN` : sans le retirer, il rendait
+    #  l'expression même qu'on vient d'écarter, et GitHub répondait 401.
+    env = {k: v for k, v in os.environ.items() if k not in ("GH_TOKEN", "GITHUB_TOKEN")}
     try:
-        sortie = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True)
+        sortie = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, env=env)
     except OSError:
         return None
-    return sortie.stdout.strip() if sortie.returncode == 0 and sortie.stdout.strip() else None
+    return jeton_utilisable(sortie.stdout) if sortie.returncode == 0 else None
 
 
 def lire_github(depot: str) -> tuple[str | None, str | None]:
@@ -157,6 +166,10 @@ def selftest() -> int:
     t("autre licence détectée", len(confronter(texte, texte, "MIT", agpl)), 1)
     t("GPL n'est pas AGPL", len(confronter(texte, texte, "GPL-3.0", agpl)), 1)
     t("identifiant exact accepté", confronter(texte, texte, "MIT", "MIT"), [])
+
+    t("jeton fourni : gardé", jeton_utilisable(" abc "), "abc")
+    t("jeton vide : aucun", jeton_utilisable(""), None)
+    t("expression non résolue (rejeu) : aucun", jeton_utilisable("${{ github.token }}"), None)
 
     reuse = '[[annotations]]\npath = "**"\nSPDX-License-Identifier = "AGPL-3.0-or-later"\n'
     t("REUSE : motif racine lu", licence_du_projet(reuse), agpl)
