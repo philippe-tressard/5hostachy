@@ -73,7 +73,7 @@
 			<div class="alert alert-error">
 				{error}
 				{#if emailNotVerified}
-					<div style="margin-top:.5rem">
+					<div class="renvoi">
 						{#if resendDone}
 							<span class="text-muted-md"
 								>Un nouveau lien a été envoyé si un compte non vérifié existe pour cette adresse.</span
@@ -81,8 +81,7 @@
 						{:else}
 							<button
 								type="button"
-								class="btn btn-sm btn-outline"
-								style="margin-top:.25rem"
+								class="btn btn-sm btn-outline btn-renvoi"
 								disabled={resendLoading}
 								on:click={resendVerification}
 							>
@@ -155,5 +154,11 @@
 		margin-top: 1.25rem;
 		font-size: var(--fs-xs);
 		color: var(--color-text-muted);
+	}
+	.renvoi {
+		margin-top: 0.5rem;
+	}
+	.btn-renvoi {
+		margin-top: 0.25rem;
 	}
 </style>

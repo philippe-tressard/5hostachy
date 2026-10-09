@@ -146,7 +146,7 @@
 	}
 </script>
 
-<p class="muted" style="margin-bottom:1.25rem">
+<p class="muted intro-pages">
 	Personnalisez l'icône, le label de navigation, le titre et la description de chaque page. Cliquer
 	sur une entrée pour la modifier ; les autres se referment automatiquement.
 </p>
@@ -215,7 +215,7 @@
 							</label>
 						</div>
 						{#if pg.onglets && pg.onglets.length > 0}
-							<div class="pages-form-section" style="grid-column:1/-1">
+							<div class="pages-form-section section-pleine">
 								<div class="pages-form-section-title">Onglets</div>
 								<div class="onglets-cards">
 									{#each pg.onglets as o (o.id)}
@@ -389,5 +389,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+	}
+	.intro-pages {
+		margin-bottom: 1.25rem;
+	}
+	.section-pleine {
+		grid-column: 1/-1;
 	}
 </style>

@@ -42,7 +42,7 @@
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
 		{:else}
-			<p style="font-size:var(--fs-base);color:var(--color-text-muted);margin-bottom:1.5rem">
+			<p class="auth-consigne">
 				Saisissez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot
 				de passe.
 			</p>
@@ -57,8 +57,8 @@
 					</button>
 				</div>
 			</form>
-			<p style="text-align:center;font-size:var(--fs-sm);margin-top:1rem">
-				<a href="/auth/connexion" style="color:var(--color-primary)">Retour à la connexion</a>
+			<p class="retour">
+				<a href="/auth/connexion" class="lien-retour">Retour à la connexion</a>
 			</p>
 		{/if}
 	</div>
@@ -70,4 +70,12 @@
 	    `.success-box` et un `.btn-wrapper`. Tout venait de la charte ou aurait dû
 	    y venir : une copie sous un AUTRE NOM échappe à `lint:charte`, qui ne
 	    compare que les classes de la charte. Retiré le 09/09/2026. */
+	.retour {
+		text-align: center;
+		font-size: var(--fs-sm);
+		margin-top: 1rem;
+	}
+	.lien-retour {
+		color: var(--color-primary);
+	}
 </style>

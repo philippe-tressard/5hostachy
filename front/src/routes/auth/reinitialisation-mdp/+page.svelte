@@ -66,9 +66,7 @@
 				<a href="/auth/mot-de-passe-oublie" class="btn btn-primary">Nouvelle demande</a>
 			</div>
 		{:else}
-			<p style="font-size:var(--fs-base);color:var(--color-text-muted);margin-bottom:1.5rem">
-				Choisissez un nouveau mot de passe pour votre compte.
-			</p>
+			<p class="auth-consigne">Choisissez un nouveau mot de passe pour votre compte.</p>
 			<form on:submit|preventDefault={submit}>
 				<ChampMotDePasse
 					id="mdp-nouveau"

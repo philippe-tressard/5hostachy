@@ -189,7 +189,7 @@
 			messageVide="Tous les comptes ont été traités."
 		/>
 	{:else}
-		<div class="card" style="overflow:hidden">
+		<div class="card carte-table">
 			<table class="table">
 				<thead>
 					<tr>
@@ -202,35 +202,29 @@
 					{#each comptes as item (item.user.id)}
 						{@const u = item.user}
 						<tr>
-							<td style="font-weight:500"
+							<td class="nom-compte"
 								>{nomAffiche(u)}
 								{#if u.statut === 'locataire' && u.nom_proprietaire}
-									<div
-										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-									>
+									<div class="precision">
 										&#x1F464; Prop. : {u.nom_proprietaire}
 									</div>
 								{/if}
 								{#if (u.statut === 'aidant' || u.statut === 'mandataire') && u.nom_aide}
-									<div
-										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-									>
+									<div class="precision">
 										&#x1F464; Aidé : {u.prenom_aide}
 										{u.nom_aide}
 									</div>
 								{/if}
 							</td>
 							<td
-								><span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)"
+								><span class="badge {badgeStatut(u.statut)} pastille-xs"
 									>{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut}</span
 								></td
 							>
 							<td>
-								<div style="display:flex;gap:.25rem;flex-wrap:wrap">
+								<div class="liste-roles">
 									{#each u.roles?.length ? u.roles : [u.role] as r (r)}
-										<span class="badge {badgeRole(r)}" style="font-size:var(--fs-xs)"
-											>{libelleRole(r)}</span
-										>
+										<span class="badge {badgeRole(r)} pastille-xs">{libelleRole(r)}</span>
 									{/each}
 								</div>
 							</td>
@@ -311,7 +305,7 @@
 			messageVide="Toutes les demandes d’accès ont été traitées."
 		/>
 	{:else}
-		<div class="card" style="overflow:hidden">
+		<div class="card carte-table">
 			<table class="table">
 				<thead>
 					<tr><th>Utilisateur</th><th>Type</th><th>Lot</th><th>Date</th><th>Actions</th></tr>
@@ -319,7 +313,7 @@
 				<tbody>
 					{#each commandes as cmd (cmd.id)}
 						<tr>
-							<td style="font-weight:500">#{cmd.user_id}</td>
+							<td class="nom-compte">#{cmd.user_id}</td>
 							<td><span class="badge badge-blue">{cmd.type}</span></td>
 							<td class="muted">{cmd.lot_id ?? ''}</td>
 							<td class="text-muted-sm">{fmt(cmd.cree_le)}</td>
@@ -356,7 +350,7 @@
 			messageVide="Toutes les demandes de modification de profil ont été traitées."
 		/>
 	{:else}
-		<div class="card" style="overflow:hidden">
+		<div class="card carte-table">
 			<table class="table">
 				<thead>
 					<tr
@@ -369,37 +363,34 @@
 					{#each demandesProfil as d (d.id)}
 						<tr>
 							<td>
-								<div style="font-weight:600">{d.utilisateur_nom}</div>
+								<div class="demandeur">{d.utilisateur_nom}</div>
 								<div class="text-muted-sm">
 									{d.utilisateur_email}
 								</div>
 							</td>
 							<td
-								><span style="font-size:var(--fs-md)"
+								><span class="valeur"
 									>{(d.statut_actuel && LIBELLES_STATUT_ABREGE[d.statut_actuel]) ??
 										d.statut_actuel ??
 										'—'}</span
 								></td
 							>
-							<td><span style="font-size:var(--fs-md)">{d.batiment_actuel ?? '—'}</span></td>
+							<td><span class="valeur">{d.batiment_actuel ?? '—'}</span></td>
 							<td>
 								{#if d.statut_souhaite}
-									<div style="font-size:var(--fs-md)">
+									<div class="valeur">
 										Type : <strong
 											>{LIBELLES_STATUT_ABREGE[d.statut_souhaite] ?? d.statut_souhaite}</strong
 										>
 									</div>
 								{/if}
 								{#if d.batiment_nom_souhaite}
-									<div style="font-size:var(--fs-md)">
+									<div class="valeur">
 										Bât. : <strong>{d.batiment_nom_souhaite}</strong>
 									</div>
 								{/if}
 							</td>
-							<td
-								style="font-size:var(--fs-md);color:var(--color-text-muted);max-width:140px;white-space:pre-wrap"
-								>{d.motif ?? '—'}</td
-							>
+							<td class="motif-demande">{d.motif ?? '—'}</td>
 							<td class="text-muted-md">{fmt(d.cree_le)}</td>
 							<td>
 								<div class="action-row">
@@ -428,5 +419,36 @@
 		border-top: none;
 		background: var(--color-bg-alt, #fafafa);
 		padding: 1rem;
+	}
+	.carte-table {
+		overflow: hidden;
+	}
+	.nom-compte {
+		font-weight: 500;
+	}
+	.precision {
+		font-size: var(--fs-xs);
+		color: var(--color-text-muted);
+		margin-top: 0.15rem;
+	}
+	.pastille-xs {
+		font-size: var(--fs-xs);
+	}
+	.liste-roles {
+		display: flex;
+		gap: 0.25rem;
+		flex-wrap: wrap;
+	}
+	.demandeur {
+		font-weight: 600;
+	}
+	.valeur {
+		font-size: var(--fs-md);
+	}
+	.motif-demande {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		max-width: 140px;
+		white-space: pre-wrap;
 	}
 </style>

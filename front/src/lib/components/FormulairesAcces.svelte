@@ -112,12 +112,12 @@
 							type="text"
 							bind:value={declareCode}
 							placeholder="Ex : 1234567890"
-							style="font-family:monospace"
+							class="texte-code"
 							required
 						/>
 					</label>
 				</div>
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin:.5rem 0 0">
+				<p class="effet-declaration">
 					Si ce code figure dans nos imports, l'entrée sera automatiquement liée à votre compte.
 				</p>
 			</div>
@@ -125,3 +125,11 @@
 		</form>
 	</FormulaireCreation>
 {/if}
+
+<style>
+	.effet-declaration {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin: 0.5rem 0 0;
+	}
+</style>

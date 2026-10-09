@@ -245,7 +245,7 @@
 	titreVide="Aucun import"
 	messageVide="Importez un fichier .xlsx pour démarrer."
 >
-	<div class="card" style="overflow:auto">
+	<div class="card carte-table">
 		<table class="table imp-table-dense">
 			<thead>
 				<tr>
@@ -264,21 +264,15 @@
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
 						{#each modele.colonnes as c (c.cle)}
-							<td style="font-size:var(--fs-sm)">{champDe(imp, c.cle) ?? '—'}</td>
+							<td class="texte-sm">{champDe(imp, c.cle) ?? '—'}</td>
 						{/each}
 						<td>
-							<span style="font-weight:500">{imp.nom_proprietaire}</span>
+							<span class="proprietaire">{imp.nom_proprietaire}</span>
 							{#if imp.nom_locataire}
-								<span class="muted" style="font-size:var(--fs-sm)">
-									· loc. {imp.nom_locataire}</span
-								>
+								<span class="muted texte-sm"> · loc. {imp.nom_locataire}</span>
 							{/if}
 						</td>
-						<td
-							><code style="font-size:var(--fs-sm)"
-								>{champDe(imp, modele.colonneCle.cle) ?? '—'}</code
-							></td
-						>
+						<td><code class="texte-sm">{champDe(imp, modele.colonneCle.cle) ?? '—'}</code></td>
 						<td>
 							{#if imp.lot_label}
 								<span class="badge badge-green">{imp.lot_label} · {porteurs(imp.lot_porteurs)}</span
@@ -292,7 +286,7 @@
 								>{STATUT_LABEL[imp.statut] ?? imp.statut}</span
 							>
 							{#each modele.decorationsStatut(imp) as d (d.titre)}
-								<span title={d.titre} style="margin-left:.25rem">{d.icone}</span>
+								<span title={d.titre} class="icone-diff">{d.icone}</span>
 							{/each}
 						</td>
 						<td>
@@ -349,7 +343,7 @@
 					{#if editId === imp.id}
 						<tr class="imp-edit-row">
 							<td colspan={nbColonnes}>
-								<div class="imp-edit-form card" style="margin:.5rem 0">
+								<div class="imp-edit-form card form-correction">
 									<p class="aide">
 										Indices du fichier : <strong>{imp.nom_proprietaire}</strong>{imp.nom_locataire
 											? ` · locataire ${imp.nom_locataire}`
@@ -357,7 +351,7 @@
 										<code>{champDe(imp, modele.colonneCle.cle) ?? '—'}</code>
 									</p>
 									<div class="imp-edit-grid">
-										<div class="field" style="grid-column:1 / -1">
+										<div class="field champ-large">
 											<label for="imp-lot">Lot<EtoileRequis vide={!editLot} /></label>
 											<select id="imp-lot" bind:value={editLot}>
 												<option value="">— Aucun lot (délier) —</option>
@@ -396,7 +390,7 @@
 												</label>
 											</div>
 										{/each}
-										<div class="field" style="grid-column:1 / -1">
+										<div class="field champ-large">
 											<label for="imp-notes">Notes admin</label>
 											<input
 												id="imp-notes"
@@ -421,3 +415,21 @@
 		</table>
 	</div>
 </EtatListe>
+
+<style>
+	.carte-table {
+		overflow: auto;
+	}
+	.texte-sm {
+		font-size: var(--fs-sm);
+	}
+	.proprietaire {
+		font-weight: 500;
+	}
+	.icone-diff {
+		margin-left: 0.25rem;
+	}
+	.form-correction {
+		margin: 0.5rem 0;
+	}
+</style>

@@ -367,7 +367,7 @@
 	</SectionFormulaire>
 
 	<SectionFormulaire titre="Vérification">
-		<p class="aide" style="margin-bottom:.6rem">
+		<p class="aide explication-test">
 			Ce test pose une vraie question au modèle de <strong>cet usage</strong> et attend sa réponse.
 			⚠️ Il porte sur la configuration <strong>enregistrée</strong> : cliquez d’abord sur « Enregistrer
 			» si vous venez de modifier un champ. L’usage n’a pas besoin d’être activé.
@@ -465,5 +465,8 @@
 	}
 	.verdict.ko {
 		color: var(--color-danger);
+	}
+	.explication-test {
+		margin-bottom: 0.6rem;
 	}
 </style>

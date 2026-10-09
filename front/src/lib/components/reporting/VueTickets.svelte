@@ -40,7 +40,7 @@
 		.sort((a, b) => b.total - a.total);
 </script>
 
-<div class="reporting-toolbar no-print" style="margin-top:0;margin-bottom:1rem">
+<div class="reporting-toolbar no-print barre-tickets">
 	<div class="reporting-switch">
 		<Pastille active={reportPeriodDays === 30} on:click={() => (reportPeriodDays = 30)}
 			>30 jours</Pastille
@@ -54,7 +54,7 @@
 	</div>
 </div>
 
-<div class="kpi-row" style="margin-bottom:1rem">
+<div class="kpi-row kpi-espaces">
 	<div class="kpi-card">
 		<div class="kpi-value">{reportTicketSource.length}</div>
 		<div class="kpi-label">Affaires sur la période</div>
@@ -106,3 +106,13 @@
 		</div>
 	</section>
 </div>
+
+<style>
+	.barre-tickets {
+		margin-top: 0;
+		margin-bottom: 1rem;
+	}
+	.kpi-espaces {
+		margin-bottom: 1rem;
+	}
+</style>

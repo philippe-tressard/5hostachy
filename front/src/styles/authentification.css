@@ -59,6 +59,14 @@
 	color: var(--color-primary);
 	margin-bottom: 0.3rem;
 }
+/*  La phrase qui dit quoi faire, sous le titre d'un écran d'authentification —
+    mot de passe oublié, réinitialisation. Les deux l'écrivaient en ligne, puis
+    chacune dans sa feuille : `lint:css-duplique` l'a ramenée ici (#1571). */
+.auth-consigne {
+	font-size: var(--fs-base);
+	color: var(--color-text-muted);
+	margin-bottom: 1.5rem;
+}
 .auth-header p {
 	color: var(--color-text-muted);
 	font-size: var(--fs-base);

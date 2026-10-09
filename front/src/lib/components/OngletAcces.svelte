@@ -278,16 +278,14 @@
 
 	<!-- Vue par locataire (bailleurs uniquement) -->
 	{#if $isBailleur && mesBaux.length > 0}
-		<section class="section card" style="margin-top:1rem;border-left:3px solid var(--color-accent)">
+		<section class="section card section-locataires">
 			<div class="section-header">
 				<h2 class="section-title">👥 Vue par locataire</h2>
 			</div>
 			{#if mesBaux.filter(bailEnCours).length === 0}
 				<p class="text-muted-md">Aucun bail actif.</p>
 			{:else}
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.9rem">
-					Résumé des accès (Vigik / télécommandes) confiés à vos locataires.
-				</p>
+				<p class="intro">Résumé des accès (Vigik / télécommandes) confiés à vos locataires.</p>
 				{#each locatairesAcces as { baux, items } (baux[0]?.id ?? baux)}
 					{@const premierBail = baux[0]}
 					<div class="locataire-acces-row">
@@ -296,13 +294,12 @@
 								<strong>{nomLocataire(premierBail)}</strong>
 								{#if premierBail.locataire_email}<a
 										href="mailto:{premierBail.locataire_email}"
-										style="font-size:var(--fs-sm);color:var(--color-primary)"
-										>{premierBail.locataire_email}</a
+										class="courriel">{premierBail.locataire_email}</a
 									>{/if}
 							</div>
-							<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+							<div class="etat-locataire">
 								{#if items.length > 0}
-									<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
+									<span class="badge badge-yellow pastille-xxs"
 										>{items.length} accès confié{items.length > 1 ? 's' : ''}</span
 									>
 									<button
@@ -311,9 +308,7 @@
 										>↩ Tout récupérer</button
 									>
 								{:else}
-									<span class="badge badge-gray" style="font-size:var(--fs-2xs)"
-										>Aucun accès confié</span
-									>
+									<span class="badge badge-gray pastille-xxs">Aucun accès confié</span>
 								{/if}
 							</div>
 						</div>
@@ -321,16 +316,16 @@
 							<div class="lar-items">
 								{#each items as item (item.id ?? item.code)}
 									<div class="lar-item">
-										<span style="font-family:monospace;font-size:var(--fs-md)">{item.code}</span>
+										<span class="code-acces">{item.code}</span>
 										<span
-											class="badge {item.typeAcces === 'vigik' ? 'badge-blue' : 'badge-purple'}"
-											style="font-size:var(--fs-2xs)"
+											class="badge {item.typeAcces === 'vigik'
+												? 'badge-blue'
+												: 'badge-purple'} pastille-xxs"
 										>
 											{item.typeAcces === 'vigik' ? '🏷️ Vigik' : '📡 TC'}
 										</span>
-										<span
-											class="badge {statutAccesBadge(item.statut)}"
-											style="font-size:var(--fs-2xs)">{statutAccesLabel(item.statut)}</span
+										<span class="badge {statutAccesBadge(item.statut)} pastille-xxs"
+											>{statutAccesLabel(item.statut)}</span
 										>
 									</div>
 								{/each}
@@ -402,6 +397,32 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 0.2rem 0.55rem;
+		font-size: var(--fs-md);
+	}
+	.section-locataires {
+		margin-top: 1rem;
+		border-left: 3px solid var(--color-accent);
+	}
+	.intro {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin-bottom: 0.9rem;
+	}
+	.courriel {
+		font-size: var(--fs-sm);
+		color: var(--color-primary);
+	}
+	.etat-locataire {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.pastille-xxs {
+		font-size: var(--fs-2xs);
+	}
+	.code-acces {
+		font-family: monospace;
 		font-size: var(--fs-md);
 	}
 </style>

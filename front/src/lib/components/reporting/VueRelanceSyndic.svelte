@@ -133,7 +133,7 @@
 {#if erreurReponses}
 	<EtatListe compact erreur={erreurReponses} />
 {:else if reponses.length}
-	<section class="report-card" style="margin-bottom:1.5rem">
+	<section class="report-card carte-espacee">
 		<h3 class="rep-titre">&#x1F4E8; Réponses du syndic aux relances</h3>
 		<p class="rep-aide">
 			Ces réponses portent sur <strong>plusieurs dossiers à la fois</strong> : elles ne sont volontairement
@@ -169,7 +169,7 @@
 	/>
 {:else}
 	{@const eligibles = relanceList.filter((t) => daysSince(t.mis_a_jour_le) >= relanceDelaiJours)}
-	<section class="report-card" style="margin-bottom:1.5rem">
+	<section class="report-card carte-espacee">
 		<h3>🔔 Affaires syndic — suivi des relances</h3>
 		<p class="report-intro">
 			{relanceList.length} affaire(s) adressée(s) au syndic en cours.
@@ -181,7 +181,7 @@
 			{/if}
 		</p>
 
-		<div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
+		<div class="liste-relances">
 			{#each relanceList as t (t.id)}
 				{@const jours = daysSince(t.mis_a_jour_le)}
 				{@const eligible = jours >= relanceDelaiJours}
@@ -193,9 +193,7 @@
 					class:relance-item-pending={!eligible}
 				>
 					<div class="relance-item-top">
-						<label
-							style="display:flex;align-items:center;gap:.5rem;cursor:pointer;flex:1;min-width:0"
-						>
+						<label class="choix-relance">
 							<input
 								type="checkbox"
 								checked={selected}
@@ -265,13 +263,13 @@
 								{t.non_relancable ? '✅ Réactiver' : '🚫 Marquer non relançable'}
 							</button>
 						{:else}
-							<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+							<div class="saisie-ref">
 								<input
 									type="text"
 									placeholder="Motif"
 									aria-label="Motif de la mise hors relance"
 									bind:value={relanceMotifTemp}
-									style="font-size:var(--fs-sm);padding:2px 6px;border:1px solid var(--color-border);border-radius:4px;width:180px"
+									class="champ-ref"
 								/>
 								<button
 									class="btn btn-sm btn-primary"
@@ -416,5 +414,37 @@
 		white-space: pre-wrap;
 		font-size: var(--fs-base);
 		margin: 0;
+	}
+	.carte-espacee {
+		margin-bottom: 1.5rem;
+	}
+	.liste-relances {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-bottom: 1.25rem;
+	}
+	.choix-relance {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		cursor: pointer;
+		flex: 1;
+		min-width: 0;
+	}
+	.saisie-ref {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	/*  Nommé `input.` : c'est la recomposition tolérée `controle-saisie` de
+	    `lint:styles`, qui ne la verrait plus sous une classe seule. */
+	input.champ-ref {
+		font-size: var(--fs-sm);
+		padding: 2px 6px;
+		border: 1px solid var(--color-border);
+		border-radius: 4px;
+		width: 180px;
 	}
 </style>

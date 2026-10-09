@@ -94,7 +94,7 @@
 				>Nom du bailleur<input type="text" bind:value={editForm.nom_proprietaire} /></label
 			>
 		{/if}
-		<label class="case" style="padding-top:1.2rem">
+		<label class="case case-alignee">
 			<input type="checkbox" bind:checked={editForm.actif} />
 			Compte actif
 		</label>
@@ -102,3 +102,9 @@
 	<!--  Le pied STANDARD (#1329), et non plus celui de la fenêtre quittée le 06/09. -->
 	<PiedFormulaire on:annule={onAnnuler} />
 </form>
+
+<style>
+	.case-alignee {
+		padding-top: 1.2rem;
+	}
+</style>

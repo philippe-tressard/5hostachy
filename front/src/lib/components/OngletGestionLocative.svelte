@@ -205,7 +205,7 @@
 	}
 </script>
 
-<div style="max-width:900px">
+<div class="colonne">
 	<!--  🔴 LA BOÎTE DANS LA PAGE, et non une modale (#367 / #672).
 
 	      « Nouveau bail » était la dernière modale de création du site. Elle y
@@ -264,13 +264,11 @@
 		{:else}
 			{#each grouped as group (group)}
 				{@const premierBail = group.bail}
-				<div class="card" style="margin-bottom:1.5rem;padding:1.25rem">
+				<div class="card carte-locataire">
 					<!-- En-tête locataire -->
-					<div
-						style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem"
-					>
+					<div class="entete-locataire">
 						<div>
-							<div style="font-weight:700;font-size:1rem">{nomLocataire(premierBail)}</div>
+							<div class="nom-locataire">{nomLocataire(premierBail)}</div>
 							{#if premierBail.locataire_email}
 								<div class="text-muted-md">
 									{premierBail.locataire_email}
@@ -289,7 +287,7 @@
 
 					<!-- Actions globales locataire -->
 					{#if premierBail.statut !== 'termine'}
-						<div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
+						<div class="gestes">
 							<button
 								class="btn-icon-edit"
 								aria-label="Modifier"
@@ -305,16 +303,12 @@
 					<!-- Détails par bail (lot) -->
 					{#each group.baux as bail (bail.id)}
 						{@const lot = lots.find((l) => l.id === bail.lot_id)}
-						<div style="border-top:1px solid var(--color-border);padding-top:1rem;margin-top:1rem">
-							<div
-								style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem"
-							>
-								<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+						<div class="bloc-bail">
+							<div class="entete-bail">
+								<div class="lot-bail">
 									{#if lot}
 										<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-										<span
-											class="badge badge-gray"
-											style="font-size:var(--fs-2xs);text-transform:capitalize"
+										<span class="badge badge-gray type-lot"
 											>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 										>
 									{/if}
@@ -371,9 +365,7 @@
 								</GesteEnPlace>
 							{/if}
 
-							<div
-								style="display:flex;gap:2rem;font-size:var(--fs-md);margin-bottom:.75rem;flex-wrap:wrap"
-							>
+							<div class="dates-bail">
 								<span><strong>Entrée :</strong> {fmt(bail.date_entree)}</span>
 								<span><strong>Sortie prévue :</strong> {fmt(bail.date_sortie_prevue)}</span>
 								{#if bail.date_sortie_reelle}
@@ -382,10 +374,7 @@
 							</div>
 
 							{#if bail.notes}
-								<div
-									class="rich-content"
-									style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.75rem;font-style:italic"
-								>
+								<div class="rich-content notes-bail">
 									{@html safeHtml(bail.notes)}
 								</div>
 							{/if}
@@ -411,4 +400,63 @@
 		margin-bottom: 1.5rem;
 	}
 	/*  `.lbc-lot-badge` est dans la charte depuis le 30/09/2026 (#779). */
+	.colonne {
+		max-width: 900px;
+	}
+	.carte-locataire {
+		margin-bottom: 1.5rem;
+		padding: 1.25rem;
+	}
+	.entete-locataire {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+	.nom-locataire {
+		font-weight: 700;
+		font-size: 1rem;
+	}
+	.gestes {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 1.25rem;
+		flex-wrap: wrap;
+	}
+	.bloc-bail {
+		border-top: 1px solid var(--color-border);
+		padding-top: 1rem;
+		margin-top: 1rem;
+	}
+	.entete-bail {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.6rem;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.lot-bail {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.type-lot {
+		font-size: var(--fs-2xs);
+		text-transform: capitalize;
+	}
+	.dates-bail {
+		display: flex;
+		gap: 2rem;
+		font-size: var(--fs-md);
+		margin-bottom: 0.75rem;
+		flex-wrap: wrap;
+	}
+	.notes-bail {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+		font-style: italic;
+	}
 </style>

@@ -52,14 +52,14 @@
 	styleBoite="max-width:480px"
 	on:fermer={fermer}
 >
-	<p style="font-size:var(--fs-md);margin-bottom:.1rem">
+	<p class="nom-arrivant">
 		<strong>{nomAffiche(utilisateur)}</strong>
 	</p>
-	<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-bottom:.75rem">
+	<p class="effet-envoi">
 		Déclenche : bienvenue, consignes de copropriété, demande d'étiquette BAL (syndic), demande
 		d'interphone (CS), avec copie des démarches au résident.
 	</p>
-	<div class="form-grid form-grid-2" style="margin-bottom:.75rem">
+	<div class="form-grid form-grid-2 grille-arrivant">
 		<label class="field"
 			>Bâtiment / logement
 			<input bind:value={batiment} placeholder="Ex: Bât. A, Apt. 12…" />
@@ -76,3 +76,18 @@
 		</button>
 	</div>
 </Modale>
+
+<style>
+	.nom-arrivant {
+		font-size: var(--fs-md);
+		margin-bottom: 0.1rem;
+	}
+	.effet-envoi {
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.grille-arrivant {
+		margin-bottom: 0.75rem;
+	}
+</style>

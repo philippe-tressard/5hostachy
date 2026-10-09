@@ -66,8 +66,11 @@ import { fileURLToPath } from 'node:url';
  *  02/10/2026 (#1537) : 168 couleurs et 123 tailles. Les 23 classes des
  *  feuilles globales que plus rien n'employait sont retirées (`.alert-info`,
  *  `.imp-header`, `.kb-item-*`, `.month-label`, `.muted-sm`…).
+ *  08/10/2026 (#1571) : 120 tailles. Les deux titres de l'espace CS portaient
+ *  chacun `font-size:1rem` en ligne ; passés en une classe, la valeur s'écrit
+ *  une fois. Une redite retirée, pas une valeur convertie.
  */
-const PLAFOND = { couleurs: 168, tailles: 121 };
+const PLAFOND = { couleurs: 168, tailles: 120 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

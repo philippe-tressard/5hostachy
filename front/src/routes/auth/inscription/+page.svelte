@@ -135,7 +135,7 @@
 							type="text"
 							bind:value={nom}
 							required
-							style="text-transform:uppercase"
+							class="en-capitales"
 							on:input={() => (nom = nom.toUpperCase())}
 						/>
 					</div>
@@ -230,7 +230,7 @@
 									bind:value={nom_aide}
 									required
 									placeholder="NOM"
-									style="text-transform:uppercase"
+									class="en-capitales"
 									on:input={() => (nom_aide = nom_aide.toUpperCase())}
 								/>
 							</div>
@@ -420,5 +420,8 @@
 	.btn-wrapper .btn {
 		padding-left: 2.5rem;
 		padding-right: 2.5rem;
+	}
+	.en-capitales {
+		text-transform: uppercase;
 	}
 </style>

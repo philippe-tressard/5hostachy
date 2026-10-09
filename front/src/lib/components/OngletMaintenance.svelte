@@ -17,7 +17,7 @@
 	import TachesPlanifiees from '$lib/components/TachesPlanifiees.svelte';
 </script>
 
-<p class="muted" style="margin-bottom:1.25rem">
+<p class="muted intro-maintenance">
 	Exécution des tâches planifiées sur les <strong>deux</strong> Raspberry&nbsp;Pi. Le nœud actif assure
 	la maintenance applicative (purges, VACUUM) ; le nœud en veille fait son hygiène locale (cache de build,
 	rotation des logs, images de base) et transmet son rapport au nœud actif.
@@ -39,3 +39,9 @@
 <IntegriteReferentielle />
 <ControleSante />
 <CarteExportCopropriete />
+
+<style>
+	.intro-maintenance {
+		margin-bottom: 1.25rem;
+	}
+</style>

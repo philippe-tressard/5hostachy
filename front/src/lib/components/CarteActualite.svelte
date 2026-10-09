@@ -153,10 +153,7 @@
 				<slot name="formulaire" />
 			{:else}
 				<!--  Texte AVANT les photos : une image en tête poussait le premier mot sous la ligne de flottaison. -->
-				<div
-					class="rich-content"
-					style="font-size:var(--fs-base);line-height:1.6;margin-bottom:.5rem"
-				>
+				<div class="rich-content description-actualite">
 					{@html safeHtml(pub.description)}
 				</div>
 				{#if pieces.length}
@@ -256,5 +253,10 @@
 		.attenue:hover {
 			opacity: 1;
 		}
+	}
+	.description-actualite {
+		font-size: var(--fs-base);
+		line-height: 1.6;
+		margin-bottom: 0.5rem;
 	}
 </style>

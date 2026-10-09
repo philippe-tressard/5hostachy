@@ -345,10 +345,7 @@
 </EntetePage>
 
 {#if banMessage}
-	<div
-		class="alert"
-		style="margin:2rem 0;padding:1.5rem;border-radius:10px;text-align:center;font-size:1.1rem"
-	>
+	<div class="alert bannissement">
 		⛔ {banMessage}
 	</div>
 {:else}
@@ -460,3 +457,13 @@
 {/if}
 
 <!-- /banMessage else -->
+
+<style>
+	.bannissement {
+		margin: 2rem 0;
+		padding: 1.5rem;
+		border-radius: 10px;
+		text-align: center;
+		font-size: 1.1rem;
+	}
+</style>

@@ -40,7 +40,7 @@
 	export let heritees: Set<string> = new Set();
 </script>
 
-<section class="card" style="margin-bottom:1.5rem">
+<section class="card carte-affichage">
 	<h2 class="section-title">Ce que j'affiche</h2>
 	<label class="checkbox-field">
 		<input type="checkbox" bind:checked={restreindre} />
@@ -56,7 +56,7 @@
 	</p>
 
 	{#each CANAUX_NOTIFS as canal (canal.mon)}
-		<h2 class="section-title" style="margin-top:1.5rem">{canal.titre}</h2>
+		<h2 class="section-title titre-canal">{canal.titre}</h2>
 		{#each [{ cle: canal.mon, libelle: 'De mon ou mes bâtiments' }, { cle: canal.autres, libelle: 'Des autres bâtiments' }] as c, i (c.cle)}
 			<label class="checkbox-field" style:margin-top={i ? '.5rem' : null}>
 				<input type="checkbox" bind:checked={valeurs[c.cle]} />
@@ -104,4 +104,10 @@
 	/*  L'aide s'aligne sur le LIBELLÉ, pas sur le bord de la carte : largeur de la
 	    case (~1rem) plus l'écart (.5rem). Seuls le décalage et la marge restent
 	    ici — la typographie vient de la charte depuis le 09/09/2026. */
+	.carte-affichage {
+		margin-bottom: 1.5rem;
+	}
+	.titre-canal {
+		margin-top: 1.5rem;
+	}
 </style>

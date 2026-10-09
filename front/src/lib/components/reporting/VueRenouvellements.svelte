@@ -62,7 +62,7 @@
 </script>
 
 <!-- ── Renouvellement contrats & audits ──────────────────────────── -->
-<div class="kpi-row" style="margin-bottom:1rem">
+<div class="kpi-row kpi-espaces">
 	<div class="kpi-card" class:kpi-alert={renKpiPreavis > 0}>
 		<div class="kpi-value">{renKpiPreavis}</div>
 		<div class="kpi-label">Contrats en préavis</div>
@@ -80,3 +80,9 @@
 <VueRenouvellementsContrats {reportContrats} {reportPrestataires} {reportNoteMoyParPrest} />
 
 <VueRenouvellementsAudits {reportDiagTypes} />
+
+<style>
+	.kpi-espaces {
+		margin-bottom: 1rem;
+	}
+</style>

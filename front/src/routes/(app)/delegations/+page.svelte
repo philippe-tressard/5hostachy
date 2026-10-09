@@ -139,7 +139,7 @@
 	<EtatListe chargement />
 {:else}
 	{#if $isCS}
-		<div style="margin-bottom:1.25rem">
+		<div class="barre-delegation">
 			<button class="btn btn-primary" on:click={() => (showForm = true)}
 				>+ Nouvelle délégation</button
 			>
@@ -147,9 +147,7 @@
 	{/if}
 
 	{#if delegations.length === 0}
-		<div class="card" style="padding:2rem;text-align:center;color:var(--color-text-muted)">
-			Aucune délégation.
-		</div>
+		<div class="card vide-delegations">Aucune délégation.</div>
 	{:else}
 		<div class="deleg-list">
 			{#each delegations as d (d.id)}
@@ -347,4 +345,12 @@
 	    laissant `.modal-header h3` — la seule des quatre qui n'existait PAS en
 	    global, donc la seule que le retrait ne pouvait pas solder. Elle a survécu
 	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
+	.barre-delegation {
+		margin-bottom: 1.25rem;
+	}
+	.vide-delegations {
+		padding: 2rem;
+		text-align: center;
+		color: var(--color-text-muted);
+	}
 </style>
