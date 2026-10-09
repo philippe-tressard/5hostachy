@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manuel utilisateur · CoproFirst</title>
+  <title>Manuel utilisateur</title>
   <style>
     /* ═══════════════════════════════════════════
        RESET & BASE
@@ -992,7 +992,7 @@
     <div class="sidebar-logo">
       <img class="logo-icon" src="/api/config/logo.png?taille=72" width="36" height="36" alt="">
       <span>
-        CoproFirst
+        <span data-nom-residence>Votre résidence</span>
         <small>Manuel utilisateur</small>
       </span>
     </div>
@@ -1040,7 +1040,7 @@
       <a class="topbar-pdf" href="/api/manuel/pdf" target="_blank" rel="noopener">
         &#x2B07; Version PDF
       </a>
-      <span class="topbar-badge">Version 2.57 · Octobre 2026</span>
+      <span class="topbar-badge">Version 2.58 · Octobre 2026</span>
     </div>
   </header>
 
@@ -1084,7 +1084,7 @@
     <section class="apropos" id="apropos">
       <h2>À quoi sert ce site&nbsp;?</h2>
       <p>
-        CoproFirst rassemble en un seul endroit ce qui concerne la vie de la copropriété :
+        Ce site rassemble en un seul endroit ce qui concerne la vie de la copropriété :
         <strong>signaler un problème et suivre son traitement</strong>, <strong>savoir ce qui est prévu</strong>
         — travaux, coupures, assemblées —, <strong>retrouver un document</strong> et
         <strong>échanger entre voisins</strong>. Il remplace les papiers dans les boîtes,
@@ -1130,7 +1130,7 @@
         <div>
           <p class="hero-kicker" style="color:#2563eb; margin-bottom:.35rem">Guide express</p>
           <h2 style="font-size:1.45rem; margin-bottom:.35rem">Commencer sans se perdre</h2>
-          <p style="color:var(--muted); max-width:620px">Si vous débutez, suivez seulement ces 3 étapes. Vous aurez déjà l'essentiel pour utiliser CoproFirst sans stress.</p>
+          <p style="color:var(--muted); max-width:620px">Si vous débutez, suivez seulement ces 3 étapes. Vous aurez déjà l'essentiel pour utiliser le site sans stress.</p>
         </div>
         <span class="quick-badge">3 minutes pour démarrer</span>
       </div>
@@ -1675,7 +1675,7 @@
         </div>
         <div class="callout danger">
           <strong>⚡ En cas de danger immédiat</strong>
-          <p>Composez le <strong>15</strong> (SAMU), le <strong>17</strong> (Police) ou le <strong>18</strong> (Pompiers) — CoproFirst n'est pas un service d'urgence.</p>
+          <p>Composez le <strong>15</strong> (SAMU), le <strong>17</strong> (Police) ou le <strong>18</strong> (Pompiers) — ce site n'est pas un service d'urgence.</p>
         </div>
       </div>
       <div class="card" id="transferer-un-courriel">
@@ -1801,12 +1801,37 @@
        FOOTER
   ══════════════════════════════════ -->
   <footer class="doc-footer">
-    <span>© 2026 CoproFirst — Manuel utilisateur v2.57
+    <span>© 2026 <span data-nom-residence>Votre résidence</span> — Manuel utilisateur v2.58
 </span>
     <span>Document à usage interne · Ne pas diffuser à l'extérieur de la copropriété</span>
   </footer>
 
 </div>
+
+<!-- Le nom de la RÉSIDENCE, pas celui du logiciel -->
+<script>
+  //  Les résidents connaissent leur résidence (« Résidence 5Hostachy »), pas le
+  //  logiciel qui la sert : le titre, l'en-tête du menu et le pied de page portent
+  //  son nom, lu dans la configuration publique du site — le même nom et le même
+  //  préfixe que le pied de page des écrans (`pied_de_page_prefixe_nom`,
+  //  `PiedDePage.svelte`), ce que `e2e/manuel-nom-residence.spec.ts` confronte.
+  //  Ce fichier est statique et ne peut rien importer : sans réponse, il garde
+  //  « Votre résidence ». Le logiciel, CoproFirst, n'est nommé qu'à « Un logiciel
+  //  libre », qui dit ce qui sert le site.
+  fetch('/api/config', { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((cfg) => {
+      const nom = String((cfg && cfg.site_nom) || '').trim();
+      if (!nom) return;
+      const prefixe = String(cfg.pied_de_page_prefixe_nom || '').trim();
+      const residence = prefixe ? prefixe + ' ' + nom : nom;
+      document.querySelectorAll('[data-nom-residence]').forEach((el) => {
+        el.textContent = residence;
+      });
+      document.title = 'Manuel utilisateur — ' + residence;
+    })
+    .catch(() => {});
+</script>
 
 <!-- Navigation active highlighting -->
 <script>
