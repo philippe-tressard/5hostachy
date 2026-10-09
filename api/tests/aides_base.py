@@ -20,7 +20,7 @@ import uuid
 import weakref
 
 from sqlalchemy import event, text
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.models.core import Utilisateur
@@ -72,10 +72,13 @@ def _moteur_postgresql(url: str, *, schema: bool):
     d'objet : PostgreSQL sert plusieurs fils, et vérifie toujours ses clés.
     """
     nom = f"t_{uuid.uuid4().hex[:16]}"
-    admin = create_engine(url, isolation_level="AUTOCOMMIT")
+    #  🔴 NullPool : une connexion se FERME dès qu'elle est rendue. Avec un pool,
+    #  chaque base de test gardait les siennes jusqu'au ramasse-miettes, et la
+    #  suite dépassait `max_connections` (« too many clients », 09/10/2026).
+    admin = create_engine(url, isolation_level="AUTOCOMMIT", poolclass=NullPool)
     with admin.connect() as c:
         c.execute(text(f'CREATE SCHEMA "{nom}"'))  # noqa: S608 — identifiant généré ici
-    moteur = create_engine(url)
+    moteur = create_engine(url, poolclass=NullPool)
 
     #  Posé à CHAQUE connexion, par SQL : le pilote (pg8000) n'accepte pas
     #  l'option de démarrage `options` qu'emploie psycopg.
