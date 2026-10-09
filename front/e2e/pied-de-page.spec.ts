@@ -9,6 +9,7 @@
  *  quand la configuration en base demande de les masquer, et l'aperçu de
  *  l'administration suit la pastille avant tout enregistrement.
  */
+import { NOM_PLATEFORME } from '../src/lib/plateforme';
 import { expect, MEMBRE_CS, simulerApi, test } from './aides';
 
 const ADMIN = { ...MEMBRE_CS, role: 'admin', roles: ['admin'] };
@@ -79,7 +80,7 @@ test('l’ordre, le préfixe du nom et l’année de création se lisent dans le
 	await page.goto('/tableau-de-bord');
 	const elements = page.locator('footer.app-footer > .element');
 	await expect(elements.nth(0)).toHaveText(`© ${courante - 1}–${courante}`);
-	await expect(elements.nth(1)).toHaveText('CoproConnect');
+	await expect(elements.nth(1)).toHaveText(NOM_PLATEFORME);
 	await expect(elements.nth(2)).toHaveText(/^v\d+\.\d+\.\d+$/);
 	await expect(elements.nth(3)).toHaveText('Résidence 5Hostachy');
 	//  Les éléments absents de l'ordre réglé viennent ensuite : rien ne disparaît.
@@ -91,16 +92,18 @@ test('Admin › Site : un élément monte et descend, l’aperçu suit', async (
 	await page.goto('/admin?onglet=site');
 	const groupe = page.getByRole('group', { name: 'Éléments, dans l’ordre' });
 	const elements = page.getByRole('group', { name: 'Aperçu du pied de page' }).locator('.element');
-	const rang = async () => (await elements.allTextContents()).indexOf('CoproConnect');
+	const rang = async () => (await elements.allTextContents()).indexOf(NOM_PLATEFORME);
 	//  L'aperçu se rend après le chargement de la configuration : attendre qu'il y soit.
 	await expect
-		.poll(rang, { message: 'CoproConnect doit paraître dans l’aperçu' })
+		.poll(rang, { message: `${NOM_PLATEFORME} doit paraître dans l’aperçu` })
 		.toBeGreaterThan(0);
-	//  Un élément VERROUILLÉ se déplace aussi : CoproConnect monte jusqu'en tête.
-	const monter = groupe.getByRole('button', { name: 'Monter « CoproConnect (code source) »' });
+	//  Un élément VERROUILLÉ se déplace aussi : le lien du logiciel monte jusqu'en tête.
+	const monter = groupe.getByRole('button', { name: `Monter « ${NOM_PLATEFORME} (code source) »` });
 	while (await monter.isEnabled()) await monter.click();
 	await expect.poll(rang).toBe(0);
-	await groupe.getByRole('button', { name: 'Descendre « CoproConnect (code source) »' }).click();
+	await groupe
+		.getByRole('button', { name: `Descendre « ${NOM_PLATEFORME} (code source) »` })
+		.click();
 	await expect.poll(rang).toBe(1);
 	await page.getByLabel('Texte libre', { exact: true }).fill('Texte du conseil');
 	await expect(elements).toContainText(['Texte du conseil']);
