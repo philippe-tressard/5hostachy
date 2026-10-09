@@ -878,8 +878,10 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 > partagé, regarder `git worktree list` puis `git -C <autre> status` : rien ne
 > signale le travail **non committé** d'une session voisine (vécu le 02/08/2026).
 
-- `main` = production **réellement protégée depuis le 09/08/2026** : les 5 jobs de
-  CI sont des *checks requis*, `enforce_admins` est actif, le push direct et le
+- `main` = production **réellement protégée depuis le 09/08/2026** : les jobs de la
+  CI et la suite sur PostgreSQL (#1747) sont des *checks requis* — leur liste se lit
+  dans la protection (`gh api repos/philippe-tressard/coprofirst/branches/main/protection/required_status_checks`),
+  jamais un compte recopié ici —, `enforce_admins` est actif, le push direct et le
   `--force` sont refusés. Toute modification passe par une PR depuis `dev`.
   ⚠️ Cette ligne affirmait « production protégé » alors que GitHub répondait
   « Branch not protected » : rien n'empêchait de fusionner une CI rouge — ce qui
@@ -891,7 +893,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   La contrepartie demandée n'est pas une validation *avant*, c'est un **compte rendu
   après** : à chaque MEP, **la version et les fonctionnalités apportées**.
   Le pré-check ne s'allège pas pour autant : c'est lui qui remplace la relecture.
-  `gh pr create` → attendre les **5 checks requis** → `gh pr merge --squash
+  `gh pr create` → attendre **tous les checks requis** → `gh pr merge --squash
   --delete-branch` → **réaligner `dev` sur `origin/main`** (la fusion est un squash
   et supprime la branche distante).
   ⚠️ `gh pr merge --delete-branch` supprime aussi la branche **locale** et bascule
@@ -907,8 +909,8 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 - **Session cloud** (claude.ai/code) : aucun SSH vers les RPi, et le site public
   est hors de la politique réseau de la session. 🔴 **La MEP s'y enchaîne SANS
   validation intermédiaire** (arbitré le 25/09/2026) : PR du lot vers `dev` →
-  fusion dès les 5 checks verts → bump de version en **dernier commit** du lot →
-  PR `dev → main` → fusion dès ses 5 checks verts → **recréer `dev` depuis `main`**
+  fusion dès les checks requis verts → bump de version en **dernier commit** du lot →
+  PR `dev → main` → fusion dès ses checks requis verts → **recréer `dev` depuis `main`**
   (la fusion la supprime ; par l'API GitHub, le hook `pre-push` refusant un push
   sans trace de pré-check). Une seule demande de l'utilisateur couvre toute la
   chaîne, et le compte rendu arrive **après** — version et fonctionnalités, comme
