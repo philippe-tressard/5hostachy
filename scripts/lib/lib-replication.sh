@@ -24,6 +24,22 @@
 #: Retard toléré de la réplique, en octets de journal (au-delà : WARN).
 REPLICATION_RETARD_MAX=67108864   # 64 Mio
 
+# ── PURE : le moteur que `.env` désigne — par l'URL de sa base ───────────────
+#  Les scripts qui touchent la base (maintenance, bascule) choisissent leur chemin
+#  par CE QUI EST CONFIGURÉ, jamais par une supposition. → sqlite|postgresql|inconnu
+moteur_de_url() {
+    case "${1:-}" in
+        sqlite:*)                   echo sqlite ;;
+        postgresql:*|postgresql+*)  echo postgresql ;;
+        *)                          echo inconnu ;;
+    esac
+}
+
+#  Le moteur du `.env` de ce dépôt ($1 = chemin du dépôt).
+moteur_configure() {
+    moteur_de_url "$(grep -m1 '^DATABASE_URL=' "$1/.env" 2>/dev/null | cut -d= -f2-)"
+}
+
 # ── Collecte (insérée dans COLLECT : SANS apostrophe) ────────────────────────
 #  pg_present  1 si le conteneur de la base tourne, 0 sinon
 #  pg_recovery t (réplique) | f (primaire) | vide (illisible)
@@ -147,6 +163,11 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "deux primaires"                            DEUX_PRIMAIRES verdict_paire_replication 1 1 f f
     t "base sur un seul nœud"                     PARTIELLE      verdict_paire_replication 1 0 f ""
     t "primaire + réplique"                       NOEUDS         verdict_paire_replication 1 1 f t
+    echo "== le moteur configuré =="
+    t "SQLite (production avant DI-7c)"   sqlite     moteur_de_url "sqlite:////app/data/app.db"
+    t "PostgreSQL par psycopg"            postgresql moteur_de_url "postgresql+psycopg://u:p@postgres:5432/coprofirst"
+    t "PostgreSQL sans pilote nommé"      postgresql moteur_de_url "postgresql://u:p@h/b"
+    t "variable absente → inconnu"        inconnu    moteur_de_url ""
     echo "== le point 22 du pré-check =="
     t "aucune base : sans objet"              SANS_OBJET verdict_precheck_replication 0 "" "" "" "" 0 "" "" "" ""
     t "primaire + réplique saines"            OK         verdict_precheck_replication 1 f 1 0 "" 1 t "" "" streaming

@@ -131,6 +131,11 @@ services:
       - TZ=Europe/Paris
       - POSTGRES_USER=coprofirst
       - POSTGRES_DB=coprofirst
+      #  Sommes de contrôle de PAGES : PostgreSQL vérifie chaque page lue, et
+      #  `dialecte.verifier_integrite` en lit le compteur d'échecs — l'intégrité
+      #  se MESURE (sans elles, une page abîmée sur la carte SD passerait muette).
+      #  Ne se pose qu'à l'initialisation : une réplique les hérite de la copie.
+      - POSTGRES_INITDB_ARGS=--data-checksums
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
       - PG_REPLICATION_PASSWORD=${PG_REPLICATION_PASSWORD:-}
     ports:

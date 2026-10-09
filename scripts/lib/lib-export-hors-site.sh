@@ -58,6 +58,32 @@ contient_app_db() { # $1=listing tar → oui|non
   esac
 }
 
+# ── …ou l'EXPORT vérifié d'une base serveur ? (PostgreSQL, DI-7b, #1781) ──────
+# Une base serveur n'a pas de fichier : `api/app/utils/backup.py` met dans
+# l'archive son export vérifié (P2-7), sous ce nom — même valeur que
+# `backup.NOM_EXPORT_BASE`, tenue par `test_sauvegarde_base_serveur.py`.
+NOM_EXPORT_BASE="base-export.tar.gz"
+contient_export_base() { # $1=listing tar → oui|non
+  case $'\n'"${1:-}"$'\n' in
+    *$'\n'"$NOM_EXPORT_BASE"$'\n'*) echo "oui" ;;
+    *)                              echo "non" ;;
+  esac
+}
+
+# ── PURE : l'export compte-t-il les lignes que son manifeste annonce ? ───────
+# Lit le RÉSUMÉ que `verifier_export_base` produit (« table lues annoncees » par
+# ligne) ; ne fait aucune E/S. → ok | « écarts : … » | inconnue (rien lu)
+verdict_export_base() { # $1 = résumé
+  local resume=${1:-} ecarts="" t lu annonce n=0
+  while read -r t lu annonce; do
+    [ -n "$t" ] || continue
+    n=$((n + 1))
+    [ "$lu" = "$annonce" ] || ecarts="${ecarts:+$ecarts, }$t $lu/$annonce"
+  done <<< "$resume"
+  [ "$n" -gt 0 ] || { echo "inconnue"; return 0; }
+  [ -z "$ecarts" ] && echo "ok" || echo "écarts : $ecarts"
+}
+
 # ── Le nom d'archive annoncé par le nœud est-il acceptable ? ─────────────────
 # Ce nom vient d'une machine distante et repart dans une commande exécutée là-bas :
 # il est validé en LISTE BLANCHE ancrée (standards/03-securite.md §2), jamais par
@@ -77,6 +103,9 @@ nom_valide() { # $1 = nom candidat → 0 si acceptable
 # n'est PAS déclarée saine : elle renvoie `erreur`, jamais `succes` — un
 # contrôle qui ne peut pas s'exécuter rend INCONNU (standards/04 §1), et une
 # sauvegarde qu'on croit bonne à tort est pire que pas de sauvegarde du tout.
+# `contient_db` : « oui » (app.db, base-fichier), « export » (base serveur,
+# DI-7b) ou « non ». L'intégrité vient de `PRAGMA integrity_check` pour l'une,
+# de `verdict_export_base` pour l'autre ; la règle est la même : « ok » ou rien.
 verdict_archive() { # $1=octets $2=empreintes_identiques $3=contient_db $4=integrite → statut|message
   local octets="${1:-0}" empreintes="${2:-non}" contient="${3:-non}" integrite="${4:-inconnue}"
   if [ "${octets:-0}" -le 0 ] 2>/dev/null || [ -z "$octets" ]; then
@@ -85,16 +114,20 @@ verdict_archive() { # $1=octets $2=empreintes_identiques $3=contient_db $4=integ
   if [ "$empreintes" != "oui" ]; then
     echo "erreur|Empreinte SHA-256 différente de la source — transfert tronqué ou altéré."; return 0
   fi
-  if [ "$contient" != "oui" ]; then
-    echo "erreur|L'archive ne contient pas app.db — sauvegarde inexploitable."; return 0
+  if [ "$contient" != "oui" ] && [ "$contient" != "export" ]; then
+    echo "erreur|L'archive ne contient ni app.db ni $NOM_EXPORT_BASE — sauvegarde inexploitable."; return 0
   fi
   if [ "$integrite" = "inconnue" ]; then
     echo "erreur|Intégrité NON vérifiée (ni sqlite3 ni python disponibles) — copie non validée."; return 0
   fi
   if [ "$integrite" != "ok" ]; then
-    echo "erreur|Base corrompue dans l'archive (integrity_check : $integrite)."; return 0
+    echo "erreur|Base corrompue dans l'archive ($([ "$contient" = export ] && echo "export" || echo "integrity_check") : $integrite)."; return 0
   fi
-  echo "succes|Copie hors site vérifiée ($octets octets, integrity_check : ok)."
+  if [ "$contient" = export ]; then
+    echo "succes|Copie hors site vérifiée ($octets octets, export : chaque table compte ses lignes annoncées)."
+  else
+    echo "succes|Copie hors site vérifiée ($octets octets, integrity_check : ok)."
+  fi
 }
 
 # ── Quelles copies locales supprimer ? ───────────────────────────────────────

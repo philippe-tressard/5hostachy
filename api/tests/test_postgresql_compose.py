@@ -42,7 +42,9 @@ def test_le_port_n_est_lie_qu_a_l_ip_du_lan_ou_a_la_boucle_locale():
 
 def test_l_acces_reseau_exige_scram_et_la_replication_vient_de_l_autre_noeud():
     hba = (RACINE / "infra" / "postgresql" / "pg_hba.conf").read_text(encoding="utf-8")
-    lignes = [l.split() for l in hba.splitlines() if l.strip() and not l.lstrip().startswith("#")]
+    lignes = [
+        li.split() for li in hba.splitlines() if li.strip() and not li.lstrip().startswith("#")
+    ]
     assert lignes, "pg_hba.conf vide : tout serait refusé, ou le contrôle ne mesure plus rien"
     for champs in lignes:
         if champs[0] == "local":
@@ -100,6 +102,12 @@ def test_les_reglages_menagent_la_carte_sans_ceder_la_durabilite():
     #  🔴 Jamais au prix d'un commit perdu : ces deux-là restent à leur défaut, actifs.
     for interdit in ("fsync", "synchronous_commit", "full_page_writes"):
         assert interdit not in reglages, f"`{interdit}` ne se règle pas ici : la durabilité prime"
+
+
+def test_les_pages_portent_une_somme_de_controle():
+    """Sans elles, `dialecte.verifier_integrite` ne saurait rien dire de la base."""
+    environnement = dict(e.split("=", 1) for e in PG["environment"])
+    assert environnement.get("POSTGRES_INITDB_ARGS") == "--data-checksums"
 
 
 def test_la_base_dit_quand_elle_est_prete():

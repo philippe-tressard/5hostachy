@@ -292,7 +292,37 @@ if [ "$CONTIENT" = "oui" ]; then
   fi
   rm -rf "$TMP"
 fi
-log "  Vérification : empreintes=$EMPREINTES app.db=$CONTIENT intégrité=$INTEGRITE"
+# Une base SERVEUR (PostgreSQL, DI-7b) : l'archive porte son export vérifié au
+# lieu d'app.db. On le relit ici, sans rien du projet : chaque table doit compter
+# les lignes que le manifeste annonce. Sa restauration, elle, a été éprouvée au
+# nœud avant que la sauvegarde se dise réussie (`backup.py`).
+if [ "$CONTIENT" = "non" ] && [ "$(contient_export_base "$LISTING")" = "oui" ]; then
+  CONTIENT="export"
+  TMP=$(mktemp -d 2>/dev/null || echo "/tmp/export-hs-$$")
+  mkdir -p "$TMP"
+  if tar -xzf "$LOCAL" -C "$TMP" "$NOM_EXPORT_BASE" 2>/dev/null; then
+    CHEMIN_EXPORT="$TMP/$NOM_EXPORT_BASE"
+    command -v cygpath >/dev/null 2>&1 && CHEMIN_EXPORT=$(cygpath -w "$CHEMIN_EXPORT")
+    for PY in python3 python py; do
+      if command -v "$PY" >/dev/null 2>&1; then
+        RESUME=$("$PY" - "$CHEMIN_EXPORT" 2>/dev/null <<'PYTHON'
+import json, sys, tarfile
+with tarfile.open(sys.argv[1]) as archive:
+    manifeste = json.load(archive.extractfile("manifeste.json"))
+    for table, info in manifeste["tables"].items():
+        membre = archive.extractfile(f"tables/{table}.jsonl")
+        lues = sum(1 for ligne in membre if ligne.strip()) if membre else -1
+        print(table, lues, info["lignes"])
+PYTHON
+)
+        INTEGRITE=$(verdict_export_base "$RESUME")
+        break
+      fi
+    done
+  fi
+  rm -rf "$TMP"
+fi
+log "  Vérification : empreintes=$EMPREINTES base=$CONTIENT intégrité=$INTEGRITE"
 
 VERDICT=$(verdict_archive "$OCTETS" "$EMPREINTES" "$CONTIENT" "$INTEGRITE")
 STATUT="${VERDICT%%|*}"
