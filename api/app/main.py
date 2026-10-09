@@ -1,5 +1,5 @@
 """
-5Hostachy — Application de gestion de copropriété
+CoproFirst — Application de gestion de copropriétés
 API FastAPI v0.1
 """
 
@@ -280,7 +280,7 @@ API_VERSION = "0.2.0"
 
 app = FastAPI(
     title=f"{NOM_PLATEFORME} API",
-    description="API de gestion de copropriété",
+    description="API de gestion de copropriétés",
     version=API_VERSION,
     lifespan=lifespan,
     default_response_class=UTCJSONResponse,
