@@ -309,17 +309,16 @@ def _check_db_integrity() -> list[str]:
     découverte seulement par l'échec du job d'agrégation) au lieu d'attendre
     un signalement utilisateur.
     """
-    from sqlalchemy import text
     from app.database import engine
+    from app.dialecte import verifier_integrite
 
     issues: list[str] = []
     try:
         with engine.connect() as conn:
-            res = conn.execute(text("PRAGMA quick_check")).first()
-        verdict = res[0] if res else "(aucun résultat)"
+            verdict = verifier_integrite(conn)
         if verdict != "ok":
             issues.append(
-                f"Intégrité base CORROMPUE (PRAGMA quick_check : « {verdict} »). "
+                f"Intégrité base CORROMPUE (contrôle du moteur : « {verdict} »). "
                 f"Récupération requise (.recover) — voir CLAUDE.md → corruption DB."
             )
     except Exception as exc:

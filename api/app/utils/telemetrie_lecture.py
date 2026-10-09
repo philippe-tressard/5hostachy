@@ -26,6 +26,7 @@ import sqlalchemy as sa
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
+from app import dialecte
 from app.models.core import (
     TelemetryDaily,
     TelemetryEvent,
@@ -179,7 +180,7 @@ def uniques_par_jour(session: Session, lecture: Lecture, depuis=None) -> dict[st
     un jour que les évènements savent encore compter. Les deux séries d'un jour
     étant disjointes, leurs uniques s'additionnent.
     """
-    jour = func.strftime("%Y-%m-%d", TelemetryEvent.cree_le, lecture.paris_offset_str)
+    jour = dialecte.jour(TelemetryEvent.cree_le, lecture.paris_offset_str)
     evenements = (
         select(
             jour.label("jour"), func.count(func.distinct(TelemetryEvent.user_id)).label("uniques")
@@ -205,7 +206,7 @@ def uniques_par_jour(session: Session, lecture: Lecture, depuis=None) -> dict[st
 def heure_de_pointe(session: Session, lecture: Lecture, depuis) -> Optional[str]:
     hour_stats = session.exec(
         select(
-            func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+            sa.extract("hour", TelemetryEvent.cree_le).label("heure"),
             func.count().label("total"),
         )
         .where(TelemetryEvent.cree_le >= depuis, *lecture.evenements())

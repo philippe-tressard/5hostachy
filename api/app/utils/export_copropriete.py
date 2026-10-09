@@ -308,7 +308,7 @@ def verifier_restauration(moteur_source, dossier: Path) -> tuple[dict, Bilan]:
     Rend le manifeste et le bilan. Une base qui ne se restaure pas lève
     `ImportRefuse` : c'est précisément ce que ce geste doit dire.
     """
-    from app.database import moteur_jetable
+    from app.dialecte import moteur_jetable
 
     archive = dossier / "verification.tar.gz"
     cible = dossier / "verification.db"

@@ -1,17 +1,23 @@
 import logging
-from sqlalchemy import event, text
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine, Session, SQLModel
 from app.config import get_settings
+from app.dialecte import (
+    activer_cles_etrangeres,
+    cles_suspendues,
+    est_fichier,
+    options_connexion,
+    regler_moteur,
+)
 
 logger = logging.getLogger("hostachy.db")
 
 settings = get_settings()
 
-connect_args = {"check_same_thread": False}
 engine = create_engine(
     settings.database_url,
-    connect_args=connect_args,
+    connect_args=options_connexion(settings.database_url),
     echo=False,
     pool_pre_ping=True,  # Teste chaque connexion avant usage → détecte les inodes orphelins (ex: post-VACUUM)
 )
@@ -22,78 +28,6 @@ engine = create_engine(
 # `app.database.engine` obtient des sessions sur sa base.
 def SessionLocal() -> Session:
     return Session(engine)
-
-
-def moteur_jetable(chemin):
-    """Un moteur sur une base NEUVE, au fichier `chemin`, dans le dialecte de l'application.
-
-    Ce qui ouvre une base de travail — la vérification d'une restauration
-    (`utils/export_copropriete`, #1749) — la demande ici, sans écrire d'URL : le
-    dialecte ne se nomme que dans ce module (#1747, D4). Les clés étrangères y
-    sont vérifiées comme sur la base de l'application.
-    """
-    moteur = create_engine(f"sqlite:///{chemin.as_posix()}")
-    activer_cles_etrangeres(moteur)
-    return moteur
-
-
-def activer_cles_etrangeres(moteur) -> None:
-    """Fait poser `PRAGMA foreign_keys=ON` sur CHAQUE connexion de `moteur`.
-
-    ✅ **Appelé sur le moteur de l'application depuis le 30/08/2026** — fin de
-    #546. Ce paragraphe a dit le contraire pendant deux jours, et c'était juste :
-    la fonction existait, éprouvée, et n'était pas branchée. Il est corrigé le
-    jour où il cesse de l'être, parce qu'un commentaire qui survit à ce qu'il
-    décrit est pire qu'absent.
-
-    ## Ce que l'absence de ce PRAGMA coûtait
-
-    SQLite ne vérifie **aucune** clé étrangère par défaut, et le réglage n'est
-    **pas** persisté dans le fichier — contrairement à `journal_mode=WAL`. Il vaut
-    pour la connexion, pas pour la base. Aucune des FK déclarées dans les modèles
-    n'est donc vérifiée : une ligne peut référencer un parent supprimé, et rien ne
-    l'empêche ni ne le signale. L'intégrité repose entièrement sur le code
-    applicatif — ce qui est tenable, et n'est pas une bonne surprise à découvrir
-    le jour d'un incident.
-
-    ## Pourquoi l'écouteur doit être posé ICI et pas plus bas
-
-    Le bloc d'amorçage ci-dessous ouvre une connexion et la **rend au pool**, où
-    elle est réutilisée : l'événement `connect` n'est alors plus jamais émis. Un
-    écouteur enregistré six lignes trop bas laisse le relevé dire `foreign_keys =
-    0` alors qu'il est « en place ». Vérifié.
-
-    ## Pourquoi l'activation a attendu le 30/08/2026
-
-    Activer le PRAGMA ne valide **pas** l'existant : SQLite ne relit pas la base,
-    une ligne orpheline reste lisible, et seules les écritures futures sont
-    refusées. Le risque n'était donc pas au démarrage — la crainte inverse avait
-    immobilisé ce ticket depuis le 20/08, et elle était fausse.
-
-    Trois conditions ont dû être remplies, dans cet ordre :
-
-      1. **les fixtures** ne construisent plus de lignes orphelines (4 lots, 103
-         erreurs ramenées à zéro — régime par défaut de la suite depuis le 29/08) ;
-      2. **les suppressions** ont été exercées : 11 endpoints DELETE testés, six
-         défauts corrigés. Deux ne se voyaient qu'en traçant le SQL émis ;
-      3. **la base** a été purgée : 50 lignes orphelines relevées, supprimées
-         depuis l'écran d'administration, relevé rendu à zéro par deux sondes.
-
-    ⚠️ **L'ordre n'était pas négociable.** Sans la 3, l'activation n'aurait rien
-    cassé au démarrage, mais toute écriture touchant l'une de ces lignes aurait
-    échoué ensuite — avec un message ne disant pas qu'elle datait de mois.
-    """
-
-    #  PostgreSQL vérifie ses clés étrangères toujours, et ne connaît pas PRAGMA
-    #  (#1747) : il n'y a rien à poser.
-    if moteur.dialect.name != "sqlite":
-        return
-
-    @event.listens_for(moteur, "connect")
-    def _poser(dbapi_connection, _record):  # pragma: no cover — appelé par SQLAlchemy
-        curseur = dbapi_connection.cursor()
-        curseur.execute("PRAGMA foreign_keys=ON")
-        curseur.close()
 
 
 #  🔴 LES CLÉS ÉTRANGÈRES SONT ACTIVES — 30/08/2026, fin de #546. Les trois
@@ -122,17 +56,9 @@ def activer_cles_etrangeres(moteur) -> None:
 #  corruptions de juin n'est pas perdue.
 activer_cles_etrangeres(engine)
 
-# WAL mode : lectures et écritures concurrentes sans blocage mutuel
-# synchronous=FULL : chaque commit est fsync'd intégralement (WAL + en-tête).
-#   NORMAL était plus rapide mais laisse une fenêtre de torn-write sur coupure/
-#   arrêt brutal ; sur une copro à faible trafic le surcoût est négligeable et la
-#   durabilité prime (cf. corruptions récurrentes telemetry_event 05+17/06/2026).
-# busy_timeout=5000 : attend jusqu'à 5s si la DB est verrouillée au lieu d'échouer immédiatement
-with engine.connect() as _conn:
-    _conn.execute(text("PRAGMA journal_mode=WAL"))
-    _conn.execute(text("PRAGMA synchronous=FULL"))
-    _conn.execute(text("PRAGMA busy_timeout=5000"))
-    _conn.commit()
+#  Durabilité de la base-fichier (WAL, synchronous=FULL, busy_timeout) : le
+#  pourquoi de chaque réglage est dans `dialecte.regler_moteur`.
+regler_moteur(engine)
 
 
 def get_session():
@@ -153,7 +79,13 @@ def get_session():
 
 
 def _run_migrations():
-    """Migrations SQLite manuelles pour les colonnes ajoutées après la création initiale."""
+    """Migrations manuelles d'une base-fichier, pour les colonnes ajoutées avant Alembic.
+
+    Une base SERVEUR n'a pas ce passé : son schéma est posé d'un coup par la
+    migration initiale (`utils/schema_initial`, #1747), jamais rattrapé ici.
+    """
+    if not est_fichier(engine):
+        return
     simple_migrations = [
         "ALTER TABLE utilisateur ADD COLUMN batiment_id INTEGER REFERENCES batiment(id)",
         # Colonnes ajoutées au modèle Ticket sans migration Alembic correspondante
@@ -195,44 +127,33 @@ def _run_migrations():
         # Migration : rendre lot.batiment_id nullable (parkings sans bâtiment)
         # SQLite ne supporte pas ALTER COLUMN → recréation de la table
         try:
-            cols = [r[1] for r in conn.execute(text("PRAGMA table_info(lot)")).fetchall()]
-            if "batiment_id" in cols:
-                # Vérifier si la colonne est déjà nullable en tentant un INSERT NULL
-                # Plus simple : recréer si la définition contient NOT NULL
-                schema = (
-                    conn.execute(
-                        text("SELECT sql FROM sqlite_master WHERE type='table' AND name='lot'")
-                    ).scalar()
-                    or ""
-                )
-                if (
-                    "batiment_id INTEGER NOT NULL" in schema
-                    or 'batiment_id" INTEGER NOT NULL' in schema
-                ):
-                    conn.execute(text("PRAGMA foreign_keys=off"))
-                    conn.execute(
-                        text("""
-                        CREATE TABLE lot_migration_tmp (
-                            id INTEGER PRIMARY KEY,
-                            batiment_id INTEGER REFERENCES batiment(id),
-                            numero TEXT NOT NULL,
-                            type TEXT NOT NULL DEFAULT 'appartement',
-                            type_appartement TEXT,
-                            etage INTEGER,
-                            superficie REAL
+            colonnes = {c["name"]: c for c in inspect(conn).get_columns("lot")}
+            if "batiment_id" in colonnes:
+                # Recréer si la colonne est encore NOT NULL
+                if not colonnes["batiment_id"]["nullable"]:
+                    with cles_suspendues(conn):
+                        conn.execute(
+                            text("""
+                            CREATE TABLE lot_migration_tmp (
+                                id INTEGER PRIMARY KEY,
+                                batiment_id INTEGER REFERENCES batiment(id),
+                                numero TEXT NOT NULL,
+                                type TEXT NOT NULL DEFAULT 'appartement',
+                                type_appartement TEXT,
+                                etage INTEGER,
+                                superficie REAL
+                            )
+                        """)
                         )
-                    """)
-                    )
-                    conn.execute(
-                        text(
-                            "INSERT INTO lot_migration_tmp "
-                            "SELECT id, batiment_id, numero, type, type_appartement, etage, superficie FROM lot"
+                        conn.execute(
+                            text(
+                                "INSERT INTO lot_migration_tmp "
+                                "SELECT id, batiment_id, numero, type, type_appartement, etage, superficie FROM lot"
+                            )
                         )
-                    )
-                    conn.execute(text("DROP TABLE lot"))
-                    conn.execute(text("ALTER TABLE lot_migration_tmp RENAME TO lot"))
-                    conn.execute(text("PRAGMA foreign_keys=on"))
-                    conn.commit()
+                        conn.execute(text("DROP TABLE lot"))
+                        conn.execute(text("ALTER TABLE lot_migration_tmp RENAME TO lot"))
+                        conn.commit()
         except Exception:
             pass  # déjà migré ou erreur non bloquante
 

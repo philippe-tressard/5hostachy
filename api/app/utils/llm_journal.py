@@ -43,6 +43,7 @@ from typing import Any, Optional
 from sqlalchemy import case, func
 from sqlmodel import Session, select
 
+from app import dialecte
 from app.models.core import ConfigSite
 from app.models.ia import AppelIA
 from app.utils import horloge
@@ -222,7 +223,7 @@ def cout_appel(
 def consommation(session: Session, maintenant: Optional[datetime] = None) -> dict:
     """Ce que l'écran de maintenance montre : par mois, par usage et modèle."""
     maintenant = maintenant or horloge.maintenant()
-    mois = func.strftime("%Y-%m", AppelIA.cree_le)  # clé machine, pas un affichage
+    mois = dialecte.mois(AppelIA.cree_le)  # clé machine, pas un affichage
     lignes = session.exec(
         select(
             mois,

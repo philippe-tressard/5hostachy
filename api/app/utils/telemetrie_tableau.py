@@ -30,6 +30,7 @@ import sqlalchemy as sa
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app import dialecte
 from app.models.core import TelemetryDaily, TelemetryEvent, TelemetryMonthly
 from app.utils import horloge
 from app.utils.destinataires import site_manager_user_id
@@ -80,7 +81,7 @@ def _portee_jour(session: Session, lecture: Lecture) -> dict:
 
     hour_stats = session.exec(
         select(
-            func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+            sa.extract("hour", TelemetryEvent.cree_le).label("heure"),
             func.count().label("total"),
             func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
         )
@@ -205,7 +206,7 @@ def _lignes_mensuelles(session: Session, lecture: Lecture, depuis_mois: str) -> 
 
 def _uniques_par_mois(session: Session, lecture: Lecture, depuis_mois: str) -> dict[str, int]:
     """Les uniques de chaque mois : les évènements bruts d'abord (30 jours), puis l'agrégat."""
-    mois = func.strftime("%Y-%m", TelemetryEvent.cree_le, lecture.paris_offset_str)
+    mois = dialecte.mois(TelemetryEvent.cree_le, lecture.paris_offset_str)
     recents = session.exec(
         select(mois, func.count(func.distinct(TelemetryEvent.user_id)))
         .where(

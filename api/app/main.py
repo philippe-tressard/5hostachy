@@ -252,11 +252,11 @@ async def lifespan(app: FastAPI):
     # Sans ça, si un job APScheduler est interrompu par SIGTERM, le WAL reste dans un état
     # intermédiaire → "database disk image is malformed" au prochain démarrage.
     try:
-        from sqlalchemy import text as _text
         from app.database import engine as _engine
+        from app.dialecte import point_de_controle
 
         with _engine.connect() as _conn:
-            _conn.execute(_text("PRAGMA wal_checkpoint(TRUNCATE)"))
+            point_de_controle(_conn)
             _conn.commit()
         _logger.info("WAL checkpoint effectué au shutdown.")
     except Exception as _e:

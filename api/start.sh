@@ -36,6 +36,13 @@ ETAT_BASE=$(python -m app.utils.revision_base 2>/dev/null || echo inconnu)
 if [ "$ETAT_BASE" = "en_avance" ]; then
     echo "==> ⚠ Base EN AVANCE sur ce code (retour à une version précédente) — migrations ignorées."
 else
+    #  Une base NEUVE reçoit le schéma courant d'un coup, marqué à la tête :
+    #  l'historique écrit pour SQLite ne se rejoue pas sur une base vierge
+    #  (#1747, spec §4.3). Une base qui a des tables n'est pas touchée.
+    #  Affecté AVANT d'être affiché : sous `set -e`, un échec dans `$(…)` passé à
+    #  `echo` serait ignoré, et le conteneur démarrerait sur une base sans schéma.
+    SCHEMA_INITIAL=$(python -m app.utils.schema_initial)
+    echo "==> Schéma initial d'une base neuve : $SCHEMA_INITIAL"
     echo "==> Lancement des migrations Alembic... (utilisateur : $(id -un))"
     alembic upgrade head
 fi

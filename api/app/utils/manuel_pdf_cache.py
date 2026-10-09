@@ -41,10 +41,10 @@ def dossier_par_defaut() -> Path | None:
     """Le dossier du cache, à côté de la base ; `None` pour une base en mémoire."""
     from app.config import get_settings
 
-    url = get_settings().database_url
-    if not url.startswith("sqlite:///") or ":memory:" in url:
-        return None
-    return Path(url.removeprefix("sqlite:///")).parent / NOM_DOSSIER
+    from app.dialecte import chemin_fichier
+
+    fichier = chemin_fichier(get_settings().database_url)
+    return fichier.parent / NOM_DOSSIER if fichier else None
 
 
 def _fichier(dossier: Path, cle: tuple[str, ...]) -> Path:

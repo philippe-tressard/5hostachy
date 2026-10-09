@@ -210,14 +210,19 @@ def test_la_base_de_l_exemple_est_celle_du_code_et_dans_le_volume():
     """
     exemple = re.search(r"(?m)^DATABASE_URL=(.+)$", EXEMPLE.read_text(encoding="utf-8"))
     assert exemple, ".env.example ne déclare plus DATABASE_URL"
-    defaut = re.search(r'database_url:\s*str\s*=\s*"([^"]+)"', CONFIG_TXT)
+    #  Le défaut est LU sur la classe, pas dans le texte : il se compose par
+    #  `dialecte.url_fichier` depuis #1747, et une regex sur le littéral ne le
+    #  voyait plus.
+    from app.config import Settings
+
+    defaut = Settings.model_fields["database_url"].default
     assert defaut, "config.py ne déclare plus de défaut pour database_url"
-    assert exemple.group(1).strip() == defaut.group(1), (
+    assert exemple.group(1).strip() == defaut, (
         f"DATABASE_URL du gabarit ({exemple.group(1).strip()}) diffère du défaut du "
-        f"code ({defaut.group(1)}) : l'un des deux pointe hors du volume "
+        f"code ({defaut}) : l'un des deux pointe hors du volume "
         f"`app_data:/app/data`"
     )
-    chemin = defaut.group(1).split("////")[-1]
+    chemin = defaut.split("////")[-1]
     assert chemin.startswith("app/data/"), (
         f"la base est déclarée en `{chemin}`, hors du volume monté par "
         f"docker-compose.yml (`app_data:/app/data`) : elle serait perdue à la recréation"

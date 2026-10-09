@@ -2,6 +2,8 @@ from functools import lru_cache
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
+from app.dialecte import url_fichier
+
 _INSECURE_KEY_DEFAULTS = {
     "dev-secret-key-change-in-production",
     "changez-cette-valeur-secrete-en-production-min-32-chars",
@@ -44,7 +46,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
 
     # Base de données
-    database_url: str = "sqlite:////app/data/app.db"
+    database_url: str = url_fichier("/app/data/app.db")
 
     # Email
     mail_enabled: bool = False

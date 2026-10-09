@@ -6,12 +6,12 @@ import tarfile
 from datetime import datetime
 from app.utils import horloge
 
-from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.utils.declenchement import AUTOMATIQUE
 from app.config import get_settings
 from app.database import engine
+from app.dialecte import chemin_fichier, point_de_controle, verifier_integrite
 from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
 
 from app.utils.noeud import noeud_courant
@@ -92,13 +92,14 @@ def run_backup(history_id: int | None = None):
             filename = nom_archive(horloge.maintenant())
             dest = os.path.join(settings.backup_dir, filename)
 
-            db_path = settings.database_url.replace("sqlite:////", "/")
+            fichier = chemin_fichier(settings.database_url)
+            db_path = str(fichier) if fichier else ""
 
             # WAL checkpoint avant copie : garantit que app.db contient
             # toutes les transactions committées (le WAL peut être en avance)
             if os.path.exists(db_path):
                 with engine.connect() as _conn:
-                    _conn.execute(text("PRAGMA wal_checkpoint(FULL)"))
+                    point_de_controle(_conn, "FULL")
 
                 # Validation d'intégrité AVANT de sauvegarder : ne jamais écraser
                 # les backups sains (rotation) par un snapshot d'une base corrompue.
@@ -106,8 +107,7 @@ def run_backup(history_id: int | None = None):
                 # contenait déjà la table malformée, devenu inutilisable.
                 try:
                     with engine.connect() as _conn:
-                        verdict_row = _conn.execute(text("PRAGMA quick_check")).first()
-                    verdict = verdict_row[0] if verdict_row else "(aucun résultat)"
+                        verdict = verifier_integrite(_conn)
                 except Exception as exc:
                     verdict = f"quick_check a échoué : {exc}"
                 if verdict != "ok":

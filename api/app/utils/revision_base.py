@@ -30,6 +30,7 @@ n'est pas l'ouverture par un tiers que la règle d'or interdit (CLAUDE.md).
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -40,11 +41,27 @@ from sqlalchemy import create_engine, inspect, text
 ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
 
 
+def config_alembic(ini: Path = ALEMBIC_INI) -> Config:
+    """La configuration d'Alembic, pointée sur LA base de l'application.
+
+    `DATABASE_URL` l'emporte sur `alembic.ini` (#1747) : c'est la variable que
+    lit l'API, et une installation sur PostgreSQL n'a que celle-là. L'écrire une
+    fois ici garde Alembic, `start.sh` et l'API sur la même base.
+    """
+    config = Config(str(ini))
+    config.set_main_option("script_location", str(ini.parent / "alembic"))
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        #  `%` est l'interpolation d'`alembic.ini` : un mot de passe qui en porte
+        #  se double, sinon la configuration lève.
+        config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
+    return config
+
+
 def etat_revision(url: str | None = None, ini: Path = ALEMBIC_INI) -> str:
     """`connue` | `vide` | `en_avance` | `inconnu` — voir la table du module."""
     try:
-        config = Config(str(ini))
-        config.set_main_option("script_location", str(ini.parent / "alembic"))
+        config = config_alembic(ini)
         connues = {r.revision for r in ScriptDirectory.from_config(config).walk_revisions()}
         moteur = create_engine(url or config.get_main_option("sqlalchemy.url"))
         try:

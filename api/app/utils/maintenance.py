@@ -5,7 +5,6 @@ import os
 from datetime import timedelta
 from app.utils import horloge
 
-from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.auth.jetons_rafraichissement import purger as purger_jetons
@@ -15,6 +14,7 @@ from app.utils.declenchement import AUTOMATIQUE
 from app.utils.llm_journal import limite_conservation
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
 from app.database import engine
+from app.dialecte import chemin_fichier, compacter
 from app.models.core import (
     HistoriqueMaintenance,
     WhatsAppLog,
@@ -181,19 +181,18 @@ def run_maintenance(history_id: int | None = None) -> None:
         comptes, erreurs = purger()
         tokens_supprimes = comptes["tokens"]
 
-        # VACUUM + PRAGMA optimize SQLite — après les purges, qu'il compacte.
+        # Compactage — après les purges, qu'il récupère (`dialecte.compacter`).
         try:
             with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
-                conn.execute(text("VACUUM"))
-                conn.execute(text("PRAGMA optimize"))
+                compacter(conn)
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
 
         # Taille DB après VACUUM
         taille_db: int | None = None
         try:
-            db_path = str(engine.url).replace("sqlite:////", "/").replace("sqlite:///", "")
-            if os.path.exists(db_path):
+            db_path = chemin_fichier(engine.url)
+            if db_path and os.path.exists(db_path):
                 taille_db = os.path.getsize(db_path)
         except Exception:
             pass
