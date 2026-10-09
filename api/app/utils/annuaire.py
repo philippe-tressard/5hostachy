@@ -158,4 +158,49 @@ def membres_du_syndic(session: Session, *, pour_administration: bool = False) ->
     ]
 
 
-__all__ = ["membres_du_conseil", "membres_du_syndic"]
+def reconcilier_membres(session: Session, modele, entrees) -> None:
+    """Enregistrer la liste d'un annuaire en RÉCONCILIANT, jamais en remplaçant.
+
+    Les deux annuaires — conseil et syndic — s'enregistrent d'un bloc : l'écran
+    renvoie la liste entière, telle que le GET la lui a donnée, avec l'`id` de
+    chaque membre. Une entrée dont l'`id` est connu est mise à jour EN PLACE
+    (`cree_le` et `id` survivent) ; une entrée sans `id` connu est une arrivée ;
+    ce que la liste ne contient plus a quitté l'annuaire.
+
+    ## 🔴 Pourquoi une seule fonction
+
+    Le conseil a été corrigé le 31/08/2026 : il supprimait ses sept lignes et les
+    recréait à chaque enregistrement — sept « Nouveau membre du conseil
+    syndical » au fil pour une correction d'étage, parce que `flux/annuaire.py`
+    lit `cree_le` pour décider de ce qui est nouveau. Le correctif a été écrit
+    DANS le routeur du conseil, et le syndic, quarante lignes plus bas, a gardé le
+    remplacement : le 09/10/2026, deux interlocutrices inchangées sont réapparues
+    au fil comme « Nouveau membre du syndic » le jour où un troisième changeait.
+    Une règle rangée chez un appelant n'est pas prise par le suivant
+    (`standards/02` §4 sexies).
+
+    :param entrees: les schémas d'entrée, dans l'ordre de l'écran. Chacun porte
+        un `id` (facultatif) et les champs du modèle ; `ordre` se déduit de la
+        position.
+    """
+    existants = {m.id: m for m in session.exec(select(modele)).all()}
+    gardes: set[int] = set()
+
+    for ordre, entree in enumerate(entrees):
+        valeurs = entree.model_dump(exclude={"id"}) | {"ordre": ordre}
+        ancien = existants.get(entree.id) if entree.id is not None else None
+        if ancien is not None:
+            for champ, val in valeurs.items():
+                setattr(ancien, champ, val)
+            gardes.add(ancien.id)
+        else:
+            #  Sans identifiant connu, c'est une arrivée : elle date d'aujourd'hui
+            #  et le fil a raison de l'annoncer.
+            session.add(modele(**valeurs))
+
+    for id_, membre in existants.items():
+        if id_ not in gardes:
+            session.delete(membre)
+
+
+__all__ = ["membres_du_conseil", "membres_du_syndic", "reconcilier_membres"]

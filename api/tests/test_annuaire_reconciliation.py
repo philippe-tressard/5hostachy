@@ -1,4 +1,14 @@
-"""Modifier UN membre du conseil syndical ne doit pas en « recréer » sept.
+"""Modifier UN membre d'un annuaire — conseil ou syndic — ne doit pas recréer les autres.
+
+## 🔴 La récidive, signalée le 09/10/2026 (syndic)
+
+Le correctif du 31/08 (ci-dessous) avait été écrit DANS le routeur du conseil.
+Le syndic, quarante lignes plus bas, supprimait et recréait encore tous ses
+membres : deux interlocutrices inchangées sont réapparues au fil comme
+« Nouveau membre du syndic » le jour où un troisième changeait. La règle vit
+désormais dans `utils/annuaire.reconcilier_membres`, et ce fichier éprouve les
+DEUX annuaires. Le même jour, le titre du fil prend la civilité (« Mr »), que
+la carte de l'annuaire portait déjà.
 
 ## 🔴 Le défaut, signalé le 31/08/2026
 
@@ -41,8 +51,15 @@ import pytest
 from sqlmodel import Session, SQLModel, select
 
 from app.database import engine
-from app.models.core import GenreCivilite, MembreCS
-from app.routers.admin.annuaire import CompositionCSIn, put_composition_cs
+from app.models.core import GenreCivilite, MembreCS, MembreSyndic
+from app.routers.admin.annuaire import (
+    CompositionCSIn,
+    SyndicIn,
+    put_composition_cs,
+    put_syndic_info,
+)
+from app.routers.flux import annuaire as flux_annuaire
+from app.routers.flux.commun import ContexteFlux
 from app.utils.horloge import maintenant
 
 
@@ -50,13 +67,16 @@ from app.utils.horloge import maintenant
 def session():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as s:
-        for m in s.exec(select(MembreCS)).all():
-            s.delete(m)
-        s.commit()
+        _vider(s)
         yield s
-        for m in s.exec(select(MembreCS)).all():
+        _vider(s)
+
+
+def _vider(s) -> None:
+    for modele in (MembreCS, MembreSyndic):
+        for m in s.exec(select(modele)).all():
             s.delete(m)
-        s.commit()
+    s.commit()
 
 
 def _poser_le_conseil(session) -> list[MembreCS]:
@@ -182,3 +202,134 @@ def test_un_membre_retire_de_la_liste_quitte_le_conseil(session):
     restants = session.exec(select(MembreCS)).all()
     assert len(restants) == 2
     assert all(m.id != parti["id"] for m in restants)
+
+
+# ── Le syndic — la récidive du 09/10/2026 ─────────────────────────────────────
+
+
+def _poser_le_syndic(session) -> list[MembreSyndic]:
+    """Trois interlocuteurs, entrés il y a longtemps."""
+    ancien = datetime(2020, 1, 1)
+    membres = [
+        MembreSyndic(
+            genre=GenreCivilite.mme,
+            prenom="Elise",
+            nom="MERCIER",
+            fonction="Comptable de copropriété",
+            telephone="0102030405",
+            ordre=0,
+            cree_le=ancien,
+        ),
+        MembreSyndic(
+            genre=GenreCivilite.mme,
+            prenom="Odile",
+            nom="SOREL",
+            fonction="Assistante de gestion",
+            telephone="0102030406",
+            ordre=1,
+            cree_le=ancien,
+        ),
+        MembreSyndic(
+            genre=GenreCivilite.mr,
+            prenom="Bruno",
+            nom="RENARD",
+            fonction="Gestionnaire",
+            telephone="0102030407",
+            est_principal=True,
+            ordre=2,
+            cree_le=ancien,
+        ),
+    ]
+    for m in membres:
+        session.add(m)
+    session.commit()
+    for m in membres:
+        session.refresh(m)
+    return membres
+
+
+def _corps_syndic(membres) -> dict:
+    """Le corps que `AnnuaireSyndic.svelte` envoie, identifiant compris."""
+    return {
+        "nom_syndic": "",
+        "adresse": "",
+        "site_web": None,
+        "membres": [
+            {
+                "id": m.id,
+                "genre": m.genre.value if hasattr(m.genre, "value") else m.genre,
+                "prenom": m.prenom,
+                "nom": m.nom,
+                "fonction": m.fonction,
+                "email": m.email,
+                "telephone": m.telephone,
+                "est_principal": m.est_principal,
+                "user_id": m.user_id,
+            }
+            for m in membres
+        ],
+    }
+
+
+def _enregistrer_syndic(session, corps: dict) -> None:
+    put_syndic_info(SyndicIn(**corps), session=session, _=None)
+
+
+def test_syndic_remplacer_UN_membre_ne_recree_pas_les_autres(session):
+    """Le cas exact du 09/10/2026 : le gestionnaire change, ses deux collègues non."""
+    membres = _poser_le_syndic(session)
+    gardes = {m.id: m.cree_le for m in membres[:2]}
+
+    corps = _corps_syndic(membres)
+    corps["membres"][2] = {
+        "id": None,
+        "genre": "Mr",
+        "prenom": "",
+        "nom": "LEROY",
+        "fonction": "Gestionnaire de copropriétés",
+        "email": None,
+        "telephone": "0102030408",
+        "est_principal": True,
+        "user_id": None,
+    }
+    _enregistrer_syndic(session, corps)
+
+    session.expire_all()
+    apres = {m.id: m for m in session.exec(select(MembreSyndic)).all()}
+    assert len(apres) == 3
+    for id_, cree_le in gardes.items():
+        assert id_ in apres, "un membre inchangé a été recréé : son entrée au fil reviendra"
+        assert apres[id_].cree_le == cree_le, "`cree_le` réécrit : le fil le lira comme une arrivée"
+    assert membres[2].id not in apres, "le membre remplacé n'a pas quitté l'annuaire"
+    venu = next(m for m in apres.values() if m.nom == "LEROY")
+    assert venu.cree_le > maintenant() - timedelta(minutes=5)
+
+
+def test_syndic_modifier_UN_membre_le_met_a_jour_en_place(session):
+    membres = _poser_le_syndic(session)
+    corps = _corps_syndic(membres)
+    corps["membres"][1]["fonction"] = "Assistante de copropriété"
+    _enregistrer_syndic(session, corps)
+
+    session.expire_all()
+    apres = session.exec(select(MembreSyndic).order_by(MembreSyndic.ordre)).all()
+    assert [m.id for m in apres] == [m.id for m in membres]
+    assert apres[1].fonction == "Assistante de copropriété"
+    assert all(m.cree_le == datetime(2020, 1, 1) for m in apres)
+
+
+def test_le_fil_n_annonce_que_l_arrivee_et_porte_la_civilite(session):
+    """Ce que le résident voit : une seule carte, « Mr LEROY »."""
+    membres = _poser_le_syndic(session)
+    corps = _corps_syndic(membres)
+    corps["membres"][2] = {**corps["membres"][2], "id": None, "prenom": "", "nom": "Leroy"}
+    _enregistrer_syndic(session, corps)
+
+    maintenant_ = maintenant()
+    ctx = ContexteFlux(
+        session=session, user=None, now=maintenant_, since=maintenant_ - timedelta(days=7)
+    )
+    cartes = flux_annuaire.collecter(ctx)
+    assert [c.titre for c in cartes] == ["Mr LEROY"], (
+        "le fil doit n'annoncer que le membre arrivé, civilité comprise"
+    )

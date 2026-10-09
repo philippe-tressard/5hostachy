@@ -28,10 +28,11 @@ def _carte_membre(ident: str, membre, detail: str, badge: str, meta: dict) -> Fl
         type="annuaire",
         date=membre.cree_le,
         cree_le=membre.cree_le,
-        #  « Prénom NOM », nom en capitales — la règle du site, écrite une
+        #  « Mr Prénom NOM », nom en capitales — la règle du site, écrite une
         #  seule fois (`utils/noms.py`). Ce titre rendait la casse tapée :
-        #  « Jean-Baptiste ForT », signalé à l'écran le 31/08/2026.
-        titre=nom_affiche(membre.prenom, membre.nom),
+        #  « Jean-Baptiste ForT », signalé à l'écran le 31/08/2026 ; puis sans
+        #  civilité, que la carte de l'annuaire porte (09/10/2026).
+        titre=nom_affiche(membre.prenom, membre.nom, civilite=membre.genre),
         detail=detail,
         icon="👥",
         badges=[badge],

@@ -34,16 +34,24 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.utils.valeurs import valeur
 
-def nom_affiche(prenom: Optional[str], nom: Optional[str]) -> str:
+
+def nom_affiche(prenom: Optional[str], nom: Optional[str], civilite=None) -> str:
     """« Jean-Baptiste », « ForT » → « Jean-Baptiste FORT ».
 
     Tolère l'absence de l'un ou de l'autre : une personne dont on ne connaît que
     le nom doit s'afficher quand même, et sans espace en trop.
+
+    `civilite` (« Mr », « Mme »… — `GenreCivilite` ou sa valeur) se place
+    devant : « Mr Jean-Baptiste FORT ». C'est la forme de la carte d'un membre
+    d'annuaire (`CarteMembre`), reprise par le fil le 09/10/2026 — sans elle,
+    un membre saisi sans prénom n'y était plus qu'un nom de famille.
     """
+    civilite = (valeur(civilite) or "").strip()
     prenom = (prenom or "").strip()
     nom = (nom or "").strip().upper()
-    return " ".join(p for p in (prenom, nom) if p)
+    return " ".join(p for p in (civilite, prenom, nom) if p)
 
 
 def contexte_personne(personne, **extras) -> dict:
