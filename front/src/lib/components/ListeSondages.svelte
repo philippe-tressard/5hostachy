@@ -69,7 +69,7 @@
 				<BadgeNouveau le={s.cree_le} />
 			</svelte:fragment>
 			<svelte:fragment slot="tags">
-				<span class="badge {s.cloture ? 'badge-gray' : 'badge-green'}"
+				<span class="badge" class:badge-gray={s.cloture} class:badge-green={!s.cloture}
 					>{s.cloture ? '🔒 Clôturé' : 'Ouvert'}</span
 				>
 				<!--  État · 🔹 · qui le lit — l'ordre de la carte d'affaire (#1373) : le 🔹

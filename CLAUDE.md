@@ -182,9 +182,12 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   `api/tests/test_recuperer_source_unique.py` — la valeur se lit là, et la carte
   des plafonds est #1571 (#1047, qui le citait, est fermé). Le 404 d'un objet
   qui doit porter son parent (`sous={"bail_id": …}`) passe aussi par lui.
-  Deux autres questions du même module : le **fichier absent du disque** —
-  `fichier_ou_404(chemin, "PDF")` — et la **ligne unique** d'une table de réglage —
-  `premier_ou_404(session, Modele, "…non configurée")` (#1571).
+  Les autres questions du même module : le **fichier absent du disque** —
+  `fichier_ou_404(chemin, "PDF")` —, la **ligne unique** d'une table de réglage —
+  `premier_ou_404(session, Modele, "…non configurée")` —, la **clé d'un registre**
+  du code — `connu_ou_404(TABLE, cle, "Section inconnue")`, jamais pour une liste
+  blanche d'accès — et le **résultat déjà calculé** qui vaut `None` —
+  `present_ou_404(valeur, "…")` (#1571).
 - Lire un objet, puis refuser en **403** si le prédicat de l'entité dit non
   (`ticket_visible`, `sondage_accessible`…) : `auth/appartenance.exiger_objet_autorise`
   — jamais `ou_404` suivi d'un `if not visible: raise HTTPException(403)`, qui

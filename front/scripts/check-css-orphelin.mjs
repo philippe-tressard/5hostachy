@@ -276,7 +276,15 @@ const aveugles = tous.filter((f) =>
 //  pour les siennes (onglet Comptes) : aucune interpolation nouvelle, une dette
 //  répartie sur deux fichiers. La classe LOCALE `utag-{e}` du même bloc, elle, a
 //  été convertie en `class:`.
-const PLAFOND_NON_MESURES = 29;
+//
+//  24 le 08/10/2026 (#1571) : les cinq fichiers dont TOUTES les classes
+//  interpolées étaient des ternaires locaux passent en `class:` — barre
+//  d'import, confirmation, liste des sondages, réponses, renouvellements
+//  d'audits. Aucun sélecteur orphelin ne s'y cachait. Les 24 restants tirent
+//  leur classe d'une TABLE de teintes (`badge {STATUT[…]}`) : un composant de
+//  pastille commun les rendrait mesurables, mais un `.badge` stylé dans une page
+//  cesserait de s'y appliquer — chantier à regarder à l'écran, pas à l'aveugle.
+const PLAFOND_NON_MESURES = 24;
 
 const mesures = tous.length - aveugles.length;
 

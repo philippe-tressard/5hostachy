@@ -44,3 +44,42 @@ def test_premier_ou_404_rend_la_ligne(session):
     session.add(copro)
     session.commit()
     assert premier_ou_404(session, Copropriete, "x").id == copro.id
+
+
+#  Deux questions de plus, écrites chacune en plusieurs exemplaires (08/10/2026) :
+#  « cette clé figure-t-elle dans la table ? » (type de source d'affiche, section
+#  de contrat) et « le résultat est-il là ? » (rapport à prolonger, source
+#  d'affiche, cible d'un signalement).
+
+
+def test_connu_ou_404_rend_la_valeur_de_la_cle():
+    from app.utils.recuperer import connu_ou_404
+
+    assert connu_ou_404({"syndic": ("syndic_contrat_id", 2)}, "syndic", "x") == (
+        "syndic_contrat_id",
+        2,
+    )
+
+
+def test_cle_inconnue_est_un_404_qui_dit_le_detail():
+    from app.utils.recuperer import connu_ou_404
+
+    with pytest.raises(HTTPException) as e:
+        connu_ou_404({"syndic": 1}, "inconnue", "Section inconnue")
+    assert (e.value.status_code, e.value.detail) == (404, "Section inconnue")
+
+
+def test_present_ou_404_rend_la_valeur_meme_vide_mais_pas_none():
+    from app.utils.recuperer import present_ou_404
+
+    #  `is None`, jamais un test de vérité : un dict vide ou un 0 est un résultat.
+    assert present_ou_404({}, "x") == {}
+    assert present_ou_404(0, "x") == 0
+
+
+def test_absent_est_un_404_qui_dit_le_detail():
+    from app.utils.recuperer import present_ou_404
+
+    with pytest.raises(HTTPException) as e:
+        present_ou_404(None, "Contenu introuvable")
+    assert (e.value.status_code, e.value.detail) == (404, "Contenu introuvable")

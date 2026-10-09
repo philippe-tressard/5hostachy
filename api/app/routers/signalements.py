@@ -28,7 +28,7 @@ from app.utils.communaute import exiger_acces
 from app.utils.noms import nom_affiche
 from app.utils.destinataires import membres_cs_ou_admin
 from app.utils.liens import lien_element, lien_sondage
-from app.utils.recuperer import ou_404
+from app.utils.recuperer import ou_404, present_ou_404
 from app.utils.cloche import sonner_systeme
 
 router = APIRouter(prefix="/signalements", tags=["signalements"])
@@ -101,8 +101,7 @@ def creer_signalement(
     if not motif:
         raise HTTPException(422, "Le motif du signalement est obligatoire")
     apercu, auteur_cible_id = _resoudre_cible(body.cible_type, body.cible_id, session)
-    if apercu is None:
-        raise HTTPException(404, "Contenu introuvable")
+    apercu = present_ou_404(apercu, "Contenu introuvable")
 
     # Anti-doublon : un seul signalement en attente par utilisateur et par contenu.
     existant = session.exec(

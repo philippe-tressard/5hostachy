@@ -8,12 +8,13 @@ découpage que l'aperçu (`annonces_hall_apercu`) : un routeur sans préfixe,
 inclus par celui des annonces AVANT ses routes à paramètre.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import Utilisateur
+from app.utils.recuperer import connu_ou_404, present_ou_404
 
 router = APIRouter()
 
@@ -64,9 +65,7 @@ def prefill_depuis_element(
     """
     from app.utils.sources_affiche import FAMILLES, prefill_source
 
-    if type_source not in FAMILLES:
-        raise HTTPException(404, "Type d'élément inconnu")
-    champs = prefill_source(session, type_source, id_source)
-    if champs is None:
-        raise HTTPException(404, "Élément introuvable ou non reprenable")
-    return champs
+    connu_ou_404(FAMILLES, type_source, "Type d'élément inconnu")
+    return present_ou_404(
+        prefill_source(session, type_source, id_source), "Élément introuvable ou non reprenable"
+    )

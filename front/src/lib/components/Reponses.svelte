@@ -83,8 +83,10 @@
 						<span class="reponse-auteur">{rep.auteur_nom}</span>
 						{#if rep.auteur_batiment}<span class="badge badge-gray">{rep.auteur_batiment}</span
 							>{/if}
-						{#if rep.auteur_role}<span class="badge {rep.est_cs ? 'badge-blue' : 'badge-gray'}"
-								>{rep.auteur_role}</span
+						{#if rep.auteur_role}<span
+								class="badge"
+								class:badge-blue={rep.est_cs}
+								class:badge-gray={!rep.est_cs}>{rep.auteur_role}</span
 							>{/if}
 						{#if rep.est_cs}<span class="reponse-poids" title="Réponse du conseil syndical">⭐</span
 							>{/if}

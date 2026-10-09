@@ -49,7 +49,9 @@
 		</button>
 		<button
 			type="button"
-			class="btn {danger ? 'btn-danger' : 'btn-primary'}"
+			class="btn"
+			class:btn-danger={danger}
+			class:btn-primary={!danger}
 			on:click={() => onReponse(true)}
 		>
 			{libelleConfirmer}

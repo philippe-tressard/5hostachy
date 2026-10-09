@@ -221,8 +221,11 @@ function boutonsDeSoumission(src) {
 		const finContenu = fermante.debut;
 		const balise = src.slice(m.index, finOuvrante + 1);
 		const submit = /type=["']submit["']/.test(balise);
+		//  `class:btn-primary={…}` aussi : la classe posée par directive n'en est pas
+		//  moins le bouton principal — la confirmation y est passée le 08/10/2026, et
+		//  son exception ne « servait plus » qu'en apparence (#1571).
 		const primaireDansActions =
-			/class="[^"]*\bbtn-primary\b/.test(balise) &&
+			/class="[^"]*\bbtn-primary\b|\bclass:btn-primary\b/.test(balise) &&
 			zones.some(([a, z]) => m.index >= a && m.index < z);
 		if (!submit && !primaireDansActions) continue;
 		trouves.push({
