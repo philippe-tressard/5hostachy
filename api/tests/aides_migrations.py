@@ -14,6 +14,12 @@ from types import ModuleType
 
 VERSIONS = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions"
 
+#: La dernière migration de l'HISTORIQUE, écrite pour SQLite seule (#1757, #1747).
+#: Celles-là ne sont ni jugées par `test_migrations_compatibles`, ni rejouées sur
+#: PostgreSQL : une base PostgreSQL naît du schéma initial (`utils/schema_initial`,
+#: spec §4.3). Toutes les suivantes valent pour les deux moteurs.
+DERNIERE_HISTORIQUE = 271
+
 
 def chemin_migration(motif: str) -> pathlib.Path:
     """Le fichier de migration qui correspond à `motif` (`"0194_*.py"`, `"0243"`…), ou lève."""

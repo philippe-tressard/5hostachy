@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 import uuid
-import weakref
+import warnings
 
 from sqlalchemy import event, text
 from sqlalchemy.pool import NullPool, StaticPool
@@ -46,7 +46,7 @@ def moteur_memoire(*, partage: bool = False, schema: bool = True, cles_etrangere
     #  qu'un seul test change. Ailleurs, rien ne change.
     url = os.environ.get("TESTS_BASE_URL")
     if url:
-        return _moteur_postgresql(url, schema=schema)
+        return _moteur_postgresql(url, schema=schema, cles_etrangeres=cles_etrangeres)
     if partage:
         moteur = create_engine(
             "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -62,14 +62,27 @@ def moteur_memoire(*, partage: bool = False, schema: bool = True, cles_etrangere
     return moteur
 
 
-def _moteur_postgresql(url: str, *, schema: bool):
-    """Une base PostgreSQL propre à l'appelant : un SCHÉMA neuf, retiré à sa libération.
+#: Les schémas PostgreSQL posés pendant le test en cours — retirés par la fixture
+#: `_retirer_schemas_postgresql` de `conftest.py` à la fin du test.
+_SCHEMAS_DU_TEST: list[tuple[object, str]] = []
+
+
+def _moteur_postgresql(url: str, *, schema: bool, cles_etrangeres: bool):
+    """Une base PostgreSQL propre à l'appelant : un SCHÉMA neuf, retiré à la fin du test.
 
     Un schéma par moteur rend à chaque test la base vide qu'il reçoit de SQLite en
-    mémoire. `search_path` le fait seul visible ; il est supprimé quand le moteur
-    est libéré (fin du test), sans quoi des milliers de schémas s'accumuleraient
-    dans le catalogue au fil de la suite. `partage` et `cles_etrangeres` n'ont pas
-    d'objet : PostgreSQL sert plusieurs fils, et vérifie toujours ses clés.
+    mémoire ; `search_path` le fait seul visible.
+
+    🔴 **Retiré à la fin du TEST, pas à la libération du moteur** : un moteur gardé
+    en vie par une référence de module (un `engine` remplacé, une fermeture) ne
+    l'était qu'à la sortie du processus. Deux mesures complètes ont rempli ainsi
+    le disque de la base d'essai, en plein passage (09/10/2026).
+
+    **Le régime des clés est celui de SQLite** : désactivées sauf
+    `cles_etrangeres=True`, comme `moteur_memoire` le fait en mémoire. PostgreSQL
+    les vérifie toujours ; `session_replication_role = replica` suspend leurs
+    déclencheurs pour la connexion — sans quoi chaque fixture qui écrit un enfant
+    sans son parent, permise sous SQLite, échouait ici.
     """
     nom = f"t_{uuid.uuid4().hex[:16]}"
     #  🔴 NullPool : une connexion se FERME dès qu'elle est rendue. Avec un pool,
@@ -78,28 +91,39 @@ def _moteur_postgresql(url: str, *, schema: bool):
     admin = create_engine(url, isolation_level="AUTOCOMMIT", poolclass=NullPool)
     with admin.connect() as c:
         c.execute(text(f'CREATE SCHEMA "{nom}"'))  # noqa: S608 — identifiant généré ici
+    _SCHEMAS_DU_TEST.append((admin, nom))
+    reglages = f'SET search_path TO "{nom}"'
+    if not cles_etrangeres:
+        reglages += "; SET session_replication_role = replica"
     moteur = create_engine(url, poolclass=NullPool)
 
-    #  Posé à CHAQUE connexion, par SQL : le pilote (pg8000) n'accepte pas
-    #  l'option de démarrage `options` qu'emploie psycopg.
     @event.listens_for(moteur, "connect")
-    def _schema(dbapi_connection, _record):
+    def _regler(dbapi_connection, _record):
         curseur = dbapi_connection.cursor()
-        curseur.execute(f'SET search_path TO "{nom}"')
+        curseur.execute(reglages)
         curseur.close()
+        dbapi_connection.commit()
 
     if schema:
         SQLModel.metadata.create_all(moteur)
+    return moteur
 
-    def _retirer(admin=admin, nom=nom):
+
+def retirer_schemas_postgresql() -> None:
+    """Retire les schémas posés par le test qui s'achève — appelé par `conftest.py`."""
+    while _SCHEMAS_DU_TEST:
+        admin, nom = _SCHEMAS_DU_TEST.pop()
         try:
             with admin.connect() as c:
+                #  Une connexion restée ouverte (un client HTTP de test) bloquerait
+                #  le retrait : on attend 10 s, puis on laisse le schéma au
+                #  conteneur jetable plutôt que de figer la suite.
+                c.execute(text("SET lock_timeout = '10s'"))
                 c.execute(text(f'DROP SCHEMA IF EXISTS "{nom}" CASCADE'))  # noqa: S608
+        except Exception as exc:  # noqa: BLE001 — un retrait manqué ne fait pas échouer le test
+            warnings.warn(f"schéma de test {nom} non retiré : {exc}", stacklevel=1)
         finally:
             admin.dispose()
-
-    weakref.finalize(moteur, _retirer)
-    return moteur
 
 
 def compte(session: Session, *, prefixe: str = "compte", **champs) -> Utilisateur:

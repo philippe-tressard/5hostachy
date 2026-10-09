@@ -242,6 +242,41 @@ def utilisateur():
         session.commit()
 
 
+def pytest_collection_modifyitems(config, items):
+    """Sur PostgreSQL, les tests des migrations HISTORIQUES sont sautés, et le disent (#1747).
+
+    Elles sont écrites pour SQLite (`DATETIME`, mode `batch`, `PRAGMA`) et ne
+    s'exécutent jamais sur PostgreSQL : une base y naît du schéma initial (spec
+    §4.3). Une migration POSTÉRIEURE à l'historique, elle, doit passer sur les
+    deux — son test n'est pas sauté. La tête est jugée de même par
+    `test_migration_de_tete`.
+    """
+    import re
+
+    if not os.environ.get("TESTS_BASE_URL"):
+        return
+    from tests.aides_migrations import DERNIERE_HISTORIQUE, VERSIONS
+
+    tete = max(int(p.name[:4]) for p in VERSIONS.glob("[0-9][0-9][0-9][0-9]_*.py"))
+    saut = pytest.mark.skip(
+        reason="migration historique écrite pour SQLite — sur PostgreSQL, le schéma initial (#1747)"
+    )
+    for item in items:
+        numero = re.match(r"test_migration_(\d{4})_", item.path.name)
+        de_tete = item.path.name == "test_migration_de_tete.py" and tete <= DERNIERE_HISTORIQUE
+        if de_tete or (numero and int(numero.group(1)) <= DERNIERE_HISTORIQUE):
+            item.add_marker(saut)
+
+
+@pytest.fixture(autouse=True)
+def _retirer_schemas_postgresql():
+    """Sur PostgreSQL, les schémas d'un test partent avec lui (`tests/aides_base`)."""
+    yield
+    from tests.aides_base import retirer_schemas_postgresql
+
+    retirer_schemas_postgresql()
+
+
 def pytest_runtest_logreport(report):
     """Les tests sautés, consignés pour le rejeu local de la CI (#1734).
 

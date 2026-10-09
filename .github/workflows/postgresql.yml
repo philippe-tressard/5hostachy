@@ -4,13 +4,16 @@ name: PostgreSQL
 #
 #  Rejoue TOUTE la suite pytest sur PostgreSQL : `tests/aides_base.moteur_memoire`
 #  y bascule quand `TESTS_BASE_URL` est posé, un schéma neuf par base de test.
-#  La production reste sur SQLite ; ce workflow MESURE l'écart avant d'y toucher.
+#  La production reste sur SQLite ; ce workflow garde le code prêt pour l'autre.
 #
-#  ⚠️ INFORMATIF, et il le dit : la mesure (tests verts, en échec, par fichier) va
-#  au résumé du run, et le job ne rougit que si la mesure n'a PAS PU se faire
-#  (pytest interrompu, base injoignable) — un contrôle qui ne s'exécute pas rend
-#  INCONNU, jamais OK (`standards/04` §1). Il deviendra un check REQUIS quand la
-#  suite y sera verte, et l'écart à zéro se lira dans son résumé.
+#  🔒 REQUIS depuis le second temps de P2-5 : la suite y est verte, et un test
+#  qui casse sur PostgreSQL bloque la fusion comme sur SQLite. Le premier temps
+#  (v2.125.0) était INFORMATIF — il mesurait l'écart sans rougir. Un job qui
+#  n'a pas pu rejouer la suite (pytest interrompu, base injoignable) rend
+#  toujours l'échec : INCONNU, jamais OK (`standards/04` §1).
+#
+#  La suite tourne en tranches parallèles (`TRANCHES`) : un schéma par test,
+#  donc ~300 tables posées à chaque fois, et les quatre cœurs de l'exécuteur.
 on:
   push:
     branches: [main]
@@ -30,7 +33,7 @@ permissions:
 
 jobs:
   mesure:
-    name: Suite pytest sur PostgreSQL (mesure)
+    name: Suite pytest sur PostgreSQL
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
@@ -55,8 +58,9 @@ jobs:
         working-directory: api
         run: pip install -r requirements-dev.txt
 
-      - name: Mesurer la suite sur PostgreSQL
+      - name: Rejouer la suite sur PostgreSQL
         working-directory: api
         env:
-          TESTS_BASE_URL: postgresql+pg8000://essai:essai@localhost:5432/essai
+          TESTS_BASE_URL: postgresql+psycopg://essai:essai@localhost:5432/essai
+          TRANCHES: "4"
         run: bash ../scripts/ci/mesure-postgresql.sh
