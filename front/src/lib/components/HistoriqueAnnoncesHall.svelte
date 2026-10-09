@@ -265,7 +265,7 @@
 								? 's'
 								: ''}
 						{:else}
-							<span style="color:var(--color-warning)">non envoyée</span>
+							<span class="non-envoyee">non envoyée</span>
 						{/if}
 					</small>
 					<p class="ah-card-apercu clamp-5">{annonce.apercu}</p>
@@ -274,16 +274,16 @@
 
 			{#if ahExpandedId === annonce.id}
 				<div class="ah-card-details">
-					<div class="rich-content" style="font-size:var(--fs-base)">
+					<div class="rich-content message-annonce">
 						{@html safeHtml(annonce.message)}
 					</div>
 					{#if annonce.images?.length}
-						<div style="margin-top:.6rem">
+						<div class="bloc-suite">
 							<FichiersUpload urls={annonce.images} readonly size={64} />
 						</div>
 					{/if}
 					{#if annonce.destinataires.length}
-						<p class="ah-card-meta" style="margin-top:.6rem">
+						<p class="ah-card-meta bloc-suite">
 							Envoyée le {fmtDatetime(annonce.envoye_le ?? annonce.cree_le)} à
 							{annonce.destinataires.join(', ')}
 						</p>
@@ -328,5 +328,14 @@
 	.ah-poids {
 		font-size: var(--fs-2xs);
 		color: var(--color-text-muted);
+	}
+	.non-envoyee {
+		color: var(--color-warning);
+	}
+	.message-annonce {
+		font-size: var(--fs-base);
+	}
+	.bloc-suite {
+		margin-top: 0.6rem;
 	}
 </style>

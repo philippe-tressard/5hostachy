@@ -239,7 +239,7 @@
 								>
 								{LIBELLE_TACHE[t.tache] ?? t.tache}
 							</td>
-							<td style="color:var(--color-text-muted)">
+							<td class="muted">
 								<!--  ⚠️ « Aucune exécution » se teste EN PREMIER (#542).
 								      `noeud_enregistre` vaut faux dans ce cas aussi — faute
 								      d'exécution, il n'y a pas de nœud à enregistrer — et l'ordre
@@ -290,9 +290,7 @@
 									</span>
 								{/if}
 							</td>
-							<td style="color:var(--color-text-muted)"
-								>{t.derniere ? fmtDatetime(t.derniere) : '—'}</td
-							>
+							<td class="muted">{t.derniere ? fmtDatetime(t.derniere) : '—'}</td>
 						</tr>
 						{#if t.noeuds?.length}
 							<!--  UNE SOUS-LIGNE PAR NŒUD, toujours visible (#331).
@@ -319,7 +317,7 @@
 							{#each t.noeuds as n (n.noeud)}
 								<tr class="par-noeud">
 									<td></td>
-									<td style="color:var(--color-text-muted)">↳ {n.noeud.toUpperCase()}</td>
+									<td class="muted">↳ {n.noeud.toUpperCase()}</td>
 									<td>
 										<span
 											class="badge {CLASSE_STATUT[n.statut] ?? 'badge-red'}"
@@ -328,9 +326,7 @@
 											{LIBELLE_STATUT[n.statut] ?? n.statut}
 										</span>
 									</td>
-									<td style="color:var(--color-text-muted)"
-										>{n.derniere ? fmtDatetime(n.derniere) : '—'}</td
-									>
+									<td class="muted">{n.derniere ? fmtDatetime(n.derniere) : '—'}</td>
 								</tr>
 							{/each}
 						{/if}

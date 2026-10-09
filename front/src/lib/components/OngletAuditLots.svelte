@@ -117,16 +117,16 @@
 
 <svelte:head><title>Audit associations lots — {_siteNom}</title></svelte:head>
 
-<p style="color:var(--color-text-muted);font-size:var(--fs-base);margin:0 0 1rem">
+<p class="intro">
 	Liste toutes les associations utilisateur ↔ lot actives. Permet de repérer et supprimer les
 	affectations erronées (faux positifs de l'auto-match).
 </p>
 
-<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-	<div class="field champ-en-ligne" style="max-width:320px">
+<div class="barre-filtre">
+	<div class="field champ-en-ligne filtre-champ">
 		<input type="text" placeholder="Filtrer par nom, lot ou bâtiment…" bind:value={filtre} />
 	</div>
-	<span style="color:var(--color-text-muted);font-size:var(--fs-md)"
+	<span class="compte"
 		>{filtered.length} association{filtered.length > 1 ? 's' : ''} — {grouped.length} utilisateur{grouped.length >
 		1
 			? 's'
@@ -137,19 +137,16 @@
 {#if loading}
 	<EtatListe chargement />
 {:else if grouped.length === 0}
-	<p style="color:var(--color-text-muted)">Aucune association trouvée.</p>
+	<p class="muted">Aucune association trouvée.</p>
 {:else}
 	{#each grouped as g (g.user_id)}
-		<div class="card" style="margin-bottom:.75rem;padding:.75rem 1rem">
-			<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+		<div class="card carte-compte">
+			<div class="entete-compte">
 				<strong>{g.user_nom}</strong>
-				<span class="badge badge-gray" style="font-size:var(--fs-xs)">{g.user_statut}</span>
-				<span style="color:var(--color-text-muted);font-size:var(--fs-sm)"
-					>— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span
-				>
+				<span class="badge badge-gray statut-compte">{g.user_statut}</span>
+				<span class="nb-lots">— {g.lots.length} lot{g.lots.length > 1 ? 's' : ''}</span>
 				<button
-					class="btn btn-sm btn-outline"
-					style="margin-left:auto"
+					class="btn btn-sm btn-outline suppr-tout"
 					disabled={deletingUserId === g.user_id}
 					on:click={() => supprimerToutesPourUtilisateur(g)}
 				>
@@ -158,21 +155,21 @@
 						: `Supprimer les ${g.lots.length} associations`}
 				</button>
 			</div>
-			<table class="table" style="table-layout:fixed;width:100%;margin:0">
+			<table class="table table-lots">
 				<colgroup
-					><col style="width:25%" /><col style="width:20%" /><col style="width:20%" /><col
-						style="width:20%"
-					/><col style="width:15%" /></colgroup
+					><col class="col-25" /><col class="col-20" /><col class="col-20" /><col
+						class="col-20"
+					/><col class="col-15" /></colgroup
 				>
 				<thead><tr><th>Lot</th><th>Type lot</th><th>Bâtiment</th><th>Lien</th><th></th></tr></thead>
 				<tbody>
 					{#each g.lots as ul (ul.user_lot_id)}
 						<tr>
-							<td style="font-family:monospace">{ul.lot_numero}</td>
+							<td class="texte-code">{ul.lot_numero}</td>
 							<td>{ul.lot_type}</td>
 							<td>{ul.batiment}</td>
 							<td><span class="badge badge-blue">{ul.type_lien}</span></td>
-							<td style="text-align:right">
+							<td class="cellule-action">
 								<button
 									class="btn-icon-danger"
 									aria-label="Supprimer cette association"
@@ -201,3 +198,62 @@
 <!--  Le second relevé de cet onglet, et le même parti pris : il PROPOSE, il
       n'écrit rien. Voir son en-tête pour le pourquoi. -->
 <ReclassementTickets />
+
+<style>
+	.intro {
+		color: var(--color-text-muted);
+		font-size: var(--fs-base);
+		margin: 0 0 1rem;
+	}
+	.barre-filtre {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+	}
+	.filtre-champ {
+		max-width: 320px;
+	}
+	.compte {
+		color: var(--color-text-muted);
+		font-size: var(--fs-md);
+	}
+	.carte-compte {
+		margin-bottom: 0.75rem;
+		padding: 0.75rem 1rem;
+	}
+	.entete-compte {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.4rem;
+	}
+	.statut-compte {
+		font-size: var(--fs-xs);
+	}
+	.nb-lots {
+		color: var(--color-text-muted);
+		font-size: var(--fs-sm);
+	}
+	.suppr-tout {
+		margin-left: auto;
+	}
+	.table-lots {
+		table-layout: fixed;
+		width: 100%;
+		margin: 0;
+	}
+	.col-25 {
+		width: 25%;
+	}
+	.col-20 {
+		width: 20%;
+	}
+	.col-15 {
+		width: 15%;
+	}
+	.cellule-action {
+		text-align: right;
+	}
+</style>

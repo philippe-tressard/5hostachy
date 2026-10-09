@@ -275,20 +275,14 @@
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
 						<td style="font-weight:600">{imp.nom_coproprietaire ?? '—'}</td>
-						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-							>{imp.no_coproprietaire ?? '—'}</td
-						>
+						<td class="text-muted-sm">{imp.no_coproprietaire ?? '—'}</td>
 						<td style="font-size:var(--fs-sm);font-weight:600"
 							>{imp.batiment_nom ?? imp.batiment_id}</td
 						>
 						<td style="font-weight:500">{imp.numero}</td>
 						<td><span class="badge badge-type">{imp.type_raw}</span></td>
-						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-							>{imp.etage_raw ?? '—'}</td
-						>
-						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-							>{imp.lot_label ?? '—'}</td
-						>
+						<td class="text-muted-sm">{imp.etage_raw ?? '—'}</td>
+						<td class="text-muted-sm">{imp.lot_label ?? '—'}</td>
 						<td style="font-size:var(--fs-sm)">
 							{#if imp.utilisateurs?.length}
 								<div class="occupants-list">

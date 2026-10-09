@@ -160,7 +160,7 @@
 	</h2>
 	<SectionFormulaire premiere icone="settings" titre="Serveur d’envoi">
 		<div class="form-grid largeur-saisie">
-			<label class="field" style="grid-column:span 2">
+			<label class="field champ-double">
 				<span class="case">
 					<input type="checkbox" bind:checked={smtpConfig.enabled} />
 					Activer l'envoi d'e-mails
@@ -235,22 +235,14 @@
 				placeholder="Nouveau mot de passe SMTP"
 				aide="Requis si le serveur exige une authentification."
 			/>
-			<label class="field" style="grid-column:span 2">
-				<span style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
-					<span style="display:flex;align-items:center;gap:.4rem">
-						<input
-							type="checkbox"
-							bind:checked={smtpConfig.starttls}
-							style="width:1rem;height:1rem"
-						/>
+			<label class="field champ-double">
+				<span class="choix-chiffrement">
+					<span class="option-chiffrement">
+						<input type="checkbox" bind:checked={smtpConfig.starttls} class="case-chiffrement" />
 						STARTTLS (port 587)
 					</span>
-					<span style="display:flex;align-items:center;gap:.4rem">
-						<input
-							type="checkbox"
-							bind:checked={smtpConfig.ssl_tls}
-							style="width:1rem;height:1rem"
-						/>
+					<span class="option-chiffrement">
+						<input type="checkbox" bind:checked={smtpConfig.ssl_tls} class="case-chiffrement" />
 						SSL/TLS (port 465)
 					</span>
 				</span>
@@ -269,8 +261,8 @@
 
 	<SectionFormulaire icone="activity" titre="Tester la configuration">
 		<div class="largeur-saisie">
-			<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-				<div class="field champ-en-ligne" style="flex:1;min-width:220px">
+			<div class="ligne-test">
+				<div class="field champ-en-ligne champ-essai">
 					<input type="email" bind:value={smtpTestEmail} placeholder="destinataire@example.com" />
 				</div>
 				<button
@@ -281,7 +273,7 @@
 					{smtpTesting ? 'Envoi...' : '📨 Envoyer un e-mail de test'}
 				</button>
 			</div>
-			<p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:.3rem">
+			<p class="note-essai">
 				Envoie un e-mail de test avec la configuration SMTP actuellement enregistrée en base,
 				<strong>depuis chacune des deux adresses d'expédition</strong> — celle qui n'attend pas de
 				réponse et celle qui en attend une. Un serveur peut accepter l'une et refuser l'autre,
@@ -316,8 +308,7 @@
 					bind:value={emailFooter}
 					rows="2"
 					placeholder="— Le conseil syndical de la résidence"
-					style="width:100%;resize:vertical;font-size:var(--fs-md);font-family:monospace"
-				></textarea>
+					class="saisie-gabarit"></textarea>
 				<span class="aide"
 					>Texte ajouté automatiquement en bas de chaque e-mail envoyé par la plateforme.</span
 				>
@@ -344,4 +335,25 @@
 <style>
 	/*  Le résultat du test : un encadré, pas un `toast`. Un toast disparaît, et
 	    c'est précisément ce message qu'on relit en corrigeant un paramètre. */
+	.choix-chiffrement {
+		display: flex;
+		align-items: center;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+	}
+	.option-chiffrement {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	input[type='checkbox'].case-chiffrement {
+		width: 1rem;
+		height: 1rem;
+	}
+	.ligne-test {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		flex-wrap: wrap;
+	}
 </style>

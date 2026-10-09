@@ -23,18 +23,33 @@
 </script>
 
 <!-- ── RGPD ─────────────────────────────────────────────────────────────── -->
-<section
-	class="card"
-	style="border-color:var(--color-warning-bordure);background:var(--color-warning-fond)"
->
-	<h2 style="font-size:var(--fs-lg);font-weight:600;margin-bottom:.5rem">Vos droits (RGPD)</h2>
-	<p style="font-size:var(--fs-sm);line-height:1.55;color:var(--color-text-muted)">
+<section class="card carte-droits">
+	<h2 class="titre-droits">Vos droits (RGPD)</h2>
+	<p class="texte-droits">
 		Conformément au RGPD, vous pouvez exercer vos droits d'accès, rectification, portabilité et
 		effacement en contactant le responsable de traitement à l'adresse indiquée dans la
-		<a href="/politique-de-confidentialite" style="color:var(--color-primary)"
-			>politique de confidentialité</a
-		>.
+		<a href="/politique-de-confidentialite" class="lien-politique">politique de confidentialité</a>.
 	</p>
 
 	<TelemetrieRGPD />
 </section>
+
+<style>
+	.carte-droits {
+		border-color: var(--color-warning-bordure);
+		background: var(--color-warning-fond);
+	}
+	.titre-droits {
+		font-size: var(--fs-lg);
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+	}
+	.texte-droits {
+		font-size: var(--fs-sm);
+		line-height: 1.55;
+		color: var(--color-text-muted);
+	}
+	.lien-politique {
+		color: var(--color-primary);
+	}
+</style>

@@ -149,14 +149,14 @@
 		<EtatListe erreur={erreurLecture} titreErreur={TITRE_PARAMETRAGE_ILLISIBLE} />
 	{:else}
 		<div class="largeur-saisie">
-			<p class="aide" style="margin-bottom:.75rem">
+			<p class="aide intro-reception">
 				Quand le syndic répond à un e-mail d'affaire, sa réponse arrive dans la boîte d'envoi et
 				personne ne la voit. Activée, cette relève la dépose dans le fil de l'affaire concernée,
 				toutes les 10 minutes.
 			</p>
 		</div>
 		<div class="form-grid largeur-saisie">
-			<label class="field" style="grid-column:span 2">
+			<label class="field champ-double">
 				<span class="case">
 					<input type="checkbox" bind:checked={imapConfig.enabled} />
 					Relever les réponses
@@ -212,14 +212,14 @@
 				{imapSaving ? 'Enregistrement…' : 'Enregistrer'}
 			</button>
 		</div>
-		<div class="largeur-saisie" style="margin-top:.75rem">
+		<div class="largeur-saisie bloc-test">
 			<button class="btn btn-outline" on:click={testerImap} disabled={imapTesting}>
 				{imapTesting ? 'Connexion…' : '📥 Tester la connexion'}
 			</button>
 			{#if imapResultat}
 				<p class="imap-resultat">{imapResultat}</p>
 			{/if}
-			<p class="aide" style="margin-top:.3rem">
+			<p class="aide note-test">
 				Se connecte avec ce qui est <strong>enregistré</strong>, compte les messages non lus, et ne
 				traite rien. Enregistrez d'abord.
 			</p>
@@ -236,5 +236,14 @@
 		border-radius: 0 var(--radius) var(--radius) 0;
 		font-size: var(--fs-md);
 		white-space: pre-wrap;
+	}
+	.intro-reception {
+		margin-bottom: 0.75rem;
+	}
+	.bloc-test {
+		margin-top: 0.75rem;
+	}
+	.note-test {
+		margin-top: 0.3rem;
 	}
 </style>

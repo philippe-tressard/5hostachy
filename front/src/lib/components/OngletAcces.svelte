@@ -283,7 +283,7 @@
 				<h2 class="section-title">👥 Vue par locataire</h2>
 			</div>
 			{#if mesBaux.filter(bailEnCours).length === 0}
-				<p style="font-size:var(--fs-md);color:var(--color-text-muted)">Aucun bail actif.</p>
+				<p class="text-muted-md">Aucun bail actif.</p>
 			{:else}
 				<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:.9rem">
 					Résumé des accès (Vigik / télécommandes) confiés à vos locataires.

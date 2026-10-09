@@ -49,30 +49,24 @@
 			<div class="lpc-header">
 				<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
 				{#if lot.bail}
-					<span class="badge badge-green" style="font-size:var(--fs-2xs)">Occupé</span>
+					<span class="badge badge-green etat-lot">Occupé</span>
 				{:else}
-					<span class="badge badge-gray" style="font-size:var(--fs-2xs)">Vacant</span>
+					<span class="badge badge-gray etat-lot">Vacant</span>
 				{/if}
 			</div>
 			<div class="lpc-details">
-				<span class="badge badge-gray" style="font-size:var(--fs-2xs);text-transform:capitalize"
+				<span class="badge badge-gray type-lot"
 					>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 				>
-				{#if lot.etage !== null}<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+				{#if lot.etage !== null}<span class="text-muted-sm"
 						>{etageLabel(lot.etage, { suffixe: true })}</span
 					>{/if}
-				{#if lot.superficie}<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-						>{lot.superficie} m²</span
-					>{/if}
+				{#if lot.superficie}<span class="text-muted-sm">{lot.superficie} m²</span>{/if}
 			</div>
 			{#if lot.bail}
 				<div class="lpc-occupant">👤 {nomLocataire(lot.bail)}</div>
 			{:else}
-				<button
-					class="btn btn-sm btn-primary"
-					style="margin-top:.4rem"
-					on:click={() => onCreerBail(lot.id)}
-				>
+				<button class="btn btn-sm btn-primary btn-bail" on:click={() => onCreerBail(lot.id)}>
 					+ Créer un bail
 				</button>
 			{/if}
@@ -82,7 +76,7 @@
 
 <!-- Section 2 : Locataires (lots regroupés par locataire) -->
 {#if locatairesMap.length > 0}
-	<div class="lots-section-label" style="margin-top:1.8rem">
+	<div class="lots-section-label label-suivant">
 		👥 Locataires ({locatairesMap.length})
 	</div>
 	{#each locatairesMap as loc (loc.bail.locataire_id ?? `ext_${loc.bail.id}`)}
@@ -96,11 +90,9 @@
 				<div class="loc-contact">
 					{#if premierBail.locataire_email}<a
 							href="mailto:{premierBail.locataire_email}"
-							style="color:var(--color-primary);font-size:var(--fs-md)"
-							>📬 {premierBail.locataire_email}</a
+							class="courriel-locataire">📬 {premierBail.locataire_email}</a
 						>{/if}
-					{#if premierBail.locataire_telephone}<span
-							style="font-size:var(--fs-md);color:var(--color-text-muted)"
+					{#if premierBail.locataire_telephone}<span class="text-muted-md"
 							>📞 {premierBail.locataire_telephone}</span
 						>{/if}
 				</div>
@@ -111,12 +103,10 @@
 					{#if lot}
 						<div class="loc-lot-row">
 							<span class="lbc-lot-badge">{lot.batiment_nom ?? '—'} / {lot.numero}</span>
-							<span
-								class="badge badge-gray"
-								style="font-size:var(--fs-2xs);text-transform:capitalize"
+							<span class="badge badge-gray type-lot"
 								>{lotTypeComplet(lot.type, lot.type_appartement)}</span
 							>
-							<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
+							<span class="text-muted-sm"
 								>Depuis le {fmt(bail.date_entree)}{bail.date_sortie_prevue
 									? ` · Sortie prévue ${fmt(bail.date_sortie_prevue)}`
 									: ''}</span
@@ -145,10 +135,10 @@
 
 <!-- Lots vacants (rappel rapide) -->
 {#if lotsVacants.length > 0}
-	<div class="lots-section-label" style="margin-top:1.8rem">
+	<div class="lots-section-label label-suivant">
 		🔓 Lots vacants ({lotsVacants.length})
 	</div>
-	<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin:0 0 .6rem">
+	<p class="note-vacants">
 		Ces lots n'ont pas de bail actif. Créez un bail depuis la fiche du lot ci-dessus ou l'onglet <strong
 			>Gestion locative</strong
 		>.
@@ -243,5 +233,27 @@
 		padding: 0.3rem 0.5rem;
 		background: var(--color-bg-alt, #f8fafc);
 		border-radius: var(--radius);
+	}
+	.etat-lot {
+		font-size: var(--fs-2xs);
+	}
+	.type-lot {
+		font-size: var(--fs-2xs);
+		text-transform: capitalize;
+	}
+	.btn-bail {
+		margin-top: 0.4rem;
+	}
+	.label-suivant {
+		margin-top: 1.8rem;
+	}
+	.courriel-locataire {
+		color: var(--color-primary);
+		font-size: var(--fs-md);
+	}
+	.note-vacants {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin: 0 0 0.6rem;
 	}
 </style>

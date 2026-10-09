@@ -110,9 +110,7 @@
 
 <EntetePage titre={_pc.titre} descriptif={_pc.descriptif} icone={_pc.icone || 'bell'}>
 	{#if unread > 0}
-		<span style="font-size:var(--fs-md);color:var(--color-text-muted)"
-			>{unread} non lue{unread > 1 ? 's' : ''}</span
-		>
+		<span class="text-muted-md">{unread} non lue{unread > 1 ? 's' : ''}</span>
 		<button class="btn btn-outline btn-sm" on:click={markAll}>Tout marquer lu</button>
 	{/if}
 </EntetePage>

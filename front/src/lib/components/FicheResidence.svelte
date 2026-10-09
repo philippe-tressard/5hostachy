@@ -56,11 +56,11 @@
 	$: totalLocaux = batiments.reduce((s, b) => s + (b.nb_locaux_commerciaux ?? 0), 0);
 </script>
 
-<div class="card" style="padding:1.25rem">
+<div class="card carte-fiche">
 	{#if copropriete.adresse}
-		<div style="margin-bottom:1rem">
+		<div class="bloc-adresse">
 			<span class="info-label">Adresse</span>
-			<div class="info-value" style="margin-top:.25rem">{copropriete.adresse}</div>
+			<div class="info-value valeur-adresse">{copropriete.adresse}</div>
 		</div>
 	{/if}
 
@@ -135,8 +135,8 @@
 	{/if}
 
 	{#if batiments.length > 0}
-		<div style="border-top:1px solid var(--color-border);padding-top:1rem">
-			<p class="info-label" style="margin-bottom:.6rem">Composition</p>
+		<div class="bloc-composition">
+			<p class="info-label label-composition">Composition</p>
 			<div class="table-wrap">
 				<table class="batiment-table">
 					<thead>
@@ -151,7 +151,7 @@
 					<tbody>
 						{#each batiments as b (b.id)}
 							<tr>
-								<td style="font-weight:600">Bât. {b.numero}</td>
+								<td class="batiment">Bât. {b.numero}</td>
 								<td>{(b.nb_parkings ?? 0) > 0 ? b.nb_parkings : '—'}</td>
 								<td>{(b.nb_caves ?? 0) > 0 ? b.nb_caves : '—'}</td>
 								<td>{(b.nb_appartements ?? 0) > 0 ? b.nb_appartements : '—'}</td>
@@ -160,7 +160,7 @@
 						{/each}
 						{#if hasOrphanLots}
 							<tr>
-								<td style="color:var(--color-text-muted);font-style:italic">Communs</td>
+								<td class="communs">Communs</td>
 								<td>{copropriete.nb_parkings_communs}</td>
 								<td>—</td>
 								<td>—</td>
@@ -259,5 +259,28 @@
 		font-weight: 700;
 		border-top: 2px solid var(--color-border);
 		border-bottom: none;
+	}
+	.carte-fiche {
+		padding: 1.25rem;
+	}
+	.bloc-adresse {
+		margin-bottom: 1rem;
+	}
+	.valeur-adresse {
+		margin-top: 0.25rem;
+	}
+	.bloc-composition {
+		border-top: 1px solid var(--color-border);
+		padding-top: 1rem;
+	}
+	.label-composition {
+		margin-bottom: 0.6rem;
+	}
+	.batiment {
+		font-weight: 600;
+	}
+	.communs {
+		color: var(--color-text-muted);
+		font-style: italic;
 	}
 </style>

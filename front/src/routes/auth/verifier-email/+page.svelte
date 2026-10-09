@@ -56,7 +56,7 @@
 		</div>
 
 		{#if status === 'loading'}
-			<p style="text-align:center; color:var(--color-text-muted)">Vérification en cours…</p>
+			<p class="attente">Vérification en cours…</p>
 		{:else if status === 'success'}
 			<div class="alert alert-success">
 				{#if changementAdresse}
@@ -69,24 +69,22 @@
 					Vous recevrez un e-mail dès qu'il sera activé.
 				{/if}
 			</div>
-			<div style="text-align:center; margin-top:1rem">
+			<div class="lien-retour">
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
 		{:else if status === 'expired'}
 			<div class="alert alert-error">
 				{errorMessage}
 			</div>
-			<div style="margin-top:1.5rem">
-				<p style="font-size:var(--fs-base); color:var(--color-text-muted); margin-bottom:.75rem">
-					Vous pouvez demander un nouveau lien de vérification :
-				</p>
+			<div class="bloc-renvoi">
+				<p class="explication">Vous pouvez demander un nouveau lien de vérification :</p>
 				{#if resendDone}
-					<div class="alert alert-success" style="font-size:var(--fs-base)">
+					<div class="alert alert-success alerte-renvoi">
 						Si un compte non vérifié existe pour cette adresse, un nouveau lien vous a été envoyé.
 					</div>
 				{:else}
-					<form on:submit|preventDefault={resend} style="display:flex; gap:.5rem">
-						<div class="field champ-en-ligne" style="flex:1">
+					<form on:submit|preventDefault={resend} class="form-renvoi">
+						<div class="field champ-en-ligne champ-renvoi">
 							<input type="email" bind:value={resendEmail} placeholder="Votre e-mail" required />
 						</div>
 						<button type="submit" class="btn btn-primary" disabled={resendLoading}>
@@ -95,16 +93,43 @@
 					</form>
 				{/if}
 			</div>
-			<div style="text-align:center; margin-top:1rem">
-				<a href="/auth/connexion" style="font-size:var(--fs-md); color:var(--color-text-muted)"
-					>Retour à la connexion</a
-				>
+			<div class="lien-retour">
+				<a href="/auth/connexion" class="text-muted-md">Retour à la connexion</a>
 			</div>
 		{:else}
 			<div class="alert alert-error">{errorMessage}</div>
-			<div style="text-align:center; margin-top:1rem">
+			<div class="lien-retour">
 				<a href="/auth/connexion" class="btn btn-outline">Retour à la connexion</a>
 			</div>
 		{/if}
 	</div>
 </div>
+
+<style>
+	.attente {
+		text-align: center;
+		color: var(--color-text-muted);
+	}
+	.lien-retour {
+		text-align: center;
+		margin-top: 1rem;
+	}
+	.bloc-renvoi {
+		margin-top: 1.5rem;
+	}
+	.explication {
+		font-size: var(--fs-base);
+		color: var(--color-text-muted);
+		margin-bottom: 0.75rem;
+	}
+	.alerte-renvoi {
+		font-size: var(--fs-base);
+	}
+	.form-renvoi {
+		display: flex;
+		gap: 0.5rem;
+	}
+	.champ-renvoi {
+		flex: 1;
+	}
+</style>
