@@ -56,7 +56,10 @@
 			<div class="audit-year-group" class:audit-year-current={annee === ANNEE_COURANTE}>
 				<h4 class="audit-year-title">
 					{annee}
-					<span class="badge {annee === ANNEE_COURANTE ? 'badge-orange' : 'badge-blue'}"
+					<span
+						class="badge"
+						class:badge-orange={annee === ANNEE_COURANTE}
+						class:badge-blue={annee !== ANNEE_COURANTE}
 						>{diags.length} audit{diags.length > 1 ? 's' : ''}</span
 					>
 				</h4>
