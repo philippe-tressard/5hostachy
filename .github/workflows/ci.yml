@@ -42,7 +42,8 @@ env:
 #  qui change sans qu'un octet du dépôt bouge n'est pas un contrôle. AUCUN job
 #  n'écrit (ni `gh`, ni `GITHUB_TOKEN`, ni `secrets.`, ni push, ni commentaire
 #  de PR, ni dépôt d'artefact par API) : la lecture du contenu suffit au
-#  `checkout`. Un job qui devra écrire déclarera SA permission, dans le job.
+#  `checkout` — et à l'étape du descriptif (#1771), seule à passer le jeton,
+#  pour LIRE le dépôt. Un job qui devra écrire déclarera SA permission, dans le job.
 permissions:
   contents: read
 
@@ -136,6 +137,18 @@ jobs:
       # du projet (#1543). Le détail : l'en-tête de `scripts/ci/contenus_tiers.py`.
       - name: Contenus tiers attribués à leur licence (REUSE)
         run: python scripts/ci/contenus_tiers.py
+
+      # Le descriptif « About » du dépôt ne vit pas dans le dépôt : il disait
+      # « Licence 5Hostachy (source-available…) » un jour après le passage à
+      # l'AGPL (#1771). Son texte est versionné et jugé par
+      # `test_gouvernance_depot.py` ; ici, GitHub doit afficher CE texte, et
+      # détecter la licence de REUSE.toml. Le jeton ne sert qu'à LIRE.
+      - name: Descriptif et licence affichés par GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/ci/descriptif_depot.py --selftest
+          python scripts/ci/descriptif_depot.py
 
       - name: Run Ruff
         # F401 (import inutilisé) sur `app/` seulement, ajouté le 08/08/2026 :
