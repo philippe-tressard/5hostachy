@@ -66,7 +66,7 @@
 				<a href="/auth/mot-de-passe-oublie" class="btn btn-primary">Nouvelle demande</a>
 			</div>
 		{:else}
-			<p class="consigne">Choisissez un nouveau mot de passe pour votre compte.</p>
+			<p class="auth-consigne">Choisissez un nouveau mot de passe pour votre compte.</p>
 			<form on:submit|preventDefault={submit}>
 				<ChampMotDePasse
 					id="mdp-nouveau"
@@ -101,9 +101,4 @@
 	    `.success-box` et un `.btn-wrapper`. Tout venait de la charte ou aurait dû
 	    y venir : une copie sous un AUTRE NOM échappe à `lint:charte`, qui ne
 	    compare que les classes de la charte. Retiré le 09/09/2026. */
-	.consigne {
-		font-size: var(--fs-base);
-		color: var(--color-text-muted);
-		margin-bottom: 1.5rem;
-	}
 </style>

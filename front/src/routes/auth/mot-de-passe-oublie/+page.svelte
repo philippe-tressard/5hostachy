@@ -42,7 +42,7 @@
 				<a href="/auth/connexion" class="btn btn-primary">Retour à la connexion</a>
 			</div>
 		{:else}
-			<p class="consigne">
+			<p class="auth-consigne">
 				Saisissez votre adresse e-mail et nous vous enverrons un lien pour réinitialiser votre mot
 				de passe.
 			</p>
@@ -70,11 +70,6 @@
 	    `.success-box` et un `.btn-wrapper`. Tout venait de la charte ou aurait dû
 	    y venir : une copie sous un AUTRE NOM échappe à `lint:charte`, qui ne
 	    compare que les classes de la charte. Retiré le 09/09/2026. */
-	.consigne {
-		font-size: var(--fs-base);
-		color: var(--color-text-muted);
-		margin-bottom: 1.5rem;
-	}
 	.retour {
 		text-align: center;
 		font-size: var(--fs-sm);
