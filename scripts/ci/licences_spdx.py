@@ -152,3 +152,28 @@ def licence_python(
         noms = " | ".join(CLASSIFIEURS.get(c, c) for c in licences)
         return f"{noms} (classifieurs multiples)", "Classifier"
     return "NON DÉTERMINÉE", "aucune"
+
+
+def licence_du_projet(texte_reuse: str) -> str:
+    """L'identifiant que le dépôt ACCORDE : l'annotation du motif `**` de `REUSE.toml`.
+
+    Seule lecture de cette valeur (`test_gouvernance_depot.py`,
+    `descriptif_depot.py`) : un nom de licence recopié dans un contrôle
+    défendrait l'ancienne le jour où elle change. Lève ValueError si le motif
+    racine n'existe pas ou ne déclare pas de licence — illisible n'est pas vide.
+    """
+    import tomllib
+
+    try:
+        annotations = tomllib.loads(texte_reuse).get("annotations", [])
+    except tomllib.TOMLDecodeError as erreur:
+        raise ValueError(f"REUSE.toml illisible : {erreur}") from erreur
+    for annotation in annotations:
+        chemins = annotation.get("path")
+        chemins = [chemins] if isinstance(chemins, str) else (chemins or [])
+        if "**" in chemins:
+            licence = annotation.get("SPDX-License-Identifier")
+            if isinstance(licence, str) and licence.strip():
+                return licence.strip()
+            raise ValueError("le motif « ** » de REUSE.toml ne déclare aucune licence")
+    raise ValueError("REUSE.toml n'a pas de motif « ** » : la licence du projet est illisible")

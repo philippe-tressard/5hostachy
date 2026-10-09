@@ -54,8 +54,20 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sys
 
 _RACINE = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_RACINE / "scripts" / "ci"))
+
+from licences_spdx import licence_du_projet  # noqa: E402
+
+#: Le descriptif « About » du dépôt sur GitHub, versionné (#1771). C'est le
+#: premier texte public qu'on lit du projet, et il disait encore « Licence
+#: 5Hostachy (source-available… + clauses commerciales) » le 09/10/2026, un
+#: jour après le passage à l'AGPL : rien ne le confrontait à la licence. Il est
+#: jugé ici comme les autres fichiers publics ; `scripts/ci/descriptif_depot.py`
+#: vérifie en CI que GitHub affiche bien CE texte.
+DESCRIPTIF = ".github/descriptif-depot.txt"
 
 #: Les fichiers publics qui *parlent* de la licence et de la méthode du projet.
 #:
@@ -64,7 +76,7 @@ _RACINE = pathlib.Path(__file__).resolve().parents[2]
 #: pour le franciser le rendrait faux. Il est tenu à l'octet près par
 #: `test_les_copies_de_la_licence_sont_identiques`, et sa nature par
 #: `test_le_texte_de_licence_est_celui_de_l_identifiant`.
-GOUVERNANCE = ("README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md")
+GOUVERNANCE = ("README.md", "CONTRIBUTING.md", "SECURITY.md", "NOTICE.md", DESCRIPTIF)
 
 #: Les licences qu'un fichier de gouvernance ne peut pas promettre, puisque le
 #: dépôt ne les accorde pas.
@@ -95,6 +107,30 @@ LICENCES_NON_ACCORDEES = (
 #: le test échoue si la section disparaît : une exception qui ne sert plus se
 #: retire.
 SECTIONS_TIERS = {"NOTICE.md": "## 6. Composants tiers"}
+
+#: Ce qui décrit l'ANCIENNE licence (« Licence 5Hostachy », jusqu'à la 2.115.0)
+#: — des mots qu'aucun identifiant SPDX ne porte, donc que
+#: `LICENCES_NON_ACCORDEES` ne voyait pas : le descriptif GitHub les a gardés
+#: un jour entier après le changement (#1771). « AGPL-like » y est : une
+#: licence « comme » l'AGPL n'est pas l'AGPL.
+REGIMES_NON_ACCORDES = (
+    r"source[- ]available",
+    r"clauses? (?:d'usage )?commercial(?:e|es)?\b",
+    r"Licence 5Hostachy",
+    r"\w*GPL-like",
+)
+
+#: L'exception, et la seule : la section de `NOTICE.md` qui RACONTE le
+#: changement de licence. Les versions jusqu'à la 2.115.0 restent sous
+#: l'ancienne ; la nommer y est une obligation, pas un oubli.
+SECTIONS_HISTORIQUE = {"NOTICE.md": "## 2. Changement de licence (08/10/2026)"}
+
+#: GitHub refuse un descriptif plus long.
+LONGUEUR_MAX_DESCRIPTIF = 350
+
+#: Un numéro de version : le descriptif n'est pas bumpé avec `package.json`, et
+#: celui du 09/10/2026 disait « v1.0.0 » pour la v2.122.0.
+VERSION = r"\bv?\d+\.\d+(?:\.\d+)?\b"
 
 #: Mots dont aucun n'a de sens en français. Ils ne mesurent pas un style : leur
 #: présence dit qu'une phrase entière est en anglais.
@@ -134,28 +170,20 @@ def _prose_seule(texte: str) -> str:
     return texte
 
 
-def _sans_section_tierce(nom: str, texte: str) -> str:
-    """Le texte privé de sa section « Composants tiers », si elle lui est déclarée."""
-    titre = SECTIONS_TIERS.get(nom)
+def _sans_section(nom: str, texte: str, sections: dict[str, str] = SECTIONS_TIERS) -> str:
+    """Le texte privé de la section que `sections` lui déclare en exception, s'il en a une."""
+    titre = sections.get(nom)
     if titre is None:
         return texte
     debut = texte.find(f"\n{titre}\n")
-    assert debut >= 0, (
-        f"{nom} n'a plus de section « {titre} » : retirer son entrée de SECTIONS_TIERS"
-    )
+    assert debut >= 0, f"{nom} n'a plus de section « {titre} » : retirer son exception"
     suite = texte.find("\n## ", debut + len(titre) + 1)
     return texte[:debut] + ("" if suite < 0 else texte[suite:])
 
 
 def identifiant_spdx_accorde() -> str:
     """L'identifiant que le dépôt accorde réellement, lu dans `REUSE.toml`."""
-    reuse = _lire("REUSE.toml")
-    trouve = re.search(r'SPDX-License-Identifier\s*=\s*"([^"]+)"', reuse)
-    assert trouve, (
-        "REUSE.toml ne déclare aucun SPDX-License-Identifier : "
-        "la licence accordée par le dépôt n'est plus lisible nulle part"
-    )
-    return trouve.group(1)
+    return licence_du_projet(_lire("REUSE.toml"))
 
 
 def nom_lisible_de_la_licence() -> str:
@@ -167,7 +195,7 @@ def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
     """Le défaut exact du 19/09/2026 : « MIT » dans `CONTRIBUTING.md`."""
     fautes = []
     for nom in GOUVERNANCE:
-        prose = _prose_seule(_sans_section_tierce(nom, _lire(nom)))
+        prose = _prose_seule(_sans_section(nom, _lire(nom)))
         for licence in LICENCES_NON_ACCORDEES:
             for trouve in re.finditer(rf"\b{re.escape(licence)}\b", prose, re.I):
                 debut = max(0, trouve.start() - 60)
@@ -177,6 +205,62 @@ def test_aucun_fichier_public_ne_promet_une_licence_non_accordee():
         "Un fichier public nomme une licence que le dépôt n'accorde pas "
         f"(il accorde « {nom_lisible_de_la_licence()} », "
         f"SPDX {identifiant_spdx_accorde()}) :\n" + "\n".join(fautes)
+    )
+
+
+def _regimes_non_accordes(texte: str) -> list[re.Match]:
+    return [t for motif in REGIMES_NON_ACCORDES for t in re.finditer(motif, texte, re.I)]
+
+
+def test_aucun_fichier_public_ne_decrit_l_ancienne_licence():
+    """Le défaut exact du 09/10/2026 : le descriptif GitHub, resté source-available."""
+    fautes = []
+    for nom in GOUVERNANCE:
+        prose = _prose_seule(_sans_section(nom, _lire(nom), SECTIONS_HISTORIQUE))
+        for trouve in _regimes_non_accordes(prose):
+            debut = max(0, trouve.start() - 60)
+            fautes.append(f"  {nom} : …{prose[debut : trouve.end() + 40].strip()}…")
+
+    assert not fautes, (
+        "Un fichier public décrit l'ancienne licence — le dépôt accorde "
+        f"{identifiant_spdx_accorde()} depuis la 2.116.0 :\n" + "\n".join(fautes)
+    )
+
+
+def _sans_licence(texte: str) -> str:
+    """Le texte sans l'identifiant de licence, dont le « 3.0 » n'est pas une version."""
+    return texte.replace(identifiant_spdx_accorde(), " ")
+
+
+def test_les_motifs_attrapent_le_descriptif_du_09_10():
+    """Cas témoin : le texte fautif lui-même est refusé, motif par motif (`standards/04` §2)."""
+    fautif = (
+        "Application de gestion des résidents pour une copropriété multi-bâtiments "
+        "avec syndic — v1.0.0, Licence 5Hostachy (source-available, copyleft "
+        "AGPL-like + clauses commerciales)"
+    )
+    for motif in REGIMES_NON_ACCORDES:
+        assert re.search(motif, fautif, re.I), f"le motif {motif!r} ne sert plus"
+    assert re.search(VERSION, _sans_licence(fautif))
+    assert not re.search(
+        VERSION, _sans_licence(f"Logiciel libre sous {identifiant_spdx_accorde()}")
+    )
+
+
+def test_le_descriptif_github_nomme_la_licence_et_aucune_version():
+    """Le premier texte qu'on lit du projet dit sa licence, et rien qui se périme."""
+    descriptif = _lire(DESCRIPTIF).strip()
+    spdx = identifiant_spdx_accorde()
+    assert descriptif, f"{DESCRIPTIF} est vide : GitHub n'afficherait aucune licence"
+    assert "\n" not in descriptif, f"{DESCRIPTIF} : GitHub n'affiche qu'une ligne"
+    assert len(descriptif) <= LONGUEUR_MAX_DESCRIPTIF, (
+        f"{DESCRIPTIF} : {len(descriptif)} caractères, GitHub en accepte {LONGUEUR_MAX_DESCRIPTIF}"
+    )
+    assert spdx in descriptif, f"{DESCRIPTIF} ne nomme pas la licence accordée, « {spdx} »"
+    version = re.search(VERSION, _sans_licence(descriptif))
+    assert not version, (
+        f"{DESCRIPTIF} porte un numéro de version (« {version.group(0)} ») : "
+        "il n'est pas bumpé avec le projet, et se périme à la version suivante"
     )
 
 
