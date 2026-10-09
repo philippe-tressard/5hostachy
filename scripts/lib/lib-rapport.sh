@@ -207,6 +207,30 @@ if ! declare -f log >/dev/null 2>&1; then
 fi
 
 # ── Self-test ────────────────────────────────────────────────────────────────
+# ── Le rapport d'une bascule réussie (`bascule.sh`) ───────────────────────────
+# POURQUOI (04/08/2026) : jusqu'ici la bascule ne rendait compte à personne. La
+# ligne « Bascule actif/standby » de l'écran Admin → Maintenance affichait donc
+# « Jamais exécutée » EN PERMANENCE, alors qu'elle réussissait chaque nuit — et,
+# plus grave, l'écran serait resté IDENTIQUE si elle s'était arrêtée pour de bon.
+# Un rouge permanent ne signale rien : c'est le battement manquant de
+# standards/04 §4. Elle alerte quand elle échoue (send_alert_email) ET rend
+# compte quand elle réussit — une alerte ne prouve jamais que la tâche tourne.
+#
+# La cible est le PEER : les flags viennent d'être inversés, c'est lui qui porte
+# maintenant l'API. Poster sur soi-même échouerait — même erreur que celle
+# corrigée le 02/08 pour l'hygiène locale du standby. `noeud` = QUI a agi (comme
+# dans maintenance.sh) : l'ancien actif ; le nœud devenu actif est dans `vers`.
+# Sorti de bascule.sh, qui atteignait le plafond de 500 lignes (DI-7b, #1781).
+rapporter_bascule() { # $1 dépôt · $2 self · $3 peer · $4 IP du peer · $5 commit · $6 début
+    local cle fin details
+    cle=$(rapport_cle "$1") || { log "  ⚠ MAINTENANCE_KEY illisible — rapport de bascule non enregistré"; return 0; }
+    fin=$(date -u +%Y-%m-%dT%H:%M:%S)
+    details=$(printf '{"depuis":"%s","vers":"%s","commit":"%s"}' "$2" "$3" "${5:0:7}")
+    rapport_envoyer "http://$4" "$cle" \
+      "$(rapport_payload bascule "$2" applicative succes "$SECONDS" "$details" '' "$6" "$fin")" \
+      "Rapport bascule"
+}
+
 if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     st_fail=0
     check() { if [ "$3" = "$2" ]; then echo "PASS  $1"
