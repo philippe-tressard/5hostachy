@@ -65,6 +65,8 @@ HORS_GABARIT = {
     "uploads_dir": "chemin INTERNE au conteneur, fixé par le volume "
     "`uploads:/app/uploads` — le déclarer dans .env laisserait croire qu'on peut "
     "le déplacer sans toucher au volume",
+    "git_hash": "posé par la CONSTRUCTION de l'image (`ARG GIT_HASH`, api/Dockerfile) : "
+    "c'est le commit qu'elle contient, pas un réglage d'exploitant (#1761)",
     "wa_photo_budget_ko": "posé par l'ancre `x-budget-photo-whatsapp` de "
     "docker-compose.yml, lue des DEUX côtés (API et bridge) ; une seconde source "
     "les ferait diverger (#1057)",

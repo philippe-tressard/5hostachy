@@ -978,5 +978,10 @@ Instanciation 5Hostachy :
   Ce retour arrière tient parce que `start.sh` **saute les migrations d'une base
   en avance sur le code** (`utils/revision_base`) : sans lui, l'ancienne image
   s'arrêtait en boucle sur une révision inconnue.
+- **Le rôle de l'installation** (#1761) : `ROLE_INSTALLATION` (`maitre` sur les deux RPi,
+  `replique` posé d'office par `compose.images.yml`) se lit dans `utils/installation` et
+  nulle part ailleurs ; absent → « Inconnu », jamais « Maître ». Le bloc *Installation*
+  d'Admin › Maintenance le montre, avec l'écart au dépôt si le service *Vérification de
+  la version* est activé (coupé par défaut : rien ne sort sans accord).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.

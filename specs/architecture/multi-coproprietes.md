@@ -401,7 +401,7 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou `test_migrations_compatibles.py`. **Livré en v2.119.1** | S | — | #1757 |
 | DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi ; construction locale en secours, avec alerte. **Livré en v2.122.0** | M | DI-1 | #1758 |
 | DI-7 | **PostgreSQL sur le maître** (RPi), réplication vers le standby, règle d'or réécrite | L | P2-5, P2-7 | #1759 |
-| DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica` | #1761 |
+| DI-8 | **Le rôle de l'installation dans l'administration** : maître (`main`), réplique (`replica`) ou inconnu ; version, écart à la branche suivie (règle 11) | S | — ; DI-1 pour l'écart à `replica`. **Livré en v2.123.0** : `ROLE_INSTALLATION`, service *Vérification de la version* coupé par défaut | #1761 |
 
 **Ordre conseillé** : DI-5 dès maintenant (il sert aussi au retour arrière du
 maître) ; DI-1 puis DI-6, qui suppriment les builds sur les RPi ; DI-2 et DI-3 ;

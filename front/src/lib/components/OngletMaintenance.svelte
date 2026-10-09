@@ -8,6 +8,7 @@
   derniers écrits en ligne, et l'accueillir aurait demandé de l'agrandir.
 -->
 <script lang="ts">
+	import CarteInstallation from '$lib/components/CarteInstallation.svelte';
 	import ControleSante from '$lib/components/ControleSante.svelte';
 	import ControlesFiabilite from '$lib/components/ControlesFiabilite.svelte';
 	import ConsommationIA from '$lib/components/ConsommationIA.svelte';
@@ -30,6 +31,7 @@
       de l'agrégation — est déplacé dans `TachesPlanifiees` (AIDE_TACHE), et la
       profondeur d'historique y passe de 4 à 10 : retirer les cartes sans
       compenser aurait réduit en silence ce qu'un administrateur peut voir. -->
+<CarteInstallation />
 <TachesPlanifiees />
 <ControlesFiabilite />
 <ConsommationIA />

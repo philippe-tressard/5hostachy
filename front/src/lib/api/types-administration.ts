@@ -480,3 +480,21 @@ export interface EssaiWhatsApp {
 	message: string;
 	detail: Record<string, unknown>;
 }
+
+/**  `GET /admin/installation` (`routers/admin/installation.py`, #1761) : le rôle de
+ *   l'installation dans la distribution, et l'écart de sa version à la branche suivie. */
+export interface EtatInstallation {
+	/** `maitre` | `replique` | `inconnu` — absent du `.env`, jamais « maître ». */
+	role: 'maitre' | 'replique' | 'inconnu';
+	libelle: string;
+	/** `main` | `replica` ; `null` quand le rôle est inconnu. */
+	branche: string | null;
+	/** Le commit de l'image ; vide pour une image construite sans lui. */
+	empreinte: string;
+	demarree_le: string;
+	verification_active: boolean;
+	/** `a_jour` | `en_retard` | `ecart` | `non_verifie` — jamais « à jour » faute de mesure. */
+	etat: 'a_jour' | 'en_retard' | 'ecart' | 'non_verifie';
+	retard: number;
+	detail: string;
+}

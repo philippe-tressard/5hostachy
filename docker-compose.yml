@@ -71,6 +71,8 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
+      args:
+        GIT_HASH: ${GIT_HASH:-dev}
     container_name: hostachy_api
     restart: unless-stopped
     stop_grace_period: 30s

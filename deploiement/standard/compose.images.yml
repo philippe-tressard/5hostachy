@@ -33,6 +33,10 @@ services:
 
   api:
     build: !reset null
+    # Une installation standard EST une réplique (#1761) : le rôle ne dépend pas
+    # d'un `.env` qu'on aurait oublié de compléter.
+    environment:
+      - ROLE_INSTALLATION=replique
     image: ghcr.io/philippe-tressard/coprofirst-api:${COPROFIRST_VERSION:?COPROFIRST_VERSION manquante dans .env}
     pull_policy: missing
 

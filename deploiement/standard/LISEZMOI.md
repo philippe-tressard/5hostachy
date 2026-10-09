@@ -70,7 +70,9 @@ dépôt), l'archive `coprofirst-deploiement-X.Y.Z.tar.gz`. Elle contient,
    docker compose logs api | grep "ADMIN INITIAL"
    ```
    Le changer dès la première connexion, puis régler l'identité de la résidence
-   (nom, adresse, logo) dans l'administration.
+   (nom, adresse, logo) dans l'administration. *Administration › Maintenance* dit
+   « Réplique — suit replica » : la surcouche pose ce rôle d'office. Pour y voir si
+   la version est à jour, activer le service *Vérification de la version*.
 
 ## Mettre à jour
 

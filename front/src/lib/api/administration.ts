@@ -29,6 +29,7 @@ import type {
 	EssaiImap,
 	EssaiSmtp,
 	EssaiWhatsApp,
+	EtatInstallation,
 	ExecutionMaintenance,
 	ExecutionSauvegarde,
 	ExecutionTache,
@@ -267,6 +268,9 @@ export const admin = {
 	 */
 	purgerOrphelins: () =>
 		api.post<{ supprimees: number; deliees: number }>('/admin/db/purger-orphelins?confirmer=true'),
+
+	/** Le rôle de l'installation et l'écart de sa version — lu par `CarteInstallation` (#1761). */
+	installation: () => api.get<EtatInstallation>('/admin/installation'),
 
 	/** L'état des tâches planifiées — lu par `TachesPlanifiees`. */
 	santeMaintenance: () => api.get<SanteMaintenance>('/admin/maintenance/sante'),

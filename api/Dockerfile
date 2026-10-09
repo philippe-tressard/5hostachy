@@ -2,6 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Le commit de l'image, lu par Administration › Maintenance (« Installation »,
+# #1761) pour le comparer à la branche suivie. Posé par la CI (images.yml) et
+# par `construire_images` ; `dev` hors de ces deux chemins.
+ARG GIT_HASH=dev
+ENV GIT_HASH=$GIT_HASH
+
 # Dépendances système
 # libpango/libcairo/libharfbuzz(+subset) + polices : rendu PDF WeasyPrint
 # (fiche arrivant, annonces de hall). Aucune compilation : install rapide sur ARM64.

@@ -55,6 +55,7 @@ from dataclasses import dataclass
 SERVICE_IA = "assistant_ia"
 SERVICE_DIFFUSION = "diffusion"
 SERVICE_REPONSES_COURRIEL = "reponses_courriel"
+SERVICE_VERIF_VERSION = "verification_version"
 INFRA_SMTP = "envoi_courriels"
 
 #: La valeur qui dit « activé ». Une seule, pour toutes les clés.
@@ -136,6 +137,19 @@ SERVICES: dict[str, Service] = {
             ("imap_username", "l'identifiant"),
             ("imap_password", "le mot de passe"),
         ),
+    ),
+    SERVICE_VERIF_VERSION: Service(
+        code=SERVICE_VERIF_VERSION,
+        libelle="Vérification de la version",
+        description=(
+            "Compare la version qui tourne à la branche que suit l'installation (main pour "
+            "le maître, replica pour une réplique), sur le dépôt public, quand "
+            "Administration › Maintenance s'ouvre. Seul le commit de l'image part."
+        ),
+        perte="Le bloc « Installation » dit « non vérifié » : un retard ou un écart ne se voit plus.",
+        onglet="maintenance",
+        icone="refresh-cw",
+        cle_actif="verification_version_active",
     ),
     INFRA_SMTP: Service(
         code=INFRA_SMTP,
