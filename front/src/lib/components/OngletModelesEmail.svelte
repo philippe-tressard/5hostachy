@@ -39,8 +39,8 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { confirmer } from '$lib/confirmation';
 	import { safeHtml } from '$lib/sanitize';
-	import { fmtDatetimeShort as fmt } from '$lib/date';
 	import EtatListe from '$lib/components/EtatListe.svelte';
+	import HistoriqueEnvoisEmail from '$lib/components/HistoriqueEnvoisEmail.svelte';
 
 	let emailTemplates: ModeleEmail[] = [];
 	let emailsLoading = true;
@@ -216,9 +216,7 @@
 	onMount(loadEmails);
 </script>
 
-<p class="muted" style="margin-bottom:1rem">
-	Modeles utilises pour les notifications automatiques.
-</p>
+<p class="muted intro-modeles">Modeles utilises pour les notifications automatiques.</p>
 {#if emailsLoading || erreurModeles || emailTemplates.length === 0}
 	<EtatListe
 		chargement={emailsLoading}
@@ -228,8 +226,8 @@
 		titreVide="Aucun modèle trouvé"
 	/>
 {:else}
-	<div class="card" style="overflow:hidden">
-		<div class="action-row" style="margin-bottom:.75rem">
+	<div class="card carte-modeles">
+		<div class="action-row actions-modeles">
 			<button
 				class="btn btn-outline btn-sm"
 				on:click={resetEmailTemplates}
@@ -249,14 +247,14 @@
 			<tbody>
 				{#each emailTemplates as tpl (tpl.code)}
 					<tr>
-						<td><code style="font-size:var(--fs-sm)">{tpl.code}</code></td>
-						<td style="font-size:var(--fs-base)">{tpl.libelle ?? '—'}</td>
+						<td><code class="texte-sm">{tpl.code}</code></td>
+						<td class="libelle-modele">{tpl.libelle ?? '—'}</td>
 						<td class="text-muted-sm">{tpl.sujet}</td>
 						<td>
 							{#if tpl.intention}<span class="badge badge-blue"
 									>{labelIntention(tpl.intention)}</span
 								>
-							{:else}<span class="muted" style="font-size:var(--fs-sm)">—</span>{/if}
+							{:else}<span class="muted texte-sm">—</span>{/if}
 						</td>
 						<td>
 							{#if tpl.actif}<span class="badge badge-green">Oui</span>
@@ -292,14 +290,14 @@
 						<tr class="ligne-edition">
 							<td colspan="6">
 								<FormulaireCreation titre="Modifier le modèle {tpl.code}" encadre={false}>
-									<div style="display:flex;flex-direction:column;gap:.6rem">
+									<div class="champs-modele">
 										<div class="field">
 											<label for="email-sujet">Sujet</label>
 											<input
 												id="email-sujet"
 												type="text"
 												bind:value={emailSujet}
-												style="font-family:monospace"
+												class="texte-code"
 											/>
 										</div>
 										<div class="field">
@@ -316,7 +314,7 @@
 											>
 										</div>
 										<div class="field">
-											<div style="display:flex;align-items:center;justify-content:space-between">
+											<div class="entete-corps">
 												<label for="email-corps-html">Corps HTML</label>
 												<button
 													class="btn btn-outline btn-sm"
@@ -333,7 +331,7 @@
 													id="email-corps-html"
 													rows="10"
 													bind:value={emailCorpsHtml}
-													style="font-family:monospace;resize:vertical"></textarea>
+													class="saisie-corps"></textarea>
 											{/if}
 										</div>
 										<!--  🔴 « Corps texte (fallback) » a été RETIRÉ le 08/09/2026, sur
@@ -391,54 +389,11 @@
 	</div>
 {/if}
 
-<!-- Historique des emails envoyés -->
-<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
-<h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">📬 Historique des envois</h3>
-<p class="muted" style="font-size:var(--fs-md);margin-bottom:.75rem">
-	10 derniers emails envoyés (ou tentatives). Purgé automatiquement après 90 jours.
-</p>
-{#if emailHistoryLoading || erreurHistorique || emailHistory.length === 0}
-	<EtatListe
-		chargement={emailHistoryLoading}
-		erreur={erreurHistorique}
-		vide={emailHistory.length === 0}
-		titreErreur="Impossible d’afficher l’historique d’envoi"
-		titreVide="Aucun e-mail envoyé"
-		messageVide="L'historique est vide."
-	/>
-{:else}
-	<div class="card" style="overflow:auto;max-height:420px">
-		<table class="table" style="font-size:var(--fs-md)">
-			<thead class="sticky-head"
-				><tr><th>Date</th><th>Template</th><th>Destinataire</th><th>Sujet</th><th>Statut</th></tr
-				></thead
-			>
-			<tbody>
-				{#each emailHistory as h (h.id)}
-					<tr>
-						<td style="white-space:nowrap">{fmt(h.cree_le)}</td>
-						<td><code style="font-size:var(--fs-xs)">{h.code}</code></td>
-						<td
-							style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-							title={h.destinataire}>{h.destinataire}</td
-						>
-						<td
-							style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-							title={h.sujet}>{h.sujet || '—'}</td
-						>
-						<td>
-							{#if h.statut === 'succes'}<span class="badge badge-green">✓</span>
-							{:else if h.statut === 'erreur'}<span class="badge badge-red" title={h.erreur ?? ''}
-									>✗</span
-								>
-							{:else}<span class="badge badge-gray" title={h.erreur ?? ''}>ignoré</span>{/if}
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
-{/if}
+<HistoriqueEnvoisEmail
+	historique={emailHistory}
+	chargement={emailHistoryLoading}
+	erreur={erreurHistorique}
+/>
 
 <style>
 	/*  La rangée qui porte le formulaire — elle appartient au tableau, et se
@@ -471,5 +426,34 @@
 	}
 	.variables-modele code {
 		margin-left: 0.25rem;
+	}
+	.intro-modeles {
+		margin-bottom: 1rem;
+	}
+	.carte-modeles {
+		overflow: hidden;
+	}
+	.actions-modeles {
+		margin-bottom: 0.75rem;
+	}
+	.texte-sm {
+		font-size: var(--fs-sm);
+	}
+	.libelle-modele {
+		font-size: var(--fs-base);
+	}
+	.champs-modele {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.entete-corps {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.saisie-corps {
+		font-family: monospace;
+		resize: vertical;
 	}
 </style>

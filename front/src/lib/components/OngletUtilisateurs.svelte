@@ -25,6 +25,7 @@
 	import { comparerParNom, nomAffiche } from '$lib/noms';
 	import { badgeStatut, badgesDeRoles, libelleRole, LIBELLES_STATUT_ABREGE } from '$lib/roles';
 	import { aRole } from '$lib/stores/auth';
+	import GestesRolesCompte from '$lib/components/GestesRolesCompte.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 	import FiltresUtilisateurs from '$lib/components/FiltresUtilisateurs.svelte';
 	import FormulaireCreation from '$lib/components/FormulaireCreation.svelte';
@@ -207,7 +208,7 @@
 	{#if filteredUsers.length === 0}
 		<div class="empty-state"><h3>Aucun résultat</h3></div>
 	{:else}
-		<div class="card" style="overflow:hidden">
+		<div class="card carte-comptes">
 			<table class="table">
 				<thead>
 					<tr
@@ -219,12 +220,10 @@
 				<tbody>
 					{#each filteredUsers as u (u.id)}
 						<tr class:row-cs={aRole(u, 'conseil_syndical')} class:row-inactive={!u.actif}>
-							<td style="font-weight:500">
+							<td class="nom-compte">
 								{nomAffiche(u)}
 								{#if u.statut === 'locataire' && u.nom_proprietaire}
-									<div
-										style="font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:.15rem"
-									>
+									<div class="precision-compte">
 										🏠 Bailleur : {u.nom_proprietaire}
 									</div>
 								{/if}
@@ -246,7 +245,7 @@
 							</td>
 							<td class="text-muted-md">{u.email}</td>
 							<td>
-								<span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)">
+								<span class="badge {badgeStatut(u.statut)} statut-compte">
 									{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut ?? '—'}
 								</span>
 							</td>
@@ -273,59 +272,14 @@
 								{/if}
 							</td>
 							<td>
-								<div style="display:flex;gap:.3rem;flex-wrap:wrap">
+								<div class="liste-badges">
 									{#each badgesDeRoles(u.roles?.length ? u.roles : [u.role]) as d (d.label)}
 										<span class="badge {d.cls}">{d.label}</span>
 									{/each}
 								</div>
 							</td>
 							<td>
-								{#if !u.actif}
-									<span class="muted" style="font-size:var(--fs-sm)">Compte inactif</span>
-								{:else}
-									<div class="action-row">
-										<!-- Ajouter CS si pas déjà — réservé aux propriétaires -->
-										{#if !aRole(u, 'conseil_syndical')}
-											{#if u.statut?.startsWith('copropriétaire')}
-												<button
-													class="btn btn-outline btn-sm"
-													style="color:#1d4ed8;border-color:#1d4ed8"
-													on:click={() => demanderRole(u, 'conseil_syndical', 'ajouter')}
-												>
-													+ CS
-												</button>
-											{/if}
-										{:else}
-											<button
-												class="btn btn-outline btn-sm"
-												style="color:var(--color-danger);border-color:var(--color-danger)"
-												on:click={() => demanderRole(u, 'conseil_syndical', 'retirer')}
-											>
-												– CS
-											</button>
-										{/if}
-										<!-- Ajouter Admin si pas déjà — réservé aux propriétaires -->
-										{#if !aRole(u, 'admin')}
-											{#if u.statut?.startsWith('copropriétaire')}
-												<button
-													class="btn btn-outline btn-sm"
-													style="color:#c2410c;border-color:#c2410c"
-													on:click={() => demanderRole(u, 'admin', 'ajouter')}
-												>
-													+ Admin
-												</button>
-											{/if}
-										{:else}
-											<button
-												class="btn btn-outline btn-sm"
-												style="color:var(--color-danger);border-color:var(--color-danger)"
-												on:click={() => demanderRole(u, 'admin', 'retirer')}
-											>
-												– Admin
-											</button>
-										{/if}
-									</div>
-								{/if}
+								<GestesRolesCompte {u} demander={demanderRole} />
 							</td>
 							<td>
 								<div class="action-row">
@@ -396,7 +350,7 @@
 		classeBoite="modal-box card modal-sm"
 		on:fermer={() => (roleEnCours = null)}
 	>
-		<p style="font-size:var(--fs-base);margin-bottom:1rem">
+		<p class="question-role">
 			{roleEnCours.action === 'ajouter' ? 'Ajouter' : 'Retirer'} le rôle
 			<strong>{libelleRole(roleEnCours.role)}</strong>
 			{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
@@ -491,5 +445,28 @@
 	.utag-sans_objet {
 		background: var(--color-bg-subtle, #f3f4f6);
 		color: var(--color-text-muted);
+	}
+	.carte-comptes {
+		overflow: hidden;
+	}
+	.nom-compte {
+		font-weight: 500;
+	}
+	.precision-compte {
+		font-size: var(--fs-xs);
+		color: var(--color-text-muted);
+		margin-top: 0.15rem;
+	}
+	.statut-compte {
+		font-size: var(--fs-xs);
+	}
+	.liste-badges {
+		display: flex;
+		gap: 0.3rem;
+		flex-wrap: wrap;
+	}
+	.question-role {
+		font-size: var(--fs-base);
+		margin-bottom: 1rem;
 	}
 </style>

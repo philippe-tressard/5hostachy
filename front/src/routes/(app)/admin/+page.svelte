@@ -305,7 +305,7 @@
 		</p>
 		<RichEditor bind:value={siteConfig.mentions_legales} minHeight="380px" titres sourceHtml />
 	</section>
-	<hr class="separateur" />
+	<hr class="separateur-section" />
 	<section class="card config-section">
 		<h2 class="config-section-title">
 			<Icon name="shield" size={17} />Politique de confidentialité
@@ -381,10 +381,5 @@
     `delegations` en avait une deuxieme. Meme notion, trois couleurs. */
 	.intro-texte {
 		margin-bottom: 1rem;
-	}
-	.separateur {
-		border: none;
-		border-top: 1px solid var(--color-border);
-		margin: 1.5rem 0;
 	}
 </style>
