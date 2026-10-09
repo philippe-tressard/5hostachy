@@ -39,8 +39,8 @@
 </script>
 
 <!-- Télémétrie opt-out -->
-<div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--color-warning-bordure)">
-	<label class="checkbox-field" style="margin-bottom:.4rem">
+<div class="bloc-telemetrie">
+	<label class="checkbox-field case-telemetrie">
 		<input
 			type="checkbox"
 			bind:checked={optOutTelemetrie}
@@ -67,9 +67,7 @@
 		/>
 		Refuser la collecte de statistiques de navigation
 	</label>
-	<p
-		style="font-size:var(--fs-sm);color:var(--color-text-muted);margin:0 0 .75rem;padding-left:1.55rem"
-	>
+	<p class="note-telemetrie">
 		Ces statistiques anonymisées permettent au gestionnaire d'identifier les fonctionnalités les
 		plus utilisées, de détecter d'éventuels problèmes de navigation et d'orienter les améliorations
 		futures vers ce qui vous est réellement utile au quotidien. Elles ne contiennent aucune donnée
@@ -77,11 +75,10 @@
 		privez d'informations précieuses pour vous offrir une meilleure expérience.
 	</p>
 
-	<div style="display:flex;gap:.5rem;flex-wrap:wrap">
+	<div class="actions-telemetrie">
 		<button
 			type="button"
-			class="btn btn-sm"
-			style="font-size:var(--fs-sm)"
+			class="btn btn-sm btn-telemetrie"
 			disabled={exportingTelemetrie}
 			on:click={async () => {
 				exportingTelemetrie = true;
@@ -108,19 +105,17 @@
 		{#if !confirmDeleteTelemetrie}
 			<button
 				type="button"
-				class="btn btn-sm btn-danger"
-				style="font-size:var(--fs-sm)"
+				class="btn btn-sm btn-danger btn-telemetrie"
 				on:click={() => (confirmDeleteTelemetrie = true)}
 			>
 				🗑️ Effacer mes données de navigation
 			</button>
 		{:else}
-			<span style="display:inline-flex;gap:.35rem;align-items:center;font-size:var(--fs-sm)">
-				<strong style="color:var(--color-danger)">Confirmer ?</strong>
+			<span class="confirmation">
+				<strong class="danger">Confirmer ?</strong>
 				<button
 					type="button"
-					class="btn btn-sm btn-danger"
-					style="font-size:var(--fs-sm)"
+					class="btn btn-sm btn-danger btn-telemetrie"
 					disabled={deletingTelemetrie}
 					on:click={async () => {
 						deletingTelemetrie = true;
@@ -138,8 +133,7 @@
 				</button>
 				<button
 					type="button"
-					class="btn btn-sm"
-					style="font-size:var(--fs-sm)"
+					class="btn btn-sm btn-telemetrie"
 					on:click={() => (confirmDeleteTelemetrie = false)}
 				>
 					Annuler
@@ -148,3 +142,37 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.bloc-telemetrie {
+		margin-top: 1rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-warning-bordure);
+	}
+	.case-telemetrie {
+		margin-bottom: 0.4rem;
+	}
+	.note-telemetrie {
+		font-size: var(--fs-sm);
+		color: var(--color-text-muted);
+		margin: 0 0 0.75rem;
+		padding-left: 1.55rem;
+	}
+	.actions-telemetrie {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.btn-telemetrie {
+		font-size: var(--fs-sm);
+	}
+	.confirmation {
+		display: inline-flex;
+		gap: 0.35rem;
+		align-items: center;
+		font-size: var(--fs-sm);
+	}
+	.danger {
+		color: var(--color-danger);
+	}
+</style>

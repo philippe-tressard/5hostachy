@@ -38,13 +38,13 @@
 </script>
 
 <!-- ── Synthèse prestataires ─────────────────────────────────────────── -->
-<div class="kpi-row" style="margin-bottom:1rem">
+<div class="kpi-row bloc-espace">
 	<div class="kpi-card">
 		<div class="kpi-value">{reportPrestataires.length}</div>
 		<div class="kpi-label">Prestataires actifs</div>
 	</div>
 </div>
-<div class="report-table-wrap" style="margin-bottom:1.5rem">
+<div class="report-table-wrap bloc-espace-large">
 	<table class="report-table">
 		<thead>
 			<tr>
@@ -75,14 +75,14 @@
 {#if reportPrestSynthLoading}
 	<EtatListe chargement messageChargement="Chargement synthèse…" />
 {:else if reportPrestSynth}
-	<section class="report-card" style="margin-bottom:1.5rem">
-		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-			<h3 style="margin:0">&#x1F4C4; Fiche — {reportPrestSynth.nom}</h3>
+	<section class="report-card bloc-espace-large">
+		<div class="entete-fiche">
+			<h3 class="titre-fiche">&#x1F4C4; Fiche — {reportPrestSynth.nom}</h3>
 			<button class="btn btn-sm btn-outline" on:click={() => (reportPrestSynth = null)}
 				>✕ Fermer</button
 			>
 		</div>
-		<div class="report-grid-2" style="margin-bottom:1rem">
+		<div class="report-grid-2 bloc-espace">
 			<div>
 				<p><strong>Équipement :</strong> {equipLabel(reportPrestSynth.specialite)}</p>
 				<p>
@@ -93,7 +93,7 @@
 				{#if reportPrestSynth.contacts && reportPrestSynth.contacts.length > 0}
 					<p><strong>Contacts :</strong></p>
 					{#each reportPrestSynth.contacts as c (c)}
-						<p style="margin-left:1rem">
+						<p class="retrait">
 							📞 {c.telephone ?? '—'}{#if c.prenom || c.nom}
 								— {nomAffiche(c)}{/if}{#if c.fonction}
 								({c.fonction}){/if}{#if c.email}
@@ -120,15 +120,13 @@
 				{#if reportPrestSynth.prochaines_visites && reportPrestSynth.prochaines_visites.length > 0}
 					<p><strong>Prochaines visites :</strong></p>
 					{#each reportPrestSynth.prochaines_visites as v (v)}
-						<p style="margin-left:1rem">📅 {fmtDate(v.date)} — {v.contrat}</p>
+						<p class="retrait">📅 {fmtDate(v.date)} — {v.contrat}</p>
 					{/each}
 				{/if}
 			</div>
 		</div>
 		{#if reportPrestSynth.notations && reportPrestSynth.notations.length > 0}
-			<h4 style="font-size:var(--fs-base);font-weight:600;margin:1rem 0 .5rem">
-				Historique des notations
-			</h4>
+			<h4 class="sous-titre-fiche">Historique des notations</h4>
 			<div class="report-table-wrap">
 				<table class="report-table compact">
 					<thead><tr><th>Date</th><th>Note</th><th>Commentaire</th><th>Par</th></tr></thead>
@@ -149,7 +147,7 @@
 			</div>
 		{/if}
 		{#if reportPrestSynth.contrats && reportPrestSynth.contrats.length > 0}
-			<h4 style="font-size:var(--fs-base);font-weight:600;margin:1rem 0 .5rem">Contrats</h4>
+			<h4 class="sous-titre-fiche">Contrats</h4>
 			<div class="report-table-wrap">
 				<table class="report-table compact">
 					<thead
@@ -171,3 +169,29 @@
 		{/if}
 	</section>
 {/if}
+
+<style>
+	.bloc-espace {
+		margin-bottom: 1rem;
+	}
+	.bloc-espace-large {
+		margin-bottom: 1.5rem;
+	}
+	.entete-fiche {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.75rem;
+	}
+	.titre-fiche {
+		margin: 0;
+	}
+	.retrait {
+		margin-left: 1rem;
+	}
+	.sous-titre-fiche {
+		font-size: var(--fs-base);
+		font-weight: 600;
+		margin: 1rem 0 0.5rem;
+	}
+</style>

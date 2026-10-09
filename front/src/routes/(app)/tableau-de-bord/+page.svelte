@@ -208,7 +208,7 @@
 	<EnteteAccueil salutation={greeting} lots={userLots} visible={ready} />
 
 	<!-- ═══ CONSIGNES DE LA COPROPRIÉTÉ ═══════════════════════════════════ -->
-	<div class="section-reveal" class:section-visible={ready} style="--delay:.05s">
+	<div class="section-reveal delai-1" class:section-visible={ready}>
 		<LienConsignes forme="carte" misEnAvant={$isLocataire} />
 	</div>
 
@@ -227,12 +227,12 @@
 
 	<!-- ═══ ALERTES URGENTES ══════════════════════════════════════════════ -->
 	{#if $isCS && (data.sante.tickets_relance_syndic ?? 0) > 0}
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.08s">
+		<div class="section-reveal delai-2" class:section-visible={ready}>
 			<AlerteRelanceSyndic nombre={data.sante.tickets_relance_syndic ?? 0} />
 		</div>
 	{/if}
 	{#if urgentItems.length > 0}
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.1s">
+		<div class="section-reveal delai-3" class:section-visible={ready}>
 			<UrgencesAccueil items={urgentItems.slice(0, 3)} />
 		</div>
 	{/if}
@@ -245,7 +245,7 @@
 	     dans un bandeau d'alerte, et le plafond de 3 des urgences finirait par
 	     évincer une urgence réelle. -->
 	{#if pinnedItems.length > 0}
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.15s">
+		<div class="section-reveal delai-4" class:section-visible={ready}>
 			<div class="epingle-bloc">
 				<h2 class="epingle-titre">📌 Épinglé</h2>
 				<FriseDuFil
@@ -261,14 +261,14 @@
 
 	<!-- ═══ KANBAN (masqué pour les locataires) ═════════════════════════════ -->
 	{#if !$isLocataire}
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.2s">
+		<div class="section-reveal delai-5" class:section-visible={ready}>
 			<KanbanTableauBord affaires={kanbanAffaires} ctx={_dashKanbanCtx} {loading} />
 		</div>
 	{/if}
 
 	<!-- ═══ FIL D'ACTIVITÉ ════════════════════════════════════════════════ -->
-	<div class="section-reveal" class:section-visible={ready} style="--delay:.25s">
-		<h2 class="section-title" style="margin-top:1.5rem">
+	<div class="section-reveal delai-6" class:section-visible={ready}>
+		<h2 class="section-title titre-fil">
 			<Icon name="newspaper" size={16} /> Fil d'activité
 		</h2>
 	</div>
@@ -281,7 +281,7 @@
 		</div>
 	{:else}
 		<!-- Fil récent (<30 jours) -->
-		<div class="section-reveal" class:section-visible={ready} style="--delay:.3s">
+		<div class="section-reveal delai-7" class:section-visible={ready}>
 			<FriseDuFil
 				groupes={recentDayGroups}
 				itemDeplie={expandedItem}
@@ -292,7 +292,7 @@
 
 		<!-- Accordéon : anciens (>30 jours) -->
 		{#if olderItems.length > 0}
-			<div class="section-reveal" class:section-visible={ready} style="--delay:.35s">
+			<div class="section-reveal delai-8" class:section-visible={ready}>
 				<ArchivesDuFil
 					groupesParJour={olderDayGroups}
 					compte={olderItems.length}
@@ -398,4 +398,31 @@
 	}
 	/*  La frise elle-même — celle du bandeau comme celle du fil et des Archives —
 	    est `FriseDuFil` (#779), variante `epingle` ici. */
+	.delai-1 {
+		--delay: 0.05s;
+	}
+	.delai-2 {
+		--delay: 0.08s;
+	}
+	.delai-3 {
+		--delay: 0.1s;
+	}
+	.delai-4 {
+		--delay: 0.15s;
+	}
+	.delai-5 {
+		--delay: 0.2s;
+	}
+	.delai-6 {
+		--delay: 0.25s;
+	}
+	.titre-fil {
+		margin-top: 1.5rem;
+	}
+	.delai-7 {
+		--delay: 0.3s;
+	}
+	.delai-8 {
+		--delay: 0.35s;
+	}
 </style>

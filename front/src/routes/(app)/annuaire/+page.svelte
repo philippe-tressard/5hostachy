@@ -109,9 +109,9 @@
 {#if loading}
 	<EtatListe chargement />
 {:else}
-	<section style="margin-bottom:2rem">
-		<div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
-			<h2 class="section-title" style="margin-bottom:0">Conseil Syndical</h2>
+	<section class="section-annuaire">
+		<div class="entete-annuaire">
+			<h2 class="section-title titre-annuaire">Conseil Syndical</h2>
 			{#if data.cs.ag_annee}
 				<span class="ag-info">
 					Voté en AG {data.cs.ag_annee}{#if data.cs.ag_date}
@@ -120,7 +120,7 @@
 			{/if}
 		</div>
 		{#if data.whatsapp_url}
-			<div class="url-block" style="margin-bottom:.75rem">
+			<div class="url-block bloc-groupe">
 				<QRCode data={data.whatsapp_url} size={45} />
 				<div>
 					<strong>Groupe WhatsApp copropriété</strong>
@@ -132,9 +132,7 @@
 			</div>
 		{/if}
 		{#if data.cs.membres.length === 0}
-			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
-				Aucun membre CS enregistré.
-			</p>
+			<p class="text-muted-base">Aucun membre CS enregistré.</p>
 		{:else if batimentsCS.length > 1}
 			{#each batimentsCS as groupe (groupe.batiment ?? '')}
 				<div class="batiment-section">
@@ -198,9 +196,7 @@
 			{/if}
 		{/if}
 		{#if data.syndic.membres.length === 0}
-			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
-				Aucun contact syndic enregistré.
-			</p>
+			<p class="text-muted-base">Aucun contact syndic enregistré.</p>
 		{:else}
 			<div class="contact-grid">
 				{#each data.syndic.membres as m (m.id)}
@@ -319,5 +315,21 @@
 	}
 	.url-block a {
 		word-break: break-all;
+	}
+	.section-annuaire {
+		margin-bottom: 2rem;
+	}
+	.entete-annuaire {
+		display: flex;
+		align-items: baseline;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.75rem;
+	}
+	.titre-annuaire {
+		margin-bottom: 0;
+	}
+	.bloc-groupe {
+		margin-bottom: 0.75rem;
 	}
 </style>

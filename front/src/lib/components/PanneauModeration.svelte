@@ -41,13 +41,11 @@
 					<div class="moderation-meta">
 						<span class="badge badge-blue">{sig.cible_type_label}</span>
 						<strong>« {sig.apercu}</strong>
-						{#if sig.auteur_cible}<span style="color:var(--color-text-muted)"
-								>— par {sig.auteur_cible}</span
-							>{/if}
+						{#if sig.auteur_cible}<span class="muted">— par {sig.auteur_cible}</span>{/if}
 					</div>
 					<div class="moderation-motif">
 						Motif : {sig.motif}
-						<span style="color:var(--color-text-muted)">(signalé par {sig.signale_par})</span>
+						<span class="muted">(signalé par {sig.signale_par})</span>
 					</div>
 					<div class="moderation-actions">
 						<button

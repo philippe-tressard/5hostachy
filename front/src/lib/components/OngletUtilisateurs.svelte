@@ -244,7 +244,7 @@
 									{/each}
 								</div>
 							</td>
-							<td style="color:var(--color-text-muted);font-size:var(--fs-md)">{u.email}</td>
+							<td class="text-muted-md">{u.email}</td>
 							<td>
 								<span class="badge {badgeStatut(u.statut)}" style="font-size:var(--fs-xs)">
 									{LIBELLES_STATUT_ABREGE[u.statut] ?? u.statut ?? '—'}
@@ -402,9 +402,7 @@
 			{roleEnCours.action === 'ajouter' ? 'à' : 'de'}
 			<strong>{nomAffiche(roleEnCours.user)}</strong> ?
 			<br />
-			<span style="font-size:var(--fs-sm);color:var(--color-text-muted)">
-				Cette personne recevra une notification.
-			</span>
+			<span class="text-muted-sm"> Cette personne recevra une notification. </span>
 		</p>
 		<div class="modal-footer">
 			<button class="btn btn-outline" on:click={() => (roleEnCours = null)}>Annuler</button>

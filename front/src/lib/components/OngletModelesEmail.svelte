@@ -251,7 +251,7 @@
 					<tr>
 						<td><code style="font-size:var(--fs-sm)">{tpl.code}</code></td>
 						<td style="font-size:var(--fs-base)">{tpl.libelle ?? '—'}</td>
-						<td style="font-size:var(--fs-sm);color:var(--color-text-muted)">{tpl.sujet}</td>
+						<td class="text-muted-sm">{tpl.sujet}</td>
 						<td>
 							{#if tpl.intention}<span class="badge badge-blue"
 									>{labelIntention(tpl.intention)}</span

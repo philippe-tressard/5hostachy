@@ -239,11 +239,9 @@
 				Ce bail concerne un {typeLot}. <strong>TC uniquement</strong> : les Vigik ne sont pas autorisés.
 			</EncartAvertissement>
 		{:else if accesListe.length === 0}
-			<p style="color:var(--color-text-muted);font-size:var(--fs-base)">
-				Aucun Vigik ni télécommande rattaché à ce lot.
-			</p>
+			<p class="text-muted-base">Aucun Vigik ni télécommande rattaché à ce lot.</p>
 		{:else}
-			<p style="font-size:var(--fs-md);color:var(--color-text-muted);margin-bottom:0.6rem">
+			<p class="intro-selection">
 				Sélection intelligente : utilisez un préréglage puis ajustez manuellement. Les règles de
 				cohérence sont appliquées automatiquement (ex. pas de Vigik pour un bail parking seul).
 			</p>
@@ -255,9 +253,7 @@
 			</div>
 			{#if lotsSourcesAcces.length > 1}
 				<div class="acces-filters">
-					<span style="font-size:var(--fs-sm);color:var(--color-text-muted)"
-						>Filtrer lots source :</span
-					>
+					<span class="text-muted-sm">Filtrer lots source :</span>
 					{#each lotsSourcesAcces as ls (ls.id)}
 						<Pastille active={filtreLotsAcces.has(ls.id)} on:click={() => toggleFiltreLot(ls.id)}
 							>{ls.label}</Pastille
@@ -266,10 +262,10 @@
 				</div>
 			{/if}
 			<div class="table-wrap">
-				<table class="table" style="font-size:var(--fs-md)">
+				<table class="table table-transfert">
 					<thead>
 						<tr>
-							<th style="width:2rem"></th>
+							<th class="col-case"></th>
 							<th>Lot source</th>
 							<th>Type</th>
 							<th>Code</th>
@@ -294,12 +290,10 @@
 								</td>
 								<td
 									>{acces.lot_label ?? '—'}
-									<span class="badge badge-gray" style="margin-left:.25rem"
-										>{lotTypeLabel(acces.lot_type)}</span
-									></td
+									<span class="badge badge-gray type-lot">{lotTypeLabel(acces.lot_type)}</span></td
 								>
 								<td>{acces.type === 'vigik' ? '\u{1F3F7}️ Vigik' : '\u{1F4E1} Télécommande'}</td>
-								<td style="font-family:monospace">{acces.code}</td>
+								<td class="texte-code">{acces.code}</td>
 								<td>
 									<!--  🔴 `class:` et non un ternaire INTERPOLÉ (#810) : devant
 									      `class="badge {…}"`, Svelte cesse de déclarer les sélecteurs
@@ -335,9 +329,7 @@
 				</table>
 			</div>
 			{#if accesListe.some((a) => a.chez_locataire)}
-				<button class="btn btn-sm" style="margin-top:0.75rem" on:click={recupererAcces}>
-					↩ Tout récupérer
-				</button>
+				<button class="btn btn-sm btn-tout" on:click={recupererAcces}> ↩ Tout récupérer </button>
 			{/if}
 		{/if}
 	</div>
@@ -377,5 +369,22 @@
 		align-items: center;
 		gap: 0.35rem;
 		margin-bottom: 0.7rem;
+	}
+	.intro-selection {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		margin-bottom: 0.6rem;
+	}
+	.table-transfert {
+		font-size: var(--fs-md);
+	}
+	.col-case {
+		width: 2rem;
+	}
+	.type-lot {
+		margin-left: 0.25rem;
+	}
+	.btn-tout {
+		margin-top: 0.75rem;
 	}
 </style>

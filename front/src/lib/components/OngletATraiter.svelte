@@ -234,7 +234,7 @@
 									{/each}
 								</div>
 							</td>
-							<td style="color:var(--color-text-muted)"
+							<td class="muted"
 								>{u.batiment_id ? (batimentsMap[u.batiment_id] ?? `#${u.batiment_id}`) : '—'}</td
 							>
 							<td>
@@ -247,10 +247,10 @@
 								{:else if u.statut?.startsWith('copropriétaire')}
 									<span class="badge badge-orange" title="Pas trouvé dans l'import Lots">⚠ 0</span>
 								{:else}
-									<span style="color:var(--color-text-muted)">—</span>
+									<span class="muted">—</span>
 								{/if}
 							</td>
-							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)">{fmt(u.cree_le)}</td>
+							<td class="text-muted-sm">{fmt(u.cree_le)}</td>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser
@@ -321,10 +321,8 @@
 						<tr>
 							<td style="font-weight:500">#{cmd.user_id}</td>
 							<td><span class="badge badge-blue">{cmd.type}</span></td>
-							<td style="color:var(--color-text-muted)">{cmd.lot_id ?? ''}</td>
-							<td style="color:var(--color-text-muted);font-size:var(--fs-sm)"
-								>{fmt(cmd.cree_le)}</td
-							>
+							<td class="muted">{cmd.lot_id ?? ''}</td>
+							<td class="text-muted-sm">{fmt(cmd.cree_le)}</td>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser
@@ -372,7 +370,7 @@
 						<tr>
 							<td>
 								<div style="font-weight:600">{d.utilisateur_nom}</div>
-								<div style="font-size:var(--fs-sm);color:var(--color-text-muted)">
+								<div class="text-muted-sm">
 									{d.utilisateur_email}
 								</div>
 							</td>
@@ -402,7 +400,7 @@
 								style="font-size:var(--fs-md);color:var(--color-text-muted);max-width:140px;white-space:pre-wrap"
 								>{d.motif ?? '—'}</td
 							>
-							<td style="font-size:var(--fs-md);color:var(--color-text-muted)">{fmt(d.cree_le)}</td>
+							<td class="text-muted-md">{fmt(d.cree_le)}</td>
 							<td>
 								<div class="action-row">
 									<AccepterRefuser

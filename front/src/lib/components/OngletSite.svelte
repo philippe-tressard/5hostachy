@@ -47,14 +47,14 @@
 			URL publique
 			<input type="url" bind:value={siteConfig.url} placeholder="https://..." />
 		</label>
-		<label class="field" style="grid-column:span 2">
+		<label class="field champ-double">
 			E-mail administrateur
 			<input type="email" bind:value={siteConfig.email_admin} placeholder="admin@example.com" />
 			<span class="aide"
 				>Adresse de secours utilisée si aucun utilisateur gestionnaire du site n'est sélectionné.</span
 			>
 		</label>
-		<label class="field" style="grid-column:span 2">
+		<label class="field champ-double">
 			Gestionnaire du site (administrateur)
 			<select bind:value={siteConfig.site_manager_user_id}>
 				<option value="">Aucun (utiliser l'e-mail administrateur)</option>
@@ -67,7 +67,7 @@
 				— comptes à valider, alertes système, bogues signalés si l'option est activée.</span
 			>
 		</label>
-		<label class="field" style="grid-column:span 2">
+		<label class="field champ-double">
 			Sous-titre de la page de connexion
 			<input
 				type="text"
@@ -84,7 +84,7 @@
 
           ⚠️ Ce champ gouverne SEPT objets, pas seulement les actualités : le
           texte d'aide doit le dire, sinon on croira régler une seule page. -->
-		<label class="field champ-court" style="grid-column:span 2">
+		<label class="field champ-court champ-double">
 			Délai d'archivage automatique (jours)
 			<input
 				type="number"
@@ -101,7 +101,7 @@
 				archivé immédiatement, sans attendre — et le bouton 📦 archive à la main, quel que soit ce réglage.</span
 			>
 		</label>
-		<label class="field champ-court" style="grid-column:span 2">
+		<label class="field champ-court champ-double">
 			Délai de relance syndic (jours)
 			<input
 				type="number"
@@ -115,7 +115,7 @@
 				dans la liste de relance de l'Espace CS (défaut : 30 jours).</span
 			>
 		</label>
-		<label class="field" style="grid-column:span 2">
+		<label class="field champ-double">
 			<span class="case">
 				<input type="checkbox" bind:checked={siteConfig.notify_ticket_bug_email} />
 				Notifier si un bug (Affaires)
@@ -126,7 +126,7 @@
 				Urgent ne déclenche pas cette notification — l'urgence est une case, pas une catégorie.</span
 			>
 		</label>
-		<label class="field" style="grid-column:span 2">
+		<label class="field champ-double">
 			<span class="case">
 				<input type="checkbox" bind:checked={siteConfig.notify_new_user_created_email} />
 				Notifier si un nouvel utilisateur est créé
@@ -145,3 +145,6 @@
 </section>
 
 <ReglagePiedDePage bind:reglage={siteConfig.pied_de_page} {siteSaving} {saveSiteConfig} />
+
+<style>
+</style>
