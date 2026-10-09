@@ -95,3 +95,36 @@ def test_tout_appelant_pose_ssh_cmd():
         "ces scripts appellent une fonction SSH des modules sans poser "
         f"`SSH_CMD=$(ssh_noeud_cmd N)` : {fautes}"
     )
+
+
+def _points_d_entree_root() -> set[str]:
+    """Les scripts que root lance d'office : le crontab root et l'unité systemd."""
+    dossier = RACINE / "infra" / "points-entree"
+    textes = [(dossier / "cron-root.crontab").read_text(encoding="utf-8")]
+    textes += [p.read_text(encoding="utf-8") for p in sorted(dossier.glob("*.service"))]
+    return {nom for t in textes for nom in re.findall(r"([a-z][a-z0-9-]*\.sh)\b", t)}
+
+
+def test_un_outil_lance_a_la_main_exige_root():
+    """La clé inter-nœuds n'est lisible que par root (#1781, essai du 09/10/2026).
+
+    Un script qui pose `SSH_CMD` sans être un point d'entrée root (crontab root,
+    unité systemd) est un outil qu'une personne lance : il appelle
+    `ssh_noeud_exiger_root`, qui refuse en le disant au lieu de lire le pair
+    « illisible ». `reconstruire-replique.sh` refusait ainsi, lancé sans sudo.
+    """
+    entrees = _points_d_entree_root()
+    assert {"bascule.sh", "check-reliability.sh", "boot-role-guard.sh"} <= entrees, (
+        f"cas zéro : les points d'entrée root ne se lisent plus ({sorted(entrees)})"
+    )
+    fautes = []
+    for script in scripts_shell_versionnes():
+        if "/lib/" in script.as_posix() or script.name in entrees:
+            continue
+        code = _sans_commentaires(script.read_text(encoding="utf-8"))
+        if _POSE in code and not re.search(r"(?m)^ssh_noeud_exiger_root\b", code):
+            fautes.append(script.relative_to(RACINE).as_posix())
+    assert not fautes, (
+        "ces outils joignent le pair par la clé de root sans exiger root "
+        f'(`ssh_noeud_exiger_root "$0"` après le chargement de lib-ssh-noeuds) : {fautes}'
+    )

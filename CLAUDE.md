@@ -69,7 +69,7 @@ détruisent sont **autres**, et ils sont interdits au même rang :
 
 - **Jamais deux primaires.** Un ancien primaire ne se relance JAMAIS tel quel après
   une promotion : il s'isole, puis se reconstruit en réplique
-  (`scripts/exploitation/reconstruire-replique.sh --oui`, sur le standby).
+  (`sudo bash scripts/exploitation/reconstruire-replique.sh --oui`, sur le standby, en root).
 - **Jamais une base absente démarrée sur un nœud qui prend la main** : l'image
   l'initialiserait en primaire VIDE. Un `docker compose up -d` complet sur un standby
   sans réplique fait exactement cela — passer par `lib-promotion.sh`

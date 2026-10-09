@@ -160,7 +160,7 @@ phases_base_postgresql() {
 isoler_base_pair_si_promue() {
     "${PROMU:-false}" || return 0
     $SSH_CMD ptressard@"$PEER_IP" "cd /opt/5hostachy && docker compose stop postgres 2>/dev/null" 2>/dev/null || true
-    log "  → Base promue du peer ARRÊTÉE (isolée) — la reconstruire en réplique : scripts/exploitation/reconstruire-replique.sh --oui sur $PEER."
+    log "  → Base promue du peer ARRÊTÉE (isolée) — la reconstruire en réplique : sudo bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh --oui sur $PEER."
 }
 
 #  Phase 7 : l'ancien primaire (ce nœud) redevient RÉPLIQUE du nouveau. Après
@@ -170,7 +170,7 @@ reconstruire_apres_bascule() {
     if bash "$REPO/scripts/exploitation/reconstruire-replique.sh" --oui; then
         log "  → $SELF reconstruit en réplique de $PEER."
     else
-        log "  ⚠ Reconstruction de la réplique sur $SELF ÉCHOUÉE — $PEER sert sans réplique : relancer scripts/exploitation/reconstruire-replique.sh --oui."
+        log "  ⚠ Reconstruction de la réplique sur $SELF ÉCHOUÉE — $PEER sert sans réplique : relancer sudo bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh --oui."
     fi
 }
 

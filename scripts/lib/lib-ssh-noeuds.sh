@@ -52,6 +52,19 @@ ssh_noeud_cmd() { # [délai de connexion, défaut 10]
        "-o GlobalKnownHostsFile=/dev/null"
 }
 
+# ── Un outil lancé À LA MAIN qui parle au pair : root, ou rien ───────────────
+#  La clé ci-dessus n'est lisible que par root. Les points d'entrée (cron root,
+#  unité systemd) le sont d'office ; un outil d'exploitation lancé par une
+#  personne ne l'est que sous `sudo`. Lancé en ptressard, il ne pouvait pas
+#  joindre le pair, lisait sa base « illisible » et refusait — sans dire
+#  pourquoi (`reconstruire-replique.sh`, essai du 09/10/2026, #1781). Il le dit
+#  désormais, AVANT le moindre geste. 🔒 `test_ssh_cmd_pose.py`.
+ssh_noeud_exiger_root() { # $1 = le script appelant ($0)
+  [ "$(id -u)" -eq 0 ] && return 0
+  echo "La clé inter-nœuds ($SSH_NOEUDS_CLE) n'est lisible que par root — à lancer avec sudo : sudo bash $1" >&2
+  exit 1
+}
+
 # ── La clé d'hôte de cette IP est-elle épinglée ? ────────────────────────────
 #  → ok | absent (fichier manquant ou vide) | non-epingle | inconnu
 #  `ssh-keygen -F` et non un grep : il lit les entrées HACHÉES (HashKnownHosts,

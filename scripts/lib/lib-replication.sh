@@ -140,7 +140,7 @@ replication_verdicts() {
         eval "pa=\${${A}_pg_present:-0} ps=\${${Sb}_pg_present:-0} ra=\${${A}_pg_recovery:-} rs=\${${Sb}_pg_recovery:-}"
         case "$(verdict_paire_replication "$pa" "$ps" "$ra" "$rs")" in
             SANS_OBJET)     ok   "Réplication PostgreSQL : sans objet (base non activée sur les deux nœuds — la production est sous SQLite)"; return ;;
-            DEUX_PRIMAIRES) fail "DEUX PRIMAIRES PostgreSQL ($actif et $standby) : les données divergent — isoler $standby (docker compose stop postgres) puis le reconstruire en réplique (scripts/exploitation/reconstruire-replique.sh)"; return ;;
+            DEUX_PRIMAIRES) fail "DEUX PRIMAIRES PostgreSQL ($actif et $standby) : les données divergent — isoler $standby (docker compose stop postgres) puis le reconstruire en réplique (sudo bash /opt/5hostachy/scripts/exploitation/reconstruire-replique.sh --oui)"; return ;;
             PARTIELLE)      warn "Réplication PostgreSQL PARTIELLE : la base tourne sur $([ "$pa" = 1 ] && echo "$actif" || echo "$standby") seulement — l'autre nœud n'a pas de base ; reconstruire la réplique sur le standby" ;;
         esac
     fi
