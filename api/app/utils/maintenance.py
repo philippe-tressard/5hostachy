@@ -75,11 +75,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
     except Exception as exc:
         erreurs.append(f"purge tokens: {exc}")
 
+    #  `TRUE`, jamais `1` : PostgreSQL ne compare pas un booléen à un entier, et
+    #  SQLite comprend `TRUE` depuis 3.23 (#1747).
     etapes = (
         (
             "prt",
             "purge password reset tokens",
-            "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
+            "DELETE FROM password_reset_token WHERE expires_at < :now OR used = TRUE",
             {"now": maintenant},
         ),
         #  Les jetons de VÉRIFICATION d'e-mail : la seule famille qu'aucune purge
@@ -87,13 +89,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
         (
             "verifications",
             "purge email verification tokens",
-            "DELETE FROM email_verification_token WHERE expires_at < :now OR used = 1",
+            "DELETE FROM email_verification_token WHERE expires_at < :now OR used = TRUE",
             {"now": maintenant},
         ),
         (
             "notifications",
             "purge notifications",
-            "DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff",
+            "DELETE FROM notification WHERE lue = TRUE AND cree_le < :cutoff",
             {"cutoff": il_y_a_90_j},
         ),
         (

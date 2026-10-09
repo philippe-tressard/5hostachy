@@ -257,6 +257,12 @@ def pytest_collection_modifyitems(config, items):
         return
     from tests.aides_migrations import DERNIERE_HISTORIQUE, VERSIONS
 
+    for item in items:
+        marque = item.get_closest_marker("sqlite_seulement")
+        if marque:
+            assert marque.args, f"{item.nodeid} : `sqlite_seulement` exige sa raison"
+            item.add_marker(pytest.mark.skip(reason=f"propre à SQLite — {marque.args[0]}"))
+
     tete = max(int(p.name[:4]) for p in VERSIONS.glob("[0-9][0-9][0-9][0-9]_*.py"))
     saut = pytest.mark.skip(
         reason="migration historique écrite pour SQLite — sur PostgreSQL, le schéma initial (#1747)"

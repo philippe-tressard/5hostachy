@@ -9,6 +9,7 @@ chaque fichier qui en avait besoin.
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 from types import ModuleType
 
@@ -31,8 +32,20 @@ def chemin_migration(motif: str) -> pathlib.Path:
 
 
 def charger_migration(motif: str) -> ModuleType:
-    """La migration désignée par `motif`, chargée comme un module."""
+    """La migration désignée par `motif`, chargée comme un module.
+
+    Sur PostgreSQL (`TESTS_BASE_URL`), une migration HISTORIQUE n'est pas
+    rejouée : le test qui la charge est sauté, et le dit (#1747).
+    """
     chemin = chemin_migration(motif)
+    if os.environ.get("TESTS_BASE_URL") and int(chemin.name[:4]) <= DERNIERE_HISTORIQUE:
+        import pytest
+
+        pytest.skip(
+            f"migration historique {chemin.name[:4]} écrite pour SQLite — sur PostgreSQL, "
+            "le schéma initial (#1747)",
+            allow_module_level=True,
+        )
     spec = importlib.util.spec_from_file_location(f"migration_{chemin.stem}", chemin)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

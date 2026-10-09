@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
+
 from sqlalchemy import text
 
 from app.utils.requete_liee import requete_liee
@@ -38,6 +40,7 @@ def _comptes_crees_a(session, *heures: datetime) -> list[int]:
     return ids
 
 
+@pytest.mark.sqlite_seulement("témoin du bug : SQLite compare des chaînes, PostgreSQL refuse")
 def test_temoin_un_seuil_isoformat_se_trompe_le_jour_du_seuil(session):
     """Sans lui, le test suivant ne prouverait rien : c'est l'erreur que le module évite."""
     avant_le_seuil, apres_le_seuil = _comptes_crees_a(

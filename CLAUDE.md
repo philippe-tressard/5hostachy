@@ -655,13 +655,21 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
   en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
   donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
-- 🐘 **La suite se rejoue sur PostgreSQL** (#1747, D4) : `tests/aides_base.moteur_memoire`
-  bascule sur PostgreSQL quand `TESTS_BASE_URL` est posé — un schéma neuf par base —,
-  et le workflow `postgresql.yml` MESURE l'écart (résumé du run : verts, rouges, fichiers
-  les plus touchés). Informatif tant que la suite n'y est pas verte ; il ne rougit que si
-  la mesure n'a pas pu se faire. 🔒 `test_adherence_sqlite.py` : l'adhérence du code à
-  SQLite (modules qui nomment SQLite ou un `PRAGMA`, fonctions SQL propres à SQLite) est
-  sous deux plafonds qui ne font que baisser.
+- 🐘 **La suite passe sur PostgreSQL, et c'est un check REQUIS** (#1747, D4) :
+  `tests/aides_base.moteur_memoire` bascule sur PostgreSQL quand `TESTS_BASE_URL`
+  est posé — un schéma neuf par test, retiré à sa fin, clés désactivées sauf
+  `cles_etrangeres=True` comme en mémoire —, et le workflow `postgresql.yml` rejoue
+  toute la suite (`scripts/ci/mesure-postgresql.sh`, en tranches). Une comparaison
+  qui ne tient que sous SQLite — un horodatage contre du texte, un booléen contre
+  `1` — y échoue. Ce qui ne vaut QUE pour SQLite se déclare
+  `@pytest.mark.sqlite_seulement("pourquoi")` ; les migrations historiques (≤
+  `DERNIERE_HISTORIQUE`, `tests/aides_migrations.py`) n'y sont pas rejouées, une
+  base PostgreSQL naissant du schéma initial. En local : `TESTS_BASE_URL=postgresql+psycopg://…`.
+- 🔒 **Ce qui ne vaut que pour SQLite vit dans `app/dialecte.py`** (#1747) : `PRAGMA`,
+  URL de base-fichier, journal WAL, intégrité, compactage, clés étrangères, format
+  SQL d'une date (`dialecte.jour`, `dialecte.mois`). `test_adherence_sqlite.py` le
+  refuse partout ailleurs dans `app/`, sur l'AST. Une base NEUVE reçoit le schéma
+  courant d'un coup, marqué à la tête (`utils/schema_initial`, appelé par `start.sh`).
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,

@@ -105,7 +105,10 @@ def test_des_tables_sans_version_ne_font_pas_une_base_neuve(url_neuve):
 
 def test_une_base_injoignable_rend_inconnu():
     """Jamais « posée » ni « existante » sur ce qu'on n'a pas pu lire."""
-    assert poser_si_neuve("postgresql+psycopg://personne:x@127.0.0.1:9/aucune") == "inconnu"
+    assert (
+        poser_si_neuve("postgresql+psycopg://personne:x@127.0.0.1:9/aucune?connect_timeout=2")
+        == "inconnu"
+    )
 
 
 def test_start_sh_pose_le_schema_avant_de_migrer_et_jamais_sur_une_base_en_avance():

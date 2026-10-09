@@ -17,7 +17,11 @@ if os.environ.get("DATABASE_URL"):
     config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"].replace("%", "%%"))
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    #  `disable_existing_loggers=False` : appelé DANS un processus qui journalise
+    #  déjà (`utils/schema_initial`, ses tests), le défaut éteignait tous les
+    #  journaux de l'application — trois tests de l'alerte WhatsApp ne lisaient
+    #  plus rien après lui (#1747).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = SQLModel.metadata
 

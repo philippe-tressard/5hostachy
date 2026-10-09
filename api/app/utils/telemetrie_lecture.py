@@ -19,7 +19,7 @@ lectures, et la réponse dit jusqu'à quand (`non_distingue_jusqu_au`).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Optional
 
 import sqlalchemy as sa
@@ -172,13 +172,19 @@ def fiches_utilisateurs(session: Session, lignes) -> dict[int, dict]:
     }
 
 
-def uniques_par_jour(session: Session, lecture: Lecture, depuis=None) -> dict[str, int]:
+def uniques_par_jour(
+    session: Session, lecture: Lecture, depuis: Optional[date] = None
+) -> dict[str, int]:
     """Les utilisateurs uniques de chaque jour — les évènements bruts d'abord, puis l'agrégat.
 
     Un jour dont les évènements bruts ont été purgés (30 jours) n'existe plus que
     dans `TelemetryDaily` : son total comble alors le trou, sans jamais écraser
     un jour que les évènements savent encore compter. Les deux séries d'un jour
     étant disjointes, leurs uniques s'additionnent.
+
+    `depuis` est un JOUR : il borne l'horodatage des évènements à son minuit, et
+    la colonne texte « AAAA-MM-JJ » des agrégats à sa forme écrite — une même
+    chaîne ne vaut pas pour les deux sous PostgreSQL (#1747).
     """
     jour = dialecte.jour(TelemetryEvent.cree_le, lecture.paris_offset_str)
     evenements = (
@@ -194,8 +200,8 @@ def uniques_par_jour(session: Session, lecture: Lecture, depuis=None) -> dict[st
         .group_by(TelemetryDaily.jour)
     )
     if depuis is not None:
-        evenements = evenements.where(TelemetryEvent.cree_le >= depuis)
-        totaux = totaux.where(TelemetryDaily.jour >= depuis)
+        evenements = evenements.where(TelemetryEvent.cree_le >= datetime.combine(depuis, time.min))
+        totaux = totaux.where(TelemetryDaily.jour >= depuis.isoformat())
     uniques = {r[0]: r[1] for r in session.exec(evenements).all()}
     for r in session.exec(totaux).all():
         if r[0] not in uniques:
