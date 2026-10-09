@@ -1,0 +1,71 @@
+name: PostgreSQL
+
+#  Lot P2-5 (#1747) — chantier multi-copropriétés, D4 (« passer à PostgreSQL »).
+#
+#  Rejoue TOUTE la suite pytest sur PostgreSQL : `tests/aides_base.moteur_memoire`
+#  y bascule quand `TESTS_BASE_URL` est posé, un schéma neuf par base de test.
+#  La production reste sur SQLite ; ce workflow garde le code prêt pour l'autre.
+#
+#  🔒 REQUIS depuis le second temps de P2-5 : la suite y est verte, et un test
+#  qui casse sur PostgreSQL bloque la fusion comme sur SQLite. Le premier temps
+#  du lot était INFORMATIF — il mesurait l'écart sans rougir. Un job qui
+#  n'a pas pu rejouer la suite (pytest interrompu, base injoignable) rend
+#  toujours l'échec : INCONNU, jamais OK (`standards/04` §1).
+#
+#  La suite tourne en tranches parallèles (`TRANCHES`) : un schéma par test,
+#  donc ~300 tables posées à chaque fois, et les quatre cœurs de l'exécuteur.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  mesure:
+    name: Suite pytest sur PostgreSQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: essai
+          POSTGRES_PASSWORD: essai
+          POSTGRES_DB: essai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U essai" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      #  Le même rendu PDF que le job pytest de la CI : sans elles, les tests de
+      #  rendu échouent ici et nulle part ailleurs (`scripts/ci/bibliotheques-pdf.sh`).
+      - name: Bibliothèques système pour le rendu PDF
+        run: bash scripts/ci/bibliotheques-pdf.sh
+
+      - name: Install dependencies
+        working-directory: api
+        run: pip install -r requirements-dev.txt
+
+      - name: Rejouer la suite sur PostgreSQL
+        working-directory: api
+        env:
+          TESTS_BASE_URL: postgresql+psycopg://essai:essai@localhost:5432/essai
+          TRANCHES: "4"
+        run: bash ../scripts/ci/mesure-postgresql.sh

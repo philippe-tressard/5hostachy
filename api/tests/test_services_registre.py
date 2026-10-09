@@ -75,7 +75,16 @@ def test_aucune_cle_d_activation_n_est_ecrite_hors_du_registre():
 def test_le_temoin_le_registre_porte_chaque_cle():
     """Le cas zéro : si le registre ne les écrivait plus, le contrôle ne verrait rien."""
     ecrites = {cle for _, cle in _cles_ecrites(module_app(REGISTRE).source)}
-    assert ecrites == CLES_ACTIVATION == {"llm_actif", "whatsapp_enabled", "imap_enabled"}
+    assert (
+        ecrites
+        == CLES_ACTIVATION
+        == {
+            "llm_actif",
+            "whatsapp_enabled",
+            "imap_enabled",
+            "verification_version_active",
+        }
+    )
 
 
 @pytest.mark.parametrize(

@@ -178,6 +178,17 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	max-width: 70ch;
 	font-size: 0.85rem;
 }
+/* L'en-tête d'un bloc d'administration qui porte ses boutons : le titre et sa
+   phrase à gauche, les gestes à droite, et les boutons passent dessous quand la
+   largeur manque. Remontée ici le 09/10/2026 : « Contrôle de santé » et
+   « Export vérifié » l'écrivaient à l'identique — `lint:css-duplique` l'a refusé. */
+.config-section-entete {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+}
 .muted {
 	color: var(--color-text-muted);
 }

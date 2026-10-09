@@ -53,13 +53,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from tests.aides_migrations import VERSIONS
+from tests.aides_migrations import DERNIERE_HISTORIQUE, VERSIONS
 
 _RACINE = Path(__file__).resolve().parents[2]
-
-#: La dernière migration écrite AVANT ce contrôle. Celles-là sont de l'historique ;
-#: toutes les suivantes sont jugées.
-DERNIERE_HISTORIQUE = 271
 
 #: Les contractions annoncées : la cible (`table` ou `table.colonne`), la version
 #: du code qui a CESSÉ d'en dépendre, et pourquoi. Une entrée s'écrit au premier

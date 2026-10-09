@@ -2,6 +2,8 @@ from functools import lru_cache
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
+from app.dialecte import url_fichier
+
 _INSECURE_KEY_DEFAULTS = {
     "dev-secret-key-change-in-production",
     "changez-cette-valeur-secrete-en-production-min-32-chars",
@@ -15,6 +17,13 @@ class Settings(BaseSettings):
     # dire sur quel nœud elle exécutait ses propres tâches (sauvegarde, maintenance
     # déclenchée à la main) : la colonne « Nœud » restait vide. Vide en local.
     instance_id: str = ""
+
+    # Rôle de l'installation dans la distribution (#1761) : `maitre` ou
+    # `replique`. Lu par `utils/installation.role_installation` et nulle part
+    # ailleurs ; vide ou mal écrit, l'installation se dit « Inconnu ».
+    role_installation: str = ""
+    # Le commit de l'image, posé à la construction (`GIT_HASH`, api/Dockerfile).
+    git_hash: str = ""
 
     # Sécurité
     secret_key: str = "dev-secret-key-change-in-production"
@@ -37,7 +46,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
 
     # Base de données
-    database_url: str = "sqlite:////app/data/app.db"
+    database_url: str = url_fichier("/app/data/app.db")
 
     # Email
     mail_enabled: bool = False

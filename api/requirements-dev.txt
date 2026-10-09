@@ -11,3 +11,11 @@ cryptography==50.0.2
 #  Pose un sceau ARC (`dkim.arc_sign`) dans `test_courriel_authenticite` : la
 #  VÉRIFICATION n'en a pas besoin, d'où son absence de l'image. Apache 2.0.
 authres==1.2.0
+#  Le pilote PostgreSQL du workflow « PostgreSQL » (#1747) : `tests/aides_base` y
+#  rejoue la suite quand `TESTS_BASE_URL` est posé. psycopg plutôt que pg8000 (le
+#  premier temps) : pg8000 rend toute erreur du serveur en `ProgrammingError`, et
+#  une clé violée n'y était pas une `IntegrityError` — le code et les tests qui
+#  l'attendent ne voyaient pas PostgreSQL tel que DI-7 le servira. LGPL-3.0, roues
+#  binaires (libpq embarquée) ; pas dans l'image tant que la production reste
+#  sous SQLite.
+psycopg[binary]==3.3.6

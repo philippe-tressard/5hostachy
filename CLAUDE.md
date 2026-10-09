@@ -60,6 +60,12 @@ swap de fichier → **stopper l'API d'abord** (0 writer).
 Signature de diagnostic, conduite à tenir et historique des trois incidents :
 `.claude/skills/infra-rpi`.
 
+**Exporter la base pendant que l'API tourne** (#1749) : par l'administration —
+`POST /admin/export-copropriete` (archive complète) et `…/verifier` (réimport dans une
+base jetable) —, qui lisent dans le processus de l'API, en une transaction. Jamais par
+`python -m app.utils.export_copropriete` dans le conteneur : cette commande ne sert qu'à
+**importer** une archive dans une base CIBLE neuve (DI-7).
+
 > 📖 `standards/06-donnees-et-integrite.md` §1 — le principe généralisé à **tout état
 > multi-fichiers qu'un processus tient ouvert**, pas seulement une base : il s'est
 > reproduit à l'identique sur l'état d'authentification WhatsApp (24/07/2026).
@@ -649,6 +655,21 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
   en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
   donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
+- 🐘 **La suite passe sur PostgreSQL, et c'est un check REQUIS** (#1747, D4) :
+  `tests/aides_base.moteur_memoire` bascule sur PostgreSQL quand `TESTS_BASE_URL`
+  est posé — un schéma neuf par test, retiré à sa fin, clés désactivées sauf
+  `cles_etrangeres=True` comme en mémoire —, et le workflow `postgresql.yml` rejoue
+  toute la suite (`scripts/ci/mesure-postgresql.sh`, en tranches). Une comparaison
+  qui ne tient que sous SQLite — un horodatage contre du texte, un booléen contre
+  `1` — y échoue. Ce qui ne vaut QUE pour SQLite se déclare
+  `@pytest.mark.sqlite_seulement("pourquoi")` ; les migrations historiques (≤
+  `DERNIERE_HISTORIQUE`, `tests/aides_migrations.py`) n'y sont pas rejouées, une
+  base PostgreSQL naissant du schéma initial. En local : `TESTS_BASE_URL=postgresql+psycopg://…`.
+- 🔒 **Ce qui ne vaut que pour SQLite vit dans `app/dialecte.py`** (#1747) : `PRAGMA`,
+  URL de base-fichier, journal WAL, intégrité, compactage, clés étrangères, format
+  SQL d'une date (`dialecte.jour`, `dialecte.mois`). `test_adherence_sqlite.py` le
+  refuse partout ailleurs dans `app/`, sur l'AST. Une base NEUVE reçoit le schéma
+  courant d'un coup, marqué à la tête (`utils/schema_initial`, appelé par `start.sh`).
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,
@@ -857,8 +878,10 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 > partagé, regarder `git worktree list` puis `git -C <autre> status` : rien ne
 > signale le travail **non committé** d'une session voisine (vécu le 02/08/2026).
 
-- `main` = production **réellement protégée depuis le 09/08/2026** : les 5 jobs de
-  CI sont des *checks requis*, `enforce_admins` est actif, le push direct et le
+- `main` = production **réellement protégée depuis le 09/08/2026** : les jobs de la
+  CI et la suite sur PostgreSQL (#1747) sont des *checks requis* — leur liste se lit
+  dans la protection (`gh api repos/philippe-tressard/coprofirst/branches/main/protection/required_status_checks`),
+  jamais un compte recopié ici —, `enforce_admins` est actif, le push direct et le
   `--force` sont refusés. Toute modification passe par une PR depuis `dev`.
   ⚠️ Cette ligne affirmait « production protégé » alors que GitHub répondait
   « Branch not protected » : rien n'empêchait de fusionner une CI rouge — ce qui
@@ -870,7 +893,7 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
   La contrepartie demandée n'est pas une validation *avant*, c'est un **compte rendu
   après** : à chaque MEP, **la version et les fonctionnalités apportées**.
   Le pré-check ne s'allège pas pour autant : c'est lui qui remplace la relecture.
-  `gh pr create` → attendre les **5 checks requis** → `gh pr merge --squash
+  `gh pr create` → attendre **tous les checks requis** → `gh pr merge --squash
   --delete-branch` → **réaligner `dev` sur `origin/main`** (la fusion est un squash
   et supprime la branche distante).
   ⚠️ `gh pr merge --delete-branch` supprime aussi la branche **locale** et bascule
@@ -886,8 +909,8 @@ d'urgence : `ALLOW_STALE=1 git commit …`.
 - **Session cloud** (claude.ai/code) : aucun SSH vers les RPi, et le site public
   est hors de la politique réseau de la session. 🔴 **La MEP s'y enchaîne SANS
   validation intermédiaire** (arbitré le 25/09/2026) : PR du lot vers `dev` →
-  fusion dès les 5 checks verts → bump de version en **dernier commit** du lot →
-  PR `dev → main` → fusion dès ses 5 checks verts → **recréer `dev` depuis `main`**
+  fusion dès les checks requis verts → bump de version en **dernier commit** du lot →
+  PR `dev → main` → fusion dès ses checks requis verts → **recréer `dev` depuis `main`**
   (la fusion la supprime ; par l'API GitHub, le hook `pre-push` refusant un push
   sans trace de pré-check). Une seule demande de l'utilisateur couvre toute la
   chaîne, et le compte rendu arrive **après** — version et fonctionnalités, comme
@@ -978,5 +1001,10 @@ Instanciation 5Hostachy :
   Ce retour arrière tient parce que `start.sh` **saute les migrations d'une base
   en avance sur le code** (`utils/revision_base`) : sans lui, l'ancienne image
   s'arrêtait en boucle sur une révision inconnue.
+- **Le rôle de l'installation** (#1761) : `ROLE_INSTALLATION` (`maitre` sur les deux RPi,
+  `replique` posé d'office par `compose.images.yml`) se lit dans `utils/installation` et
+  nulle part ailleurs ; absent → « Inconnu », jamais « Maître ». Le bloc *Installation*
+  d'Admin › Maintenance le montre, avec l'écart au dépôt si le service *Vérification de
+  la version* est activé (coupé par défaut : rien ne sort sans accord).
 - ⚠️ Un onglet PWA resté ouvert peut servir une version en cache : le bandeau de mise
   à jour (v2.24.0) existe pour ça, et `api/tests/test_pwa_maj.py` le verrouille.

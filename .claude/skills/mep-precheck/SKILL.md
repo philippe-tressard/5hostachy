@@ -141,7 +141,7 @@ Le déroulé complet, une fois le pré-check vert :
 
 ```
 gh pr create --base main --head dev …
-gh pr checks <n> --watch          # les 5 checks REQUIS, pas un de moins
+gh pr checks <n> --watch          # TOUS les checks requis (liste : protection de main), pas un de moins
 gh pr merge <n> --squash --delete-branch
 git fetch --prune && git checkout -B dev origin/main
 SKIP_PRECHECK=1 git push -u origin dev   # recrée `dev` distante (piège 2)

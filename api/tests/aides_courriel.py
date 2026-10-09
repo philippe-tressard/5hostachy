@@ -39,7 +39,7 @@ from app.models.core import (
     TicketEvolution,
     Utilisateur,
 )
-from app.models.courriel import FilCourriel, MessageVerse
+from app.models.courriel import FilCourriel, MessageVerse, VersementCourriel
 from app.utils import courriel_boite, courriel_transfert
 from app.utils.courriel_boite import traiter
 from app.utils.courriel_entrant import nouveau_jeton
@@ -174,7 +174,10 @@ def monde(scene, monkeypatch):
         select(Ticket).where(Ticket.auteur_id == cs.id, Ticket.id != ticket.id)
     ).all()
     for t in [*crees, ticket]:
-        for modele in (TicketEvolution, MessageVerse, FilCourriel):
+        #  Les VERSEMENTS aussi (#1747) : laissés en place, ils pointaient vers un
+        #  identifiant d'affaire que SQLite réattribue — une affaire neuve d'un test
+        #  suivant en héritait (« 9 versements » au lieu d'un, selon l'ordre).
+        for modele in (TicketEvolution, MessageVerse, VersementCourriel, FilCourriel):
             for ligne in session.exec(select(modele).where(modele.ticket_id == t.id)).all():
                 purger_ligne(session, modele, ligne.id)
     for t in crees:

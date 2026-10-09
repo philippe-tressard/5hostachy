@@ -86,7 +86,7 @@ def compter_orphelins(engine) -> dict:
     ⚠️ Il parcourt la base entière. Sur une copropriété c'est instantané ; le
     noter pour le jour où ce ne le serait plus.
     """
-    from sqlalchemy import text
+    from app.dialecte import cles_de_table, cles_etrangeres_actives, lignes_orphelines
 
     try:
         with engine.connect() as conn:
@@ -101,18 +101,16 @@ def compter_orphelins(engine) -> dict:
             #  base où les clés seraient restées désactivées — l'appel
             #  `activer_cles_etrangeres` ne prenant PAS effet s'il est placé après
             #  le bloc d'amorçage (mesuré le 30/08/2026, cf. `database.py`).
-            cles_actives = bool(conn.execute(text("PRAGMA foreign_keys")).scalar())
-            lignes = conn.execute(text("PRAGMA foreign_key_check")).fetchall()
+            cles_actives = cles_etrangeres_actives(conn)
+            lignes = lignes_orphelines(conn)
             #  Le `fkid` rendu par le PRAGMA est un INDEX dans la liste des clés
             #  de la table : illisible tel quel. On le résout en NOM DE COLONNE,
             #  sinon le rapport nommerait un chiffre là où il faut décider d'une
             #  relation. Interrogé seulement pour les tables en défaut.
             colonnes: dict[tuple[str, int], str] = {}
             for table in {ligne[0] for ligne in lignes}:
-                for fk in conn.execute(
-                    text(f'PRAGMA foreign_key_list("{_sur(table)}")')
-                ).fetchall():
-                    colonnes[(table, fk[0])] = fk[3]
+                for numero, cols in cles_de_table(conn, _sur(table)).items():
+                    colonnes[(table, numero)] = cols[0]
     except Exception as exc:  # pragma: no cover - éprouvé par un moteur simulé
         return {"ok": False, "inconnu": True, "erreur": str(exc)}
 
@@ -160,21 +158,19 @@ def _remedes(conn, lignes):
     obligatoire, la ligne entière l'est. Délier à moitié fabriquerait une ligne
     que le schéma refuse.
     """
-    from sqlalchemy import text
+    from sqlalchemy import inspect
+
+    from app.dialecte import cles_de_table
 
     #  Les métadonnées sont relues par table, une seule fois chacune.
     cache: dict = {}
 
     def meta(table: str):
         if table not in cache:
-            fks: dict = {}
-            for f in conn.execute(text(f'PRAGMA foreign_key_list("{_sur(table)}")')):
-                fks.setdefault(f[0], []).append(f[3])
             colonnes = {
-                c[1]: bool(c[3])  # notnull
-                for c in conn.execute(text(f'PRAGMA table_info("{_sur(table)}")'))
+                c["name"]: not c["nullable"] for c in inspect(conn).get_columns(_sur(table))
             }
-            cache[table] = (fks, colonnes)
+            cache[table] = (cles_de_table(conn, _sur(table)), colonnes)
         return cache[table]
 
     remedes = []
@@ -248,9 +244,11 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
     """
     from sqlalchemy import text
 
+    from app.dialecte import cles_suspendues, lignes_orphelines
+
     try:
         with engine.connect() as conn:
-            lignes = conn.execute(text("PRAGMA foreign_key_check")).fetchall()
+            lignes = lignes_orphelines(conn)
             if not lignes:
                 return {
                     "ok": True,
@@ -282,9 +280,10 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
                     "par_table": resume,
                 }
 
-            etat_cles = conn.execute(text("PRAGMA foreign_keys")).scalar()
-            try:
-                conn.execute(text("PRAGMA foreign_keys=OFF"))
+            #  Le réglage des clés est rétabli à son ÉTAT D'ORIGINE en sortie, pas
+            #  forcé à « ON » : forcer changerait le régime de la connexion à
+            #  l'insu de tout le monde (`dialecte.cles_suspendues`).
+            with cles_suspendues(conn):
                 for table, rowid, cols, remede in remedes:
                     #  Les noms de table et de colonne viennent des métadonnées de
                     #  SQLite, pas d'une entrée utilisateur — ils sont quand même
@@ -301,11 +300,6 @@ def purger_orphelins(engine, *, simuler: bool = True) -> dict:
                             text(f'DELETE FROM "{_sur(table)}" WHERE rowid = :r'),  # noqa: S608 — idem : _sur() lève sur tout nom hors regex
                             {"r": rowid},
                         )
-                conn.commit()
-            finally:
-                #  Rétablir l'état d'ORIGINE, pas « ON » : forcer ON ici changerait
-                #  le régime de la connexion à l'insu de tout le monde.
-                conn.execute(text(f"PRAGMA foreign_keys={'ON' if etat_cles else 'OFF'}"))
                 conn.commit()
 
             #  🔴 La trace, sans laquelle l'incident du 31/08/2026 n'aurait pas pu

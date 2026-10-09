@@ -44,6 +44,7 @@ def moteur_strict():
     moteur.dispose()
 
 
+@pytest.mark.sqlite_seulement("lit le réglage `PRAGMA foreign_keys` ; PostgreSQL vérifie toujours")
 def test_le_moteur_strict_applique_vraiment_les_cles(moteur_strict):
     """Cas zéro — sans lui, tous les tests de ce fichier passeraient pour rien.
 

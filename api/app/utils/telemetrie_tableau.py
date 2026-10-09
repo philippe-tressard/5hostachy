@@ -23,13 +23,14 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import replace
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app import dialecte
 from app.models.core import TelemetryDaily, TelemetryEvent, TelemetryMonthly
 from app.utils import horloge
 from app.utils.destinataires import site_manager_user_id
@@ -80,7 +81,7 @@ def _portee_jour(session: Session, lecture: Lecture) -> dict:
 
     hour_stats = session.exec(
         select(
-            func.cast(func.strftime("%H", TelemetryEvent.cree_le), sa.Integer).label("heure"),
+            sa.extract("hour", TelemetryEvent.cree_le).label("heure"),
             func.count().label("total"),
             func.count(func.distinct(TelemetryEvent.user_id)).label("uniques"),
         )
@@ -115,7 +116,7 @@ def _portee_jour(session: Session, lecture: Lecture) -> dict:
 
 
 def _portee_mois(session: Session, lecture: Lecture) -> dict:
-    thirty_days_ago = (lecture.now_paris - timedelta(days=30)).strftime("%Y-%m-%d")
+    thirty_days_ago = _minuit_il_y_a(lecture, 30)
     filtre = lecture.evenements()
     daily_rows = session.exec(
         select(TelemetryDaily)
@@ -126,7 +127,7 @@ def _portee_mois(session: Session, lecture: Lecture) -> dict:
         )
         .order_by(TelemetryDaily.jour)
     ).all()
-    daily_uniques_map = uniques_par_jour(session, lecture, thirty_days_ago)
+    daily_uniques_map = uniques_par_jour(session, lecture, thirty_days_ago.date())
     daily_chart: dict[str, dict] = {}
     for r in daily_rows:
         if r.jour not in daily_chart:
@@ -178,6 +179,16 @@ def _portee_mois(session: Session, lecture: Lecture) -> dict:
     }
 
 
+def _minuit_il_y_a(lecture: Lecture, jours: int) -> datetime:
+    """Minuit, il y a `jours` jours de Paris — une DATE, comparée à `cree_le` (#1747).
+
+    C'était le texte « AAAA-MM-JJ » : SQLite comparait des chaînes, et
+    « 2026-09-09 » précède toute heure de ce jour ; PostgreSQL refuse de comparer
+    un horodatage à du texte. Le minuit naïf garde exactement la même borne.
+    """
+    return datetime.combine((lecture.now_paris - timedelta(days=jours)).date(), time.min)
+
+
 def _lignes_mensuelles(session: Session, lecture: Lecture, depuis_mois: str) -> list:
     """Les lignes par mois depuis `depuis_mois` : l'agrégat mensuel, puis le
     journalier du mois EN COURS, que l'agrégat mensuel n'a pas encore (il ne
@@ -205,11 +216,11 @@ def _lignes_mensuelles(session: Session, lecture: Lecture, depuis_mois: str) -> 
 
 def _uniques_par_mois(session: Session, lecture: Lecture, depuis_mois: str) -> dict[str, int]:
     """Les uniques de chaque mois : les évènements bruts d'abord (30 jours), puis l'agrégat."""
-    mois = func.strftime("%Y-%m", TelemetryEvent.cree_le, lecture.paris_offset_str)
+    mois = dialecte.mois(TelemetryEvent.cree_le, lecture.paris_offset_str)
     recents = session.exec(
         select(mois, func.count(func.distinct(TelemetryEvent.user_id)))
         .where(
-            TelemetryEvent.cree_le >= (lecture.now_paris - timedelta(days=30)).strftime("%Y-%m-%d"),
+            TelemetryEvent.cree_le >= _minuit_il_y_a(lecture, 30),
             TelemetryEvent.user_id.isnot(None),
             *lecture.evenements(),
         )
@@ -245,7 +256,9 @@ def _portee_longue(session: Session, lecture: Lecture, depuis_mois: str, par_ann
     #  Sans `uniques` : le cumul mois par mois — voir `_cumul_par_page`.
     top_pages = _cumul_par_page([r for _, r in lignes])
     total_vues = sum(d["total"] for d in chart.values())
-    daily_uniques = uniques_par_jour(session, lecture, None if par_annee else depuis_mois + "-01")
+    daily_uniques = uniques_par_jour(
+        session, lecture, None if par_annee else date.fromisoformat(depuis_mois + "-01")
+    )
     kpi = {
         "vues": total_vues,
         "pages": len(top_pages),

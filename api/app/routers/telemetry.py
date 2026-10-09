@@ -7,7 +7,7 @@ dépassait 500 lignes. Les LECTURES — quatre portées et un filtre — vivent 
 300 lignes ici, la quatrième et le filtre auraient repassé le plafond.
 """
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
@@ -46,7 +46,9 @@ def users_active(
     _: Utilisateur = Depends(require_admin),
 ):
     """Top utilisateurs actifs sur les 30 derniers jours."""
-    thirty_days_ago = (horloge.aujourd_hui() - timedelta(days=30)).isoformat()
+    #  Une DATE, comparée à `cree_le` — le texte « AAAA-MM-JJ » n'était juste que
+    #  sous SQLite, qui compare des chaînes (#1747).
+    thirty_days_ago = datetime.combine(horloge.aujourd_hui() - timedelta(days=30), time.min)
     rows = top_utilisateurs(session, thirty_days_ago)
     fiches = fiches_utilisateurs(session, rows)
     return [{"user_id": r[0], **ligne} for r, ligne in zip(rows, _palmares(rows, fiches))]

@@ -104,6 +104,7 @@ def test_le_code_dun_batiment():
     assert code_batiment(4) == "bat:4"
 
 
+@pytest.mark.sqlite_seulement("rejoue mot pour mot la requête de la migration historique 0190")
 @pytest.mark.parametrize("batiments_voulus", CAS, ids=lambda c: "-".join(map(str, c)) or "aucun")
 def test_la_MIGRATION_dit_la_meme_chose(batiments_voulus):
     """La requête de la migration 0190, exercée sur une base réelle.

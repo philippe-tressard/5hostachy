@@ -5,7 +5,6 @@ import os
 from datetime import timedelta
 from app.utils import horloge
 
-from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.auth.jetons_rafraichissement import purger as purger_jetons
@@ -15,6 +14,7 @@ from app.utils.declenchement import AUTOMATIQUE
 from app.utils.llm_journal import limite_conservation
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
 from app.database import engine
+from app.dialecte import chemin_fichier, compacter
 from app.models.core import (
     HistoriqueMaintenance,
     WhatsAppLog,
@@ -75,11 +75,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
     except Exception as exc:
         erreurs.append(f"purge tokens: {exc}")
 
+    #  `TRUE`, jamais `1` : PostgreSQL ne compare pas un booléen à un entier, et
+    #  SQLite comprend `TRUE` depuis 3.23 (#1747).
     etapes = (
         (
             "prt",
             "purge password reset tokens",
-            "DELETE FROM password_reset_token WHERE expires_at < :now OR used = 1",
+            "DELETE FROM password_reset_token WHERE expires_at < :now OR used = TRUE",
             {"now": maintenant},
         ),
         #  Les jetons de VÉRIFICATION d'e-mail : la seule famille qu'aucune purge
@@ -87,13 +89,13 @@ def purger() -> tuple[dict[str, int], list[str]]:
         (
             "verifications",
             "purge email verification tokens",
-            "DELETE FROM email_verification_token WHERE expires_at < :now OR used = 1",
+            "DELETE FROM email_verification_token WHERE expires_at < :now OR used = TRUE",
             {"now": maintenant},
         ),
         (
             "notifications",
             "purge notifications",
-            "DELETE FROM notification WHERE lue = 1 AND cree_le < :cutoff",
+            "DELETE FROM notification WHERE lue = TRUE AND cree_le < :cutoff",
             {"cutoff": il_y_a_90_j},
         ),
         (
@@ -181,19 +183,18 @@ def run_maintenance(history_id: int | None = None) -> None:
         comptes, erreurs = purger()
         tokens_supprimes = comptes["tokens"]
 
-        # VACUUM + PRAGMA optimize SQLite — après les purges, qu'il compacte.
+        # Compactage — après les purges, qu'il récupère (`dialecte.compacter`).
         try:
             with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
-                conn.execute(text("VACUUM"))
-                conn.execute(text("PRAGMA optimize"))
+                compacter(conn)
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
 
         # Taille DB après VACUUM
         taille_db: int | None = None
         try:
-            db_path = str(engine.url).replace("sqlite:////", "/").replace("sqlite:///", "")
-            if os.path.exists(db_path):
+            db_path = chemin_fichier(engine.url)
+            if db_path and os.path.exists(db_path):
                 taille_db = os.path.getsize(db_path)
         except Exception:
             pass
