@@ -94,6 +94,7 @@ sur() { timeout 25 ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" "$2" 2>/dev/nul
 #  point 1 pouvait donc afficher un code vide, que rien ne distingue d un OK.
 # shellcheck source=../lib/lib-sonde.sh
 . "$RACINE_DEPOT/scripts/lib/lib-sonde.sh"
+. "$RACINE_DEPOT/scripts/lib/lib-applicatifs.sh"   # l'application, la base mise à part (DI-7b)
 
 #  `--post-mep` (#1282) : après la fusion, les points du LOT échouent par
 #  construction. Ce mode juge la production seule, ajoute P1 et P3, et
@@ -117,13 +118,14 @@ rapporter 1 "$(verdict_http "$CODE")" "Site public" "HTTP ${CODE:-?}"
 # 2 et 3 — rôle actif cohérent, pas de split-brain
 A1=$(sur "$RPI1" 'cat /opt/5hostachy/.active')
 A2=$(sur "$RPI2" 'cat /opt/5hostachy/.active')
-C1=$(sur "$RPI1" 'docker ps -q --filter name=hostachy | wc -l')
-C2=$(sur "$RPI2" 'docker ps -q --filter name=hostachy | wc -l')
+C1=$(sur "$RPI1" "$COMPTER_APPLICATIFS")
+C2=$(sur "$RPI2" "$COMPTER_APPLICATIFS")
 rapporter 2 "$(verdict_role "$A1" "$A2" "$C1" "$C2")" "Rôle actif cohérent et conforme au réel" \
           "rpi1='${A1:-?}'/${C1:-?}c  rpi2='${A2:-?}'/${C2:-?}c"
 rapporter 3 "$(verdict_standby "${A1:-}" "${C1:-}" "${C2:-}")" "Pas de split-brain"           "actif déclaré=${A1:-?} — conteneurs rpi1=${C1:-?} rpi2=${C2:-?}"
 
-#  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs.
+#  L'actif est déduit du réel, pas du flag : c'est lui qui porte les conteneurs
+#  de l'APPLICATION (la réplique de la base vit sur le standby, DI-7b).
 if [ "${C1:-0}" != "0" ]; then ACTIF="$RPI1"; STANDBY="$RPI2"; else ACTIF="$RPI2"; STANDBY="$RPI1"; fi
 #  P1 et P3 : ils ont besoin de l'actif, déduit juste au-dessus.
 if [ -n "$MODE_POST_MEP" ]; then

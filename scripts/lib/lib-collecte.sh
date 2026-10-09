@@ -47,11 +47,18 @@
 # « Crontabs root INCONNUS » quatre jours durant. Il l'a dit — INCONNU jamais OK,
 # la règle a tenu — mais un INCONNU répété se lit « pas cette fois », jamais
 # « mort depuis quatre jours ».
+#
+# ── Les conteneurs comptés (`containers=`) : ceux de l'APPLICATION (DI-7b) ────
+# Sous PostgreSQL, la réplique de la base tourne en permanence sur le standby :
+# compter « tout hostachy » y ferait voir un split-brain à C2 et C4. La commande
+# vient de `lib-applicatifs.sh`, insérée telle quelle (concaténée hors des
+# apostrophes) — le pair n'a pas à porter le module pour être mesuré.
+. "$(dirname "${BASH_SOURCE[0]}")/lib-applicatifs.sh"
 COLLECT='
 R=/opt/5hostachy
 echo "host=$(hostname)"
 echo "active=$(cat $R/.active 2>/dev/null | tr -d "[:space:]")"
-echo "containers=$(docker ps -q --filter name=hostachy 2>/dev/null | wc -l | tr -d " ")"
+echo "containers=$('"$COMPTER_APPLICATIFS"')"
 echo "cf_active=$(systemctl is-active cloudflared 2>/dev/null)"
 echo "cf_enabled=$(systemctl is-enabled cloudflared 2>/dev/null)"
 echo "head=$(git -C $R rev-parse --short HEAD 2>/dev/null)"
