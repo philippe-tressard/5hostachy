@@ -76,7 +76,7 @@
 			: ''}
 	/>
 {:else}
-	<p class="muted" style="margin-bottom:1rem">
+	<p class="muted bilan">
 		<strong>{propositions.length}</strong> affaire{propositions.length > 1 ? 's' : ''} sur
 		{releve?.total_tickets} pourrai{propositions.length > 1 ? 'ent' : 't'} changer de catégorie.
 		<strong>{hautes.length}</strong> proposition{hautes.length > 1 ? 's' : ''} à confiance haute.
@@ -144,5 +144,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+	.bilan {
+		margin-bottom: 1rem;
 	}
 </style>

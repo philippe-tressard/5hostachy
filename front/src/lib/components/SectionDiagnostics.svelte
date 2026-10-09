@@ -245,8 +245,7 @@
 							{/if}
 							{#if peutModifier && dtype.rapports.length === 0}
 								<button
-									class="btn-icon"
-									style="margin-left:auto"
+									class="btn-icon retablir"
 									aria-label="Non applicable à cette copropriété"
 									title="Non applicable à cette copropriété"
 									disabled={togglingNonApplicableId === dtype.id}
@@ -338,7 +337,7 @@
 				}}
 			>
 				<summary>Diagnostics non applicables ({nonApplicables.length})</summary>
-				<div class="diag-list" style="margin-top:.75rem">
+				<div class="diag-list liste-non-applicables">
 					{#each nonApplicables as dtype (dtype.id)}
 						<div class="diag-card card diag-card-disabled">
 							<div class="diag-header">
@@ -471,5 +470,11 @@
 		border-left: 3px solid var(--color-primary);
 		margin: 0 0.5rem 0.35rem;
 		border-radius: 0 var(--radius) var(--radius) 0;
+	}
+	.retablir {
+		margin-left: auto;
+	}
+	.liste-non-applicables {
+		margin-top: 0.75rem;
 	}
 </style>

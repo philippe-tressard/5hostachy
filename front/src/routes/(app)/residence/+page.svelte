@@ -223,7 +223,7 @@
 	<BanniereResidence bind:copropriete peutModifier={$isCS} />
 
 	<!-- ── Section : Résidence ───────────────────────────────────────────── -->
-	<section style="margin-bottom:2.5rem">
+	<section class="section-residence">
 		<div class="section-header">
 			<h2 class="section-title">Résidence : {copropriete.nom}</h2>
 			{#if $isCS && !editing}
@@ -330,9 +330,7 @@
 			messageAjout="CR d'AG ajouté"
 		>
 			<svelte:fragment slot="badges" let:doc>
-				{#if doc.annee}<span class="badge badge-gray" style="font-variant-numeric:tabular-nums"
-						>{doc.annee}</span
-					>{/if}
+				{#if doc.annee}<span class="badge badge-gray annee-ag">{doc.annee}</span>{/if}
 				{#if doc.date_ag}<span class="doc-date">AG du {fmt(doc.date_ag)}</span>{/if}
 				<!--  🔴 `perimetreLabel` sur des CODES, plus `batimentLabel` sur des
 			      identifiants (#470). Trois branches se sont réduites à une : le
@@ -407,4 +405,10 @@
 	    à l'identique dans les trois, et divergeait du `h2` de la charte. */
 
 	/* ── Diagnostics ─────────────────────────────────────────────── */
+	.section-residence {
+		margin-bottom: 2.5rem;
+	}
+	.annee-ag {
+		font-variant-numeric: tabular-nums;
+	}
 </style>

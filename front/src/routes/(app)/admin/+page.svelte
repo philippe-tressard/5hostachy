@@ -300,17 +300,17 @@
 {:else if onglet === 'legal'}
 	<section class="card config-section">
 		<h2 class="config-section-title"><Icon name="file-text" size={17} />Mentions légales</h2>
-		<p class="muted" style="margin-bottom:1rem">
+		<p class="muted intro-texte">
 			Contenu affiché sur <code>/mentions-legales</code>.
 		</p>
 		<RichEditor bind:value={siteConfig.mentions_legales} minHeight="380px" titres sourceHtml />
 	</section>
-	<hr style="border:none;border-top:1px solid var(--color-border);margin:1.5rem 0" />
+	<hr class="separateur" />
 	<section class="card config-section">
 		<h2 class="config-section-title">
 			<Icon name="shield" size={17} />Politique de confidentialité
 		</h2>
-		<p class="muted" style="margin-bottom:1rem">
+		<p class="muted intro-texte">
 			Contenu affiché sur <code>/politique-de-confidentialite</code>.
 		</p>
 		<RichEditor
@@ -379,4 +379,12 @@
 	/*  🔴 `.badge-orange` et `.badge-purple` retirees le 28/08/2026 (#607) :
     la charte les porte, et cet ecran en donnait une TROISIEME teinte —
     `delegations` en avait une deuxieme. Meme notion, trois couleurs. */
+	.intro-texte {
+		margin-bottom: 1rem;
+	}
+	.separateur {
+		border: none;
+		border-top: 1px solid var(--color-border);
+		margin: 1.5rem 0;
+	}
 </style>

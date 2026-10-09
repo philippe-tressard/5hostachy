@@ -281,7 +281,7 @@
 		</p>
 	{:else}
 		<div class="table-wrap">
-			<table class="table" style="font-size:var(--fs-md)">
+			<table class="table table-inventaire">
 				<thead>
 					<tr>
 						<th>Type</th>
@@ -299,7 +299,7 @@
 						<tr>
 							<td>{typeLabel[objet.type] ?? objet.type}</td>
 							<td>{objet.libelle}</td>
-							<td style="text-align:center">{objet.quantite}</td>
+							<td class="cellule-quantite">{objet.quantite}</td>
 							<td>{objet.reference ?? '—'}</td>
 							<td>
 								<span class="badge {statutObjetBadge[objet.statut] ?? 'badge-gray'}">
@@ -437,5 +437,11 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: var(--fs-base);
+	}
+	.table-inventaire {
+		font-size: var(--fs-md);
+	}
+	.cellule-quantite {
+		text-align: center;
 	}
 </style>

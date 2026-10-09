@@ -225,7 +225,7 @@
 </script>
 
 <div class="ah-panel">
-	<div class="perimetre-pills" style="margin-bottom:1rem">
+	<div class="perimetre-pills choix-vue">
 		<Pastille active={ahVue === 'nouvelle'} on:click={() => (ahVue = 'nouvelle')}
 			>&#x1F4DD; Nouvelle annonce</Pastille
 		>
@@ -282,7 +282,7 @@
 						></iframe>
 					</div>
 				{:else}
-					<div class="empty-state" style="margin:0">
+					<div class="empty-state vide-apercu">
 						<p>
 							Renseignez le titre et le message, puis cliquez sur <strong>Aperçu</strong> pour voir l'affiche
 							telle qu'elle sortira de l'imprimante.
@@ -349,5 +349,11 @@
 		.ah-apercu-frame {
 			height: 460px;
 		}
+	}
+	.choix-vue {
+		margin-bottom: 1rem;
+	}
+	.vide-apercu {
+		margin: 0;
 	}
 </style>

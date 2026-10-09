@@ -287,7 +287,7 @@
 	</SectionFormulaire>
 
 	<SectionFormulaire titre="Par usage">
-		<p class="aide" style="margin-bottom:.4rem">
+		<p class="aide explication-usages">
 			Chaque usage règle <strong>son modèle</strong>, <strong>son prompt</strong> et
 			<strong>ses limites d’appels</strong>, et se teste séparément. Tout s’enregistre avec le
 			bouton en bas de page.
@@ -352,5 +352,8 @@
 	/*  Le réglage propre à un usage se lit sous son bloc, légèrement rentré. */
 	.option-usage {
 		margin-top: 0.6rem;
+	}
+	.explication-usages {
+		margin-bottom: 0.4rem;
 	}
 </style>

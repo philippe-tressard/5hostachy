@@ -215,7 +215,7 @@
 		<EtatListe chargement />
 	{:else}
 		<!-- KPI Cards -->
-		<div class="kpi-row" style="margin-bottom:1.5rem">
+		<div class="kpi-row kpi-espaces">
 			<div class="kpi-card" class:kpi-alert={nbComptes > 0}>
 				<div class="kpi-value">{nbComptes}</div>
 				<div class="kpi-label">Compte(s) à valider</div>
@@ -227,10 +227,8 @@
 		</div>
 
 		<!-- Comptes en attente -->
-		<section class="largeur-saisie" style="margin-bottom:2rem">
-			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
-				Comptes en attente de validation
-			</h2>
+		<section class="largeur-saisie section-file">
+			<h2 class="titre-file">Comptes en attente de validation</h2>
 			{#if comptesEnAttente.length === 0}
 				<p class="text-muted-sm">Aucun compte en attente.</p>
 			{:else}
@@ -288,9 +286,7 @@
 
 		<!-- Commandes d'accès -->
 		<section class="largeur-saisie">
-			<h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem">
-				Demandes d'accès (badges / télécommandes)
-			</h2>
+			<h2 class="titre-file">Demandes d'accès (badges / télécommandes)</h2>
 			{#if commandesEnAttente.length === 0}
 				<p class="text-muted-sm">Aucune demande en attente.</p>
 			{:else}
@@ -447,4 +443,15 @@
 	/*  Les trente-six règles `.ah-*` sont parties avec `OngletAnnoncesHall` :
 	    Svelte scope les styles au composant qui rend le balisage, et les laisser
 	    ici aurait livré l'onglet entièrement NU (v2.67.11). */
+	.kpi-espaces {
+		margin-bottom: 1.5rem;
+	}
+	.section-file {
+		margin-bottom: 2rem;
+	}
+	.titre-file {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
 </style>

@@ -103,7 +103,7 @@
 </script>
 
 <!-- ── Section : Règles & Recommandations ──────────────────────────── -->
-<section style="margin-bottom:2.5rem">
+<section class="section-regles">
 	<div class="section-header">
 		<h2 class="section-title">&#x1F4CB; Règles & Recommandations</h2>
 		{#if $isCS}
@@ -144,13 +144,10 @@
 		<div class="doc-list">
 			{#each regles as regle (regle.id)}
 				<div class="doc-row card">
-					<div class="doc-info" style="flex-direction:column;align-items:flex-start;gap:.25rem">
+					<div class="doc-info info-regle">
 						<span class="doc-titre">{regle.titre}</span>
 						{#if regle.contenu}
-							<span
-								style="font-size:var(--fs-md);color:var(--color-text-muted);white-space:pre-wrap"
-								>{regle.contenu}</span
-							>
+							<span class="contenu-regle">{regle.contenu}</span>
 						{/if}
 					</div>
 					{#if $isCS}
@@ -174,3 +171,19 @@
 		</div>
 	</EtatListe>
 </section>
+
+<style>
+	.section-regles {
+		margin-bottom: 2.5rem;
+	}
+	.info-regle {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+	.contenu-regle {
+		font-size: var(--fs-md);
+		color: var(--color-text-muted);
+		white-space: pre-wrap;
+	}
+</style>

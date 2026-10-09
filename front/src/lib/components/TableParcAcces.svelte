@@ -47,7 +47,7 @@
 </script>
 
 <div class="table-wrap">
-	<table class="table" style="font-size:var(--fs-md)">
+	<table class="table table-parc">
 		<thead>
 			<!--  🔴 De vrais `<button>` dans les `<th>` : un `<th>` cliquable sans
 			      bouton n'est ni atteignable au clavier ni annoncé comme
@@ -167,5 +167,8 @@
 	.bc-chez {
 		font-size: var(--fs-2xs);
 		margin-left: 0.35rem;
+	}
+	.table-parc {
+		font-size: var(--fs-md);
 	}
 </style>

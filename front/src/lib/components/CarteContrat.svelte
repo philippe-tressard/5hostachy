@@ -216,8 +216,7 @@
 					<div><span class="detail-label">Fréquence</span>{frequenceLabel(contrat)}</div>
 				{/if}
 				{#if contrat.prochaine_visite}<div>
-						<span class="detail-label">Prochaine visite</span><span
-							style="color:var(--color-primary);font-weight:600"
+						<span class="detail-label">Prochaine visite</span><span class="prochaine-visite"
 							>🗓 {fmtDateShort(contrat.prochaine_visite)}</span
 						>
 					</div>{/if}
@@ -242,7 +241,7 @@
 					Description {notesOuvertes ? '▲' : '▼'}
 				</div>
 				{#if notesOuvertes}
-					<div class="rich-content" style="font-size:var(--fs-base)">
+					<div class="rich-content notes-contrat">
 						{@html safeHtml(contrat.notes)}
 					</div>
 				{/if}
@@ -266,7 +265,7 @@
 			/>
 		</div>
 		{#if peutModifier}
-			<div style="display:flex;gap:.4rem;margin-top:.25rem;flex-wrap:wrap">
+			<div class="gestes-notation">
 				<!--  🔴 « Noter » ne vivait QUE dans `CarteVisite`, donc dans le
 				      seul onglet Visites : retirer cet onglet sans porter le geste
 				      ici aurait rendu la notation d'un prestataire IMPOSSIBLE à
@@ -373,5 +372,18 @@
 		font-size: var(--fs-md);
 		color: var(--color-text);
 		margin-bottom: 0.5rem;
+	}
+	.prochaine-visite {
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+	.notes-contrat {
+		font-size: var(--fs-base);
+	}
+	.gestes-notation {
+		display: flex;
+		gap: 0.4rem;
+		margin-top: 0.25rem;
+		flex-wrap: wrap;
 	}
 </style>

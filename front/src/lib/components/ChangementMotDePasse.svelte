@@ -65,7 +65,7 @@
 	}
 </script>
 
-<section class="card" style="margin-bottom:1.5rem">
+<section class="card carte-mot-de-passe">
 	<h2 class="section-title">Modifier le mot de passe</h2>
 	<p class="section-aide">
 		Il vous faut votre mot de passe actuel, puis le nouveau saisi deux fois.
@@ -163,5 +163,8 @@
 			width: 100%;
 			justify-content: center;
 		}
+	}
+	.carte-mot-de-passe {
+		margin-bottom: 1.5rem;
 	}
 </style>

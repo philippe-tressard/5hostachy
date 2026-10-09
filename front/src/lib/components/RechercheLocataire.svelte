@@ -125,9 +125,7 @@
 				<span class="locataire-selected-name">✓ {nomAffiche(trouve)}</span>
 				<span class="locataire-selected-email">{trouve.email}</span>
 				{#if !trouve.actif}
-					<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
-						>En attente d'activation</span
-					>
+					<span class="badge badge-yellow en-attente">En attente d'activation</span>
 				{/if}
 			</div>
 			<button class="btn btn-xs btn-outline" on:click={reinitialiser} title="Changer de locataire"
@@ -143,9 +141,7 @@
 						<button class="locataire-resultat-btn" on:click={() => selectionner(sug)}>
 							<span class="lr-name">{nomAffiche(sug)}</span>
 							<span class="lr-email">{sug.email}</span>
-							{#if !sug.actif}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
-									>En attente</span
-								>{/if}
+							{#if !sug.actif}<span class="badge badge-yellow en-attente">En attente</span>{/if}
 						</button>
 					</li>
 				{/each}
@@ -176,9 +172,7 @@
 						<button class="locataire-resultat-btn" on:click={() => selectionner(r)}>
 							<span class="lr-name">{nomAffiche(r)}</span>
 							<span class="lr-email">{r.email}</span>
-							{#if !r.actif}<span class="badge badge-yellow" style="font-size:var(--fs-2xs)"
-									>En attente</span
-								>{/if}
+							{#if !r.actif}<span class="badge badge-yellow en-attente">En attente</span>{/if}
 						</button>
 					</li>
 				{/each}
@@ -289,5 +283,8 @@
 	.locataire-selected-email {
 		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
+	}
+	.en-attente {
+		font-size: var(--fs-2xs);
 	}
 </style>

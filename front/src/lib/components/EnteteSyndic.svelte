@@ -35,7 +35,7 @@
 </script>
 
 {#if edition}
-	<div class="form-grid largeur-saisie" style="margin-bottom:1rem">
+	<div class="form-grid largeur-saisie grille-syndic">
 		<label class="field champ-large">
 			Nom du syndic
 			<input
@@ -67,7 +67,7 @@
 		      boutons. Elle échappait au contrôle parce qu'il n'ouvrait que les
 		      rangées `.form-actions` ; il cherche désormais la paire quelle que
 		      soit la classe. -->
-		<div style="grid-column:1/-1">
+		<div class="pied-syndic">
 			<PiedFormulaire
 				enCours={enregistrement}
 				soumission={false}
@@ -80,7 +80,7 @@
 {:else}
 	<div class="header-summary">
 		<span>{nom || 'Nom du syndic non renseigné'}{adresse ? ` · ${adresse}` : ''}</span>
-		{#if siteWeb}<span style="margin-left:.5rem"
+		{#if siteWeb}<span class="site-syndic"
 				>· <a href={siteWeb} target="_blank" rel="noopener">Espace client</a></span
 			>{/if}
 		<button
@@ -92,3 +92,15 @@
 		>
 	</div>
 {/if}
+
+<style>
+	.grille-syndic {
+		margin-bottom: 1rem;
+	}
+	.pied-syndic {
+		grid-column: 1/-1;
+	}
+	.site-syndic {
+		margin-left: 0.5rem;
+	}
+</style>

@@ -216,17 +216,17 @@
 						/></label
 					>
 				</div>
-				<div class="field" style="margin-top:.6rem">
+				<div class="field champ-suivant">
 					<label for="releve-note">Note</label>
 					<input
 						id="releve-note"
 						type="text"
 						bind:value={releveForm.note}
 						placeholder="Ex. Changement compteur"
-						style="width:100%"
+						class="note-releve"
 					/>
 				</div>
-				<div class="field" style="margin-top:.6rem">
+				<div class="field champ-suivant">
 					<span class="libelle-groupe">Photo du relevé</span>
 					<!--  Différé : la photo part par `prestApi.uploadRelevePhoto`,
 						      une fois le relevé créé. -->
@@ -348,5 +348,11 @@
 		border: 1px solid var(--color-border);
 		margin-top: 0.2rem;
 		display: block;
+	}
+	.champ-suivant {
+		margin-top: 0.6rem;
+	}
+	.note-releve {
+		width: 100%;
 	}
 </style>

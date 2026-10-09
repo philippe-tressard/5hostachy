@@ -110,7 +110,7 @@
 <svelte:window bind:innerWidth={largeurFenetre} />
 
 <div class="kb-header">
-	<h2 class="section-title" style="margin:0">&#x1F4CB; Kanban</h2>
+	<h2 class="section-title titre-kanban">&#x1F4CB; Kanban</h2>
 	<a href={lienKanban} class="kb-voir-lien">Voir le Kanban complet →</a>
 </div>
 
@@ -215,3 +215,9 @@
 		</div>
 	{/if}
 {/if}
+
+<style>
+	.titre-kanban {
+		margin: 0;
+	}
+</style>

@@ -98,7 +98,7 @@
 
 		<!-- Diagnostics permanents -->
 		{#if diagsPermanents.length > 0}
-			<div class="audit-year-group" style="margin-top:1rem">
+			<div class="audit-year-group groupe-suivant">
 				<h4 class="audit-year-title">
 					Permanent
 					<span class="badge badge-blue">{diagsPermanents.length}</span>
@@ -131,7 +131,7 @@
 
 		<!-- Diagnostics sans échéance calculable -->
 		{#if diagsSansEcheance.length > 0}
-			<div class="audit-year-group" style="margin-top:1rem">
+			<div class="audit-year-group groupe-suivant">
 				<h4 class="audit-year-title">
 					Sans échéance calculable
 					<span class="badge badge-gray">{diagsSansEcheance.length}</span>
@@ -202,5 +202,8 @@
 		.report-table tr {
 			break-inside: avoid;
 		}
+	}
+	.groupe-suivant {
+		margin-top: 1rem;
 	}
 </style>

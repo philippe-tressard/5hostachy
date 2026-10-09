@@ -59,8 +59,12 @@ import { fileURLToPath } from 'node:url';
  *  ⚠️ Une classe pèse MOINS qu'un attribut : là où une règle globale plus forte
  *  visait l'élément (`.field input[type='checkbox']`, `.field textarea`), le
  *  sélecteur est qualifié pour la battre comme l'attribut la battait.
+ *  Puis 76 (#1571) : tous les fichiers qui avaient de la place sous 500 lignes.
+ *  Restent ceux qui la frôlent — modèles d'e-mail, import des lots, comptes,
+ *  profil, tâches planifiées, renouvellements de contrats, formulaire d'affaire :
+ *  les découper d'abord, une classe ajoutée les ferait déborder.
  */
-const PLAFOND = 206;
+const PLAFOND = 76;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

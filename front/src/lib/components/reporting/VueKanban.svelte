@@ -41,7 +41,7 @@
 	}));
 </script>
 
-<div class="kpi-row" style="margin-bottom:1rem">
+<div class="kpi-row kpi-espaces">
 	<div class="kpi-card">
 		<div class="kpi-value">
 			{reportKanbanEvents.filter((ev) => ev.statut_kanban !== 'annule').length}
@@ -56,7 +56,7 @@
 	{/each}
 </div>
 {#each reportKanbanByCol as col (col.col)}
-	<section class="report-card" style="margin-bottom:1.5rem">
+	<section class="report-card carte-espacee">
 		<h3>
 			<span class="badge {col.badge}">{col.label}</span> — {col.items.length} dossier{col.items
 				.length > 1
@@ -119,5 +119,11 @@
 	}
 	.report-event-desc :global(p:last-child) {
 		margin-bottom: 0;
+	}
+	.kpi-espaces {
+		margin-bottom: 1rem;
+	}
+	.carte-espacee {
+		margin-bottom: 1.5rem;
 	}
 </style>

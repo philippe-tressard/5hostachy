@@ -71,14 +71,7 @@
 		{uploading ? 'Chargement…' : label}
 	</button>
 
-	<input
-		bind:this={input}
-		{id}
-		type="file"
-		{accept}
-		style="display:none"
-		on:change={handleChange}
-	/>
+	<input bind:this={input} {id} type="file" {accept} class="champ-cache" on:change={handleChange} />
 </div>
 
 <style>
@@ -177,5 +170,8 @@
 	.btn-link:disabled {
 		opacity: 0.5;
 		cursor: default;
+	}
+	.champ-cache {
+		display: none;
 	}
 </style>

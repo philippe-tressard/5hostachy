@@ -150,9 +150,11 @@ export const TOLERANCES = {
 	//  `<textarea>` de #561, et pour la même raison : c'est un AUTRE contrôle qui
 	//  a forcé la main.
 	//  Le champ « Motif » du marquage non-relançable, parti avec la vue en
-	//  extrayant le reporting (#453) — même dette, autre fichier.
-	'lib/components/reporting/VueRelanceSyndic.svelte::controle-saisie':
-		'champ de motif re-peint à la main (l. ~150)',
+	//  extrayant le reporting (#453) — même dette, autre fichier. Passée de
+	//  l'attribut `style` à la règle `input.champ-ref` le 08/10/2026 (#1571) : la
+	//  même dette, désormais vue par le volet C — d'où la clé `::style:`.
+	'lib/components/reporting/VueRelanceSyndic.svelte::style:controle-saisie':
+		'champ de référence re-peint à la main (`input.champ-ref`)',
 	//  ⚠️ Pas une dette : une exception VOULUE (24/09/2026). Le `<select>` de
 	//  `PastilleDeroulante` n'est pas un champ de formulaire mais le cœur d'une
 	//  PASTILLE — transparent, sans bordure, arrondi par la pastille qui

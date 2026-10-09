@@ -156,7 +156,7 @@
 				<div>
 					<span class="detail-label">Téléphone</span>
 					{#each telephonesDe(p.telephone) as tel, ti (`${ti}|${tel}`)}
-						<span style="display:block">📞 {tel.trim()}</span>
+						<span class="ligne-telephone">📞 {tel.trim()}</span>
 					{/each}
 				</div>
 			{/if}
@@ -166,8 +166,8 @@
 				</div>{/if}
 			<div><span class="detail-label">Contrats</span>{cs.length}</div>
 			{#if nextVisit}<div>
-					<span class="detail-label">Prochaine visite</span><span
-						style="color:var(--color-primary);font-weight:600">🗓 {fmtDateShort(nextVisit)}</span
+					<span class="detail-label">Prochaine visite</span><span class="prochaine-visite"
+						>🗓 {fmtDateShort(nextVisit)}</span
 					>
 				</div>{/if}
 		</div>
@@ -223,4 +223,11 @@
 		color: var(--color-text-muted);
 	}
 	/*  `.prest-body` est partie avec le corps, dans `CarteModifiable` (#1539). */
+	.ligne-telephone {
+		display: block;
+	}
+	.prochaine-visite {
+		color: var(--color-primary);
+		font-weight: 600;
+	}
 </style>

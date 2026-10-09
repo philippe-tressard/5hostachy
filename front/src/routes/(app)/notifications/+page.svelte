@@ -137,16 +137,14 @@
 				<div class="notif-body">
 					{#if !n.lue}<div class="unread-dot"></div>{/if}
 					<div class="notif-content">
-						<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
-							<strong style="font-size:var(--fs-lg)">{n.titre}</strong>
+						<div class="entete-notif">
+							<strong class="titre-notif">{n.titre}</strong>
 							{#if n.urgente}<span class="badge badge-red">Urgent</span>{/if}
 						</div>
-						<p style="font-size:var(--fs-base);color:var(--color-text-muted);margin:0">
+						<p class="corps-notif">
 							{@html safeRichContent(n.corps)}
 						</p>
-						<small style="color:var(--color-text-muted);font-size:var(--fs-xs)"
-							>{section.format(n.cree_le)}</small
-						>
+						<small class="date-notif">{section.format(n.cree_le)}</small>
 					</div>
 				</div>
 				<div class="notif-actions">
@@ -234,5 +232,23 @@
 		.back-link:hover {
 			color: var(--color-primary);
 		}
+	}
+	.entete-notif {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.2rem;
+	}
+	.titre-notif {
+		font-size: var(--fs-lg);
+	}
+	.corps-notif {
+		font-size: var(--fs-base);
+		color: var(--color-text-muted);
+		margin: 0;
+	}
+	.date-notif {
+		color: var(--color-text-muted);
+		font-size: var(--fs-xs);
 	}
 </style>

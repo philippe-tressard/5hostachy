@@ -266,7 +266,7 @@
 	</ReorganisationFaq>
 {:else}
 	{#each Object.entries(filteredGrouped) as [categorie, catItems] (categorie)}
-		<div style="display:flex;justify-content:space-between;align-items:center">
+		<div class="entete-categorie">
 			{#if canEdit && editingCategory === categorie}
 				<div class="categorie-edit">
 					<input
@@ -339,10 +339,9 @@
 		Créez une affaire via la rubrique <a href="/tickets">Affaires</a> et le conseil syndical vous répondra
 		dans les meilleurs délais.
 	</p>
-	<p style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--color-border)">
-		<span style="vertical-align:middle;margin-right:.3rem;display:inline-flex"
-			><Icon name="book-open" size={15} /></span
-		>Le <a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur</a>
+	<p class="renvoi-manuel">
+		<span class="icone-manuel"><Icon name="book-open" size={15} /></span>Le
+		<a href="/manuel-utilisateur.html" target="_blank" rel="noopener">Manuel utilisateur</a>
 		vous guide pas à pas, et existe
 		<a href={manuel.pdfUrl()} target="_blank" rel="noopener">en PDF</a>.
 	</p>
@@ -405,4 +404,19 @@
 	.btn-outline {
 		padding: 0.4rem 0.9rem;
 	} /* le reste vient de la charte (#607) */
+	.entete-categorie {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.renvoi-manuel {
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
+	.icone-manuel {
+		vertical-align: middle;
+		margin-right: 0.3rem;
+		display: inline-flex;
+	}
 </style>
