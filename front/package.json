@@ -118,6 +118,7 @@
 		"lint:suppression-confirmee": "node scripts/check-suppression-confirmee.mjs --selftest && node scripts/check-suppression-confirmee.mjs",
 		"lint:statut-recalcule": "node scripts/check-statut-recalcule.mjs --selftest && node scripts/check-statut-recalcule.mjs",
 		"lint:nombre-saisi": "node scripts/check-nombre-saisi.mjs --selftest && node scripts/check-nombre-saisi.mjs",
+		"lint:vignette-compte": "node scripts/check-vignette-compte.mjs --selftest && node scripts/check-vignette-compte.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
 		"lint:entete-carte": "node scripts/check-entete-carte.mjs --selftest && node scripts/check-entete-carte.mjs",
 		"lint:pictogrammes": "node scripts/check-pictogrammes.mjs --selftest && node scripts/check-pictogrammes.mjs",

@@ -25,12 +25,7 @@
 	import { aboutirGeste, ouvrirGeste } from '$lib/aboutissement';
 	import AvertissementUrgence from '$lib/components/AvertissementUrgence.svelte';
 	import { OPTIONS_FILTRE_NATURE, estActualite, statutsPresents } from '$lib/tickets';
-	import {
-		archiveesTrouvees,
-		estArchive,
-		filtrerAffaires,
-		rechercheAffaires,
-	} from '$lib/recherche-affaires';
+	import { estArchive, filtrerAffaires, rechercheAffaires } from '$lib/recherche-affaires';
 
 	$: _pc = getPageConfig($configStore, 'mes-demandes', defautsDePage('mes-demandes'));
 	$: _siteNom = $siteNomStore;
@@ -425,8 +420,7 @@
 		bind:recherche
 		bind:inclureArchives
 		etat={$moteur}
-		affichees={filtered.length}
-		archivees={archiveesTrouvees(ticketList, $moteur.resultats)}
+		tickets={ticketList}
 	/>
 {/if}
 
