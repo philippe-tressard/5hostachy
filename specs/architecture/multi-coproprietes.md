@@ -371,7 +371,7 @@ soumis à accord, lot par lot.
 | P2-2 | **Un seul accès aux ressources** d'une copropriété — base, fichiers, secret, expéditeur, services — par un module `contexte` qui lit `settings` tant qu'il n'y a qu'une copro ; garde-fou contre l'accès direct (§4.1, règle 3). Les états « à indexer » de P2-1 s'y soldent | L | P2-1 | #1744 |
 | P2-3 | **Tâches planifiées par copropriété** : une enveloppe, un journal par copro, l'échec de l'une ne bloque pas les autres (§4.6) | M | P2-2 | #1745 |
 | P2-4 | **Test d'étanchéité** sur deux copros factices aux identifiants identiques, avec cas zéro et témoin (§5.1, §5.3) | M | P2-2 | #1746 |
-| P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3) | M | — | #1747 |
+| P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3). **Premier temps livré en v2.124.0** : la suite se rejoue sur PostgreSQL (`TESTS_BASE_URL`) et le workflow « PostgreSQL » mesure l'écart ; l'adhérence à SQLite est sous plafond | M | — | #1747 |
 | P2-6 | **Stockage des fichiers** derrière une interface, disque local puis stockage objet, préfixe par copro (§4.4). Décision à y prendre : `/uploads/*` n'est plus servi en statique par Caddy | M | P2-2 | #1748 |
 | P2-7 | **Export / import vérifié** d'une copro (comptes et sommes de contrôle par table) : sauvegarde vérifiée aujourd'hui, passage à PostgreSQL demain, réversibilité ensuite (§4.3, §4.9) | M | — | #1749 |
 | P2-8 | **Scission du rôle `admin`** : administrateur de copro et opérateur de plateforme, sans donnée personnelle (§4.7, §5.5) | M | — (D8 confirmée le 08/10/2026) | #1750 |

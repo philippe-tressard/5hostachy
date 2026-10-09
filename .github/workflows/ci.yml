@@ -583,6 +583,9 @@ jobs:
           # Le tag d'une version (#1753) : créer, relancer, lot sans bump, version
           # illisible — la décision qui pose `vX.Y.Z` et autorise la publication.
           bash scripts/ci/tag-version.sh            --selftest
+          # La mesure sur PostgreSQL (#1747) : une mesure qui n'a pas pu se faire
+          # échoue, des tests rouges sont une MESURE.
+          bash scripts/ci/mesure-postgresql.sh      --selftest
           # La promotion sur `replica` (#1754) : refus sans tag, hors de main, en
           # arrière de replica ; et les notes de version des exploitants.
           bash scripts/ci/promotion.sh              --selftest

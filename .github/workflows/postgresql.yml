@@ -1,0 +1,62 @@
+name: PostgreSQL
+
+#  Lot P2-5 (#1747) — chantier multi-copropriétés, D4 (« passer à PostgreSQL »).
+#
+#  Rejoue TOUTE la suite pytest sur PostgreSQL : `tests/aides_base.moteur_memoire`
+#  y bascule quand `TESTS_BASE_URL` est posé, un schéma neuf par base de test.
+#  La production reste sur SQLite ; ce workflow MESURE l'écart avant d'y toucher.
+#
+#  ⚠️ INFORMATIF, et il le dit : la mesure (tests verts, en échec, par fichier) va
+#  au résumé du run, et le job ne rougit que si la mesure n'a PAS PU se faire
+#  (pytest interrompu, base injoignable) — un contrôle qui ne s'exécute pas rend
+#  INCONNU, jamais OK (`standards/04` §1). Il deviendra un check REQUIS quand la
+#  suite y sera verte, et l'écart à zéro se lira dans son résumé.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  mesure:
+    name: Suite pytest sur PostgreSQL (mesure)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: essai
+          POSTGRES_PASSWORD: essai
+          POSTGRES_DB: essai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U essai" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: api
+        run: pip install -r requirements-dev.txt
+
+      - name: Mesurer la suite sur PostgreSQL
+        working-directory: api
+        env:
+          TESTS_BASE_URL: postgresql+pg8000://essai:essai@localhost:5432/essai
+        run: bash ../scripts/ci/mesure-postgresql.sh

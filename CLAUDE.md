@@ -649,6 +649,13 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
   en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
   donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
+- 🐘 **La suite se rejoue sur PostgreSQL** (#1747, D4) : `tests/aides_base.moteur_memoire`
+  bascule sur PostgreSQL quand `TESTS_BASE_URL` est posé — un schéma neuf par base —,
+  et le workflow `postgresql.yml` MESURE l'écart (résumé du run : verts, rouges, fichiers
+  les plus touchés). Informatif tant que la suite n'y est pas verte ; il ne rougit que si
+  la mesure n'a pas pu se faire. 🔒 `test_adherence_sqlite.py` : l'adhérence du code à
+  SQLite (modules qui nomment SQLite ou un `PRAGMA`, fonctions SQL propres à SQLite) est
+  sous deux plafonds qui ne font que baisser.
 - 🔒 `test_routeurs_nommes_par_un_test.py` : un routeur de `app/routers/` que
   **aucun** fichier de `tests/` ne nomme est refusé (#1569).
 - 🔒 **Clones Python** (#1564) : `scripts/ci/clones_python.py` (job `lint-backend`,

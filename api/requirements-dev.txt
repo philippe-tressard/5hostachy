@@ -11,3 +11,7 @@ cryptography==50.0.2
 #  Pose un sceau ARC (`dkim.arc_sign`) dans `test_courriel_authenticite` : la
 #  VÉRIFICATION n'en a pas besoin, d'où son absence de l'image. Apache 2.0.
 authres==1.2.0
+#  Le pilote PostgreSQL du workflow « PostgreSQL » (#1747) : `tests/aides_base` y
+#  rejoue la suite quand `TESTS_BASE_URL` est posé. BSD-3-Clause, pur Python — pas
+#  dans l'image tant que la production reste sous SQLite (elle y entrera avec DI-7).
+pg8000==1.31.5

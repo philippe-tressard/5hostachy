@@ -71,6 +71,11 @@ def activer_cles_etrangeres(moteur) -> None:
     échoué ensuite — avec un message ne disant pas qu'elle datait de mois.
     """
 
+    #  PostgreSQL vérifie ses clés étrangères toujours, et ne connaît pas PRAGMA
+    #  (#1747) : il n'y a rien à poser.
+    if moteur.dialect.name != "sqlite":
+        return
+
     @event.listens_for(moteur, "connect")
     def _poser(dbapi_connection, _record):  # pragma: no cover — appelé par SQLAlchemy
         curseur = dbapi_connection.cursor()

@@ -15,8 +15,11 @@
 
 from __future__ import annotations
 
+import os
 import uuid
+import weakref
 
+from sqlalchemy import event, text
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -38,6 +41,12 @@ def moteur_memoire(*, partage: bool = False, schema: bool = True, cles_etrangere
     ce qu'il faut quand un `TestClient` lit la base depuis un autre fil que le
     test — sans elle, chaque connexion ouvre une base vide.
     """
+    #  🐘 Sur PostgreSQL quand `TESTS_BASE_URL` le demande (#1747) : le workflow
+    #  « PostgreSQL » rejoue ainsi toute la suite sur le moteur cible (D4), sans
+    #  qu'un seul test change. Ailleurs, rien ne change.
+    url = os.environ.get("TESTS_BASE_URL")
+    if url:
+        return _moteur_postgresql(url, schema=schema)
     if partage:
         moteur = create_engine(
             "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -50,6 +59,43 @@ def moteur_memoire(*, partage: bool = False, schema: bool = True, cles_etrangere
         activer_cles_etrangeres(moteur)
     if schema:
         SQLModel.metadata.create_all(moteur)
+    return moteur
+
+
+def _moteur_postgresql(url: str, *, schema: bool):
+    """Une base PostgreSQL propre à l'appelant : un SCHÉMA neuf, retiré à sa libération.
+
+    Un schéma par moteur rend à chaque test la base vide qu'il reçoit de SQLite en
+    mémoire. `search_path` le fait seul visible ; il est supprimé quand le moteur
+    est libéré (fin du test), sans quoi des milliers de schémas s'accumuleraient
+    dans le catalogue au fil de la suite. `partage` et `cles_etrangeres` n'ont pas
+    d'objet : PostgreSQL sert plusieurs fils, et vérifie toujours ses clés.
+    """
+    nom = f"t_{uuid.uuid4().hex[:16]}"
+    admin = create_engine(url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as c:
+        c.execute(text(f'CREATE SCHEMA "{nom}"'))  # noqa: S608 — identifiant généré ici
+    moteur = create_engine(url)
+
+    #  Posé à CHAQUE connexion, par SQL : le pilote (pg8000) n'accepte pas
+    #  l'option de démarrage `options` qu'emploie psycopg.
+    @event.listens_for(moteur, "connect")
+    def _schema(dbapi_connection, _record):
+        curseur = dbapi_connection.cursor()
+        curseur.execute(f'SET search_path TO "{nom}"')
+        curseur.close()
+
+    if schema:
+        SQLModel.metadata.create_all(moteur)
+
+    def _retirer(admin=admin, nom=nom):
+        try:
+            with admin.connect() as c:
+                c.execute(text(f'DROP SCHEMA IF EXISTS "{nom}" CASCADE'))  # noqa: S608
+        finally:
+            admin.dispose()
+
+    weakref.finalize(moteur, _retirer)
     return moteur
 
 
