@@ -25,12 +25,10 @@ import type {
 	ConfigSauvegarde,
 	Delegation,
 	DemandeProfil,
-	DernierExport,
 	EnvoiEmail,
 	EssaiImap,
 	EssaiSmtp,
 	EssaiWhatsApp,
-	EtatInstallation,
 	ExecutionMaintenance,
 	ExecutionSauvegarde,
 	ExecutionTache,
@@ -43,7 +41,6 @@ import type {
 	SanteMaintenance,
 	StatutWhatsApp,
 	UtilisateurAdmin,
-	VerificationRestauration,
 } from './types-administration';
 
 //  Les types de ce que ces routes RENDENT vivent à côté (#1572) : réexportés ici,
@@ -270,16 +267,6 @@ export const admin = {
 	 */
 	purgerOrphelins: () =>
 		api.post<{ supprimees: number; deliees: number }>('/admin/db/purger-orphelins?confirmer=true'),
-
-	/** Le rôle de l'installation et l'écart de sa version — lu par `CarteInstallation` (#1761). */
-	installation: () => api.get<EtatInstallation>('/admin/installation'),
-	/** Exporte puis réimporte la base dans une base jetable — lu par `CarteExportCopropriete` (#1749). */
-	verifierRestauration: () =>
-		api.post<VerificationRestauration>('/admin/export-copropriete/verifier'),
-	/** Lance l'export complet (tables et fichiers) dans le volume des sauvegardes. */
-	exporterCopropriete: () => api.post<{ archive: string }>('/admin/export-copropriete'),
-	/** Le dernier export entier, lu dans son manifeste. */
-	dernierExport: () => api.get<DernierExport>('/admin/export-copropriete/dernier'),
 
 	/** L'état des tâches planifiées — lu par `TachesPlanifiees`. */
 	santeMaintenance: () => api.get<SanteMaintenance>('/admin/maintenance/sante'),

@@ -14,7 +14,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SectionFormulaire from './SectionFormulaire.svelte';
-	import { admin as adminApi, type DernierExport, type VerificationRestauration } from '$lib/api';
+	import { instance, type DernierExport, type VerificationRestauration } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { fmtDatetime } from '$lib/date';
 	import { fmtNombre, fmtOctets } from '$lib/utils';
@@ -31,7 +31,7 @@
 	async function relireDernier() {
 		erreurDernier = '';
 		try {
-			dernier = await adminApi.dernierExport();
+			dernier = await instance.dernierExport();
 		} catch (e) {
 			erreurDernier = messageErreur(e);
 		}
@@ -43,7 +43,7 @@
 		enVerification = true;
 		erreurVerification = '';
 		try {
-			verification = await adminApi.verifierRestauration();
+			verification = await instance.verifierRestauration();
 			toast(
 				verification.restaurable ? 'success' : 'error',
 				verification.restaurable
@@ -61,7 +61,7 @@
 	async function exporter() {
 		enExport = true;
 		try {
-			const { archive } = await adminApi.exporterCopropriete();
+			const { archive } = await instance.exporterCopropriete();
 			toast('success', `Export lancé : ${archive}. Il s’écrit en arrière-plan.`);
 		} catch (e) {
 			toast('error', messageErreur(e));

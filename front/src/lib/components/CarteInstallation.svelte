@@ -18,7 +18,7 @@
 	import pkg from '../../../package.json';
 	import SectionFormulaire from './SectionFormulaire.svelte';
 	import EtatListe from './EtatListe.svelte';
-	import { admin as adminApi, type EtatInstallation } from '$lib/api';
+	import { instance, type EtatInstallation } from '$lib/api';
 	import { messageErreur } from '$lib/erreurs';
 	import { fmtDatetime } from '$lib/date';
 	import { lienSource } from '$lib/plateforme';
@@ -29,7 +29,7 @@
 
 	onMount(async () => {
 		try {
-			etat = await adminApi.installation();
+			etat = await instance.installation();
 		} catch (e) {
 			erreur = messageErreur(e);
 		} finally {
