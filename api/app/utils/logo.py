@@ -14,6 +14,10 @@ Arbitré le 08/10/2026 :
 | menu, connexion | le logo remplace l'icône du catalogue s'il existe |
 | courriels | une image par adresse publique, servie par `GET /config/logo.png` |
 
+Le 09/10/2026, le logo neutre devient celui de la marque déposée : trois
+immeubles bleus, une fenêtre allumée en or, sur une tuile blanche. Son dessin
+vit dans `logo-neutre.svg` ; ce PNG et les icônes du front en sont les rendus.
+
 Le fichier reçu est stocké tel quel dans le volume (`uploads/logo/`), et son NOM
 dans la configuration (`site_logo`). Les tailles se dérivent à la demande
 (`images.carre_png`) : aucun fichier produit n'est écrit à côté, donc rien à
@@ -44,9 +48,9 @@ DOSSIER = "logo"
 #: double densité), sans liste à recopier côté front.
 TAILLE_MIN, TAILLE_MAX = 16, 512
 
-#: Le logo neutre de CoproFirst en PNG 512 px — le dessin de `pdf_theme.logo_svg`,
-#: rasterisé une fois (les icônes de l'application installée et les courriels
-#: ne prennent pas de SVG).
+#: Le logo neutre en PNG 512 px — le rendu de `logo-neutre.svg`, fait une fois (les
+#: icônes de l'application installée et les courriels ne prennent pas de SVG).
+#: 🔒 `test_logo_neutre.py` : il reste le rendu du dessin, et l'icône du front aussi.
 NEUTRE_PNG = Path(__file__).with_name("logo-neutre.png")
 
 
