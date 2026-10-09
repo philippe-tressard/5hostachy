@@ -8,7 +8,7 @@ name: PostgreSQL
 #
 #  🔒 REQUIS depuis le second temps de P2-5 : la suite y est verte, et un test
 #  qui casse sur PostgreSQL bloque la fusion comme sur SQLite. Le premier temps
-#  (v2.125.0) était INFORMATIF — il mesurait l'écart sans rougir. Un job qui
+#  du lot était INFORMATIF — il mesurait l'écart sans rougir. Un job qui
 #  n'a pas pu rejouer la suite (pytest interrompu, base injoignable) rend
 #  toujours l'échec : INCONNU, jamais OK (`standards/04` §1).
 #

@@ -6,7 +6,7 @@ fonction SQL propre à SQLite (`func.strftime`, `json_extract`…), le pilote
 `sqlite3` — se demande au module de dialecte, sous un nom qui dit la QUESTION
 (« vider le journal », « le mois de cette date »), jamais la commande.
 
-Premier temps (v2.125.0) : deux plafonds, 39 modules et 23 appels, qui ne
+Premier temps du lot : deux plafonds, 39 modules et 23 appels, qui ne
 faisaient que baisser. Ils comptaient la PROSE — un commentaire qui raconte un
 incident SQLite, un `.strftime` Python, un en-tête HTTP `Pragma` — et la règle
 se lisait « moins de mots », pas « moins d'adhérence ». Le relevé lit désormais

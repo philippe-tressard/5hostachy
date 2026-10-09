@@ -7,7 +7,7 @@
 #  écrit le bilan au résumé du run — tests verts, en échec, en erreur, et les
 #  fichiers qui échouent.
 #
-#  Premier temps (v2.125.0) : INFORMATIF, il ne rougissait que si la mesure
+#  Premier temps du lot : INFORMATIF, il ne rougissait que si la mesure
 #  n'avait pas pu se faire. Second temps : la suite y est verte, il est REQUIS —
 #  un test qui échoue sur PostgreSQL bloque la fusion, comme sur SQLite.
 #
