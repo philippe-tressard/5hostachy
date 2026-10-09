@@ -59,9 +59,9 @@ def _proche(pixel: tuple, couleur: tuple) -> bool:
 
 
 def test_l_api_porte_la_copie_exacte_du_dessin_du_front():
-    assert (
-        _exige(pdf_theme.LOGO_NEUTRE_SVG).read_bytes() == _exige(SVG_FRONT).read_bytes()
-    ), "logo-neutre.svg (API) et favicon.svg (front) divergent : recopier le second sur le premier"
+    assert _exige(pdf_theme.LOGO_NEUTRE_SVG).read_bytes() == _exige(SVG_FRONT).read_bytes(), (
+        "logo-neutre.svg (API) et favicon.svg (front) divergent : recopier le second sur le premier"
+    )
 
 
 def test_le_png_de_l_api_est_l_icone_512_du_front():
