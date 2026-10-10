@@ -47,7 +47,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 /* ── Page header button (top-right buttons: "+ Nouveau...") ── */
 .page-header-btn {
 	padding: 0.5rem 1rem;
-	font-size: 0.9rem;
+	font-size: var(--fs-base);
 	font-weight: 600;
 	line-height: 1.2;
 	min-height: 2.5rem;
@@ -56,7 +56,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 
 /* ── Page subtitle ── */
 .page-subtitle {
-	font-size: 0.9rem;
+	font-size: var(--fs-base);
 	color: var(--color-text-muted);
 	margin-bottom: 1.5rem;
 	line-height: 1.55;
@@ -366,7 +366,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 
 	/* Tables : scroll horizontal + cellules compactes */
 	.table {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.table th,
 	.table td {
@@ -399,15 +399,15 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 	/* Boutons plus compacts */
 	.btn {
 		padding: 0.4rem 0.75rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 	}
 	.btn-sm {
 		padding: 0.25rem 0.5rem;
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 	}
 	.page-header-btn {
 		padding: 0.4rem 0.75rem;
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		min-height: 2.15rem;
 	}
 
@@ -443,7 +443,7 @@ qu'il surcharge. C'est pour cela qu'il est ici et non dans le socle.
 		margin-bottom: 1rem;
 		position: sticky;
 		top: 3.25rem;
-		background: var(--color-bg, #f2efe9);
+		background: var(--color-bg);
 		z-index: 50;
 	}
 	.page-subtitle {

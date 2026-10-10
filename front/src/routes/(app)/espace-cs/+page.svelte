@@ -394,7 +394,7 @@
 	}
 	.btn-success {
 		background: var(--color-success);
-		color: #fff;
+		color: var(--color-surface);
 		border: none;
 	}
 	@media (hover: hover) and (pointer: fine) {

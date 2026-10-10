@@ -468,12 +468,12 @@
 		margin-top: 1rem;
 	}
 	.bc-aide {
-		font-size: 0.85rem;
+		font-size: var(--fs-md);
 		color: var(--color-text-muted);
 		margin: 0 0 0.75rem;
 	}
 	.bc-compte {
-		font-size: 0.8rem;
+		font-size: var(--fs-sm);
 		color: var(--color-text-muted);
 		margin: 0.5rem 0 0;
 		text-align: right;

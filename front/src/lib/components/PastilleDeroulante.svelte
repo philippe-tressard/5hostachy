@@ -153,7 +153,7 @@
 	.pastille-deroulante.active {
 		background: var(--color-primary);
 		border-color: var(--color-primary);
-		color: #fff;
+		color: var(--color-surface);
 	}
 	.pastille-deroulante.active .icone-chevron {
 		opacity: 0.9;

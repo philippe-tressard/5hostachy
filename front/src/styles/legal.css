@@ -92,7 +92,7 @@
 	margin: 1.25rem 0 0.4rem;
 }
 .custom-content h3 {
-	font-size: 0.9rem;
+	font-size: var(--fs-base);
 	font-weight: 600;
 	margin: 1rem 0 0.3rem;
 }

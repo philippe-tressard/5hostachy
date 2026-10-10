@@ -93,17 +93,17 @@
 	}
 
 	.toast-success {
-		background: #e6f4ee;
+		background: var(--color-success-fond);
 		color: var(--color-success);
 		border-left: 4px solid var(--color-success);
 	}
 	.toast-error {
-		background: #fdedec;
+		background: var(--color-danger-fond);
 		color: var(--color-danger);
 		border-left: 4px solid var(--color-danger);
 	}
 	.toast-warning {
-		background: #fdf3e0;
+		background: var(--color-warning-fond);
 		color: var(--color-warning);
 		border-left: 4px solid var(--color-warning);
 	}

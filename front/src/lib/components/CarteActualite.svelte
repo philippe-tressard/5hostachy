@@ -203,7 +203,7 @@
 		display: inline-flex;
 		align-items: center;
 		background: var(--color-primary);
-		color: #fff;
+		color: var(--color-surface);
 		font-size: var(--fs-2xs);
 		padding: 0.1rem 0.35rem;
 		border-radius: 8px;

@@ -277,7 +277,7 @@
 			rgba(255, 255, 255, 0.28) 10px
 		);
 		border-style: dashed;
-		border-color: #fff;
+		border-color: var(--color-surface);
 	}
 	/*  `:not(.active)` (10/10/2026) : sans lui, le survol — plus spécifique
 	    que `.active` — rendait le texte SOMBRE sur l'aplat Bleu Seine de la
@@ -290,7 +290,7 @@
 	}
 	.active {
 		background: var(--color-primary);
-		color: #fff;
+		color: var(--color-surface);
 		border-color: var(--color-primary);
 	}
 	.petite {

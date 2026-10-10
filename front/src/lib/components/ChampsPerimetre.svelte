@@ -179,7 +179,7 @@
 	}
 	.icone-active {
 		background: var(--color-primary);
-		color: #fff;
+		color: var(--color-surface);
 		border-color: var(--color-primary);
 	}
 	.field-check {

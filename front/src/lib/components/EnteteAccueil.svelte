@@ -144,7 +144,7 @@
 			transform var(--duree-geste) var(--ease-out);
 		--avatar-size: 2.6rem;
 		--avatar-bg: rgba(255, 255, 255, 0.18);
-		--avatar-color: #fff;
+		--avatar-color: var(--color-surface);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.hero-avatar:hover {
@@ -164,7 +164,7 @@
 		height: 1.05rem;
 		border-radius: 50%;
 		background: var(--color-accent);
-		color: #fff;
+		color: var(--color-surface);
 		display: flex;
 		align-items: center;
 		justify-content: center;

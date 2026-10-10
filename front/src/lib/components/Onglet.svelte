@@ -73,7 +73,7 @@
 	    `admin/+page.svelte`, donc inatteignable depuis tout autre écran. */
 	.badge-count {
 		background: var(--color-danger);
-		color: #fff;
+		color: var(--color-surface);
 		border-radius: 999px;
 		font-size: var(--fs-2xs);
 		padding: 0.1rem 0.45rem;

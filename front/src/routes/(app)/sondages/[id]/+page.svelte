@@ -359,7 +359,7 @@
 		gap: 0.6rem;
 		margin-top: 0.85rem;
 		padding: 0.75rem 1rem;
-		background: #fdf3e0;
+		background: var(--color-warning-fond);
 		border: 1px solid #e8c87a;
 		border-radius: var(--radius);
 		font-size: var(--fs-md);
