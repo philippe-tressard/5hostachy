@@ -42,6 +42,7 @@
 	import ApercuTicket from './ApercuTicket.svelte';
 	import ExtraitRecherche from './ExtraitRecherche.svelte';
 	import EnteteCarte from './EnteteCarte.svelte';
+	import GouttiereAffaire from './GouttiereAffaire.svelte';
 	import EtatListe from './EtatListe.svelte';
 	import PastillesAffaire from './PastillesAffaire.svelte';
 	import ActionsTicket from './ActionsTicket.svelte';
@@ -146,8 +147,6 @@
 		fil_change: void;
 	}>();
 
-	$: dateAffichee = ticket.mis_a_jour_le ?? ticket.cree_le;
-
 	//  🧾 La synthèse d'une affaire close (#1643) : lue par `SyntheseFil`.
 	let etatSynthese: EtatSynthese | null = null;
 	let filSynthese: SyntheseFil;
@@ -170,12 +169,10 @@
 	      `role="button"` — il interceptait la sélection de texte, et obligeait
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
-	<EnteteCarte
-		titre={ticket.titre}
-		date={fmtDate(dateAffichee)}
-		basculable
-		on:toggle={() => dispatch('basculer')}
-	>
+	<!--  QUAND puis QUOI, dans la colonne de gauche (maquette B, 10/10/2026) :
+	      la date n'est donc plus passée à l'en-tête — un seul fait, une place. -->
+	<GouttiereAffaire affaire={ticket} />
+	<EnteteCarte titre={ticket.titre} basculable ample on:toggle={() => dispatch('basculer')}>
 		<svelte:fragment slot="titre-suffixe">
 			<BadgeNouveau le={ticket.cree_le} />
 		</svelte:fragment>

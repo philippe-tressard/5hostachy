@@ -28,6 +28,7 @@
 	import ApercuCarte from '$lib/components/ApercuCarte.svelte';
 	import ExtraitRecherche from '$lib/components/ExtraitRecherche.svelte';
 	import EnteteCarte from '$lib/components/EnteteCarte.svelte';
+	import GouttiereAffaire from '$lib/components/GouttiereAffaire.svelte';
 	import PastillesAffaire from '$lib/components/PastillesAffaire.svelte';
 	import BoutonLien from '$lib/components/BoutonLien.svelte';
 	import PiecesJointes from '$lib/components/PiecesJointes.svelte';
@@ -42,7 +43,7 @@
 	//  Glyphes et intitulés des quatre options : source unique. Ils étaient
 	//  écrits ici ET dans les cases du formulaire, et avaient divergé.
 	import { optionPublication } from '$lib/options-publication';
-	import { fmtDate2d as fmtDate, fmtDateLong } from '$lib/date';
+	import { fmtDateLong } from '$lib/date';
 
 	export let pub: Ticket;
 	//  À QUI l'actualité appartient — le « Saisi pour » s'il existe, l'auteur
@@ -106,12 +107,10 @@
 	      `role="button"` — il interceptait la sélection de texte, et obligeait
 	      chaque bouton d'action à un `stopPropagation` pour qu'un clic sur ✏️ ne
 	      déplie pas la carte au même instant. -->
-	<EnteteCarte
-		titre={pub.titre}
-		date={fmtDate(pub.mis_a_jour_le ?? pub.cree_le)}
-		basculable
-		on:toggle={basculer}
-	>
+	<!--  QUAND puis QUOI, dans la colonne de gauche (maquette B, 10/10/2026) :
+	      la date n'est donc plus passée à l'en-tête — un seul fait, une place. -->
+	<GouttiereAffaire affaire={pub} />
+	<EnteteCarte titre={pub.titre} basculable ample on:toggle={basculer}>
 		<svelte:fragment slot="titre-suffixe">
 			<BadgeNouveau le={pub.cree_le} si={estFil} />
 		</svelte:fragment>

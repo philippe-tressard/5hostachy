@@ -63,6 +63,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 16 | **Le manuel montre la VRAIE pastille**, phrase au survol recalculée par le site — jamais une couleur propre au manuel | skill `user-manual` |
 | 17 | **Un seul bloc déplié à la fois, partout** (30/09/2026, « sans exception, formulaires compris ») — cartes, années d'archives, colonnes vides du kanban, sections de formulaire, réponses, `<details>`. Deux exceptions arbitrées : une section **modifiée** reste ouverte, une carte **en correction** aussi. Une seule mécanique : `$lib/accordeon` (`basculer`, `membre`, `listeMembre`, et l'écouteur des `<details>` posé par le layout) ; le bloc ouvert voit son **haut ramené à l'écran** quand le repli d'un voisin l'en a fait sortir (`amenerEnVue`, signalé dans Admin › IA : « on se trouve à la fin de la section ouverte ») ; 🔒 `npm run lint:accordeon` refuse un état d'ouverture en `Set`, `e2e/accordeon` éprouve formulaire et `<details>` | `$lib/accordeon` |
 | 18 | **Une rangée de filtres dit combien elle montre — sur la pastille RETENUE seulement** (10/10/2026, maquette J arbitrée à l'écran parmi dix) : le nombre est la longueur de la liste affichée, en vignette `Compte` inversée ; les autres pastilles n'en portent pas. Partout, sans exception — 🔒 `npm run lint:compte-filtres` | §5 |
+| 19 | **La carte d'AFFAIRE a une gouttière** (10/10/2026, maquette B « Gouttière » arbitrée parmi cinq, https://claude.ai/artifact/TUunrVHAwxQGhHgUn9wrGW) : à gauche la **date** (jour en grand) puis la **nature** (ACTU. · CAL. · AFF.), une ligne au-dessus du titre au téléphone ; densité aérée (`EnteteCarte ample`), actions **au trait** (`IconeAction`, posé par `ListeTickets`), dernière ligne en **capsules** dont seuls l'état, « qui la lit » et l'urgence sont teintés. Le n° 4 (« date à droite ») **cède pour elle seule** — les autres cartes du site gardent F1. 🔒 `e2e/gouttiere-nature` | §3 |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
@@ -813,6 +814,30 @@ Trois rangées d'actions étaient conditionnées au droit d'édition (FAQ, idée
 la rangée du conseil syndical) — elles ont été ouvertes, l'édition restant, elle,
 réservée. L'adresse ne donne aucun accès : la page vérifie les droits de qui
 l'ouvre, pas de qui l'a envoyée.
+
+### 🗂️ La carte d'AFFAIRE — gouttière datée (maquette B, 10/10/2026)
+
+Demandé : une liste des affaires « plus premium et aérée, sans perdre aucune
+information ». Arbitré à l'écran parmi cinq maquettes, **pour les affaires seulement**
+(Liste et Archives) — les autres cartes du site gardent F1 :
+
+- `GouttiereAffaire` : la **date** (`mis_a_jour_le`, sinon `cree_le`, découpée par
+  `partiesDate`) puis la **nature** (`natureDe`, pictogramme `NATURES.icone`). Largeur :
+  le jeton `--largeur-gouttiere`, que la colonne des libellés de `FiltresAffaires` reprend —
+  la recherche en tête, puis Nature et Suivi, alignés sur elle. Au téléphone (≤ 480 px) :
+  une ligne « 5 oct. 2026 · CAL. » au-dessus du titre.
+- La carte ne passe **plus** `date` à `EnteteCarte` : une seule date par carte.
+- `EnteteCarte ample` : titre `--fs-lg`, aperçu `--fs-md` interligne 1,5, actions 26 px
+  au bureau (32 au doigt) ; 0,85 rem entre deux cartes (`normes.css`, prise `[data-nature]`).
+- Actions **au trait** : `ListeTickets` pose le contexte (`$lib/actions-au-trait`),
+  `IconeAction` dessine — gris `--color-text-muted`, Bleu Seine au survol. Hors de cette
+  liste, les mêmes boutons gardent leurs émojis.
+- `PastillesAffaire` habille la ligne en **capsules** ; neutres (pierre de la charte) pour
+  ce qui décrit, teintées pour l'état, « qui la lit » et l'urgence. Le fil d'accueil la
+  rend à l'identique (n° 13).
+
+⚠️ Pas fait, et pourquoi : « NEW » n'est pas devenu « Nouveau » — `BadgeNouveau` porte
+l'arbitrage du 26/09 (« le NEW rouge, partout »), qu'une maquette d'affaires ne défait pas.
 
 ### 🔴 La DERNIÈRE LIGNE d'une carte — `PastillesAffaire` (arbitré à l'écran le 27/09/2026)
 

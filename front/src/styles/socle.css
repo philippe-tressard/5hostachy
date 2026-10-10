@@ -79,6 +79,19 @@ body {
 	--radius: 0.5rem;
 	--shadow-sm: 0 1px 3px rgba(30, 58, 95, 0.1);
 	--shadow: 0 4px 12px rgba(30, 58, 95, 0.12);
+	/*  La GOUTTIÈRE d'une carte d'affaire — date, puis nature (maquette B,
+	    10/10/2026). Un jeton et non un chiffre, parce que DEUX écrans s'alignent
+	    sur elle : la carte, et la colonne des libellés des filtres au-dessus
+	    (`FiltresAffaires`). Écrite deux fois, elle divergerait au premier
+	    réglage, et la grille ne serait plus une grille. */
+	--largeur-gouttiere: 5rem;
+	/*  Hors de l'échelle du TEXTE, et c'est voulu : un CHIFFRE mis en vedette —
+	    le jour dans la gouttière — se lit d'un coup d'œil en descendant la
+	    liste. Un seul usage aujourd'hui ; un second le prend ici. */
+	--fs-chiffre: 1.6rem;
+	/*  La police des TITRES — et du jour de la gouttière, qui se lit comme eux.
+	    Un jeton dès le second usage : la pile était écrite ici, dans `h1, h2, h3`. */
+	--police-titres: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
 	/*  Mouvement (24/09/2026). Une courbe de SORTIE marquée : le geste répond
 	    tout de suite, puis se pose. Un `ease` par défaut démarre mou, et
 	    l'écran paraît en retard sur le doigt. Deux durées, pas davantage :
@@ -116,7 +129,7 @@ body {
 h1,
 h2,
 h3 {
-	font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+	font-family: var(--police-titres);
 }
 
 /*  ⚠️ LES CONTRÔLES DE FORMULAIRE N'HÉRITENT PAS DE LA POLICE — il faut le leur

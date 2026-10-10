@@ -171,7 +171,7 @@
 		right: 1rem;
 		width: 44px;
 		height: 44px;
-		font-size: 1.6rem;
+		font-size: var(--fs-chiffre);
 	}
 	.lb-nav {
 		top: 50%;

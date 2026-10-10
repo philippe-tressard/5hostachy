@@ -43,6 +43,7 @@
 	import { page } from '$app/stores';
 	import { toast } from '$lib/components/Toast.svelte';
 	import PartageCourriel from '$lib/components/PartageCourriel.svelte';
+	import IconeAction from '$lib/components/IconeAction.svelte';
 	import { cibleDuLien } from '$lib/partage';
 	import { portail } from '$lib/portail';
 
@@ -142,7 +143,7 @@
 	title="Copier le lien"
 	aria-label="Copier le lien de {quoi}"
 	aria-expanded={bulle !== null}
-	on:click|stopPropagation={copier}>&#x1F517;</button
+	on:click|stopPropagation={copier}><IconeAction glyphe="🔗" icone="link" /></button
 >
 {#if bulle && cible}
 	<div

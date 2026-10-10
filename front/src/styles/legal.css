@@ -38,7 +38,7 @@
 	font-family: inherit;
 }
 .legal-page h1 {
-	font-size: 1.6rem;
+	font-size: var(--fs-chiffre);
 	font-weight: 700;
 	margin-bottom: 1rem;
 }

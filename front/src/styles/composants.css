@@ -768,10 +768,11 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .filters--egalisee {
 	align-items: stretch;
 }
-/*  Une barre à PLUSIEURS GROUPES (nature, suivi, recherche…) : `.filtre-saut`
-    force un retour de ligne, `.filter-sep` pose un filet entre deux groupes.
-    Sous 768 px, un groupe par ligne — un filet en bout de ligne ne séparerait
-    plus rien.
+/*  Une barre à PLUSIEURS GROUPES (métier, recherche…) : `.filtre-saut` force
+    un retour de ligne. Sous 768 px, un groupe par ligne.
+    `.filter-sep` (un filet entre deux groupes) est parti le 10/10/2026 avec la
+    barre des Affaires, alignée depuis sur la gouttière de ses cartes
+    (`FiltresAffaires`) : plus aucun écran ne le posait.
 
     Écrite ici le 28/09/2026 : Affaires la portait seule, et l'annuaire des
     prestataires en aurait fait la copie. ⚠️ `nowrap` au téléphone n'est pas un
@@ -784,20 +785,13 @@ cascade. Le deplacer changerait le rendu sans changer une regle.
 .filters--groupes > .filtre-saut {
 	flex-basis: 100%;
 }
-.filters--groupes > .filter-sep {
-	width: 1px;
-	height: 1.6rem;
-	background: var(--color-border);
-	margin: 0 0.75rem;
-}
 @media (max-width: 767px) {
 	.filters--groupes {
 		flex-direction: column;
 		flex-wrap: nowrap;
 		align-items: stretch;
 	}
-	.filters--groupes > .filtre-saut,
-	.filters--groupes > .filter-sep {
+	.filters--groupes > .filtre-saut {
 		display: none;
 	}
 }

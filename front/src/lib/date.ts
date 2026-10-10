@@ -153,6 +153,31 @@ export function fmtMoisCourt(mois: number): string {
 	});
 }
 
+/**
+ * La date de `fmtDate` en TROIS morceaux — « 2 », « avr. », « 2026 » — pour une
+ * mise en page qui les pose sur des lignes différentes : la gouttière d'une carte
+ * d'affaire (maquette B, 10/10/2026), où le jour se lit en grand.
+ *
+ * Les morceaux viennent de `formatToParts`, avec le fuseau et la locale de tout
+ * ce module : les recoller doit redonner `fmtDate`, et `e2e/gouttiere-nature`
+ * le vérifie. `null` pour une date absente : la gouttière se tait
+ * plutôt que d'afficher « — » sur trois lignes.
+ */
+export function partiesDate(
+	d: string | null | undefined,
+): { jour: string; mois: string; annee: string } | null {
+	if (!d) return null;
+	const parties = new Intl.DateTimeFormat(LOCALE, {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		timeZone: TZ,
+	}).formatToParts(new Date(d));
+	const lire = (type: Intl.DateTimeFormatPartTypes) =>
+		parties.find((p) => p.type === type)?.value ?? '';
+	return { jour: lire('day'), mois: lire('month'), annee: lire('year') };
+}
+
 /** "2 avril" (jour + mois long, sans année) */
 export function fmtDayMonth(d: string | null | undefined): string {
 	if (!d) return '—';

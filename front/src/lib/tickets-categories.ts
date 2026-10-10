@@ -312,10 +312,24 @@ export const OPTIONS_CATEGORIE: readonly {
 //: `abrege` est le mot de la GOUTTIÈRE (#1220, arbitré à l'écran le 24/09) :
 //: écrit en entier, « CALENDRIER » dépassait de la bande ou l'élargissait. Le
 //: filtre, lui, garde le mot entier — il a la place.
+//: `icone` est le pictogramme AU TRAIT de la gouttière (maquette B, 10/10/2026) :
+//: l'émoji reste celui du filtre, la carte dessine le sien (`$lib/icones-svg.json`).
 export const NATURES = [
-	{ val: 'actualite', emoji: '\u{1F4F0}', libelle: 'Actualité', abrege: 'ACTU.' },
-	{ val: 'calendrier', emoji: '\u{1F4C5}', libelle: 'Calendrier', abrege: 'CAL.' },
-	{ val: 'activite', emoji: '\u{1F6E0}️', libelle: 'Affaire', abrege: 'AFF.' },
+	{
+		val: 'actualite',
+		emoji: '\u{1F4F0}',
+		icone: 'newspaper',
+		libelle: 'Actualité',
+		abrege: 'ACTU.',
+	},
+	{
+		val: 'calendrier',
+		emoji: '\u{1F4C5}',
+		icone: 'calendar-days',
+		libelle: 'Calendrier',
+		abrege: 'CAL.',
+	},
+	{ val: 'activite', emoji: '\u{1F6E0}️', icone: 'wrench', libelle: 'Affaire', abrege: 'AFF.' },
 ] as const;
 
 export const OPTIONS_FILTRE_NATURE = NATURES.map((n) => ({
@@ -324,12 +338,21 @@ export const OPTIONS_FILTRE_NATURE = NATURES.map((n) => ({
 }));
 
 /**
- *  La nature qu'une CARTE affiche, dans sa gouttière teintée (24/09/2026,
- *  variante 3 choisie à l'écran parmi cinq). Une affaire peut en porter deux
- *  (une actualité datée) : l'actualité prime, puis la date — c'est l'ordre du
- *  filtre. Les natures viennent du serveur (`Ticket.natures`), jamais redérivées.
+ *  La nature qu'une CARTE affiche, dans sa gouttière (24/09/2026, variante 3
+ *  choisie à l'écran parmi cinq ; datée depuis la maquette B du 10/10/2026).
+ *  Une affaire peut en porter deux (une actualité datée) : l'actualité prime,
+ *  puis la date — c'est l'ordre du filtre. Les natures viennent du serveur
+ *  (`Ticket.natures`), jamais redérivées.
+ */
+export function natureDe(t: { natures?: string[] }): (typeof NATURES)[number] {
+	return NATURES.find((x) => (t.natures ?? []).includes(x.val)) ?? NATURES[2];
+}
+
+/**
+ *  L'attribut qui TEINTE une carte d'après sa nature (`styles/normes.css`). Le
+ *  pictogramme et le mot ne passent plus par des attributs rendus en
+ *  pseudo-éléments : la gouttière est un composant, `GouttiereAffaire`.
  */
 export function attributsNature(t: { natures?: string[] }): Record<string, string> {
-	const n = NATURES.find((x) => (t.natures ?? []).includes(x.val)) ?? NATURES[2];
-	return { 'data-nature': n.val, 'data-nature-icone': n.emoji, 'data-nature-libelle': n.abrege };
+	return { 'data-nature': natureDe(t).val };
 }
