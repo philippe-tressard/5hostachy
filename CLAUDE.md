@@ -561,7 +561,8 @@ coupant. 🔴 **Les courriels de sécurité ne sont pas un service**
       hors échelle se range au cran **supérieur**, un état (danger, succès,
       avertissement) prend son jeton et ses dérivés `-fond`, `-bordure`, et
       `--color-warning` ne sert jamais au texte (`--color-warning-texte`). Ces
-      valeurs-là sont **refusées**, sans plafond (`ux-patterns` §18)
+      valeurs-là sont **refusées**, sans plafond (`ux-patterns` §18) — comme une
+      valeur **égale** à un jeton (`#fff`, `0.8rem`) : 85 étaient revenues (#1571)
 - [ ] Un style s'écrit dans le `<style>` du composant ou dans `src/styles/`, jamais
       en attribut `style="…"` — sauf une valeur tirée des données (`width:{pct}%`).
       `npm run lint:styles-en-ligne` le refuse : plafond à **zéro** depuis le

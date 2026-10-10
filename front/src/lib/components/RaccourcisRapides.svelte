@@ -121,7 +121,7 @@
 	}
 	.quick-count {
 		background: var(--color-primary);
-		color: #fff;
+		color: var(--color-surface);
 		font-size: var(--fs-2xs);
 		font-weight: 700;
 		padding: 0.05rem 0.4rem;

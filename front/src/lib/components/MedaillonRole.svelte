@@ -79,7 +79,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		color: #fff;
+		color: var(--color-surface);
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 		z-index: 1;
 	}

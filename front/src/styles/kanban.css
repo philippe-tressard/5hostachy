@@ -74,7 +74,7 @@
 	padding: 0.6rem 0.9rem;
 	border-top: 3px solid;
 	font-weight: 600;
-	font-size: 0.8rem;
+	font-size: var(--fs-sm);
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 }
@@ -82,16 +82,16 @@
 	background: var(--color-border);
 	border-radius: 999px;
 	padding: 0.1rem 0.45rem;
-	font-size: 0.72rem;
+	font-size: var(--fs-2xs);
 	font-weight: 700;
 }
 .kanban-count-total {
-	font-size: 0.8rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 }
 .kanban-empty {
 	padding: 1rem;
-	font-size: 0.85rem;
+	font-size: var(--fs-md);
 	color: var(--color-text-muted);
 	text-align: center;
 }
@@ -127,7 +127,7 @@
 	font-weight: 600;
 	padding: 0.1rem 0.4rem;
 	border-radius: 3px;
-	color: #fff;
+	color: var(--color-surface);
 	line-height: 1.4;
 }
 .kanban-card-prest {
@@ -145,7 +145,7 @@
     vivait dans `VueKanbanCalendrier`, et le tableau de bord rend désormais la
     MÊME brique — une règle scopée l'y aurait laissé nu. */
 .kanban-card-type {
-	font-size: 0.72rem;
+	font-size: var(--fs-2xs);
 	font-weight: 600;
 	color: var(--color-text-muted);
 }
@@ -193,7 +193,7 @@
 	}
 }
 .kb-vide {
-	font-size: 0.85rem;
+	font-size: var(--fs-md);
 	color: var(--color-text-muted);
 	text-align: center;
 	padding: 1rem 0;
@@ -240,7 +240,7 @@
     plutôt qu'à sa place — c'est la colonne qui dit ce qu'elle contient, au lieu
     de demander un clic pour l'apprendre. */
 .kb-col-vide-mot {
-	font-size: 0.72rem;
+	font-size: var(--fs-2xs);
 	font-weight: 400;
 	color: var(--color-text-muted);
 	white-space: nowrap;
@@ -379,7 +379,7 @@
 	text-align: center;
 	padding: 0.55rem 1rem;
 	margin-top: 0.45rem;
-	font-size: 0.8rem;
+	font-size: var(--fs-sm);
 	color: var(--color-primary);
 	font-weight: 500;
 	text-decoration: none;

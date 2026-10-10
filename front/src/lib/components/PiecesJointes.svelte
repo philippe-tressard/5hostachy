@@ -321,7 +321,7 @@
 			border: none;
 			border-radius: 50%;
 			background: rgba(0, 0, 0, 0.5);
-			color: #fff;
+			color: var(--color-surface);
 			font-size: 1.6rem;
 			line-height: 1;
 			cursor: pointer;

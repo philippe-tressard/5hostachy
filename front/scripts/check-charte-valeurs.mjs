@@ -38,6 +38,15 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+	contraste,
+	contrastesBadges,
+	egalesAUnJeton,
+	jetonsDe,
+	resoudre,
+} from './lib-charte-jetons.mjs';
+
+export { contraste, contrastesBadges, egalesAUnJeton, jetonsDe, resoudre };
 
 /**
  *  Le compte autorisé, et son historique : c'est lui qui dit à quel rythme la
@@ -71,8 +80,14 @@ import { fileURLToPath } from 'node:url';
  *  une fois. Une redite retirée, pas une valeur convertie.
  *  10/10/2026 : 167 couleurs. Le badge de compte des Archives, écrit deux
  *  fois, devient `Compte` — son blanc passe par `--color-surface`.
+ *  10/10/2026 (#1571) : 123 couleurs et 79 tailles. 44 couleurs et 41 tailles
+ *  ÉGALES à un jeton — revenues depuis le 27/09, surtout par les styles en
+ *  ligne passés en classes et par les feuilles entrées dans le relevé —
+ *  s'écrivent par le jeton. Aucun rendu ne change : la charte n'a ni thème
+ *  sombre ni jeton qui varie avec l'écran. Elles sont désormais INTERDITES
+ *  (`egalesAUnJeton`), sans plafond.
  */
-const PLAFOND = { couleurs: 167, tailles: 120 };
+const PLAFOND = { couleurs: 123, tailles: 79 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
@@ -204,52 +219,6 @@ export function interditsDe(source) {
  */
 const EXCEPTIONS = {};
 
-/**
- *  ## Le texte d'un badge se LIT (#1410, 27/09/2026)
- *
- *  Chaque `.badge-<teinte>` de `styles/composants.css` pose un texte de
- *  0,75 rem sur un fond : il lui faut 4,5:1 (standards/11 §2). Le vert de la
- *  charte faisait 4,44 sur son propre fond — un écart que personne ne voit à
- *  l'œil, et que la règle « un état prend son jeton » a répandu partout.
- *  Le contrôle résout les `var(--…)` dans `socle.css` et MESURE le rapport ;
- *  une valeur qu'il ne sait pas résoudre le fait échouer (INCONNU, jamais OK).
- */
-export function contraste(a, b) {
-	const lum = (h) => {
-		const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-		const [r, g, v] = c.map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
-		return 0.2126 * r + 0.7152 * g + 0.0722 * v;
-	};
-	const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
-	return (x + 0.05) / (y + 0.05);
-}
-
-/** `var(--x)` → la valeur hexadécimale de `--x` dans les jetons, ou null. */
-export function resoudre(valeur, jetons, profondeur = 0) {
-	const v = valeur.trim().toLowerCase();
-	if (/^#[0-9a-f]{6}$/.test(v)) return v;
-	const m = v.match(/^var\(\s*(--[a-z0-9-]+)\s*\)$/);
-	if (!m || profondeur > 5 || !(m[1] in jetons)) return null;
-	return resoudre(jetons[m[1]], jetons, profondeur + 1);
-}
-
-/** Les badges et leur rapport de contraste ; `null` quand une valeur échappe. */
-export function contrastesBadges(composants, socle) {
-	const jetons = Object.fromEntries(
-		[...socle.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);/gm)].map((m) => [m[1], m[2]]),
-	);
-	return [...composants.matchAll(/^\.badge-([a-z]+)\s*\{([^}]*)\}/gm)]
-		.map(([, nom, corps]) => {
-			const fond = corps.match(/background\s*:\s*([^;]+);/);
-			const texte = corps.match(/(?:^|[\s;])color\s*:\s*([^;]+);/);
-			if (!fond || !texte) return null;
-			const f = resoudre(fond[1], jetons);
-			const t = resoudre(texte[1], jetons);
-			return { nom, rapport: f && t ? contraste(t, f) : null };
-		})
-		.filter(Boolean);
-}
-
 if (process.argv.includes('--selftest')) {
 	let ko = 0;
 	const cas = (libelle, obtenu, attendu) => {
@@ -330,6 +299,30 @@ if (process.argv.includes('--selftest')) {
 			['b', null],
 		],
 	);
+	const jetons = jetonsDe(
+		`:root {
+	--color-surface: #ffffff;
+	--color-bg: #f2efe9;
+	--color-text-inverse: #f2efe9;
+	--fs-sm: 0.8rem;
+	--radius: 0.5rem;
+}`,
+	);
+	cas(
+		'valeur égale à un jeton : couleur courte ou longue, taille, et les deux noms d’une valeur',
+		egalesAUnJeton('.a{color:#FFF;background:#ffffff;font-size:.80rem}.b{color:#f2efe9}', jetons),
+		[
+			['.80rem', 'var(--fs-sm)'],
+			['#FFF', 'var(--color-surface)'],
+			['#ffffff', 'var(--color-surface)'],
+			['#f2efe9', 'var(--color-bg) ou var(--color-text-inverse)'],
+		],
+	);
+	cas(
+		'ni une transparence, ni un jeton hors charte (rayon), ni une taille sans nom',
+		egalesAUnJeton('.a{color:#ffffff80;padding:.5rem;font-size:0.5rem;font-size:1rem}', jetons),
+		[],
+	);
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
 }
@@ -390,6 +383,25 @@ for (const chemin of sources) {
 		continue;
 	}
 	for (const [valeur, par] of trouves) interdits.push(`   ${rel} : ${valeur} → ${par}`);
+}
+const jetons = jetonsDe(readFileSync(join(STYLES, FEUILLE_DES_JETONS), 'utf8'));
+if (!Object.keys(jetons.couleurs).length || !Object.keys(jetons.tailles).length) {
+	console.error(`
+✗ Aucun jeton lu dans ${FEUILLE_DES_JETONS} : contrôle inopérant (INCONNU).
+`);
+	process.exit(2);
+}
+const egales = releves.flatMap(([chemin, css]) =>
+	egalesAUnJeton(css, jetons).map(
+		([valeur, par]) => `   ${relative(RACINE, chemin).split(sep).join('/')} : ${valeur} → ${par}`,
+	),
+);
+if (egales.length) {
+	echec = 1;
+	console.error(`
+✗ ${egales.length} valeur(s) égale(s) à un jeton de la charte, à écrire par lui :`);
+	egales.slice(0, 40).forEach((l) => console.error(l));
+	if (egales.length > 40) console.error(`   … et ${egales.length - 40} de plus`);
 }
 if (interdits.length) {
 	echec = 1;

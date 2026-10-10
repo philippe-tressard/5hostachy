@@ -33,7 +33,7 @@
 		padding: 0.1rem 0.35rem;
 		border-radius: 0.2rem;
 		background: var(--color-danger);
-		color: #fff;
+		color: var(--color-surface);
 		font-size: 0.6rem;
 		font-weight: 700;
 		letter-spacing: 0.06em;

@@ -39,7 +39,7 @@
 		height: var(--avatar-size, 2.5rem);
 		border-radius: 50%;
 		background: var(--avatar-bg, var(--color-primary));
-		color: var(--avatar-color, #fff);
+		color: var(--avatar-color, var(--color-surface));
 		box-shadow: var(--avatar-ring, none);
 		display: flex;
 		align-items: center;

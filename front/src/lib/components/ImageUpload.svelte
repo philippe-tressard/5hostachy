@@ -154,7 +154,7 @@
 		height: 24px;
 		border-width: 3px;
 		border-color: rgba(255, 255, 255, 0.4);
-		border-top-color: #fff;
+		border-top-color: var(--color-surface);
 	}
 
 	.btn-link {

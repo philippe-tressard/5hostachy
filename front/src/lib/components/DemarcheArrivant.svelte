@@ -165,7 +165,7 @@
 	}
 	.btn-arrivant-deja {
 		background: var(--color-success);
-		color: #fff;
+		color: var(--color-surface);
 	}
 	@media (hover: hover) and (pointer: fine) {
 		.btn-arrivant-deja:hover:not(:disabled) {

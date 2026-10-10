@@ -50,7 +50,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	line-height: 1.2;
 }
 .imp-stat-lbl {
-	font-size: 0.75rem;
+	font-size: var(--fs-xs);
 	color: var(--color-text-muted);
 }
 
@@ -165,7 +165,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	display: flex;
 	align-items: center;
 	gap: 0.45rem;
-	font-size: 0.95rem;
+	font-size: var(--fs-lg);
 	font-weight: 700;
 	margin-bottom: 0.75rem;
 }
@@ -176,7 +176,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 .config-section-intro {
 	margin: 0 0 1rem;
 	max-width: 70ch;
-	font-size: 0.85rem;
+	font-size: var(--fs-md);
 }
 /* L'en-tête d'un bloc d'administration qui porte ses boutons : le titre et sa
    phrase à gauche, les gestes à droite, et les boutons passent dessous quand la
@@ -238,7 +238,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	border: none;
 	background: none;
 	cursor: pointer;
-	font-size: 0.9rem;
+	font-size: var(--fs-base);
 	color: var(--color-text-muted);
 	border-bottom: 2px solid transparent;
 	margin-bottom: -2px;
@@ -343,12 +343,12 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	color: var(--color-warning);
 }
 .kpi-label {
-	font-size: 0.8rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 	margin-top: 0.2rem;
 }
 .text-muted-sm {
-	font-size: 0.8rem;
+	font-size: var(--fs-sm);
 	color: var(--color-text-muted);
 }
 /*  Sa jumelle d'un cran au-dessus : onze `style="font-size:var(--fs-md);
@@ -511,12 +511,12 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	}
 	.report-card h3 {
 		break-after: avoid;
-		font-size: 0.95rem;
+		font-size: var(--fs-lg);
 		margin-bottom: 0.3rem;
 	}
 	.report-table th,
 	.report-table td {
-		font-size: 0.75rem;
+		font-size: var(--fs-xs);
 		padding: 0.3rem 0.4rem !important;
 	}
 	.reporting-panel {
@@ -525,7 +525,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	}
 	.kpi-card {
 		border: 1px solid #ccc !important;
-		background: #fff !important;
+		background: var(--color-surface) !important;
 		-webkit-print-color-adjust: exact;
 		print-color-adjust: exact;
 	}
@@ -534,7 +534,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		background: var(--color-warning-fond) !important;
 	}
 	.kpi-value {
-		color: #1e3a5f !important;
+		color: var(--color-primary) !important;
 	}
 	.kpi-card.kpi-alert .kpi-value {
 		color: var(--color-warning-texte) !important;
@@ -589,7 +589,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 		print-color-adjust: exact;
 	}
 	.report-card {
-		background: #fff !important;
+		background: var(--color-surface) !important;
 		border-color: #ddd !important;
 	}
 	.report-intro {
@@ -624,7 +624,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 	}
 	.frise-legend {
 		margin-top: 0.6rem !important;
-		font-size: 0.72rem !important;
+		font-size: var(--fs-2xs) !important;
 	}
 	.audit-year-group {
 		margin-bottom: 0.7rem !important;
@@ -702,7 +702,7 @@ qu'a un seul doit vivre dans son `<style>`, avec son balisage.
 }
 .detail-label {
 	display: block;
-	font-size: 0.75rem;
+	font-size: var(--fs-xs);
 	color: var(--color-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;

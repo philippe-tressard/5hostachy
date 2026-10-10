@@ -287,7 +287,7 @@
 	@media (hover: hover) and (pointer: fine) {
 		.nav-logout:hover {
 			color: var(--color-danger);
-			background: #fdedec;
+			background: var(--color-danger-fond);
 		}
 	}
 	/* ── Mobile topbar ─────────────────────────────────────────────────────── */
