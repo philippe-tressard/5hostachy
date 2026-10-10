@@ -53,6 +53,7 @@
 	import VuePrestataires from './VuePrestataires.svelte';
 	import VueRenouvellements from './VueRenouvellements.svelte';
 	import VueRelanceSyndic from './VueRelanceSyndic.svelte';
+	import VueEntretienPeriodique from './VueEntretienPeriodique.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
 	/** Libellé de l'onglet, pour l'en-tête d'impression. */
@@ -71,12 +72,20 @@
 	let reportDiagTypes: DiagType[] = [];
 	let reportNoteMoyParPrest: Map<number, { moy: number; nb: number }> = new Map();
 
-	//  « Relance syndic » charge ses propres données ; elle rend compte de son état
-	//  à la barre d'outils, qui doit savoir quoi rafraîchir et si la page est vide
-	//  avant d'ouvrir la boîte d'impression.
-	let vueRelance: VueRelanceSyndic | null = null;
-	let relanceChargement = false;
-	let relanceVide = true;
+	//  Les vues AUTONOMES — « Relance syndic » et « Entretien périodique » —
+	//  chargent leurs propres données ; elles rendent compte de leur état à la
+	//  barre d'outils, qui doit savoir quoi rafraîchir et si la page est vide avant
+	//  d'ouvrir la boîte d'impression. Une seule est montée à la fois : les trois
+	//  variables les servent toutes deux, chacune avec ce qu'elle a de propre.
+	const VUES_AUTONOMES: Partial<Record<ReportVue, string>> = {
+		relance: `Aucune ${TICKET.libelle.toLowerCase()} syndic en cours — rien à imprimer.`,
+		entretien: 'Aucune visite d’entretien périodique cette année — rien à imprimer.',
+	};
+	$: autonome = reportView in VUES_AUTONOMES;
+	let vueAutonome: { recharger(): void } | null = null;
+	let autonomeChargement = false;
+	let autonomeVide = true;
+	$: occupe = autonome ? autonomeChargement : reportingLoading;
 
 	/* La classe `print-reporting` vit sur <body> : tant qu'elle y reste, elle
 	   déborde de cette page. Le nettoyage ne peut donc PAS dépendre du chemin
@@ -142,12 +151,14 @@
 			prestataires: 'Reporting CS — Synthèse prestataires',
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
 			relance: 'Reporting CS — Relance syndic',
+			entretien: 'Reporting CS — Entretien périodique',
 		};
 		// Rien à imprimer : le dire, plutôt qu'ouvrir la boîte de dialogue sur une
 		// page vide. C'est le cas qu'a rencontré l'utilisateur (04/08/2026) — la vue
 		// « Relance syndic » n'affichait qu'un état vide, sans aucun ticket.
-		if (reportView === 'relance' && !relanceChargement && relanceVide) {
-			toast('info', `Aucune ${TICKET.libelle.toLowerCase()} syndic en cours — rien à imprimer.`);
+		const rienAImprimer = VUES_AUTONOMES[reportView];
+		if (rienAImprimer && !autonomeChargement && autonomeVide) {
+			toast('info', rienAImprimer);
 			return;
 		}
 		void printReporting(titles[reportView]);
@@ -191,7 +202,7 @@
 	}
 
 	function refreshReporting() {
-		if (reportView === 'relance') vueRelance?.recharger();
+		if (autonome) vueAutonome?.recharger();
 		else loadReporting(true);
 	}
 
@@ -203,13 +214,15 @@
 		reportView = vueInitiale as ReportVue;
 	}
 
-	onMount(() => {
-		//  La page appelait `loadRelanceSyndic()` dès qu'un `?vue=` était présent,
-		//  quelle que soit la vue demandée : `?vue=kanban` chargeait donc les relances
-		//  et laissait la vue affichée VIDE. On charge ce que la vue montre — la
-		//  relance, elle, se charge d'elle-même à son montage.
-		if (reportView !== 'relance') loadReporting();
-	});
+	//  La page appelait `loadRelanceSyndic()` dès qu'un `?vue=` était présent,
+	//  quelle que soit la vue demandée : `?vue=kanban` chargeait donc les relances
+	//  et laissait la vue affichée VIDE. On charge ce que la vue montre — une vue
+	//  autonome se charge d'elle-même à son montage. RÉACTIF depuis le 10/10/2026 :
+	//  arrivé sur une vue autonome, passer à une autre la laissait vide.
+	//  `loadReporting` ne recharge pas ce qui l'est déjà.
+	let monte = false;
+	$: if (monte && !autonome) loadReporting();
+	onMount(() => (monte = true));
 </script>
 
 <div class="reporting-panel">
@@ -236,15 +249,18 @@
 			<Pastille active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
 				&#x1F514; Relance syndic
 			</Pastille>
+			<Pastille active={reportView === 'entretien'} on:click={() => (reportView = 'entretien')}>
+				&#x1F9F0; Entretien périodique
+			</Pastille>
 		</div>
 		<div class="reporting-actions">
 			<button
 				class="btn btn-sm btn-outline"
 				on:click={refreshReporting}
-				disabled={reportView === 'relance' ? relanceChargement : reportingLoading}
+				disabled={occupe}
 				title="Rafraîchir les données"
 			>
-				&#x1F504;{(reportView === 'relance' ? relanceChargement : reportingLoading) ? ' …' : ''}
+				&#x1F504;{occupe ? ' …' : ''}
 			</button>
 			<button class="btn btn-sm btn-primary" on:click={printCurrentReporting}>
 				&#x1F5A8; Imprimer / PDF
@@ -274,9 +290,15 @@
 		/>
 	{:else if reportView === 'relance'}
 		<VueRelanceSyndic
-			bind:this={vueRelance}
-			bind:chargement={relanceChargement}
-			bind:estVide={relanceVide}
+			bind:this={vueAutonome}
+			bind:chargement={autonomeChargement}
+			bind:estVide={autonomeVide}
+		/>
+	{:else if reportView === 'entretien'}
+		<VueEntretienPeriodique
+			bind:this={vueAutonome}
+			bind:chargement={autonomeChargement}
+			bind:estVide={autonomeVide}
 		/>
 	{/if}
 </div>

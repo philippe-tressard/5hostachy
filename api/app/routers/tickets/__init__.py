@@ -18,6 +18,7 @@ ayant sa propre raison de changer.
 | `messages` | messagerie publique et notes internes du CS |
 | `evolutions` | fil de suivi : changements d'état et commentaires |
 | `relance` | relance groupée du syndic, avec civilité et ancienneté |
+| `entretien_periodique` | les visites périodiques de l'exercice, et si elles ont eu lieu |
 | `courriels` | composition et envoi des e-mails d'un ticket |
 | `commun` | destinataires, configuration, libellés, sérialisation |
 | `recherche` | recherche libre : ce que le lecteur peut lire, et rien d'autre |
@@ -62,6 +63,7 @@ from . import (
     apercu,
     crud,
     depuis_annonce,
+    entretien_periodique,
     evolutions,
     fusion,
     liees,
@@ -87,6 +89,7 @@ for _sous_router in (
     recherche.router,  # `/recherche` : littéral, avant `crud` — sinon 422
     depuis_annonce.router,
     relance.router,
+    entretien_periodique.router,  # `/entretiens-periodiques` : littéral, avant `crud`
     messages.router,
     evolutions.router,
     transferts.router,  # défaire un transfert de courriel (#1482)

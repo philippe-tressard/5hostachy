@@ -10,6 +10,7 @@ import type {
 	ApercuDiffusion,
 	CorrectionEvolution,
 	CorrespondanceAffaire,
+	EntretienPeriodiqueResponse,
 	EpinglesCompte,
 	FluxResponse,
 	Notification,
@@ -309,6 +310,10 @@ export const tickets = {
 		api.get<{ reponses: ReponseRelance[] }>('/tickets/relance-syndic/reponses'),
 	envoiRelance: (ticket_ids: number[]) =>
 		api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
+	//  Les visites périodiques de l'exercice, chacune avec son état — elles ont
+	//  quitté la relance syndic (10/10/2026).
+	entretiensPeriodiques: () =>
+		api.get<EntretienPeriodiqueResponse>('/tickets/entretiens-periodiques'),
 	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`
 	// AVANT la création, et voyagent dans `photos_urls` / `fichiers_urls`.
 };
