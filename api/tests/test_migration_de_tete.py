@@ -100,5 +100,7 @@ def test_le_controle_sait_ECHOUER(corps, tmp_path, monkeypatch):
     monkeypatch.setattr(aides_migrations, "VERSIONS", versions)
 
     assert _tete() == "9999", "le graphe forgé n'est pas celui que le test lit"
-    with pytest.raises(Exception, match="migration forgée|duplicate column"):
+    #  « duplicate column » est le mot de SQLite, « already exists » celui de
+    #  PostgreSQL : depuis 0272, la tête se rejoue aussi là (#1747).
+    with pytest.raises(Exception, match="migration forgée|duplicate column|already exists"):
         test_la_migration_de_tete_se_defait_et_se_rejoue()
