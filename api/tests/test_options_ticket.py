@@ -47,6 +47,8 @@ class _Ticket:
         self.confidentiel = champs.get("confidentiel", False)
         self.priorite = champs.get("priorite", "normale")
         self.suivi_kanban = champs.get("suivi_kanban", False)
+        self.suivi_actualite = champs.get("suivi_actualite")
+        self.ferme_le = None
 
 
 def test_TOUTES_les_options_s_appliquent():
@@ -59,19 +61,24 @@ def test_TOUTES_les_options_s_appliquent():
     t = _Ticket()
     changees = appliquer_options(
         t,
-        _Corps(epingle=True, urgente=True, confidentiel=True, suivi_kanban=True),
+        _Corps(
+            epingle=True, urgente=True, confidentiel=True, suivi_kanban=True, suivre_actualite=True
+        ),
         est_cs=True,
     )
     assert t.epingle is True
     assert t.confidentiel is True
     assert t.priorite == "haute", "🚨 pilote la priorité, il n'y a pas de colonne `urgente`"
     assert t.suivi_kanban is True
+    assert t.suivi_actualite == "ouvert", "la case pose l'ÉTAT du suivi (10/10/2026)"
     assert set(changees) == set(OPTIONS_TICKET)
     #  Le faux `_Ticket` ne prouve rien du VRAI modèle : chaque option écrite
-    #  telle quelle doit en être une colonne (`urgente` passe par `priorite`).
+    #  telle quelle doit en être une colonne (`urgente` passe par `priorite`,
+    #  `suivre_actualite` par `suivi_actualite`).
     from app.models.core import Ticket
 
-    for colonne in [o for o in OPTIONS_TICKET if o != "urgente"] + ["priorite"]:
+    indirectes = {"urgente": "priorite", "suivre_actualite": "suivi_actualite"}
+    for colonne in [indirectes.get(o, o) for o in OPTIONS_TICKET]:
         assert colonne in Ticket.model_fields, f"`Ticket.{colonne}` n'existe plus"
 
 
@@ -146,6 +153,8 @@ def test_la_lecture_et_l_ecriture_couvrent_les_MEMES_options():
         #  Ajoutée le 08/09/2026 (#833) — et ce test l'a exigée le jour même :
         #  la table d'écriture l'avait, celle de lecture non.
         "suivi_kanban": True,
+        #  10/10/2026 : la case de l'actualité, lue sur son ÉTAT de suivi.
+        "suivre_actualite": False,
     }
 
 
@@ -215,7 +224,9 @@ def test_les_TROIS_corps_transportent_chaque_option():
     #  Une option qui ne se pose que par un chemin se déclare ici, avec sa raison.
     #  `suivi_kanban` : un geste de CONDUITE du suivi, pas une parole — il ne passe
     #  pas par une Suite (#833).
-    hors_suite = {"suivi_kanban"}
+    #  `suivre_actualite` : de même — la case s'active au formulaire, l'ÉTAT se
+    #  change par une Suite (arbitré le 10/10/2026).
+    hors_suite = {"suivi_kanban", "suivre_actualite"}
     manques = [
         f"{schema.__name__}.{option}"
         for schema in (TicketCreate, TicketUpdate, TicketEvolutionCreate)

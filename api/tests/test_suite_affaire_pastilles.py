@@ -49,9 +49,13 @@ def test_le_montage_unique_porte_les_pastilles_et_les_hotes_le_rendent():
     montage = (_FRONT / _MONTAGE).read_text(encoding="utf-8")
     balises = _BALISE.findall(montage)
     assert len(balises) == 1, f"{_MONTAGE} : {len(balises)} EvolForm, un attendu."
-    assert "statutOptions=" in balises[0] and "STATUT_TICKET_OPTIONS" in balises[0], (
-        f"{_MONTAGE} ne propose plus les pastilles d'état (#1094)."
-    )
+    #  Les états viennent de `etatsDeLaSuite` depuis le 10/10/2026 : le cycle d'une
+    #  affaire, ou les trois états du suivi d'une actualité — la règle lue, pas recopiée.
+    suivi = (_FRONT / "lib" / "suivi-actualite.ts").read_text(encoding="utf-8")
+    assert "statutOptions=" in balises[0] and (
+        "STATUT_TICKET_OPTIONS" in balises[0]
+        or ("etatsDeLaSuite(" in balises[0] and "return STATUT_TICKET_OPTIONS" in suivi)
+    ), f"{_MONTAGE} ne propose plus les pastilles d'état (#1094)."
     for hote in _HOTES:
         texte = (_FRONT / hote).read_text(encoding="utf-8")
         assert "<SuiteAffaire" in texte, f"{hote} ne rend plus la Suite par `SuiteAffaire`."

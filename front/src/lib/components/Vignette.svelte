@@ -53,7 +53,7 @@
 		justify-content: center;
 	}
 	.vignette-placeholder {
-		font-size: 1.6rem;
+		font-size: var(--fs-chiffre);
 	}
 	.vignette-count {
 		position: absolute;

@@ -123,9 +123,15 @@
 	 *   l'attribut n'est pas rendu : un choix exclusif n'est pas un interrupteur. */
 	export let bascule = false;
 
-	/**  Combien d'objets ce choix donnerait — en vignette `Compte` après le
-	 *   libellé (10/10/2026, filtres d'Affaires, maquette B). `null` : rien,
-	 *   la pastille reste telle qu'elle était chez tous les autres appelants. */
+	/**  Combien d'éléments la liste filtrée montre — en vignette `Compte`
+	 *   après le libellé (10/10/2026). `null` : rien, la pastille reste telle
+	 *   qu'elle était chez tous les autres appelants.
+	 *
+	 *   🔴 Montré sur la pastille RETENUE seulement (maquette J arbitrée à
+	 *   l'écran) : un nombre dans chaque pastille chargeait la rangée — dix
+	 *   vignettes Bleu Seine pour deux filtres. La règle vit ICI, pas chez
+	 *   l'appelant : une rangée donne le même compte à toutes ses pastilles
+	 *   (`ChoixPastilles.compte`), la pastille décide s'il se voit. */
 	export let compte: number | null = null;
 </script>
 
@@ -161,7 +167,7 @@
 			<span class="pastille-libelle"><slot /></span>
 			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
-		{#if compte !== null}<Compte n={compte} surAplat={active} />{/if}
+		{#if compte !== null && active}<Compte n={compte} surAplat />{/if}
 	</label>
 {:else}
 	<button
@@ -181,7 +187,7 @@
 			<span class="pastille-libelle"><slot /></span>
 			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
-		{#if compte !== null}<Compte n={compte} surAplat={active} />{/if}
+		{#if compte !== null && active}<Compte n={compte} surAplat />{/if}
 		{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
 		{#if marquee && marqueAide}<span class="sr-only"> — {marqueAide}</span>{/if}
 	</button>

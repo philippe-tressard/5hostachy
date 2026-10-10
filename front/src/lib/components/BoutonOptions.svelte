@@ -31,6 +31,7 @@
 <script lang="ts">
 	import { optionsActives, libelleOptionsActives } from '$lib/options-publication';
 	import type { CleOptionPublication } from '$lib/options-publication';
+	import IconeAction from '$lib/components/IconeAction.svelte';
 
 	/** L'objet dont on lit les options — n'importe quel porteur des quatre clés. */
 	export let objet: Partial<Record<CleOptionPublication, boolean | undefined>>;
@@ -49,7 +50,9 @@
 		aria-label={libelle}
 		title="{libelle} — cliquer pour les modifier"
 		on:click|stopPropagation={onOuvrir}
-		>{#each actives as o (o.cle)}<span class="opt-glyphe">{o.glyphe}</span>{/each}</button
+		>{#each actives as o (o.cle)}<span class="opt-glyphe"
+				><IconeAction glyphe={o.glyphe} icone={o.icone} /></span
+			>{/each}</button
 	>
 {/if}
 

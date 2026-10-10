@@ -102,7 +102,7 @@ export interface DiagType {
 	rapports: DiagRapport[];
 }
 
-/**  Les cinq vues du reporting — la liste sert aussi à valider un `?vue=` d'URL,
+/**  Les vues du reporting — la liste sert aussi à valider un `?vue=` d'URL,
  *   et c'est ce qui fait retomber sans bruit un lien `?vue=devis` d'avant le
  *   28/08/2026, date du retrait de « Devis & interventions ».
  *
@@ -118,6 +118,8 @@ export const REPORT_VUES = [
 	'prestataires',
 	'renouvellements',
 	'relance',
+	//  Les visites d'entretien périodique — sorties de la relance (10/10/2026).
+	'periodique',
 ] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 

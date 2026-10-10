@@ -45,6 +45,7 @@
 	import { isCS, isAdmin } from '$lib/stores/auth';
 	import { ticketUrgent } from '$lib/tickets';
 	import BoutonOptions from './BoutonOptions.svelte';
+	import IconeAction from './IconeAction.svelte';
 
 	export let pub: Ticket;
 	//  Les options d'une actualité — épinglage et urgence (#1096). L'urgence
@@ -79,14 +80,16 @@
 		aria-pressed={commentaireOuvertId === pub.id}
 		aria-label={SUITE.libelle}
 		title={SUITE.libelle}
-		on:click|stopPropagation={() => onCommenter(pub)}>&#x1F504;</button
+		on:click|stopPropagation={() => onCommenter(pub)}
+		><IconeAction glyphe="🔄" icone="refresh-cw" /></button
 	>
 	<button
 		class="btn-icon-edit"
 		aria-pressed={editionOuverteId === pub.id}
 		aria-label="Modifier"
 		title="Modifier"
-		on:click|stopPropagation={() => onModifier(pub)}>✏️</button
+		on:click|stopPropagation={() => onModifier(pub)}
+		><IconeAction glyphe="✏️" icone="pencil" /></button
 	>
 	<!--  🔴 « Suivre cette affaire » (#1094) — le geste qui évite de TOUT
 	      RETAPER quand une actualité dérape. Titre, description, pièces jointes
@@ -99,7 +102,8 @@
 		class="btn-icon"
 		aria-label="Suivre cette actualité — en faire une affaire"
 		title="Suivre cette actualité"
-		on:click|stopPropagation={() => onPromouvoir(pub)}>&#x1F3AF;</button
+		on:click|stopPropagation={() => onPromouvoir(pub)}
+		><IconeAction glyphe="🎯" icone="target" /></button
 	>
 	<!--  Le bouton vit dans `BoutonOptions` depuis le 12/09/2026 : tickets et
 	      événements portent les mêmes options, et le recopier chez eux aurait
@@ -113,14 +117,16 @@
 		class="btn-icon"
 		aria-label="Archiver"
 		title="Archiver — rejoint l'onglet Archives"
-		on:click|stopPropagation={() => onArchiver(pub)}>&#x1F4E6;</button
+		on:click|stopPropagation={() => onArchiver(pub)}
+		><IconeAction glyphe="📦" icone="archive" /></button
 	>
 {:else if archive && $isAdmin}
 	<button
 		class="btn-icon-danger"
 		aria-label="Supprimer"
 		title="Supprimer définitivement"
-		on:click|stopPropagation={() => onSupprimer(pub)}>🗑️</button
+		on:click|stopPropagation={() => onSupprimer(pub)}
+		><IconeAction glyphe="🗑️" icone="trash-2" /></button
 	>
 {/if}
 

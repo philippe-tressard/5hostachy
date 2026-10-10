@@ -1,7 +1,9 @@
 """Espace CS → Reporting → Relance syndic : seules les affaires encore suivies.
 
 Arbitré par l'utilisateur les 09 et 10/10/2026 : « relance toutes les affaires
-sauf celles résolues, annulées, supprimées ou archivées, sans exceptions ». La
+sauf celles résolues, annulées, supprimées ou archivées, sans exceptions » — puis,
+le 10 au soir, une seule exception : l'entretien périodique (sous contrat ou à
+récurrence), qui a sa propre vue. La
 liste gardait une affaire 📦 archivée et une affaire absorbée par une fusion,
 mais écartait la catégorie « bug » et les affaires marquées « non relançable » ;
 le compteur du tableau de bord ne comptait que les affaires adressées au syndic ;
@@ -40,6 +42,8 @@ SUIVIES = {
     #  Sans exception : ni la catégorie, ni l'adresse.
     "bug": {"statut": "ouvert", "categorie": "bug"},
     "pas_au_syndic": {"statut": "ouvert", "destinataire_syndic": False},
+    #  Un Entretien ouvert à la main — ni contrat, ni récurrence (10/10/2026).
+    "entretien_ponctuel": {"statut": "en_cours", "categorie": "entretien"},
 }
 
 #: Celles qu'elle ne doit jamais proposer, avec ce qui les en écarte.
@@ -49,6 +53,18 @@ ECARTEES = {
     "actualité": {"statut": "publie"},
     "archivée": {"statut": "ouvert", "archive_manuel": True},
     "absorbée": {"statut": "ouvert", "fusionnee_dans_id": -1},
+    #  L'entretien PÉRIODIQUE se suit dans sa propre vue (`test_entretien_periodique`).
+    "entretien_sous_contrat": {
+        "statut": "chez_prestataire",
+        "categorie": "entretien",
+        "contrat_id": 1,
+    },
+    "entretien_recurrent": {
+        "statut": "chez_prestataire",
+        "categorie": "entretien",
+        "frequence_type": "mois",
+        "frequence_valeur": 6,
+    },
 }
 
 

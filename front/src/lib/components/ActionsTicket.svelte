@@ -22,6 +22,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import BoutonLien from './BoutonLien.svelte';
 	import BoutonOptions from './BoutonOptions.svelte';
+	import IconeAction from './IconeAction.svelte';
 	import type { Ticket } from '$lib/api';
 
 	export let ticket: Ticket;
@@ -58,7 +59,8 @@
 		aria-pressed={mode === 'evolution'}
 		aria-label={SUITE.libelle}
 		title={SUITE.libelle}
-		on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}>&#x1F504;</button
+		on:click|stopPropagation={() => dispatch('evoluer_ouvrir')}
+		><IconeAction glyphe="🔄" icone="refresh-cw" /></button
 	>
 {/if}
 {#if peutEditer}
@@ -70,7 +72,8 @@
 		aria-pressed={mode === 'edition'}
 		aria-label="Modifier"
 		title="Modifier"
-		on:click|stopPropagation={() => dispatch('modifier')}>✏️</button
+		on:click|stopPropagation={() => dispatch('modifier')}
+		><IconeAction glyphe="✏️" icone="pencil" /></button
 	>
 {/if}
 <!--  ⚠️ La corbeille NE SUIT PAS le droit d'édition : supprimer
@@ -100,13 +103,15 @@
 		class="btn-icon"
 		aria-label="Archiver"
 		title="Archiver — rejoint l'onglet Archives"
-		on:click|stopPropagation={() => dispatch('archiver')}>&#x1F4E6;</button
+		on:click|stopPropagation={() => dispatch('archiver')}
+		><IconeAction glyphe="📦" icone="archive" /></button
 	>
 {:else if archive && peutAdministrer}
 	<button
 		class="btn-icon-danger"
 		aria-label="Supprimer"
 		title="Supprimer définitivement"
-		on:click|stopPropagation={() => dispatch('supprimer')}>&#x1F5D1;️</button
+		on:click|stopPropagation={() => dispatch('supprimer')}
+		><IconeAction glyphe="🗑️" icone="trash-2" /></button
 	>
 {/if}

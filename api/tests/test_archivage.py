@@ -42,6 +42,7 @@ from app.utils.archivage import (
     REGLES,
     est_archivable,
 )
+from app.utils.suivi_actualite import ETATS_SUIVI_ACTUALITE
 from tests.aides_archivage import MODELES
 
 #  Une horloge FIXE : sans elle, un test qui passe à 23 h 59 échoue à 0 h 01, et
@@ -198,6 +199,7 @@ def test_le_jour_pile_du_seuil_archive():
 STATUTS_POSSIBLES = {
     "ticket": {s.value for s in StatutTicket},
     "actualite": {s.value for s in StatutTicket},
+    "actualite_suivie": set(ETATS_SUIVI_ACTUALITE),
     "annonce": {s.value for s in StatutAnnonce},
     "idee": {"ouverte", "retenue", "rejetee", "realisee"},
     "sondage": set(),

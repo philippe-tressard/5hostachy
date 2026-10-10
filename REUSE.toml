@@ -57,6 +57,24 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "AGPL-3.0-or-later AND ISC AND MIT AND CC0-1.0"
 
+#  ── Le logo de CoproFirst, hors de l'AGPL (#1736, 10/10/2026) ─────────────
+#  Une œuvre du projet, mais pas sous sa licence : sous l'AGPL, n'importe qui
+#  pouvait signer une version modifiée du logo d'origine. Ce qui est permis se
+#  lit dans `LICENSES/LicenseRef-CoproFirst-Logo.txt`, et la politique dans
+#  `MARQUE.md`. Un rendu de plus du logo s'ajoute ICI, sinon `**` le rend libre.
+[[annotations]]
+path = [
+  "front/static/favicon.svg",
+  "front/static/icons/icon-192.png",
+  "front/static/icons/icon-512.png",
+  "api/app/utils/logo-neutre.svg",
+  "api/app/utils/logo-neutre.png",
+  "docs/images/coprofirst.png",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Philippe TRESSARD"
+SPDX-License-Identifier = "LicenseRef-CoproFirst-Logo"
+
 #  Le manuel utilisateur (deux exemplaires) et la page de maintenance
 #  Cloudflare : texte du projet, pictogrammes Lucide en SVG en ligne.
 [[annotations]]

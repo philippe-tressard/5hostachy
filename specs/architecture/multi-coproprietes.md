@@ -330,13 +330,15 @@ libre reconnue par l'OSI et la FSF. ⚠️ Ce qui suit n'est pas un avis juridiq
   c'est l'identifiant SPDX à écrire dans `LICENSE`, `REUSE.toml` et les en-têtes.
 - **La marque** porte le nom de la **plateforme**, **CoproFirst** (D9), pas celui
   de la résidence. Une recherche web du 07/10/2026 n'a trouvé aucun produit de ce
-  nom ; elle **ne remplace pas** une recherche d'antériorité (INPI, EUIPO) avant de
-  s'en servir publiquement.
+  nom. **Déposée le 09/10/2026** : demande INPI n° 5307183, marque française
+  **verbale**, classes 9, 36 et 42 ; publication prévue le 30/10/2026, opposition
+  ouverte aux tiers jusqu'au 30/12/2026 (CPI art. L.712-4) — c'est elle qui dira si
+  un droit antérieur s'y oppose. Ni le logo ni « 5Hostachy » ne sont déposés.
 - **Vérifié avant le changement** (08/10/2026) : un seul auteur humain dans tout
   l'historique, aucun contributeur extérieur ; les cinq exceptions « à valider »
   de `docs/licences-tierces.md` analysées compatibles, analyse validée par
   l'auteur (motifs : `scripts/ci/licences_politique.py`).
-- **La politique de marque** reste à écrire : #1736.
+- **La politique de marque** : [`MARQUE.md`](../../MARQUE.md) (#1736, 10/10/2026), à faire relire.
 
 ## 8. Le phasage
 
@@ -346,7 +348,7 @@ elle.
 | Phase | Contenu | Prérequis |
 |---|---|---|
 | 0 | Décisions restantes (§9) | — |
-| 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproFirst, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
+| 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproFirst, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0) ; politique de marque (#1736, `MARQUE.md`, marque déposée le 09/10/2026) | aucun |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices. Neuf lots, §8 bis (#1743 à #1751) | phase 1 |
 | 2 bis | **Distribution** (§4.10, §8 ter) : tags et images signées, branche `replica` et promotion, déploiement standard, migrations compatibles sur une version ; le maître tire son image et passe sous PostgreSQL | phase 2 en partie (§8 ter) |
 | 3 | **Première installation CoproFirst** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), mise à jour nocturne réversible (§4.10), outillage d'installation (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
@@ -398,7 +400,7 @@ ouvre les tickets ») ; le code de chaque lot reste soumis à accord, lot par lo
 | DI-1 | **Un tag par version**, posé par la CI ; images construites, **signées**, publiées avec leur SBOM. **Livré en v2.120.0** | M | — | #1753 |
 | DI-2 | **Branche `replica`** protégée, avance rapide seulement ; **geste de promotion** avec critères affichés et notes de version. **Livré en v2.120.0** | S | DI-1 | #1754 |
 | DI-3 | **Déploiement standard** d'une installation, séparé de l'exploitation des RPi ; aucune donnée de la résidence dans une image. **Livré en v2.120.0** | M | DI-1 | #1755 |
-| DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable. **Livré en v2.120.0** | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
+| DI-4 | **Mise à jour nocturne réversible** : sauvegarde, signature, migrations base par base, santé, retour arrière ; échelonnée, épinglable. **Livré en v2.120.0** ; **sous PostgreSQL** (10/10/2026) : sauvegarde par l'export réimporté dans une base jetable, restauration par schéma initial + import, PostgreSQL d'une réplique sans réplication ni port (surcouche, `pg_hba` propre), et un essai de bout en bout sur machine jetable, SQLite et PostgreSQL (workflow « Essai de mise à jour ») | L | DI-1, DI-2, DI-3, DI-5 | #1756 |
 | DI-5 | **Migrations compatibles sur une version** (ajouter, puis retirer), avec son garde-fou `test_migrations_compatibles.py`. **Livré en v2.119.1** | S | — | #1757 |
 | DI-6 | **Le maître tire son image** au lieu de la construire sur les RPi ; construction locale en secours, avec alerte. **Livré en v2.122.0** | M | DI-1 | #1758 |
 | DI-7a | **L'image et le compose savent tourner sur PostgreSQL** — service `postgres` sous profil, éteint par défaut ; pilote psycopg dans l'image ; `start.sh` attend la base et ne migre jamais une base illisible. **Livré en v2.127.0** | S | P2-5, P2-7 | #1759 |
@@ -419,11 +421,11 @@ DI-7 après la CI PostgreSQL ; DI-4 en dernier, avec la première installation
    confidentialité **par copro**, et un hébergeur conforme. À faire valider.
 2. **Hébergeur** des installations CoproFirst : PostgreSQL géré, stockage objet,
    coffre à secrets, localisation des données. Et le **registre d'images** (#1753).
-3. ~~**Nom du produit**~~ — tranché le 07/10/2026, revu le 09/10/2026 : **CoproFirst** (D9 ; CoproConnect était déjà pris). Reste la
-   recherche d'antériorité de la marque (§7).
+3. ~~**Nom du produit**~~ — tranché le 07/10/2026, revu le 09/10/2026 : **CoproFirst** (D9 ; CoproConnect était déjà pris). Marque
+   déposée le 09/10/2026 (§7) ; l'opposition se clôt le 30/12/2026.
 4. ~~**D8**~~ — confirmée le 08/10/2026 : **deux comptes indépendants**.
-5. **Licence** : la variante est tranchée (`-or-later`, D10) ; restent la politique
-   de marque et les vérifications d'avant changement (§7).
+5. ~~**Licence**~~ — AGPL-3.0-or-later (D10) depuis la v2.116.0 (#1726) ; politique
+   de marque dans `MARQUE.md` (#1736), à faire relire (§7).
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
    l'hébergement ; elle interdit seulement d'en fermer le code.
 7. ~~**La résidence actuelle**~~ — tranché le 08/10/2026 (D11) : elle **reste sur

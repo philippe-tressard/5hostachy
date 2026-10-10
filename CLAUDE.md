@@ -572,6 +572,9 @@ coupant. 🔴 **Les courriels de sécurité ne sont pas un service**
       fois**, par `$lib/accordeon` — jamais un `Set` d'ouverture. Exceptions
       arbitrées : section modifiée, carte en correction (`npm run lint:accordeon`,
       30/09/2026)
+- [ ] Rangée de pastilles qui FILTRE une liste : `compte={<liste affichée>.length}` —
+      le nombre se montre sur la pastille **retenue** seulement, jamais un par
+      entrée (maquette J, 10/10/2026 ; `ux-patterns` §5). `npm run lint:compte-filtres`
 - [ ] Attente d'un écran : `<EtatListe chargement />`, jamais un « Chargement… »
       écrit à la main — il y en avait **23** avant #1045 (`npm run lint:chargement`)
 - [ ] En-tête de page : `<EntetePage>`, jamais `<div class="page-header">`

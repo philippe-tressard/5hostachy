@@ -167,6 +167,24 @@ REGLES: dict[str, RegleArchivage] = {
         #  l'entité : une actualité est une affaire (#1091).
         champs_peremption=("fin", "debut"),
     ),
+    #  🔁 Une actualité dont le conseil a activé le SUIVI (10/10/2026) : arbitré
+    #  « comme une affaire » — « Annulé » archive aussitôt, « Résolu » trente
+    #  jours après sa clôture (`ferme_le`). « Ouvert » garde la règle de
+    #  l'actualité : `ferme_le` y est vide, la date de repli est donc la même.
+    #  L'épinglage et la péremption sont ceux de l'actualité.
+    "actualite_suivie": RegleArchivage(
+        champ_statut="suivi_actualite",
+        statuts_immediats=("annulé",),
+        statuts_terminaux=("ouvert", "résolu"),
+        champs_date=("ferme_le", "mis_a_jour_le", "cree_le"),
+        champ_archive_manuel="archive_manuel",
+        champ_epingle="epingle",
+        declencheur=(
+            "Suivi « Ouvert » : comme une actualité. « Résolu » : 30 jours après. "
+            "« Annulé » : immédiat."
+        ),
+        champs_peremption=("fin", "debut"),
+    ),
     "annonce": RegleArchivage(
         champ_statut="statut",
         statuts_immediats=("annule",),
@@ -254,6 +272,8 @@ def _regle_de(type_objet: str, objet: Any) -> str:
     et n'a pas à savoir qu'il en existe deux (#1091).
     """
     if type_objet == "ticket" and est_actualite(objet):
+        if getattr(objet, "suivi_actualite", None):
+            return "actualite_suivie"  # son suivi décide, comme une affaire
         return "actualite"
     return type_objet
 

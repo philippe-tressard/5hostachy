@@ -114,18 +114,11 @@ def _exporter_et_verifier(export: Path, dossier: Path) -> None:
     `ImportRefuse` (compte ou empreinte d'une table) fait échouer la sauvegarde —
     une archive qui ne se restaure pas n'est pas une sauvegarde.
     """
-    from sqlmodel import SQLModel
-
-    from app.dialecte import moteur_jetable
-    from app.utils.export_copropriete import exporter, importer
+    from app.utils.export_copropriete import exporter
+    from app.utils.import_copropriete import verifier_archive
 
     exporter(engine, export)
-    cible = moteur_jetable(dossier / "verification.db")
-    try:
-        SQLModel.metadata.create_all(cible)
-        importer(export, cible)
-    finally:
-        cible.dispose()
+    verifier_archive(export, dossier)
 
 
 def _reussie(session: Session, entry: HistoriqueSauvegarde, nom: str, chemin: str) -> None:

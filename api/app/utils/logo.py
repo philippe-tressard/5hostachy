@@ -14,7 +14,7 @@ Arbitré le 08/10/2026 :
 | menu, connexion | le logo remplace l'icône du catalogue s'il existe |
 | courriels | une image par adresse publique, servie par `GET /config/logo.png` |
 
-Le 09/10/2026, le logo neutre devient celui de la marque déposée : trois
+Le 09/10/2026, le logo neutre devient celui de CoproFirst : trois
 immeubles bleus, une fenêtre allumée en or, sur une tuile blanche. Son dessin
 vit dans `logo-neutre.svg` ; ce PNG et les icônes du front en sont les rendus.
 

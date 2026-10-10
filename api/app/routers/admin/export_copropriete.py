@@ -20,6 +20,7 @@ from app.auth.deps import require_admin
 from app.config import get_settings
 from app.models.core import Utilisateur
 from app.utils import export_copropriete as ex
+from app.utils import import_copropriete as im
 from app.utils import horloge
 
 router = APIRouter()
@@ -49,9 +50,9 @@ def verifier_restauration(_: Utilisateur = Depends(require_admin)):
     debut = time.monotonic()
     with tempfile.TemporaryDirectory() as dossier:
         try:
-            manifeste, bilan = ex.verifier_restauration(engine, Path(dossier))
+            manifeste, bilan = im.verifier_restauration(engine, Path(dossier))
             ecarts, restaurable = bilan.ecarts, True
-        except ex.ImportRefuse as refus:
+        except im.ImportRefuse as refus:
             manifeste = {"tables": {}, "ignorees": [], "revision": None}
             ecarts, restaurable = [str(refus)], False
     tables = manifeste["tables"]

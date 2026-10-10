@@ -17,6 +17,8 @@ sur fond transparent (un navigateur suffit : Playwright, `omitBackground`).
 
 from __future__ import annotations
 
+import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -27,6 +29,10 @@ from app.utils import logo, pdf_theme
 RACINE = Path(__file__).resolve().parents[2]
 SVG_FRONT = RACINE / "front" / "static" / "favicon.svg"
 ICONES = RACINE / "front" / "static" / "icons"
+IMAGE_README = RACINE / "docs" / "images" / "coprofirst.png"
+LICENCE_LOGO = "LicenseRef-CoproFirst-Logo"
+#: Un tracé du dessin assez long pour le reconnaître dans une copie.
+TRACE_DU_DESSIN = "M137.5 487V137.5"
 
 BLEU, OR, BLANC = (0x1E, 0x3A, 0x5F), (0xC9, 0x98, 0x3A), (0xFF, 0xFF, 0xFF)
 
@@ -85,3 +91,51 @@ def test_les_documents_recoivent_le_dessin_a_leur_taille_sans_son_commentaire():
     assert svg.startswith('<svg width="48" height="48" ')
     assert "<!--" not in svg, "la provenance du dessin partait dans chaque document"
     assert 'fill="#C9983A"' in svg
+
+
+def _fichiers_sous_licence_logo() -> set[str]:
+    reuse = tomllib.loads((RACINE / "REUSE.toml").read_text(encoding="utf-8"))
+    chemins: set[str] = set()
+    for bloc in reuse.get("annotations", []):
+        if bloc.get("SPDX-License-Identifier") == LICENCE_LOGO:
+            chemins |= {bloc["path"]} if isinstance(bloc["path"], str) else set(bloc["path"])
+    return chemins
+
+
+def _copies_du_dessin() -> set[str]:
+    """Tout fichier versionné qui recopie le tracé du logo — en dehors de ce test."""
+    sortie = subprocess.run(
+        ["git", "grep", "-l", "--fixed-strings", TRACE_DU_DESSIN],
+        cwd=RACINE,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if sortie.returncode not in (0, 1):
+        pytest.fail(f"`git grep` a échoué : {sortie.stderr}")
+    return set(sortie.stdout.split()) - {"api/tests/test_logo_neutre.py"}
+
+
+def test_le_logo_et_chacun_de_ses_rendus_sont_hors_de_l_agpl():
+    """Le logo a sa licence propre (#1736) : un rendu oublié, `**` le rendrait libre.
+
+    Le bloc de `REUSE.toml` doit nommer exactement les fichiers du logo : les
+    cinq formes tenues ensemble ci-dessus, l'image du README, et toute copie du
+    dessin que le dépôt contiendrait ailleurs.
+    """
+    attendus = {
+        str(_exige(c).relative_to(RACINE).as_posix())
+        for c in (
+            SVG_FRONT,
+            pdf_theme.LOGO_NEUTRE_SVG,
+            logo.NEUTRE_PNG,
+            ICONES / "icon-192.png",
+            ICONES / "icon-512.png",
+            IMAGE_README,
+        )
+    } | _copies_du_dessin()
+    declares = _fichiers_sous_licence_logo()
+    assert declares, f"aucun bloc de REUSE.toml n'attribue {LICENCE_LOGO} (cas zéro)"
+    assert attendus - declares == set(), f"logo sous l'AGPL par `**` : {attendus - declares}"
+    assert declares - attendus == set(), f"déclarés sans être le logo : {declares - attendus}"
+    assert (RACINE / "LICENSES" / f"{LICENCE_LOGO}.txt").is_file()

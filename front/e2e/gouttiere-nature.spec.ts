@@ -1,77 +1,156 @@
 /**
- *  Le mot de la gouttière de nature TIENT dans sa bande (#1220).
+ *  La GOUTTIÈRE d'une carte d'affaire : la date, puis la nature — et rien ne
+ *  dépasse (maquette B, 10/10/2026 ; #1220 pour le mot de la nature).
  *
- *  ## 🔴 Pourquoi ce test existe (24/09/2026)
+ *  ## 🔴 Pourquoi ce test existe
  *
- *  La gouttière teintée d'une carte d'Affaires (v2.39.0) écrivait le mot de sa
- *  nature à la verticale. Sur une carte d'une ou deux lignes, « CALENDRIER »
- *  était plus long que la carte : il en dépassait. Trois alternatives ont été
- *  maquettées ; la C est choisie à l'écran — le mot à l'HORIZONTALE, en petites
- *  capitales, sous l'icône — puis ABRÉGÉ (ACTU. · CAL. · AFF.) pour que la bande
- *  garde sa largeur d'origine.
+ *  24/09/2026 : la gouttière teintée écrivait sa nature à la verticale, et
+ *  « CALENDRIER » dépassait d'une carte d'une ligne. Le mot a été couché, puis
+ *  abrégé (ACTU. · CAL. · AFF.) — ce test mesurait qu'il tenait dans la bande.
  *
- *  Le risque qu'elle prend est l'inverse : un mot trop LARGE pour la bande.
- *  Ce test le mesure pour chaque nature, avec la police que le navigateur
- *  applique réellement au pseudo-élément — un calcul à la main dans le CSS ne
- *  verrait pas une police de repli plus large (`standards/04` §14).
+ *  10/10/2026 : la maquette B (« Gouttière », choisie parmi cinq) y fait monter
+ *  la DATE, et y aligne les libellés des filtres. Trois risques neufs, que rien
+ *  d'autre ne verrait :
+ *    • une date affichée DEUX fois (gouttière et dernière ligne) — deux faits ;
+ *    • un mot, un jour ou un libellé plus LARGE que la colonne, avec la police
+ *      que le navigateur applique vraiment (`standards/04` §14) ;
+ *    • au téléphone, une colonne qui mangerait le titre au lieu de passer
+ *      au-dessus de lui.
  *
- *  ⚠️ Les cartes sont derrière une connexion : le témoin est posé dans une page
- *  publique, et les libellés viennent du serveur de développement
- *  (`$lib/tickets-categories`), jamais recopiés ici.
+ *  Les trois natures sont rendues (API simulée, compte CS) : la nature vient du
+ *  serveur (`Ticket.natures`), jamais redérivée — le test la lui donne.
  */
-import { attendreHydratation, expect, test } from './aides';
+import type { Page } from '@playwright/test';
+import { expect, simulerApi, test } from './aides';
 
-test('le mot de chaque nature tient, à plat, dans la gouttière', async ({ page }, info) => {
-	await page.goto('/auth/connexion');
-	await attendreHydratation(page);
+const BASE = {
+	statut: 'en_cours',
+	priorite: 'normale',
+	perimetre_cible: [],
+	public_cible: null,
+	reserve_perimetre: false,
+	confidentiel: false,
+	epingle: false,
+	assiste_ia: false,
+	auteur_id: 2,
+	auteur_nom: 'Jean-Hervé KERBRAT',
+	description: 'Une description de quelques mots.',
+	photos_urls: [],
+	fichiers_urls: [],
+	cree_le: '2026-10-05T09:00:00',
+	mis_a_jour_le: '2026-10-09T15:00:00',
+};
+const AFFAIRES = [
+	{
+		...BASE,
+		id: 1,
+		numero: 'TK-1',
+		titre: 'Porte du hall',
+		categorie: 'panne',
+		natures: ['activite'],
+	},
+	{
+		...BASE,
+		id: 2,
+		numero: 'TK-2',
+		titre: 'Ascenseur à l’arrêt',
+		categorie: 'travaux',
+		debut: '2026-10-12T08:00:00',
+		natures: ['calendrier'],
+	},
+	{
+		...BASE,
+		id: 3,
+		numero: 'TK-3',
+		titre: 'Coupure d’eau',
+		categorie: 'actualite',
+		natures: ['actualite'],
+	},
+];
 
-	const mesures = await page.evaluate(async () => {
-		const { NATURES, attributsNature } = await import('/src/lib/tickets-categories.ts');
-		const temoin = document.createElement('div');
-		temoin.className = 'carte-liste';
-		temoin.textContent = 'Témoin';
-		document.body.append(temoin);
-		const ctx = document.createElement('canvas').getContext('2d')!;
-		const sortie = [];
-		for (const n of NATURES) {
-			for (const [k, v] of Object.entries(attributsNature({ natures: [n.val] }))) {
-				temoin.setAttribute(k, v as string);
-			}
-			const mot = getComputedStyle(temoin, '::after');
-			const bande = getComputedStyle(temoin, '::before');
-			ctx.font = `${mot.fontWeight} ${mot.fontSize} ${mot.fontFamily}`;
-			//  Le mot AFFICHÉ, lu sur l'attribut que le CSS rend — pas le libellé
-			//  du filtre, qui est plus long et n'est pas celui de la gouttière.
-			const affiche = temoin.getAttribute('data-nature-libelle') ?? '';
-			const texte = mot.textTransform === 'uppercase' ? affiche.toUpperCase() : affiche;
-			const espacement = parseFloat(mot.letterSpacing) || 0;
-			sortie.push({
-				nature: n.val,
-				affiche: mot.display !== 'none',
-				ecriture: mot.writingMode,
-				largeurMot: ctx.measureText(texte).width + espacement * texte.length,
-				largeurBande: parseFloat(bande.width),
-			});
-		}
-		temoin.remove();
-		return sortie;
+const ouvrir = async (page: Page) => {
+	await simulerApi(page, (chemin) => (chemin === '/api/tickets' ? AFFAIRES : undefined));
+	await page.goto('/tickets');
+	await expect(page.locator('.gouttiere')).toHaveCount(AFFAIRES.length);
+};
+
+test('chaque carte porte sa date et sa nature dans la gouttière, une fois', async ({ page }) => {
+	await ouvrir(page);
+	const mesures = await page.locator('.carte-liste[data-nature]').evaluateAll((cartes) =>
+		cartes.map((c) => {
+			const g = c.querySelector('.gouttiere')!;
+			return {
+				nature: c.getAttribute('data-nature'),
+				abrege: g.querySelector('abbr')?.textContent?.trim(),
+				date: g.querySelector('time')?.textContent?.replace(/\s+/g, ' ').trim(),
+				dateEnBas: c.querySelectorAll('.ec-date').length,
+			};
+		}),
+	);
+	//  La date rendue est celle de `fmtDate` (`mis_a_jour_le`), recollée.
+	const attendue = await page.evaluate(async () => {
+		const { fmtDate } = await import('/src/lib/date.ts');
+		return fmtDate('2026-10-09T15:00:00');
 	});
-
-	expect(mesures).toHaveLength(3);
-	//  Au pouce, la gouttière ne garde que l'icône (`normes.css`) : le mot y est
-	//  absent EXPRÈS. Sur le bureau, un mot absent serait une régression.
-	if (info.project.name === 'bureau') {
-		expect(
-			mesures.every((m) => m.affiche),
-			'le mot a disparu de la gouttière',
-		).toBe(true);
-	}
+	expect(mesures.map((m) => m.nature).sort()).toEqual(['activite', 'actualite', 'calendrier']);
 	for (const m of mesures) {
-		if (!m.affiche) continue;
-		expect(m.ecriture, `${m.nature} : le mot n'est pas écrit à plat`).toBe('horizontal-tb');
-		expect(
-			m.largeurMot,
-			`${m.nature} : ${m.largeurMot.toFixed(1)} px de mot pour ${m.largeurBande} px de bande`,
-		).toBeLessThanOrEqual(m.largeurBande - 4);
+		expect(m.abrege, `${m.nature} : pas de nature dans la gouttière`).toMatch(/^[A-Z]+\.$/);
+		expect(m.date, `${m.nature} : la date de la gouttière`).toBe(attendue);
+		expect(m.dateEnBas, `${m.nature} : la date est aussi sur la dernière ligne`).toBe(0);
 	}
+});
+
+test('rien ne dépasse de la gouttière, ni des libellés alignés sur elle', async ({
+	page,
+}, info) => {
+	await ouvrir(page);
+	if (info.project.name !== 'bureau') {
+		//  Au téléphone, la colonne devient une LIGNE au-dessus du titre.
+		const placement = await page
+			.locator('.carte-liste[data-nature]')
+			.first()
+			.evaluate((c) => {
+				const g = c.querySelector('.gouttiere')!.getBoundingClientRect();
+				const t = c.querySelector('.ec-titre')!.getBoundingClientRect();
+				return {
+					basGouttiere: g.bottom,
+					hautTitre: t.top,
+					largeurTitre: t.width,
+					carte: c.clientWidth,
+				};
+			});
+		expect(placement.basGouttiere).toBeLessThanOrEqual(placement.hautTitre + 1);
+		expect(placement.largeurTitre, 'le titre a perdu sa largeur').toBeGreaterThan(
+			placement.carte / 2,
+		);
+		return;
+	}
+	const debords = await page.evaluate(() => {
+		const sortie: string[] = [];
+		let mesures = 0;
+		for (const g of document.querySelectorAll<HTMLElement>('.gouttiere')) {
+			const bord = g.getBoundingClientRect().right;
+			for (const el of g.querySelectorAll<HTMLElement>('.g-jour, .g-mois, abbr')) {
+				mesures++;
+				if (el.getBoundingClientRect().right > bord - 2)
+					sortie.push(`gouttière : ${el.textContent}`);
+			}
+		}
+		const grille = document.querySelector<HTMLElement>('.filtres-gouttiere')!;
+		const colonne = parseFloat(getComputedStyle(grille).gridTemplateColumns);
+		const gauche = grille.getBoundingClientRect().left;
+		for (const l of grille.querySelectorAll<HTMLElement>('.libelle-devant')) {
+			mesures++;
+			//  La largeur du TEXTE, pas de la boîte : une boîte de grille se borne à
+			//  sa colonne, et le texte qui en sort ne l'élargit pas.
+			const r = document.createRange();
+			r.selectNodeContents(l);
+			if (r.getBoundingClientRect().right > gauche + colonne)
+				sortie.push(`libellé : ${l.textContent}`);
+		}
+		return { sortie, mesures };
+	});
+	//  Cas zéro : 3 cartes × (jour, mois, nature) et 3 libellés ont été mesurés.
+	expect(debords.mesures, 'rien n’a été mesuré').toBe(AFFAIRES.length * 3 + 3);
+	expect(debords.sortie, 'ces textes sortent de leur colonne').toEqual([]);
 });

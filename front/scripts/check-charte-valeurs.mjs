@@ -86,8 +86,14 @@ export { contraste, contrastesBadges, egalesAUnJeton, jetonsDe, resoudre };
  *  s'écrivent par le jeton. Aucun rendu ne change : la charte n'a ni thème
  *  sombre ni jeton qui varie avec l'écran. Elles sont désormais INTERDITES
  *  (`egalesAUnJeton`), sans plafond.
+ *  10/10/2026 : 120 couleurs et 73 tailles. La gouttière des cartes d'affaire
+ *  devient un composant (`GouttiereAffaire`, maquette B) : ses deux tailles en
+ *  pseudo-éléments passent par l'échelle (`--fs-2xs`, `--fs-chiffre`), et les
+ *  trois teintes pâles de nature, qu'elle ne peint plus, sont retirées. Son
+ *  jeton `--fs-chiffre` (1.6rem) rend quatre tailles égales à lui : elles
+ *  s'écrivent par lui (Lightbox, PiecesJointes, Vignette, legal.css).
  */
-const PLAFOND = { couleurs: 123, tailles: 79 };
+const PLAFOND = { couleurs: 120, tailles: 73 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

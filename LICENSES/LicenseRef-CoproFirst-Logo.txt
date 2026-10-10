@@ -1,0 +1,37 @@
+Logo CoproFirst — licence d'usage
+
+Copyright © 2026 Philippe TRESSARD. Tous droits réservés, sauf ce qui suit.
+
+Ce texte couvre les fichiers du logo de CoproFirst que REUSE.toml lui
+attribue : le dessin (front/static/favicon.svg et sa copie
+api/app/utils/logo-neutre.svg), ses rendus (front/static/icons/icon-192.png,
+front/static/icons/icon-512.png, api/app/utils/logo-neutre.png) et l'image du
+README (docs/images/coprofirst.png).
+
+Ces fichiers ne sont PAS couverts par la GNU Affero General Public License du
+reste du dépôt. Ce sont des œuvres distinctes du programme : le programme les
+affiche, il ne dépend pas d'eux pour fonctionner, et ils se remplacent par
+n'importe quelle autre image sans toucher au code.
+
+Permission est donnée, gratuitement, de reproduire et de distribuer ces fichiers
+SANS MODIFICATION :
+
+  1. dans une copie du dépôt source de CoproFirst, modifiée ou non, et de son
+     historique ;
+  2. pour les afficher dans une installation qui fait fonctionner une version
+     NON MODIFIÉE de CoproFirst, telle que publiée par son auteur ;
+  3. pour désigner le logiciel CoproFirst d'origine : article, documentation,
+     comparatif, lien vers le projet.
+
+Aucune autre permission n'est donnée. En particulier, ces fichiers ne
+s'affichent pas dans une version MODIFIÉE du logiciel : qui la publie ou la fait
+fonctionner remplace les fichiers ci-dessus par les siens. Ils ne se modifient
+pas, et ne servent pas à désigner un autre produit, service ou organisme.
+
+Toute version de CoproFirst publiée SANS le présent fichier a distribué ces
+fichiers sous l'AGPL-3.0-or-later : qui les a reçus avec l'une d'elles conserve,
+pour cette copie, les droits que cette licence lui a donnés.
+
+Politique d'usage des noms et du logo : MARQUE.md.
+
+CES FICHIERS SONT FOURNIS « TELS QUELS », SANS AUCUNE GARANTIE.

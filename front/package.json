@@ -1,6 +1,6 @@
 {
 	"name": "hostachy-front",
-	"version": "2.130.6",
+	"version": "2.131.0",
 	"private": true,
 	"license": "AGPL-3.0-or-later",
 	"scripts": {
@@ -119,6 +119,7 @@
 		"lint:statut-recalcule": "node scripts/check-statut-recalcule.mjs --selftest && node scripts/check-statut-recalcule.mjs",
 		"lint:nombre-saisi": "node scripts/check-nombre-saisi.mjs --selftest && node scripts/check-nombre-saisi.mjs",
 		"lint:vignette-compte": "node scripts/check-vignette-compte.mjs --selftest && node scripts/check-vignette-compte.mjs",
+		"lint:compte-filtres": "node scripts/check-compte-filtres.mjs --selftest && node scripts/check-compte-filtres.mjs",
 		"lint:note-etoiles": "node scripts/check-note-etoiles.mjs",
 		"lint:entete-carte": "node scripts/check-entete-carte.mjs --selftest && node scripts/check-entete-carte.mjs",
 		"lint:pictogrammes": "node scripts/check-pictogrammes.mjs --selftest && node scripts/check-pictogrammes.mjs",

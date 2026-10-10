@@ -39,6 +39,9 @@ export interface OptionPublication {
 	cle: CleOptionPublication;
 	/** Le glyphe, unique à cette notion dans tout le site. */
 	glyphe: string;
+	/**  Le même, AU TRAIT (`$lib/icones-svg.json`) — dans une rangée d'actions
+	 *   dessinée au trait, celle des cartes d'affaire (maquette B, 10/10/2026). */
+	icone: string;
 	/** Le GESTE, pour une case à cocher : « Épingler ». */
 	action: string;
 	/** L'ÉTAT, pour un badge ou un libellé d'accessibilité : « Épinglée ». */
@@ -50,6 +53,7 @@ export interface OptionPublication {
 export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 	{
 		cle: 'epingle',
+		icone: 'pin',
 		glyphe: '\u{1F4CC}',
 		action: 'Épingler',
 		etat: 'Épinglée',
@@ -57,6 +61,7 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 	},
 	{
 		cle: 'urgente',
+		icone: 'zap',
 		//  ⚡ et non plus la sirène (27/09/2026, arbitré à l'écran) : la carte
 		//  disait déjà « ⚡ Urgente ». Un seul glyphe pour l'urgence, écrit ICI.
 		glyphe: '\u{26A1}',
@@ -79,6 +84,7 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 		//  renommer n'apprendrait rien à personne. Le ticket y branche sa colonne
 		//  `confidentiel` — voir la prop `objet` d'`OptionsPublication`.
 		cle: 'brouillon',
+		icone: 'shield',
 		glyphe: '\u{1F6E1}️',
 		//  🔴 PLUS DE `{objet}` DANS CE LIBELLÉ (13/09/2026, vu à l'écran).
 		//
@@ -107,6 +113,7 @@ export const OPTIONS_PUBLICATION: readonly OptionPublication[] = [
 	},
 	{
 		cle: 'confidentiel',
+		icone: 'lock',
 		glyphe: '\u{1F512}',
 		action: 'Rendre confidentielle',
 		etat: 'Confidentielle',

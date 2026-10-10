@@ -131,6 +131,9 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
     #  aurait rendu un formulaire silencieux indiscernable d'un décochage
     #  délibéré — et « Étude & travaux » n'entrerait jamais au tableau.
     suivi_kanban: Optional[bool] = None
+    #  🔁 La case « Activer le suivi » d'une actualité (10/10/2026) — du conseil seul, comme
+    #  le kanban ; elle pose `suivi_actualite` (`utils/suivi_actualite`).
+    suivre_actualite: Optional[bool] = None
     #  Le workflow du ticket est saisissable DÈS la création (16/08/2026) : il
     #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
     #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
@@ -211,6 +214,9 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     epingle: bool = False
     #  Même raison : un état, donc relu. La case doit refléter ce qui est.
     suivi_kanban: bool = False
+    #  🔁 Le suivi d'une actualité : `None` (sans suivi), « ouvert », « résolu »
+    #  ou « annulé » — un état, donc relu (`utils/suivi_actualite`).
+    suivi_actualite: Optional[str] = None
     #  Section « Quand » (#1092) — RELUE depuis le 23/09/2026 : acceptée en
     #  entrée depuis la 0200, elle n'était jamais rendue. Le calendrier et le
     #  filtre « Événement » n'avaient rien à lire, et une édition l'effaçait.
@@ -290,6 +296,7 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     urgente: Optional[bool] = None  # #1171 : ignorée en silence jusqu'au 23/09/2026
     annonce_hall: Optional[bool] = None  # un acte : l'affiche d'une actualité (#1091)
     suivi_kanban: Optional[bool] = None
+    suivre_actualite: Optional[bool] = None  # la case du conseil (10/10/2026)
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le
     #  groupe, maintenant » — et il ne se relit donc pas. La case repart décochée

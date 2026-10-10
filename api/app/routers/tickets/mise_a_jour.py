@@ -36,6 +36,7 @@ from app.models.core import (
 )
 from app.schemas import TicketRead, TicketUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
+from app.utils.suivi_actualite import normaliser_suivi
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.synthese_affaire.file import inscrire_si_eligible
@@ -264,6 +265,8 @@ def update_ticket(
             #  choisi pour elle. Envoyé dans la même correction, il est retenu.
             if not est_actualite(ticket) and "public_cible" not in body.model_fields_set:
                 ticket.public_cible = None
+    #  Le suivi d'une actualité ne suit pas l'affaire suivie qu'elle devient.
+    normaliser_suivi(ticket)
     #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
     changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
     #  La prochaine visite d'un contrat (#1092) — APRÈS l'intervenant (#1445) :

@@ -56,6 +56,7 @@
 		options={OPTIONS_COMPTE}
 		bind:valeur={compte}
 		tous="Tous comptes"
+		compte={affiches}
 		libelle="Filtrer par compte"
 	/>
 	<span class="aide">

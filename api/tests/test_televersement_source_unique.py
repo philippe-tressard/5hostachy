@@ -69,7 +69,7 @@ ECRITURES_NON_TELEVERSEMENT = {
     ): "garde sur disque le manuel PDF que l'application vient de RENDRE (#1071) "
     "— rien n'est reçu, et le dossier est hors du volume `uploads` servi en statique",
     (
-        "utils/export_copropriete.py",
+        "utils/import_copropriete.py",
         "write_bytes",
     ): "restaure les fichiers d'une archive d'EXPORT de la copropriété (#1749), chacun "
     "confronté à son empreinte SHA-256 du manifeste avant d'être écrit, dans le dossier "

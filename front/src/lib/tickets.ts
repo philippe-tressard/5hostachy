@@ -62,6 +62,11 @@ export const STATUTS_TICKET: readonly StatutTicket[] = [
 	{ value: 'annulé', label: 'Annulé', emoji: '⚫', badge: 'badge-gray' },
 ];
 
+//: 🔁 Les trois états du suivi OPTIONNEL d'une actualité (10/10/2026) — un
+//: sous-ensemble du cycle, tenu ici avec lui. Miroir de `ETATS_SUIVI_ACTUALITE`
+//: (`api/app/utils/suivi_actualite.py`) ; ses règles : `$lib/suivi-actualite`.
+export const ETATS_SUIVI_ACTUALITE: readonly string[] = ['ouvert', 'résolu', 'annulé'];
+
 //: Options d'un `<select>` ou d'une rangée de boutons — pastille comprise.
 export const STATUT_TICKET_OPTIONS = STATUTS_TICKET.map((s) => ({
 	value: s.value,
@@ -319,6 +324,7 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 	urgente: boolean;
 	brouillon: boolean;
 	suiviKanban: boolean;
+	suiviActualite: boolean;
 } {
 	return {
 		epingle: ticket?.epingle ?? false,
@@ -330,6 +336,8 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 		//  et qu'une seconde charge utile serait une seconde occasion d'oublier
 		//  un champ (#833, et le défaut du 31/08 sur cinq écrans).
 		suiviKanban: ticket?.suivi_kanban ?? false,
+		//  La case « Activer le suivi » d'une actualité (10/10/2026), par le même pont.
+		suiviActualite: !!ticket?.suivi_actualite,
 	};
 }
 
@@ -362,6 +370,7 @@ export function optionsVersTicket(options: {
 	urgente: boolean;
 	brouillon: boolean;
 	suiviKanban: boolean;
+	suiviActualite?: boolean;
 	//  Ce que le CONSEIL pose dans une Suite (#1207) — Quand, Intervenant,
 	//  Équipement : `SectionsSuiteConseil` l'écrit ici, et il voyage par ce même
 	//  pont plutôt que par une variable de plus dans chaque carte.
@@ -372,6 +381,8 @@ export function optionsVersTicket(options: {
 		urgente: options.urgente,
 		confidentiel: options.brouillon,
 		suivi_kanban: options.suiviKanban,
+		//  Absente : le corps n'en dit rien, l'actualité garde son suivi.
+		suivre_actualite: options.suiviActualite,
 		...(options.planification ?? {}),
 	};
 }

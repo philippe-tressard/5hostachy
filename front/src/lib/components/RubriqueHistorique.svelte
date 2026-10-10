@@ -192,7 +192,12 @@
 {/if}
 
 {#if avecFiltre}
-	<FiltreFil bind:valeur={filtre} avancees={AVANCEES} types={triees.map((e) => e.type)} />
+	<FiltreFil
+		bind:valeur={filtre}
+		compte={filtrees.length}
+		avancees={AVANCEES}
+		types={triees.map((e) => e.type)}
+	/>
 {/if}
 
 {#if filtrees.length === 0}

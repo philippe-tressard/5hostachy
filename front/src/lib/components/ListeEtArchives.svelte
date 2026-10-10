@@ -60,7 +60,7 @@
 -->
 <script lang="ts" generics="T extends { archivee?: boolean }">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
-	import { TITRE_ARCHIVES } from '$lib/archives';
+	import { TITRE_ARCHIVES, enCours } from '$lib/archives';
 
 	/** La liste complète, courants et archivés mêlés, déjà triée par l'appelant. */
 	export let liste: T[] = [];
@@ -72,7 +72,7 @@
 	 *   ajustement. Formulation tranchée le 18/08/2026 sur les annonces. */
 	export let messageVideCourant = '';
 
-	$: courants = (liste ?? []).filter((x) => !x.archivee);
+	$: courants = enCours(liste);
 	$: archives = (liste ?? []).filter((x) => x.archivee);
 </script>
 

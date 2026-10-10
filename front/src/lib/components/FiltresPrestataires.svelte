@@ -23,6 +23,8 @@
 	import { FILTRES_CONTRAT, TYPES_PRESTATAIRE, type FiltresPrestataires } from '$lib/prestataires';
 
 	export let filtres: FiltresPrestataires;
+	/** Combien l'annuaire en montre — porté par la pastille retenue de chaque rangée. */
+	export let affiches: number | null = null;
 </script>
 
 <div class="filters filters--groupes filtres-prestataires">
@@ -30,6 +32,7 @@
 		options={TYPES_PRESTATAIRE}
 		bind:valeur={filtres.type}
 		avecDetail
+		compte={affiches}
 		libelle="Filtrer par type de prestataire"
 	/>
 	<span class="filtre-saut"></span>
@@ -37,6 +40,7 @@
 	<ChoixPastilles
 		options={FILTRES_CONTRAT}
 		bind:valeur={filtres.contrat}
+		compte={affiches}
 		libelle="Filtrer par contrat"
 	/>
 	<ChampRecherche

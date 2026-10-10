@@ -340,6 +340,7 @@
 		options={TYPES}
 		bind:valeur={filtreType}
 		tous="Tous"
+		compte={filtrees.length}
 		libelle="Filtrer par type d’accès"
 	/>
 

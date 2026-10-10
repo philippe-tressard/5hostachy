@@ -1,6 +1,7 @@
 <!--
-  FiltresAffaires.svelte — la barre de filtres de la page Affaires : Nature,
-  Suivi, puis la RECHERCHE libre.
+  FiltresAffaires.svelte — la barre de filtres de la page Affaires : la
+  RECHERCHE libre, puis Nature et Suivi (dans cet ordre depuis la maquette B du
+  10/10/2026, alignés sur la gouttière des cartes).
 
   Sortie de la page le 23/09/2026 (variante A arbitrée à l'écran) : la page
   était à son plafond de 500 lignes, et la barre y portait déjà son propre
@@ -18,23 +19,25 @@
   Archives ») ; il retombe donc à faux quand la recherche s'efface, sinon la
   recherche suivante inclurait les Archives sans que rien ne le dise.
 
-  🔢 Chaque pastille porte son NOMBRE (10/10/2026, maquette B arbitrée à
-  l'écran parmi cinq) : ce que donnerait ce choix, les autres filtres et la
-  recherche retenus — `comptesParFiltre`, qui passe par `filtrerAffaires`. La
-  vignette est `Compte`, celle des Archives. Le compte de la pastille retenue
-  est donc celui de la liste : le bilan de recherche le lit au même endroit.
+  🔢 La pastille RETENUE de chaque rangée dit combien la liste montre
+  (10/10/2026, maquette J — le standard de `ChoixPastilles.compte`). Le nombre
+  vient de la PAGE, qui tient la liste : c'est sa longueur, pas un recalcul
+  qui pourrait diverger. Le bilan de recherche le lit au même endroit.
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import ChampRecherche from '$lib/components/ChampRecherche.svelte';
 	import { OPTIONS_FILTRE_NATURE } from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
-	import { archiveesTrouvees, comptesParFiltre, type EtatRecherche } from '$lib/recherche-affaires';
+	import { archiveesTrouvees, type EtatRecherche } from '$lib/recherche-affaires';
 
 	/** Les états présents dans la liste — calculés par la page, qui la connaît. */
 	export let optionsStatut: { value: string; label: string; statuts: readonly string[] }[] = [];
-	/** Toutes les affaires chargées : les comptes se calculent dessus. */
+	/** Toutes les affaires chargées : les archivées trouvées se comptent dessus. */
 	export let tickets: Ticket[] = [];
+	/** Combien la liste en montre — porté par la pastille retenue de chaque
+	 *  rangée, et lu par le bilan de recherche. */
+	export let affichees = 0;
 	export let nature = '';
 	export let statut = '';
 	export let recherche = '';
@@ -46,21 +49,6 @@
 
 	$: if (!recherche.trim()) inclureArchives = false;
 
-	$: criteres = { resultats: etat.resultats, inclureArchives, statut, nature, optionsStatut };
-	$: comptesNature = comptesParFiltre(
-		tickets,
-		criteres,
-		'nature',
-		OPTIONS_FILTRE_NATURE.map((o) => o.val),
-	);
-	$: comptesStatut = comptesParFiltre(
-		tickets,
-		criteres,
-		'statut',
-		optionsStatut.map((o) => o.value),
-	);
-	/** Combien la liste en montre — le compte de la nature retenue. */
-	$: affichees = comptesNature[nature] ?? 0;
 	/** Combien d'archivées la recherche a trouvées, et que la liste tait. */
 	$: archivees = archiveesTrouvees(tickets, etat.resultats);
 </script>
@@ -77,34 +65,34 @@
       se perdait à chaque recopie.
       Chaque rangée porte son libellé DEVANT (23/09/2026, variante A arbitrée à
       l'écran) : « Nature » et « Suivi » se confondaient ; la recherche a sa ligne. -->
-<div class="filters filters--groupes">
-	<ChoixPastilles
-		options={OPTIONS_FILTRE_NATURE.map((o) => ({ ...o, compte: comptesNature[o.val] }))}
-		bind:valeur={nature}
-		tous="Tous"
-		compteTous={comptesNature['']}
-		libelle="Nature"
-		libelleDevant
-	/>
-	<span class="filter-sep"></span>
-	<ChoixPastilles
-		options={optionsStatut.map((s) => ({
-			val: s.value,
-			label: s.label,
-			compte: comptesStatut[s.value],
-		}))}
-		bind:valeur={statut}
-		tous="Tous"
-		compteTous={comptesStatut['']}
-		libelle="Suivi"
-		libelleDevant
-	/>
-	<span class="filtre-saut"></span>
+<!--  🗂️ ALIGNÉES SUR LA GOUTTIÈRE (maquette B, 10/10/2026) : les libellés tiennent
+      dans une colonne de la largeur de la gouttière des cartes, les champs
+      commencent là où commence le contenu d'une carte — une seule grille du haut
+      au bas de la page. La recherche passe EN TÊTE : on cherche avant de trier.
+      Les deux composants s'y fondent (`display: contents`) ; leur balisage et
+      leur accessibilité ne changent pas. -->
+<div class="filtres-gouttiere">
 	<ChampRecherche
 		id="recherche-affaires"
 		bind:valeur={recherche}
 		placeholder="Un mot, un nom, un n° d'affaire…"
 		aide="Cherche partout : n°, titre, description, catégorie, lieu, auteur, prestataire, équipement, suites, messages et pièces jointes — sans tenir compte des accents ni des majuscules."
+	/>
+	<ChoixPastilles
+		options={OPTIONS_FILTRE_NATURE}
+		bind:valeur={nature}
+		tous="Tous"
+		compte={affichees}
+		libelle="Nature"
+		libelleDevant
+	/>
+	<ChoixPastilles
+		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
+		bind:valeur={statut}
+		tous="Tous"
+		compte={affichees}
+		libelle="Suivi"
+		libelleDevant
 	/>
 </div>
 
@@ -134,6 +122,51 @@
 {/if}
 
 <style>
+	/*  La colonne des libellés : la gouttière ET le liseré gauche de la carte
+	    (4 px, `.carte-liste`), pour que les champs partent du même bord que le
+	    contenu des cartes. Au-dessous de 768 px, une colonne : libellé au-dessus. */
+	.filtres-gouttiere {
+		display: grid;
+		grid-template-columns: calc(var(--largeur-gouttiere) + 4px) minmax(0, 1fr);
+		align-items: center;
+		gap: 0.6rem 0;
+		margin-bottom: 1.25rem;
+	}
+	.filtres-gouttiere > :global(.champ-recherche),
+	.filtres-gouttiere > :global(.choix-libelle-devant) {
+		display: contents;
+	}
+	/*  Plus petits que les libellés de formulaire, et c'est voulu : ils tiennent
+	    dans la gouttière (« RECHERCHE » est le plus long), et ils nomment des
+	    réglages, pas des champs à remplir. `e2e/gouttiere-nature` mesure qu'ils
+	    y tiennent. */
+	.filtres-gouttiere :global(.libelle-devant) {
+		margin: 0;
+		padding-right: 0.5rem;
+		font-size: var(--fs-2xs);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+	}
+	.filtres-gouttiere :global(.recherche-saisie) {
+		max-width: 52rem;
+	}
+	.filtres-gouttiere :global(.aide) {
+		grid-column: 2;
+		margin: -0.3rem 0 0.2rem;
+	}
+	@media (max-width: 767px) {
+		.filtres-gouttiere {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0.3rem 0;
+		}
+		.filtres-gouttiere :global(.aide) {
+			grid-column: 1;
+		}
+		.filtres-gouttiere :global(.libelle-devant) {
+			margin-top: 0.5rem;
+		}
+	}
 	.bilan-recherche {
 		display: flex;
 		flex-wrap: wrap;

@@ -316,6 +316,11 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     epingle: bool = False
     #  Paraît-il au kanban ? SI, jamais OÙ — `utils/kanban_tickets.py` (#833).
     suivi_kanban: bool = False
+    #  🔁 Le suivi d'une ACTUALITÉ (10/10/2026) : `None` = sans suivi ; sinon
+    #  « ouvert », « résolu » ou « annulé ». Un REPÈRE, distinct de `statut` qui
+    #  reste `publie` : l'actualité sort ainsi, par construction, du kanban, des
+    #  relances et des compteurs. Règles : `utils/suivi_actualite` (migration 0274).
+    suivi_actualite: Optional[str] = None
     #  Rapatriées de `Publication` (#1091, migration 0207) : le public visé
     #  (JSON), l'Accès « Réservé au périmètre » (#1096), l'archivage manuel.
     public_cible: Optional[str] = None

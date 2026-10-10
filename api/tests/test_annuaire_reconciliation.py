@@ -333,3 +333,6 @@ def test_le_fil_n_annonce_que_l_arrivee_et_porte_la_civilite(session):
     assert [c.titre for c in cartes] == ["Mr LEROY"], (
         "le fil doit n'annoncer que le membre arrivé, civilité comprise"
     )
+    #  Une pastille « Syndic » se lisait « visible du syndic seulement »
+    #  (10/10/2026) : la carte est à tous, et sa ligne dit déjà l'organe.
+    assert cartes[0].badges == [], "pas de pastille de rôle sur une carte d'annuaire"

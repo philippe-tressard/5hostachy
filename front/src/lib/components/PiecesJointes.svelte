@@ -322,7 +322,7 @@
 			border-radius: 50%;
 			background: rgba(0, 0, 0, 0.5);
 			color: var(--color-surface);
-			font-size: 1.6rem;
+			font-size: var(--fs-chiffre);
 			line-height: 1;
 			cursor: pointer;
 			opacity: 0;

@@ -44,3 +44,13 @@ services:
     build: !reset null
     image: ghcr.io/philippe-tressard/coprofirst-whatsapp-bridge:${COPROFIRST_VERSION:?COPROFIRST_VERSION manquante dans .env}
     pull_policy: missing
+
+  #  PostgreSQL, s'il est allumé (`COMPOSE_PROFILES=postgresql`) : l'image
+  #  officielle, pas une image de la CI. Une réplique n'a pas de second nœud —
+  #  ni réplication, ni port sur le réseau local, ni le pg_hba du maître (qui
+  #  nomme ses deux RPi), ni son script de rôle de réplication.
+  postgres:
+    volumes: !override
+      - pg_data:/var/lib/postgresql/data
+      - ./deploiement/standard/postgresql/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    ports: !reset []

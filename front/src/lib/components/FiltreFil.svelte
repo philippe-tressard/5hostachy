@@ -25,6 +25,8 @@
 	export let types: readonly string[] = [];
 	/** `'tout'` ou `'avancees'` — lié par l'appelant, qui filtre sa liste. */
 	export let valeur = 'tout';
+	/** Combien d'entrées le fil montre — porté par la pastille retenue. */
+	export let compte: number | null = null;
 
 	$: utile = types.some((t) => avancees.includes(t)) && types.some((t) => !avancees.includes(t));
 </script>
@@ -34,6 +36,7 @@
 		<ChoixPastilles
 			bind:valeur
 			tous={false}
+			{compte}
 			libelle="Filtrer le fil"
 			options={[
 				{ val: 'tout', label: 'Tout' },

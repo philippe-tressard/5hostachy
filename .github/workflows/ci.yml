@@ -576,6 +576,7 @@ jobs:
           # La mise à jour nocturne d'une réplique (#1756) : quelle version, et
           # revenir ou restaurer après une santé KO.
           bash deploiement/standard/mise-a-jour.sh  --selftest
+          bash scripts/ci/essai-mise-a-jour.sh      --selftest
           # Le jeton du tunnel : l'identifiant n'est pas un jeton (#1318, 25/09/2026).
           bash scripts/lib/lib-jeton-tunnel.sh      --selftest
           bash scripts/exploitation/changer-jeton-tunnel.sh --selftest
@@ -2053,6 +2054,13 @@ jobs:
       - name: Vignettes de compte rendues par un seul composant
         working-directory: front
         run: npm run lint:vignette-compte
+
+      # Une rangée de pastilles qui filtre une liste dit combien elle montre, sur
+      # sa pastille retenue seulement (10/10/2026, maquette J) : la prop `compte`
+      # oubliée ne casse rien, la rangée part simplement sans son nombre.
+      - name: Rangées de filtres avec leur compte
+        working-directory: front
+        run: npm run lint:compte-filtres
 
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La

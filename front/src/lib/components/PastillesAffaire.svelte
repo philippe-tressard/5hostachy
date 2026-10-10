@@ -37,11 +37,11 @@
 		STATUT_TICKET_LABELS,
 		categorieTicketEmoji,
 		categorieTicketLabel,
-		estActualite,
 		optionsEnBadge,
 		ticketUrgent,
 	} from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
+	import { etatAffiche } from '$lib/suivi-actualite';
 
 	/** L'affaire — une carte la passe entière, le fil ses seuls champs de ligne. */
 	export let affaire: Ticket;
@@ -51,31 +51,64 @@
 	export let dansLeFil = false;
 
 	$: marqueurs = optionsEnBadge(affaire).filter((o) => !(dansLeFil && o.cle === 'epingle'));
+	//  L'état d'une affaire ; celui d'une actualité seulement si elle est suivie.
+	$: etat = etatAffiche(affaire);
 </script>
 
-<span class="pa-cat" title={categorieTicketLabel(affaire.categorie)}
-	>{categorieTicketEmoji(affaire.categorie)}</span
->
-{#if !estActualite(affaire)}
-	<span class="badge {STATUT_TICKET_BADGE[affaire.statut] ?? 'badge-gray'}">
-		{STATUT_TICKET_LABELS[affaire.statut] ?? affaire.statut}
-	</span>
-{/if}
-<BadgePerimetre perimetre={affaire.perimetre_cible} />
-<PastilleLecture ticket={affaire} />
-{#if ticketUrgent(affaire)}
-	<span class="badge {BADGE_PRIORITE[affaire.priorite] ?? 'badge-gray'}"
-		>{PRIORITE_BREVE[affaire.priorite]}</span
+<!--  `display: contents` : les pastilles restent les enfants de la ligne qui les
+      reçoit (`.ec-tags`, `.flux-badges`) — c'est elle qui les range et les fait
+      passer à la ligne. L'enveloppe ne sert qu'à borner l'habillage ci-dessous. -->
+<span class="pa">
+	<span class="pa-cat" title={categorieTicketLabel(affaire.categorie)}
+		>{categorieTicketEmoji(affaire.categorie)}</span
 	>
-{/if}
-{#each marqueurs as opt (opt.cle)}
-	<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
-{/each}
-<span>#{affaire.numero}</span>
-<AuteurCarte nom={auteur} />
-<MarqueIA assiste={affaire.assiste_ia} />
+	{#if etat}
+		<span class="badge {STATUT_TICKET_BADGE[etat] ?? 'badge-gray'}">
+			{STATUT_TICKET_LABELS[etat] ?? etat}
+		</span>
+	{/if}
+	<BadgePerimetre perimetre={affaire.perimetre_cible} />
+	<PastilleLecture ticket={affaire} />
+	{#if ticketUrgent(affaire)}
+		<span class="badge {BADGE_PRIORITE[affaire.priorite] ?? 'badge-gray'}"
+			>{PRIORITE_BREVE[affaire.priorite]}</span
+		>
+	{/if}
+	{#each marqueurs as opt (opt.cle)}
+		<span class="badge badge-gray" title={opt.aide}>{opt.glyphe} {opt.etat}</span>
+	{/each}
+	<span>#{affaire.numero}</span>
+	<AuteurCarte nom={auteur} />
+	<MarqueIA assiste={affaire.assiste_ia} />
+</span>
 
 <style>
+	.pa {
+		display: contents;
+	}
+	/*  Les pastilles ne se compriment pas — la règle de `.ec-tags`, qui ne les
+	    atteint plus à travers l'enveloppe. */
+	.pa > :global(*) {
+		flex-shrink: 0;
+	}
+	/*  🔴 UN HABILLAGE, et la couleur seulement où elle DISTINGUE (maquette B,
+	    10/10/2026 : « visuellement brouillon »). La ligne portait cinq
+	    habillages — fond jaune, gris, contour, rose, texte nu — et la couleur
+	    n'y hiérarchisait plus rien. Désormais : des CAPSULES (coins de 6 px, et
+	    non la pilule), NEUTRES sur le pierre de la charte pour ce qui décrit
+	    sans alerter — périmètre, marqueurs ; seuls l'ÉTAT, « qui la lit » et
+	    l'URGENCE gardent leur teinte, parce qu'ils changent d'une affaire à
+	    l'autre et qu'on les cherche. Le numéro, l'auteur et ✨ restent du texte.
+	    Ici et non sur la carte : le fil d'accueil rend cette ligne à l'identique
+	    (arbitrage n° 13), il prend l'habillage avec elle. */
+	.pa :global(.badge) {
+		border-radius: 0.375rem;
+	}
+	.pa :global(.badge-gray) {
+		background: var(--color-bg);
+		color: var(--color-text-muted);
+		font-weight: 500;
+	}
 	.pa-cat {
 		flex-shrink: 0;
 		font-size: var(--fs-lg);

@@ -19,6 +19,7 @@ from app.utils.nature_affaire import (
 from app.utils.perimetres import perimetre_cible_json
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
+from app.utils.suivi_actualite import normaliser_suivi
 
 from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import (
@@ -196,6 +197,7 @@ def create_ticket(
     ticket.suivi_kanban = suivi_par_defaut(body.categorie)
     if not bug:  # un bogue n'a pas de mise en avant (#1191)
         appliquer_options(ticket, body, est_cs=est_cs)
+    normaliser_suivi(ticket)  # la case ne vaut que pour une actualité
     appliquer_intervenant(ticket, body, session, est_cs=est_cs)
 
     #  🔴 UNE ACTUALITÉ DIFFUSE COMME UNE ACTUALITÉ (#1091, lot 4) : son module

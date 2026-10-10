@@ -1,9 +1,15 @@
 """Quelles affaires se relancent auprès du syndic — la règle, écrite une fois.
 
-**Toutes, sauf les résolues, les annulées, les supprimées et les archivées — sans
-exception** (arbitré par l'utilisateur le 10/10/2026). La catégorie « bug » et
-le marquage « non relançable » en écartaient d'autres : ils ne comptent plus, et
-le geste a quitté l'écran.
+**Toutes, sauf les résolues, les annulées, les supprimées et les archivées**
+(arbitré par l'utilisateur le 10/10/2026). La catégorie « bug » et le marquage
+« non relançable » en écartaient d'autres : ils ne comptent plus, et le geste a
+quitté l'écran.
+
+🔧 **Une exception, une seule, arbitrée le même jour** : l'**entretien
+périodique** — le passage d'un prestataire sous contrat ou à récurrence
+(`utils/entretien_periodique`). Il ne se relance pas auprès du syndic : il se
+constate, dans la vue « Entretien périodique » du reporting. Un Entretien ouvert
+à la main, sans contrat ni récurrence, reste à relancer.
 
 Elle était écrite deux fois : dans la liste de l'Espace CS (Reporting → Relance
 syndic) et dans le compteur « N affaires syndic à relancer » du tableau de bord,
@@ -17,10 +23,12 @@ Une affaire SUPPRIMÉE n'existe plus en base : aucune requête ne la ramène.
 
 from __future__ import annotations
 
+from sqlalchemy import not_
 from sqlmodel import Session, col, select
 
 from app.models.core import STATUTS_TICKET_ACTIFS, ConfigSite, Ticket
 from app.utils.affaire_absorbee import pas_absorbee
+from app.utils.entretien_periodique import condition_periodique
 
 #: Délai par défaut, en jours, sans avancée avant qu'une affaire soit éligible.
 DELAI_DEFAUT_J = 30
@@ -42,6 +50,7 @@ def conditions_relancable() -> tuple:
         col(Ticket.statut).in_(STATUTS_TICKET_ACTIFS),
         ~col(Ticket.archive_manuel),
         pas_absorbee(),
+        not_(condition_periodique()),
     )
 
 

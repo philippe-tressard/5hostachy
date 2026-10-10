@@ -158,7 +158,7 @@
 	}
 </script>
 
-<FiltresPrestataires bind:filtres />
+<FiltresPrestataires bind:filtres affiches={filteredPrests.length} />
 
 <!--  🔴 La CRÉATION seulement. Corriger un prestataire ouvre le formulaire DANS
       sa carte, à la place de son corps — le motif des tickets, appliqué aux

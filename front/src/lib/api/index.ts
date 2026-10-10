@@ -23,6 +23,7 @@ import type {
 	TransfertVerse,
 } from './types';
 import type { ExportTelemetrie } from './telemetrie';
+import type { EntretienPeriodiqueResponse } from './prestataires';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
@@ -309,6 +310,10 @@ export const tickets = {
 		api.get<{ reponses: ReponseRelance[] }>('/tickets/relance-syndic/reponses'),
 	envoiRelance: (ticket_ids: number[]) =>
 		api.post<{ sent: number; relance_to: string }>('/tickets/relance-syndic', { ticket_ids }),
+	//  Les visites périodiques de l'exercice, chacune avec son état — elles ont
+	//  quitté la relance syndic (10/10/2026).
+	entretiensPeriodiques: () =>
+		api.get<EntretienPeriodiqueResponse>('/tickets/entretiens-periodiques'),
 	// Pas de `uploadPhoto` : photos et documents passent par `fichiersApi.upload`
 	// AVANT la création, et voyagent dans `photos_urls` / `fichiers_urls`.
 };
