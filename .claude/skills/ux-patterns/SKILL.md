@@ -63,7 +63,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 16 | **Le manuel montre la VRAIE pastille**, phrase au survol recalculée par le site — jamais une couleur propre au manuel | skill `user-manual` |
 | 17 | **Un seul bloc déplié à la fois, partout** (30/09/2026, « sans exception, formulaires compris ») — cartes, années d'archives, colonnes vides du kanban, sections de formulaire, réponses, `<details>`. Deux exceptions arbitrées : une section **modifiée** reste ouverte, une carte **en correction** aussi. Une seule mécanique : `$lib/accordeon` (`basculer`, `membre`, `listeMembre`, et l'écouteur des `<details>` posé par le layout) ; le bloc ouvert voit son **haut ramené à l'écran** quand le repli d'un voisin l'en a fait sortir (`amenerEnVue`, signalé dans Admin › IA : « on se trouve à la fin de la section ouverte ») ; 🔒 `npm run lint:accordeon` refuse un état d'ouverture en `Set`, `e2e/accordeon` éprouve formulaire et `<details>` | `$lib/accordeon` |
 | 18 | **Une rangée de filtres dit combien elle montre — sur la pastille RETENUE seulement** (10/10/2026, maquette J arbitrée à l'écran parmi dix) : le nombre est la longueur de la liste affichée, en vignette `Compte` inversée ; les autres pastilles n'en portent pas. Partout, sans exception — 🔒 `npm run lint:compte-filtres` | §5 |
-| 19 | **La carte d'AFFAIRE a une gouttière** (10/10/2026, maquette B « Gouttière » arbitrée parmi cinq, https://claude.ai/artifact/TUunrVHAwxQGhHgUn9wrGW) : à gauche la **date** (jour en grand) puis la **nature** (ACTU. · CAL. · AFF.), une ligne au-dessus du titre au téléphone ; densité aérée (`EnteteCarte ample`), actions **au trait** (`IconeAction`, posé par `ListeTickets`), dernière ligne en **capsules** dont seuls l'état, « qui la lit » et l'urgence sont teintés. Le n° 4 (« date à droite ») **cède pour elle seule** — les autres cartes du site gardent F1. 🔒 `e2e/gouttiere-nature` | §3 |
+| 19 | **La carte d'AFFAIRE a une gouttière** (10/10/2026, maquette B « Gouttière » arbitrée parmi cinq, https://claude.ai/artifact/TUunrVHAwxQGhHgUn9wrGW) : à gauche la **date** (jour en grand) puis la **nature** (ACTU. · CAL. · AFF.), une ligne au-dessus du titre au téléphone ; densité aérée (`EnteteCarte ample`), actions **au trait** (`IconeAction`, posé par `ListeTickets`), dernière ligne en **capsules** dont seuls l'état, « qui la lit » et l'urgence sont teintés. Le n° 4 (« date à droite ») cède pour elle. 🔴 **Elle est devenue LE STANDARD des pages de liste similaires** (arbitré le soir même, après livraison : *« elle doit devenir un standard pour les autres pages similaires »*) : une page qui liste des objets en cartes s'aligne sur Affaires — au fil de l'eau, une page à la fois, constatée à l'écran ; F1 ne vaut plus que pour une page pas encore migrée. 🔒 `e2e/gouttiere-nature` | §3 |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
@@ -818,8 +818,27 @@ l'ouvre, pas de qui l'a envoyée.
 ### 🗂️ La carte d'AFFAIRE — gouttière datée (maquette B, 10/10/2026)
 
 Demandé : une liste des affaires « plus premium et aérée, sans perdre aucune
-information ». Arbitré à l'écran parmi cinq maquettes, **pour les affaires seulement**
-(Liste et Archives) — les autres cartes du site gardent F1 :
+information ». Arbitré à l'écran parmi cinq maquettes, d'abord **pour les affaires
+seulement** (Liste et Archives).
+
+🔴 **Renversé le soir même (10/10/2026), après livraison et vérification à l'écran** :
+*« mémorise l'UX de la page Affaires : elle doit devenir un standard pour les autres
+pages similaires »*. La page Affaires est la **référence** de toute page qui liste des
+objets en cartes, avec recherche et filtres — Communauté (annonces, idées, sondages),
+Prestataires & contrats, Espace CS, Documents… :
+
+| Ce qui se reprend | La forme d'Affaires |
+|---|---|
+| la gouttière | la date de l'objet, puis ce qui le **classe** (nature, type, catégorie) — ce que l'objet n'a pas ne s'invente pas, la proposition le dit |
+| les réglages | recherche en tête, filtres dessous, libellés alignés sur la gouttière (`--largeur-gouttiere`) ; compteur sur la pastille retenue seule (§5) |
+| la carte | `EnteteCarte ample`, actions au trait (`IconeAction`), une seule date |
+| la dernière ligne | capsules neutres pour ce qui décrit, teintées pour l'état et « qui la lit » |
+
+⚠️ **Comment** : au fil de l'eau, quand un lot touche la page, sans attendre qu'on le
+redemande — mais **une page à la fois, constatée à l'écran avant la suivante** (R5).
+Les briques sont à **généraliser**, pas à recopier : `GouttiereAffaire` et
+`FiltresAffaires` portent le nom de l'affaire et devront prendre celui de la notion
+au premier écran migré. Ce qui suit décrit la référence telle qu'elle est livrée :
 
 - `GouttiereAffaire` : la **date** (`mis_a_jour_le`, sinon `cree_le`, découpée par
   `partiesDate`) puis la **nature** (`natureDe`, pictogramme `NATURES.icone`). Largeur :
@@ -850,7 +869,7 @@ auteur sans ✍️, lecteurs et ✨ absents du fil…).
 | # | Pastille | Forme |
 |---|---|---|
 | 1 | catégorie | **emoji seul**, libellé au survol |
-| 2 | état | badge coloré — **absent sur une actualité** (pas de suivi) |
+| 2 | état | badge coloré — **absent sur une actualité sans suivi** ; le suivi optionnel d'une actualité (Ouvert · Résolu · Annulé, 10/10/2026) s'y montre (`etatAffiche`) |
 | 3 | périmètre | `BadgePerimetre` (🔹, tu quand il vaut le défaut) |
 | 4 | qui la lit | `PastilleLecture` (bleue, tue quand tout le monde lit) |
 | 5 | urgence | « ⚡ Urgente », **orange** — le glyphe vient de `GLYPHE_URGENCE` |

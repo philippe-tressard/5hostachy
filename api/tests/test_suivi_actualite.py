@@ -82,6 +82,45 @@ def test_une_affaire_suivie_n_a_pas_de_suivi_d_actualite(session):
     assert lu.suivi_actualite is None and lu.statut == "ouvert"
 
 
+# ── L'état choisi au formulaire, dès l'ouverture (10/10/2026) ─────────────
+
+
+def test_une_actualite_s_ouvre_directement_resolue(session):
+    """« La résolution est parfois rapide et l'ouverture se fait directement en l'état résolu. »"""
+    cs = _compte(session, role=CS)
+    lu = _actualite(session, cs, suivre_actualite=True, suivi_actualite="résolu")
+    assert lu.suivi_actualite == "résolu"
+    assert session.get(Ticket, lu.id).ferme_le is not None
+    #  Sans la case, un état ne pose rien : il n'y a pas de suivi à qualifier.
+    assert _actualite(session, cs, suivi_actualite="résolu").suivi_actualite is None
+
+
+def test_l_etat_se_corrige_en_modification_et_le_fil_le_dit(session):
+    cs = _compte(session, role=CS)
+    actu = _actualite(session, cs, suivre_actualite=True)
+    lu = _corriger(session, cs, actu.id, suivi_actualite="annulé")
+    assert lu.suivi_actualite == "annulé"
+    trace = session.exec(select(TicketEvolution).where(TicketEvolution.ticket_id == actu.id)).one()
+    #  Une CORRECTION, pas une transition : pas de jalon de suivi (#431).
+    assert trace.type == "commentaire" and "Suivi : Ouvert → Annulé" in trace.contenu
+    #  Rouvrir efface la clôture.
+    _corriger(session, cs, actu.id, suivi_actualite="ouvert")
+    assert session.get(Ticket, actu.id).ferme_le is None
+
+
+def test_l_etat_saisi_hors_des_trois_est_refuse_et_le_resident_ignore(session):
+    resident = _compte(session)
+    admin = _compte(session, role=RoleUtilisateur.admin)
+    cs = _compte(session, role=CS)
+    with pytest.raises(HTTPException) as refus:
+        _actualite(session, cs, suivre_actualite=True, suivi_actualite="en_cours")
+    assert refus.value.status_code == 422
+    affaire = _creer(session, resident, categorie="panne")
+    _corriger(session, admin, affaire.id, categorie="actualite", suivre_actualite=True)
+    _corriger(session, resident, affaire.id, suivi_actualite="résolu")
+    assert session.get(Ticket, affaire.id).suivi_actualite == "ouvert"
+
+
 # ── L'état : par une Suite, trois valeurs, le conseil seul ────────────────
 
 

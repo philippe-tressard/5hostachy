@@ -134,6 +134,8 @@ class TicketCreate(SaisiPourEntree, AssisteIAEntree, ChampsIntervenant):
     #  🔁 La case « Activer le suivi » d'une actualité (10/10/2026) — du conseil seul, comme
     #  le kanban ; elle pose `suivi_actualite` (`utils/suivi_actualite`).
     suivre_actualite: Optional[bool] = None
+    #  …et son ÉTAT, choisi dès l'ouverture : Ouvert, Résolu ou Annulé (10/10/2026).
+    suivi_actualite: Optional[str] = None
     #  Le workflow du ticket est saisissable DÈS la création (16/08/2026) : il
     #  ne se changeait qu'après coup, depuis la carte, alors qu'un membre du CS
     #  qui saisit un ticket déjà traité connaît son étape. Défaut inchangé —
@@ -297,6 +299,7 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     annonce_hall: Optional[bool] = None  # un acte : l'affiche d'une actualité (#1091)
     suivi_kanban: Optional[bool] = None
     suivre_actualite: Optional[bool] = None  # la case du conseil (10/10/2026)
+    suivi_actualite: Optional[str] = None  # …et l'état qu'elle corrige
     #  ⚠️ N'est PAS un champ du ticket : `Ticket` n'a pas cette colonne, à la
     #  différence de `Publication`. C'est un ACTE — « publie ce ticket sur le
     #  groupe, maintenant » — et il ne se relit donc pas. La case repart décochée

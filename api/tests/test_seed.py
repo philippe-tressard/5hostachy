@@ -154,3 +154,30 @@ def test_le_seed_ne_reecrit_pas_ce_qui_a_ete_personnalise(base):
         "Le seed a écrasé un modèle personnalisé : toute modification faite "
         "depuis l'administration serait perdue au prochain démarrage."
     )
+
+
+def test_l_administrateur_initial_se_connecte(caplog):
+    """Une installation NEUVE a un administrateur qui entre (DI-4, 10/10/2026).
+
+    Le compte initial naissait avec `email_verifie=False` : la connexion le
+    refusait (« vérifiez votre adresse »), et `admin@localhost` ne reçoit rien.
+    Le maître n'en souffrait pas — son administrateur date d'avant la règle —,
+    c'est l'essai de bout en bout de la mise à jour d'une réplique qui l'a vu.
+    Ce test passe par la VRAIE route de connexion : une condition ajoutée demain
+    à la connexion, que le compte initial ne remplirait pas, échouerait ici.
+    """
+    import logging
+    import re
+
+    import app.seed as module_seed
+    from tests.aides_http import base_http, client_http
+
+    with base_http() as moteur:
+        with caplog.at_level(logging.WARNING, logger="app.seed"), Session(moteur) as session:
+            module_seed._admin_initial(session)
+            session.commit()
+        trouve = re.search(r"Mot de passe temporaire : (\S+)", caplog.text)
+        assert trouve, "le mot de passe initial n'est plus journalisé"
+        http, _ = client_http(moteur, None)
+        r = http.post("/auth/login", json={"email": "admin@localhost", "password": trouve.group(1)})
+        assert r.status_code == 200, r.text

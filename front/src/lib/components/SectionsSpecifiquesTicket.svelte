@@ -62,18 +62,17 @@
 		brouillon: false,
 		suiviKanban: false,
 		suiviActualite: false,
+		etatSuivi: null as string | null,
 	};
 	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
 	 *   (`$lib/formulaire-affaire`, 23/09/2026) : grisées, pliées, sans champ. */
 	export let inactives: Partial<Record<IdSection, string>> = {};
 	/** L'équipement concerné (#1097) — une valeur de `TypeEquipement`, ou `''`. */
 	export let equipement = '';
-	/** L'état du suivi d'une actualité déjà suivie — `null` sinon (10/10/2026). */
-	export let etatSuivi: string | null = null;
-
 	//  🔁 Une ACTUALITÉ a un suivi OPTIONNEL : une case du conseil, puis ses trois
-	//  états, en lecture — ils se changent par une Suite. Facultatif, il se plie ;
-	//  coché, il se déplie d'office (une valeur autre que le défaut).
+	//  états, choisis dès l'ouverture et corrigés en modification (10/10/2026) —
+	//  une Suite trace ensuite l'avancée au fil. Facultatif, il se plie ; coché, il
+	//  se déplie d'office (une valeur autre que le défaut).
 	$: actualite = estActualite({ categorie });
 	$: suiviCoche = actualite && options.suiviActualite;
 </script>
@@ -166,12 +165,12 @@
 <SectionWorkflow
 	idTitre="ticket-workflow-titre"
 	options={actualite ? (suiviCoche ? SUIVI_ACTUALITE_OPTIONS : []) : STATUT_TICKET_OPTIONS}
-	valeur={actualite ? (suiviCoche ? (etatSuivi ?? ETAT_SUIVI_DEFAUT) : '') : statut}
-	lecture={actualite || !$isCS}
+	valeur={actualite ? (suiviCoche ? (options.etatSuivi ?? ETAT_SUIVI_DEFAUT) : '') : statut}
+	lecture={!$isCS}
 	pliable={actualite ? !suiviCoche : pliageDe(TICKET, 'suivi')}
 	requis={!actualite && requisDe(TICKET, 'suivi')}
 	inactive={inactives.suivi ?? ''}
-	on:choisir={(e) => (statut = e.detail)}
+	on:choisir={(e) => (actualite ? (options.etatSuivi = e.detail) : (statut = e.detail))}
 >
 	{#if actualite}
 		{#if $isCS}

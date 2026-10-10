@@ -12,6 +12,7 @@ de rendu Jinja et de pièces jointes.
 
 from sqlmodel import Session, select
 
+from app import contexte
 from app.config import get_settings
 from app.models.core import ConfigSite
 
@@ -52,7 +53,7 @@ def adresse_expedition(smtp_cfg: dict, genre: str) -> str:
     """
     from app.seed.emails import EXPEDITEUR_AFFAIRE, EXPEDITEUR_REPONSE
 
-    defaut = smtp_cfg.get("smtp_from") or get_settings().mail_from
+    defaut = smtp_cfg.get("smtp_from") or contexte.courante().expediteur
     if genre not in (EXPEDITEUR_REPONSE, EXPEDITEUR_AFFAIRE):
         return defaut
     reponse = (smtp_cfg.get("smtp_from_reponse") or "").strip() or defaut
@@ -143,8 +144,8 @@ def connexion_smtp(smtp_cfg: dict, *, expediteur: str | None = None):
         MAIL_PASSWORD=smtp_cfg.get("smtp_password") or settings.mail_password,
         #  L'expéditeur peut être imposé par l'appelant : c'est l'INTENTION du
         #  modèle qui le décide, pas la connexion (voir `adresse_expedition`).
-        MAIL_FROM=expediteur or smtp_cfg.get("smtp_from") or settings.mail_from,
-        MAIL_FROM_NAME=smtp_cfg.get("smtp_from_name") or settings.mail_from_name,
+        MAIL_FROM=expediteur or smtp_cfg.get("smtp_from") or contexte.courante().expediteur,
+        MAIL_FROM_NAME=smtp_cfg.get("smtp_from_name") or contexte.courante().nom_expediteur,
         MAIL_PORT=int(smtp_cfg.get("smtp_port") or settings.mail_port),
         MAIL_SERVER=smtp_cfg.get("smtp_server") or settings.mail_server,
         MAIL_STARTTLS=starttls,

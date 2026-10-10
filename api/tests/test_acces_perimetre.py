@@ -66,13 +66,13 @@ def sans_arbre():
 
     Le vider ici rend la condition visible au lieu de la supposer.
     """
-    from app.database import SessionLocal
+    from app import contexte
     from app.models.perimetre import Perimetre
     from app.utils.perimetres import invalider_cache
 
     invalider_cache()
     try:
-        with SessionLocal() as s:
+        with contexte.nouvelle_session() as s:
             for ligne in sorted(s.exec(select(Perimetre)).all(), key=lambda n: -n.id):
                 s.delete(ligne)
             s.commit()

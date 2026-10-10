@@ -36,9 +36,10 @@ ROUTE = "/admin/maintenance/purges"
 @pytest.fixture(name="moteur")
 def moteur_fixture(monkeypatch):
     moteur = moteur_memoire(partage=True)
-    #  `purger` lit le moteur du module : c'est lui qu'on remplace, pas une
-    #  dépendance FastAPI — la fonction sert aussi hors requête.
-    monkeypatch.setattr("app.utils.maintenance.engine", moteur)
+    #  `purger` demande le moteur au contexte de copropriété (#1744), qui le lit
+    #  dans `app.database` : c'est lui qu'on remplace, pas une dépendance
+    #  FastAPI — la fonction sert aussi hors requête.
+    monkeypatch.setattr("app.database.engine", moteur)
     monkeypatch.setattr(get_settings(), "maintenance_key", CLE)
     return moteur
 

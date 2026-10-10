@@ -21,13 +21,13 @@ import unicodedata
 import pathlib
 import uuid
 
-from app.config import get_settings
+from app import contexte
 from dataclasses import dataclass
 
 #: Racine réelle des fichiers téléversés. Résolue une fois : c'est elle qui borne
 #: `chemins_locaux`, donc elle ne doit pas dépendre d'un lien symbolique traversé
 #: au moment de l'appel.
-RACINE_UPLOADS = os.path.realpath(get_settings().uploads_dir)
+RACINE_UPLOADS = os.path.realpath(contexte.courante().racine_fichiers)
 
 #: Sous-répertoire des fichiers qui ne doivent JAMAIS être servis en statique.
 #:
@@ -47,7 +47,7 @@ RACINE_UPLOADS = os.path.realpath(get_settings().uploads_dir)
 #: Le blocage est posé dans le `Caddyfile`, sur le modèle de `/uploads/annonces-hall/*`
 #: qui applique déjà cette règle. `api/tests/test_uploads_prives.py` vérifie que la
 #: directive existe **et** qu'elle précède le service statique.
-REPERTOIRE_PRIVE = os.path.join(get_settings().uploads_dir, "prive")
+REPERTOIRE_PRIVE = os.path.join(contexte.courante().racine_fichiers, "prive")
 
 # Assez long pour rester lisible dans une URL, assez court pour ne pas buter sur
 # la limite de longueur de nom de fichier une fois le préfixe UUID ajouté.

@@ -271,11 +271,11 @@ def envoyer_whatsapp_avec_log(
     lien: str | None = None,
 ) -> None:
     """Envoie un message WhatsApp et crée un log (pour background tasks)."""
-    from app.database import SessionLocal
+    from app import contexte
     from app.models.core import WhatsAppLog
     from app.utils.whatsapp_scheduler import _prune_logs
 
-    session = SessionLocal()
+    session = contexte.nouvelle_session()
     try:
         message = construire_message(
             titre,

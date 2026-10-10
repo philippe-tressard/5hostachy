@@ -36,7 +36,7 @@ from app.utils.horloge import TZ_PARIS
 
 from sqlmodel import Session, select
 
-from app.database import engine
+from app import contexte
 from app.models.core import WhatsAppScheduled, WhatsAppLog, ConfigSite
 from app.utils.services import SERVICE_DIFFUSION, service_actif
 from app.utils.whatsapp import (
@@ -85,7 +85,7 @@ def check_and_send():
     is_last_attempt = (now.hour, now.minute) == (CATCHUP_END_HOUR, CATCHUP_END_MINUTE)
     logger.info("WhatsApp scheduler check at %s", now.strftime("%Y-%m-%d %H:%M"))
 
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         schedules = session.exec(
             select(WhatsAppScheduled).where(WhatsAppScheduled.enabled == True)  # noqa: E712
         ).all()

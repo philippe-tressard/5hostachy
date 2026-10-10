@@ -45,6 +45,6 @@ export function etatsDeLaSuite(t: Suivable, estCS: boolean): { value: string; la
 
 /** L'aide de la case, en création comme en correction. */
 export const AIDE_SUIVI_ACTUALITE =
-	'Elle part en « Ouvert ». Son état se change ensuite par une Suite : Ouvert, Résolu ou ' +
-	'Annulé. Un repère seulement — ni kanban, ni relance. « Annulé » la range aussitôt aux ' +
-	'archives, « Résolu » trente jours après.';
+	'Elle part en « Ouvert », ou dans l’état choisi ci-dessus — « Résolu » si tout est déjà ' +
+	'réglé. Une Suite trace ensuite son avancée au fil. Un repère seulement — ni kanban, ni ' +
+	'relance. « Annulé » la range aussitôt aux archives, « Résolu » trente jours après.';

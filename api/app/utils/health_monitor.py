@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from app.utils.config_site import config_site
 from app.config import get_settings
-from app.database import SessionLocal
+from app import contexte
 from app.utils.dates_fr import datetime_longue
 from app.models.core import (
     ConfigSite,
@@ -309,12 +309,11 @@ def _check_db_integrity() -> list[str]:
     découverte seulement par l'échec du job d'agrégation) au lieu d'attendre
     un signalement utilisateur.
     """
-    from app.database import engine
     from app.dialecte import verifier_integrite
 
     issues: list[str] = []
     try:
-        with engine.connect() as conn:
+        with contexte.moteur().connect() as conn:
             verdict = verifier_integrite(conn)
         if verdict != "ok":
             issues.append(
@@ -471,7 +470,7 @@ def run_health_check() -> None:
     """Job quotidien : vérifie WhatsApp, sauvegardes, disque — alerte si problème."""
     from app.utils.email import get_site_manager_notification_email
 
-    session = SessionLocal()
+    session = contexte.nouvelle_session()
     try:
         issues = collecter_problemes(session)
 

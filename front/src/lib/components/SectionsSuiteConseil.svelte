@@ -49,6 +49,7 @@
 		brouillon: boolean;
 		suiviKanban: boolean;
 		suiviActualite?: boolean;
+		etatSuivi?: string | null;
 		planification?: Record<string, unknown>;
 	};
 

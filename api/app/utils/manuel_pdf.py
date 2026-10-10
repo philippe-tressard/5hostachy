@@ -50,6 +50,7 @@ from pathlib import Path
 
 from sqlmodel import Session
 
+from app import contexte
 from app.utils import manuel_pdf_cache
 from app.utils.config_site import config_site
 from app.utils.liens import base_site, nom_site
@@ -305,7 +306,12 @@ def composer_html(
 #: ⚠️ Le cache en mémoire disparaît à chaque redémarrage, donc à chaque
 #: déploiement. Il est doublé, depuis le 25/09/2026, d'une copie SUR DISQUE :
 #: voir `manuel_pdf_cache` (#1071).
-_CACHE: dict[tuple[str, ...], bytes] = {}
+#:
+#: Un cache par copropriété (#1744, spec §4.5) : le PDF porte son nom, son adresse
+#: et son logo.
+def _cache() -> dict[tuple[str, ...], bytes]:
+    return contexte.etat("manuel_pdf")
+
 
 #: Au-delà, on jette le plus ancien. Deux entrées suffisent (la date change à
 #: minuit) ; la borne existe pour qu'une boucle anormale ne gonfle pas la mémoire
@@ -347,13 +353,14 @@ def generer_manuel_pdf(
         #  Le sous-titre aussi : il se règle dans Admin › Site.
         sous_titre,
     )
-    if cle in _CACHE:
-        return _CACHE[cle]
+    memoire = _cache()
+    if cle in memoire:
+        return memoire[cle]
 
     with _VERROU:
         #  Relu SOUS le verrou : un rendu a pu aboutir pendant l'attente.
-        if cle in _CACHE:
-            return _CACHE[cle]
+        if cle in memoire:
+            return memoire[cle]
         dossier = dossier if dossier is not None else manuel_pdf_cache.dossier_par_defaut()
         pdf = manuel_pdf_cache.lire(cle, dossier)
         if pdf is None:
@@ -368,9 +375,9 @@ def generer_manuel_pdf(
                 )
             )
             manuel_pdf_cache.ecrire(cle, pdf, dossier, garder=_CACHE_MAX)
-        if len(_CACHE) >= _CACHE_MAX:
-            _CACHE.pop(next(iter(_CACHE)))
-        _CACHE[cle] = pdf
+        if len(memoire) >= _CACHE_MAX:
+            memoire.pop(next(iter(memoire)))
+        memoire[cle] = pdf
     return pdf
 
 
@@ -424,6 +431,6 @@ def prechauffer(
         except Exception as exc:  # noqa: BLE001 — au démarrage, aucune panne ne doit remonter
             _logger.warning("Préchauffage du manuel PDF impossible : %s", exc)
             return False
-        _logger.info("Manuel PDF préchauffé (cache garni, %d entrée(s)).", len(_CACHE))
+        _logger.info("Manuel PDF préchauffé (cache garni, %d entrée(s)).", len(_cache()))
         return True
     return False

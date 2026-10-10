@@ -44,7 +44,7 @@ import sqlalchemy as sa
 from sqlalchemy import func, text
 from sqlmodel import Session, delete, select
 
-from app.database import engine
+from app import contexte
 from app.models.core import (
     HistoriqueTelemetrie,
     PresenceMensuelle,
@@ -260,7 +260,7 @@ def _mois_a_agreger(session: Session, now_paris: datetime) -> list[str]:
 
 def _purger(rapport: dict, cle: str, sql: str, **params) -> None:
     try:
-        with engine.connect() as conn:
+        with contexte.moteur().connect() as conn:
             #  Un `datetime` se lie tel quel, jamais son `isoformat()` (#1298).
             result = conn.execute(requete_liee(sql, **params) if params else text(sql))
             conn.commit()
@@ -290,7 +290,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
         "erreurs": [],
     }
 
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         now_utc = horloge.maintenant()
         now_paris = _paris_now()
 
@@ -376,7 +376,7 @@ def run_telemetry_aggregation(entry_id: int | None = None) -> dict:
     # ─── Mise à jour de l'historique ──────────────────────────────────
     duree = round(time.monotonic() - t0, 2)
     if entry_id is not None:
-        with Session(engine) as session:
+        with contexte.nouvelle_session() as session:
             entry = session.get(HistoriqueTelemetrie, entry_id)
             if entry:
                 entry.jours_agreges = rapport["jours_agreges"]
@@ -445,7 +445,7 @@ def derniere_agregation_ou_rejeu(session: Session) -> Optional[datetime]:
 
 def run_telemetry_aggregation_cron() -> dict:
     """Wrapper appelé par le scheduler cron — crée automatiquement une entrée historique."""
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         entry = HistoriqueTelemetrie(declenchee_par=AUTOMATIQUE, noeud=noeud_courant())
         session.add(entry)
         session.commit()

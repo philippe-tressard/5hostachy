@@ -203,6 +203,15 @@ Le détail des patterns est dans `.claude/skills/ux-patterns` et
   c'est voulu : un booléen ajouté à côté ferait une seconde façon de disparaître.
   🔒 `test_archivage_colonnes_booleennes.py` : toute colonne `actif`/`active`/`archivee`
   est couverte par `REGLES` ou déclarée référentiel avec son sens (#1568).
+- **Les ressources d'UNE copropriété se demandent à `app/contexte.py`** (#1744,
+  chantier multi-copropriétés) : `contexte.nouvelle_session()` hors requête (une
+  route prend `get_session`), `contexte.moteur()`, et `contexte.courante()` —
+  `url_base`, `racine_fichiers`, `secret`, `expediteur`, `nom_expediteur`. Jamais
+  `engine`, `SessionLocal` ni `settings.database_url|secret_key|uploads_dir|mail_from`.
+  Un cache ou un quota tenu en mémoire se range dans `contexte.etat("nom")`, jamais
+  dans une variable de module : l'utilisateur n° 12 d'une copropriété n'est pas
+  celui d'une autre. 🔒 `test_contexte_source_unique.py`,
+  `test_etat_module_par_copropriete.py` (`A_INDEXER` vide, plafond zéro).
 - Lire un objet ou rendre 404 : `utils/recuperer.ou_404(session, Modele, id,
   "libellé")` — jamais `session.get` suivi d'un `raise HTTPException(404)`. Les
   404 bruts qui restent sont un **plafond décroissant**, `PLAFOND_404_BRUTS` dans
@@ -681,7 +690,8 @@ Garde-fous contre les classes d'erreurs récurrentes de l'historique GitHub :
   fuiraient d'une copropriété à l'autre dans un même processus (spec §4.5).
   `test_etat_module_par_copropriete.py` les relève sur l'AST ; un état neuf se range
   en base, ou se déclare dans `DU_PROCESSUS` avec sa raison s'il ne porte aucune
-  donnée de copropriété. `A_INDEXER` est une dette qui ne fait que baisser.
+  donnée de copropriété. Un état de copropriété passe par `contexte.etat(nom)`,
+  la seule porte (`PAR_COPROPRIETE`) ; `A_INDEXER` est soldée depuis #1744.
 - 🐘 **La suite passe sur PostgreSQL, et c'est un check REQUIS** (#1747, D4) :
   `tests/aides_base.moteur_memoire` bascule sur PostgreSQL quand `TESTS_BASE_URL`
   est posé — un schéma neuf par test, retiré à sa fin, clés désactivées sauf

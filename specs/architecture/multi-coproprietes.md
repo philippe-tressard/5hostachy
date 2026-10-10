@@ -139,7 +139,8 @@ n° 12 de la copro A lirait le cache de l'utilisateur n° 12 de la copro B.
 - **Recensés le 08/10/2026 par ce contrôle — neuf, et non quatre** comme l'écrivait
   le relevé de la veille, fait à la main. La liste fait foi **dans le test**, et
   ne se recopie pas ici. Deux familles :
-  - **à indexer par copropriété** (lot P2-2) — dont le cache de l'**arbre des
+  - **à indexer par copropriété** (lot P2-2, **soldé le 10/10/2026** : ils
+    vivent dans `contexte.etat(nom)`, la seule porte) — dont le cache de l'**arbre des
     périmètres** et le quota horaire de l'IA par personne, que le relevé à la main
     n'avait pas vus ;
   - **du processus**, sans donnée de copropriété (configuration de la plateforme,
@@ -371,7 +372,7 @@ soumis à accord, lot par lot.
 | Lot | Contenu | Taille | Prérequis | Ticket |
 |---|---|---|---|---|
 | P2-1 | **Contrôle de la mémoire du processus** : tout nouvel état mutable de module est refusé ; les existants sont déclarés, à indexer ou du processus (§4.5). **Livré en v2.119.1** | S | — | #1743 |
-| P2-2 | **Un seul accès aux ressources** d'une copropriété — base, fichiers, secret, expéditeur, services — par un module `contexte` qui lit `settings` tant qu'il n'y a qu'une copro ; garde-fou contre l'accès direct (§4.1, règle 3). Les états « à indexer » de P2-1 s'y soldent | L | P2-1 | #1744 |
+| P2-2 | **Un seul accès aux ressources** d'une copropriété — base, fichiers, secret, expéditeur, services — par un module `contexte` qui lit `settings` tant qu'il n'y a qu'une copro ; garde-fou contre l'accès direct (§4.1, règle 3). Les états « à indexer » de P2-1 s'y soldent. **Livré le 10/10/2026** : `app/contexte.py` — `moteur()`, `nouvelle_session()`, `courante()` (URL de base, racine des fichiers, secret, expéditeur) et `etat(nom)`, le registre des états de processus indexé par la copropriété ; les six états à indexer y sont passés (plafond à zéro) ; 🔒 `test_contexte_source_unique.py` refuse `engine`, `SessionLocal` et les cinq réglages hors du contexte. Les services vivent déjà en base (E1) : ils suivent la base. Laissé exprès aux lots suivants : les racines de fichiers sont lues **une fois, au chargement** du module (P2-6 les résoudra à la requête), et le dossier des sauvegardes reste global (P2-3, §4.9) | L | P2-1 | #1744 |
 | P2-3 | **Tâches planifiées par copropriété** : une enveloppe, un journal par copro, l'échec de l'une ne bloque pas les autres (§4.6) | M | P2-2 | #1745 |
 | P2-4 | **Test d'étanchéité** sur deux copros factices aux identifiants identiques, avec cas zéro et témoin (§5.1, §5.3) | M | P2-2 | #1746 |
 | P2-5 | **CI sur PostgreSQL** (informative, puis requise) ; adhérence à SQLite regroupée dans un module de dialecte ; migration initiale PostgreSQL préparée (§4.3). **Livré en v2.125.0** : la suite est VERTE sur PostgreSQL et le workflow devient un check requis (pilote psycopg, clés au régime de SQLite, migrations historiques non rejouées) ; toute l'adhérence vit dans `app/dialecte.py`, refusée ailleurs sur l'AST — les 39 « fichiers » comptaient la prose, il y en avait 14 ; une base neuve reçoit le schéma d'un coup, marqué à la tête (`utils/schema_initial`, `start.sh`) | M | — | #1747 |

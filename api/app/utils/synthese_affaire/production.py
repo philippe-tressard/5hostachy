@@ -298,14 +298,14 @@ async def envoyer_avis(session: Optional[Session], synthese_id: int) -> bool:
     qui échoue ensuite n'est pas rejoué — mieux vaut un avis manqué, que la
     cloche du conseil rattrape à l'écran, que deux courriels pour un même fait.
     """
-    from app.database import SessionLocal
+    from app import contexte
     from app.utils.config_site import config_site
     from app.utils.destinataires import gestionnaire_puis_cs
     from app.utils.email import send_email_group
     from app.utils.liens import base_site, nom_site
 
     propre = session is None
-    session = session or SessionLocal()
+    session = session or contexte.nouvelle_session()
     try:
         synthese = session.get(SyntheseAffaire, synthese_id)
         if synthese is None or synthese.mail_envoye_le is not None:

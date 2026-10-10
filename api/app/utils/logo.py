@@ -30,7 +30,7 @@ from pathlib import Path
 
 from sqlmodel import Session
 
-from app.config import get_settings
+from app import contexte
 from app.utils.config_site import config_site
 from app.utils.images import carre_png
 from app.utils.liens import base_site
@@ -55,7 +55,7 @@ NEUTRE_PNG = Path(__file__).with_name("logo-neutre.png")
 
 
 def dossier_logo() -> Path:
-    return Path(get_settings().uploads_dir) / DOSSIER
+    return contexte.courante().racine_fichiers / DOSSIER
 
 
 def fichier_logo(session: Session) -> Path | None:

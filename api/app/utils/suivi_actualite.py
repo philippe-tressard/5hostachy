@@ -21,7 +21,7 @@ Arbitré le même jour, sur trois questions :
    comme `suivi_kanban`) ; l'état se change ensuite par une Suite, qui en garde
    la trace au fil — une transition `etat`, comme celle d'une affaire.
 
-⚠️ Ne pas confondre avec 🎯 « Suivre cette actualité », qui en fait une AFFAIRE
+⚠️ Ne pas confondre avec 🎯 « Transformer en affaire », qui en fait une AFFAIRE
 suivie (changement de catégorie, `nature_affaire`) : ici, elle reste une
 actualité, et le suivi n'est qu'un repère.
 
@@ -33,6 +33,7 @@ actualité, et le suivi n'est qu'un repère.
 | l'état que la Suite fait avancer — celui du suivi, ou le statut | `etat_de_la_suite` |
 | cocher ou décocher la case | `poser_suivi` |
 | une affaire suivie n'a pas de suivi d'actualité | `normaliser_suivi` |
+| l'état choisi au formulaire, à la création ou en correction | `poser_etat_saisi` |
 | une Suite peut-elle porter cet état ? | `refuser_etat` |
 | l'état change | `appliquer_etat` |
 """
@@ -97,6 +98,22 @@ def poser_suivi(ticket: Any, actif: bool) -> bool:
     return False
 
 
+def poser_etat_saisi(ticket: Any, etat: Optional[str], *, est_cs: bool) -> None:
+    """L'état choisi au FORMULAIRE — à la création comme en correction (10/10/2026).
+
+    Demandé à l'écran : *« la résolution est parfois rapide et l'ouverture se fait
+    directement en l'état résolu »*. `None` ne dit rien ; un autre que le conseil
+    est ignoré, comme la case qu'il ne voit pas (`OPTIONS_RESERVEES_AU_CS`) ; sans
+    suivi activé, il n'y a pas d'état à poser. Un état hors des trois est refusé.
+    """
+    if etat is None or not est_cs or not est_suivie(ticket):
+        return
+    if etat not in ETATS_SUIVI_ACTUALITE:
+        raise HTTPException(422, "Le suivi d'une actualité est Ouvert, Résolu ou Annulé")
+    if etat != ticket.suivi_actualite:
+        appliquer_etat(ticket, etat, horloge.maintenant())
+
+
 def normaliser_suivi(ticket: Any) -> None:
     """Une affaire suivie n'a pas de suivi d'actualité — effacé si elle en venait."""
     if not est_actualite(ticket) and ticket.suivi_actualite:
@@ -138,6 +155,7 @@ __all__ = [
     "est_suivie",
     "etat_de_la_suite",
     "normaliser_suivi",
+    "poser_etat_saisi",
     "poser_suivi",
     "refuser_etat",
 ]
