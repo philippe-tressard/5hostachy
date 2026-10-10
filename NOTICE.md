@@ -45,8 +45,9 @@ contributeur extérieur n'a versé de code sous l'ancienne licence.
 ## 4. Noms et logo
 
 La licence porte sur le **code**. Elle ne cède aucun droit sur les noms
-**5Hostachy** et **CoproFirst**, ni sur le logo ou l'identité visuelle. Leur
-politique d'usage est en cours de rédaction (ticket #1736).
+**5Hostachy** et **CoproFirst** — ce dernier fait l'objet d'une demande de
+marque (INPI n° 5307183, 09/10/2026). Ce qui est permis et ce qui ne l'est pas,
+pour les noms comme pour le logo : [`MARQUE.md`](MARQUE.md).
 
 ## 5. Contributions
 

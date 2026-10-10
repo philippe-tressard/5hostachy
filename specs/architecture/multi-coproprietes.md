@@ -330,13 +330,15 @@ libre reconnue par l'OSI et la FSF. ⚠️ Ce qui suit n'est pas un avis juridiq
   c'est l'identifiant SPDX à écrire dans `LICENSE`, `REUSE.toml` et les en-têtes.
 - **La marque** porte le nom de la **plateforme**, **CoproFirst** (D9), pas celui
   de la résidence. Une recherche web du 07/10/2026 n'a trouvé aucun produit de ce
-  nom ; elle **ne remplace pas** une recherche d'antériorité (INPI, EUIPO) avant de
-  s'en servir publiquement.
+  nom. **Déposée le 09/10/2026** : demande INPI n° 5307183, marque française
+  **verbale**, classes 9, 36 et 42 ; publication prévue le 30/10/2026, opposition
+  ouverte aux tiers jusqu'au 30/12/2026 (CPI art. L.712-4) — c'est elle qui dira si
+  un droit antérieur s'y oppose. Ni le logo ni « 5Hostachy » ne sont déposés.
 - **Vérifié avant le changement** (08/10/2026) : un seul auteur humain dans tout
   l'historique, aucun contributeur extérieur ; les cinq exceptions « à valider »
   de `docs/licences-tierces.md` analysées compatibles, analyse validée par
   l'auteur (motifs : `scripts/ci/licences_politique.py`).
-- **La politique de marque** reste à écrire : #1736.
+- **La politique de marque** : [`MARQUE.md`](../../MARQUE.md) (#1736, 10/10/2026), à faire relire.
 
 ## 8. Le phasage
 
@@ -346,7 +348,7 @@ elle.
 | Phase | Contenu | Prérequis |
 |---|---|---|
 | 0 | Décisions restantes (§9) | — |
-| 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproFirst, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0). Reste : la politique de marque (#1736) | aucun |
+| 1 | **Mono-copro propre** : services activables (#1718, v2.113.0) ; identité de la copropriété en configuration et nom de la plateforme, CoproFirst, avec le lien vers le source (#1725, v2.114.0) ; consignes de la fiche arrivant administrables (#1727, v2.115.0) ; licence AGPL (#1726, v2.116.0) ; logo de la résidence téléversable (#1728, v2.117.0) ; politique de marque (#1736, `MARQUE.md`, marque déposée le 09/10/2026) | aucun |
 | 2 | **Contexte de copropriété** dans le processus (§4.1, §4.5, §4.6), en production avec **une seule** copro, le test d'étanchéité déjà actif sur deux copros factices. Neuf lots, §8 bis (#1743 à #1751) | phase 1 |
 | 2 bis | **Distribution** (§4.10, §8 ter) : tags et images signées, branche `replica` et promotion, déploiement standard, migrations compatibles sur une version ; le maître tire son image et passe sous PostgreSQL | phase 2 en partie (§8 ter) |
 | 3 | **Première installation CoproFirst** : hébergeur, PostgreSQL (§4.3), stockage objet (§4.4), mise à jour nocturne réversible (§4.10), outillage d'installation (créer, migrer, sauvegarder et restaurer **une** copro), supervision sans donnée personnelle | hébergeur choisi |
@@ -419,11 +421,11 @@ DI-7 après la CI PostgreSQL ; DI-4 en dernier, avec la première installation
    confidentialité **par copro**, et un hébergeur conforme. À faire valider.
 2. **Hébergeur** des installations CoproFirst : PostgreSQL géré, stockage objet,
    coffre à secrets, localisation des données. Et le **registre d'images** (#1753).
-3. ~~**Nom du produit**~~ — tranché le 07/10/2026, revu le 09/10/2026 : **CoproFirst** (D9 ; CoproConnect était déjà pris). Reste la
-   recherche d'antériorité de la marque (§7).
+3. ~~**Nom du produit**~~ — tranché le 07/10/2026, revu le 09/10/2026 : **CoproFirst** (D9 ; CoproConnect était déjà pris). Marque
+   déposée le 09/10/2026 (§7) ; l'opposition se clôt le 30/12/2026.
 4. ~~**D8**~~ — confirmée le 08/10/2026 : **deux comptes indépendants**.
-5. **Licence** : la variante est tranchée (`-or-later`, D10) ; restent la politique
-   de marque et les vérifications d'avant changement (§7).
+5. ~~**Licence**~~ — AGPL-3.0-or-later (D10) depuis la v2.116.0 (#1726) ; politique
+   de marque dans `MARQUE.md` (#1736), à faire relire (§7).
 6. **Modèle économique** : gratuit ou facturé. L'AGPLv3 permet de facturer
    l'hébergement ; elle interdit seulement d'en fermer le code.
 7. ~~**La résidence actuelle**~~ — tranché le 08/10/2026 (D11) : elle **reste sur
