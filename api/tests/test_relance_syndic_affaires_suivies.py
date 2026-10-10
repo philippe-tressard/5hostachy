@@ -37,9 +37,8 @@ SUIVIES = {
     "en_cours": {"statut": "en_cours"},
     "en_ag": {"statut": "en_ag"},
     "chez_prestataire": {"statut": "chez_prestataire"},
-    #  Sans exception : ni la catégorie, ni l'ancien marquage, ni l'adresse.
+    #  Sans exception : ni la catégorie, ni l'adresse.
     "bug": {"statut": "ouvert", "categorie": "bug"},
-    "marquée": {"statut": "ouvert", "non_relancable": True},
     "pas_au_syndic": {"statut": "ouvert", "destinataire_syndic": False},
 }
 

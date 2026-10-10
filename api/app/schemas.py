@@ -202,8 +202,6 @@ class TicketRead(SaisiPourSortie, AssisteIASortie, ChampsIntervenant):
     #  l'événement n'avaient aucun moyen d'afficher autre chose que leur
     #  rédacteur. Les trois schémas héritent de la même classe — c'est ce qui
     #  rend la règle vraie partout d'une seule ligne.
-    non_relancable: bool = False
-    non_relancable_motif: Optional[str] = None
     relance_count: int = 0
     #: Règle du SITE (`utils/archivage`, #515) — l'écran en appliquait une autre.
     archivee: bool = False
@@ -300,8 +298,6 @@ class TicketUpdate(SaisiPourEntree, AssisteIACorrection, ChampsIntervenant):
     #  la réouverture de la Diffusion — le test `test_correction_pas_transition`
     #  a refusé l'affectation d'un attribut qui n'existe pas.
     partager_whatsapp: Optional[bool] = None
-    non_relancable: Optional[bool] = None
-    non_relancable_motif: Optional[str] = None
     # Sert à retirer ou réordonner des pièces jointes déjà téléversées : l'ajout
     # passe par POST /uploads/fichier, seul endroit qui valide le type MIME.
     fichiers_urls: Optional[List[str]] = None

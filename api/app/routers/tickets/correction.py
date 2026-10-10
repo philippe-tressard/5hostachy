@@ -220,10 +220,6 @@ def _appliquer_relations(body: TicketUpdate, ticket: Ticket, session: Session) -
     #  ⚠️ `_envoye` reste chez l'appelant : lire `model_fields_set` dépend du
     #  schéma, pas de la notion.
     changes.extend(corriger_saisi_pour(ticket, body, _envoye, session))
-    if body.non_relancable is not None:
-        ticket.non_relancable = body.non_relancable
-    if body.non_relancable_motif is not None:
-        ticket.non_relancable_motif = body.non_relancable_motif
     #  L'archivage décidé par une personne (#1091) — un geste du conseil.
     if body.archive_manuel is not None and body.archive_manuel != ticket.archive_manuel:
         changes.append("Archivée" if body.archive_manuel else "Désarchivée")
