@@ -18,11 +18,12 @@
   Archives ») ; il retombe donc à faux quand la recherche s'efface, sinon la
   recherche suivante inclurait les Archives sans que rien ne le dise.
 
-  🔢 Chaque pastille porte son NOMBRE (10/10/2026, maquette B arbitrée à
-  l'écran parmi cinq) : ce que donnerait ce choix, les autres filtres et la
-  recherche retenus — `comptesParFiltre`, qui passe par `filtrerAffaires`. La
-  vignette est `Compte`, celle des Archives. Le compte de la pastille retenue
-  est donc celui de la liste : le bilan de recherche le lit au même endroit.
+  🔢 Chaque pastille reçoit son NOMBRE (10/10/2026) : ce que donnerait ce
+  choix, les autres filtres et la recherche retenus — `comptesParFiltre`, qui
+  passe par `filtrerAffaires`. La vignette est `Compte`, celle des Archives.
+  Seule la pastille RETENUE le montre (maquette J, même jour : dix vignettes
+  chargeaient la rangée) — c'est `Pastille` qui en décide. Son compte est
+  celui de la liste : le bilan de recherche le lit au même endroit.
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';

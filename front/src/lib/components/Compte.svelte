@@ -1,7 +1,7 @@
 <!--
   Compte.svelte — LE nombre d'objets, en vignette : le badge Bleu Seine qu'on
-  lit à droite d'un bandeau d'Archives, d'une année d'archives, et dans chaque
-  pastille de filtre des Affaires.
+  lit à droite d'un bandeau d'Archives, d'une année d'archives, et dans la
+  pastille retenue d'un filtre des Affaires.
 
   🔴 Il était écrit DEUX fois, à l'identique ou presque (`.sr-compte` de
   `SectionRepliee`, `.archives-compte` d'`ArchivesParAnnee` — l'un en `--fs-xs`,
