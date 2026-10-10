@@ -107,12 +107,19 @@ attendre_sante || { echo "::error::$DE ne démarre pas"; exit 1; }
 echo "== 3. Le témoin : le compte administrateur initial"
 MDP_ADMIN=$("${COMPOSE[@]}" logs api 2>&1 | sed -n 's/.*Mot de passe temporaire : *//p' | tail -1 | tr -d '\r ')
 [ -n "$MDP_ADMIN" ] || { echo "::error::mot de passe initial introuvable dans les journaux"; exit 1; }
-se_connecte() {
-    [ "$(curl -s -m 10 -o /dev/null -w '%{http_code}' -X POST http://localhost/api/auth/login \
+#  → le code HTTP de la connexion (200 attendu). Le code, pas oui/non : un 403
+#  disait « adresse non vérifiée », et l'essai ne le montrait pas (10/10/2026).
+connexion() {
+    curl -s -m 10 -o "$TRAVAIL/connexion.json" -w '%{http_code}' -X POST http://localhost/api/auth/login \
         -H 'Content-Type: application/json' \
-        -d "{\"email\":\"admin@localhost\",\"password\":\"$MDP_ADMIN\"}")" = 200 ] && echo oui || echo non
+        -d "{\"email\":\"admin@localhost\",\"password\":\"$MDP_ADMIN\"}" || true
 }
-[ "$(se_connecte)" = oui ] || { echo "::error::le témoin ne se connecte pas AVANT la mise à jour"; exit 1; }
+se_connecte() { [ "$(connexion)" = 200 ] && echo oui || echo non; }
+CODE=$(connexion)
+[ "$CODE" = 200 ] || {
+    echo "::error::le témoin ne se connecte pas AVANT la mise à jour (HTTP $CODE : $(head -c 200 "$TRAVAIL/connexion.json"))"
+    exit 1
+}
 
 echo "== 4. La mise à jour $DE → $VERS"
 COPROFIRST_ESSAI_CIBLE="$VERS" COPROFIRST_ESSAI_ARCHIVE="$ARCHIVE_VERS" \

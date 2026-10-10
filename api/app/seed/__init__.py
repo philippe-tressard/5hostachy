@@ -153,6 +153,10 @@ def _admin_initial(session: Session) -> None:
             role=RoleUtilisateur.admin,
             roles_json="admin",
             actif=True,
+            #  Son adresse ne reçoit rien : sans ce drapeau, la connexion le refuse
+            #  (« vérifiez votre adresse ») et une installation neuve reste sans
+            #  administrateur. Trouvé par l'essai de bout en bout de DI-4 (10/10/2026).
+            email_verifie=True,
             consentement_rgpd=True,
         )
     )
