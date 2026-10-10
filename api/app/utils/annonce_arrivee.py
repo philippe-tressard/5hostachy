@@ -182,7 +182,7 @@ def creer_annonce_arrivee(
     from app.routers.tickets.commun import generer_numero
 
     annonce = Ticket(
-        numero=generer_numero(),
+        numero=generer_numero(session),
         jeton_courriel=nouveau_jeton(),
         titre=titre_annonce(nom_complet, nom_batiment),
         description=corps_annonce(nom_complet, nom_batiment, user.etage, ancien),

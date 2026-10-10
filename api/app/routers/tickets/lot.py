@@ -98,7 +98,7 @@ def creer_visites_en_lot(
         rythme = (None, None) if v.contrat_id else (v.frequence_type, v.frequence_valeur)
         session.add(
             Ticket(
-                numero=generer_numero(),
+                numero=generer_numero(session),
                 jeton_courriel=nouveau_jeton(),
                 titre=v.titre.strip(),
                 #  La description est obligatoire pour une affaire : le titre la porte

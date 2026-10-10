@@ -137,7 +137,7 @@ def create_ticket(
     exiger_description(body.description, debut=body.debut)
     bug = est_bug(body.categorie)
     ticket = Ticket(
-        numero=generer_numero(),
+        numero=generer_numero(session),
         #  L'adresse de réponse est fixée à la CRÉATION (#703) : la poser plus
         #  tard obligerait à savoir quels tickets en ont déjà une, et un ticket
         #  sans jeton part avec un courriel sans `Reply-To` — la réponse du

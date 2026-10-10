@@ -448,7 +448,7 @@ def creer_affaire_du_fil(
     else:
         pour = {"saisi_pour_nom": nom, "saisi_pour_email": adresse or None}
     ticket = Ticket(
-        numero=generer_numero(),
+        numero=generer_numero(session),
         jeton_courriel=nouveau_jeton(),
         titre=titre[:LONGUEUR_TITRE],
         description=description,
