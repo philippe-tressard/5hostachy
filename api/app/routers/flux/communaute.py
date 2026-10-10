@@ -119,7 +119,7 @@ def _collecter_sondages(ctx: ContexteFlux) -> list[FluxItem]:
 def _collecter_annonces(ctx: ContexteFlux) -> list[FluxItem]:
     annonces = ctx.session.exec(
         select(PetiteAnnonce)
-        .where(PetiteAnnonce.cree_le >= ctx.since, PetiteAnnonce.statut != "archive")
+        .where(PetiteAnnonce.cree_le >= ctx.since)
         .order_by(PetiteAnnonce.cree_le.desc())
     ).all()
 
