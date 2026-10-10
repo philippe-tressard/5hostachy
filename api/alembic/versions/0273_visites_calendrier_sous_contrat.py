@@ -25,15 +25,15 @@ code précédent lit `contrat_id` depuis la 0235, il reste compatible. `downgrad
 ne défait rien — rien ne distingue un rattachement d'ici d'un rattachement
 saisi depuis.
 
-Revision ID: 0272
-Revises: 0271
+Revision ID: 0273
+Revises: 0272
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0272"
-down_revision = "0271"
+revision = "0273"
+down_revision = "0272"
 branch_labels = None
 depends_on = None
 

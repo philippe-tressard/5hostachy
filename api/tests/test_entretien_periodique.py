@@ -9,7 +9,7 @@ Deux demandes, une seule règle (`utils/entretien_periodique`) :
    civile, avec son état : réalisée, non réalisée, à venir, à planifier, annulée.
 
 Les visites converties du calendrier n'avaient pas de contrat : la migration
-0272 le leur rend, sans quoi la règle n'en reconnaissait aucune en production.
+0273 le leur rend, sans quoi la règle n'en reconnaissait aucune en production.
 """
 
 from datetime import datetime
@@ -134,7 +134,7 @@ def test_ce_qui_n_est_pas_une_visite_de_l_exercice(session, conseil, champs):
     assert _lire(session, conseil).visites == []
 
 
-# ── La migration 0272 ───────────────────────────────────────────────────────
+# ── La migration 0273 ───────────────────────────────────────────────────────
 
 
 def _evenement(session, auteur, type_: str) -> Evenement:
@@ -146,7 +146,7 @@ def _evenement(session, auteur, type_: str) -> Evenement:
 
 
 def test_la_migration_rend_leur_contrat_aux_visites_du_calendrier(session, conseil, monkeypatch):
-    migration = charger_migration("0272")
+    migration = charger_migration("0273")
     contrats = []
     for prestataire_id, libelle, frequence in (
         (4, "Entretien toitures", "fois_par_an"),
