@@ -12,7 +12,7 @@
   (fonction, e-mail, téléphones) et l'interlocuteur principal.
 -->
 <script lang="ts">
-	import { annuaireAdmin } from '$lib/api';
+	import { annuaireAdmin, type MembreSyndicAdmin } from '$lib/api';
 	import { inscritParNom, type SourcesRapprochement } from '$lib/annuaire-rapprochement';
 	import EnteteSyndic from '$lib/components/EnteteSyndic.svelte';
 	import { type Geste } from '$lib/components/ActionsMembre.svelte';
@@ -22,7 +22,11 @@
 	/** Les données de référence du rapprochement par le nom. */
 	export let sources: SourcesRapprochement;
 
-	interface MembreSyndicForm extends MembreBase {
+	//  L'identifiant, comme `AnnuaireConseil` : absent pour un membre ajouté à
+	//  l'écran ; présent, il fait mettre à jour le membre EN PLACE. Sans lui, le
+	//  serveur recréait tout le syndic et le fil annonçait en « nouveau membre »
+	//  des interlocuteurs inchangés (09/10/2026, `reconcilier_membres`).
+	interface MembreSyndicForm extends MembreBase, Partial<Pick<MembreSyndicAdmin, 'id'>> {
 		fonction: string;
 		email: string;
 		telephones: string[];
@@ -44,6 +48,7 @@
 		adresseSyndic = donnees.adresse ?? '';
 		siteWebSyndic = donnees.site_web ?? '';
 		return (donnees.membres ?? []).map((m): MembreSyndicForm => ({
+			id: m.id,
 			genre: m.genre ?? 'Mme',
 			prenom: m.prenom ?? '',
 			nom: m.nom ?? '',
@@ -91,6 +96,7 @@
 			adresse: adresseSyndic,
 			site_web: siteWebSyndic || null,
 			membres: membres.map((m) => ({
+				id: m.id ?? null,
 				genre: m.genre,
 				prenom: m.prenom,
 				nom: m.nom,
