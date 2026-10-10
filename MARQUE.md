@@ -18,7 +18,7 @@ sache **qui** lui fournit le service qu'il emploie.
 |---|---|---|
 | **CoproFirst** (le mot, quelle que soit sa graphie) | marque française **verbale**, classes 9 (logiciels), 36 (services immobiliers) et 42 (logiciel en tant que service) | **demande d'enregistrement** INPI n° **5307183**, déposée le 09/10/2026 ; publication prévue le 30/10/2026 ; délai d'opposition jusqu'au 30/12/2026 |
 | **5Hostachy** | aucune marque : c'est le nom de la résidence pour laquelle le projet est né, et celui de son site | non déposé |
-| le **logo** et l'identité visuelle | aucune marque ; leurs fichiers sont distribués sous la licence du dépôt, comme le reste | non déposé |
+| le **logo** | aucune marque ; droit d'auteur, sous une licence d'usage propre, **hors de l'AGPL** : [`LICENSES/LicenseRef-CoproFirst-Logo.txt`](LICENSES/LicenseRef-CoproFirst-Logo.txt) | non déposé ; hors de l'AGPL depuis le 10/10/2026 |
 
 Sources des délais : la propriété d'une marque s'acquiert par l'enregistrement, qui
 prend effet à la date du dépôt pour dix ans renouvelables (CPI art. L.712-1) ; un
@@ -50,14 +50,30 @@ pas enregistrée, la mention est « CoproFirst — demande de marque n° 5307183
 - **Laisser croire** à un partenariat, une certification ou un soutien de l'auteur
   qui n'existe pas.
 
-## 5. Le logo et le nom 5Hostachy
+## 5. Le logo
 
-Aucun des deux n'est une marque déposée. Les fichiers du logo sont sous la licence
-du dépôt : on peut les copier et les modifier avec le code. L'auteur **demande**
-néanmoins qu'ils ne servent pas à signer une version modifiée, ni un service sans
-rapport avec la résidence 5Hostachy — c'est une demande, pas un droit que cette
-page créerait. Ce qui reste interdit dans tous les cas, c'est de tromper le public
-sur l'origine d'un service.
+Le logo n'est pas une marque déposée, mais il n'est **pas** sous l'AGPL : ses
+fichiers — le dessin et ses rendus, déclarés dans `REUSE.toml` — ont leur propre
+licence, [`LICENSES/LicenseRef-CoproFirst-Logo.txt`](LICENSES/LicenseRef-CoproFirst-Logo.txt).
+Elle permet, sans modification :
+
+- de les garder dans une copie du dépôt, modifiée ou non ;
+- de les afficher dans une installation qui fait fonctionner CoproFirst **non modifié** ;
+- de s'en servir pour désigner le logiciel d'origine.
+
+Une **version modifiée** remplace ces fichiers par les siens. Elle n'a pas à toucher
+au code pour cela : chaque installation peut aussi téléverser le logo de sa
+résidence (*Admin › Paramétrage site*), qui prend alors la place du logo neutre.
+
+⚠️ Toute version publiée **sans** ce fichier de licence a distribué le logo sous
+l'AGPL : qui l'a reçu avec elle garde, pour cette copie, les droits de l'AGPL.
+
+## 5 bis. Le nom 5Hostachy
+
+Ce n'est pas une marque déposée : c'est le nom de la résidence et de son site.
+L'auteur **demande** qu'il ne désigne pas un autre service que celui de la
+résidence — c'est une demande, pas un droit que cette page créerait. Ce qui reste
+interdit dans tous les cas, c'est de tromper le public sur l'origine d'un service.
 
 ## 6. Demander une autorisation
 
