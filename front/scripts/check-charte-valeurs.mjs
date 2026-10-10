@@ -71,8 +71,14 @@ import { fileURLToPath } from 'node:url';
  *  une fois. Une redite retirée, pas une valeur convertie.
  *  10/10/2026 : 167 couleurs. Le badge de compte des Archives, écrit deux
  *  fois, devient `Compte` — son blanc passe par `--color-surface`.
+ *  10/10/2026 (#1571) : 123 couleurs et 79 tailles. 44 couleurs et 41 tailles
+ *  ÉGALES à un jeton — revenues depuis le 27/09, surtout par les styles en
+ *  ligne passés en classes et par les feuilles entrées dans le relevé —
+ *  s'écrivent par le jeton. Aucun rendu ne change : la charte n'a ni thème
+ *  sombre ni jeton qui varie avec l'écran. Elles sont désormais INTERDITES
+ *  (`egalesAUnJeton`), sans plafond.
  */
-const PLAFOND = { couleurs: 167, tailles: 120 };
+const PLAFOND = { couleurs: 123, tailles: 79 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
@@ -194,6 +200,46 @@ export function interditsDe(source) {
 	}
 	for (const m of code.matchAll(RGB_ETAT))
 		trouves.push([m[0] + '…)', 'color-mix(… var(--color-…) …)']);
+	return trouves;
+}
+
+/**
+ *  ## Une valeur ÉGALE à un jeton s'écrit par le jeton (#1571, 10/10/2026)
+ *
+ *  Le 27/09, toutes avaient été converties ; le 10/10, il y en avait de nouveau
+ *  85 — le plafond comptait les valeurs en dur sans distinguer celle qui A un
+ *  nom. Les jetons sont LUS dans `socle.css` (une liste recopiée divergerait au
+ *  premier ajout) : `--color-*` à valeur hexadécimale, `--fs-*` en `rem`. Une
+ *  valeur qui en nomme deux (`--color-bg` et `--color-text-inverse`) les
+ *  propose toutes deux : le choix dépend de la propriété.
+ *  Les couleurs à transparence (`#rrggbbaa`) ne sont pas des jetons.
+ */
+export function jetonsDe(socle) {
+	const couleurs = {};
+	const tailles = {};
+	for (const [, nom, brut] of socle.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);/gm)) {
+		const v = brut.trim().toLowerCase();
+		if (nom.startsWith('--color-') && /^#[0-9a-f]{6}$/.test(v)) (couleurs[v] ??= []).push(nom);
+		if (nom.startsWith('--fs-') && /^[0-9]*\.?[0-9]+rem$/.test(v)) tailles[parseFloat(v)] = nom;
+	}
+	return { couleurs, tailles };
+}
+
+/** `#abc` → `#aabbcc`, en minuscules. */
+const hex6 = (h) =>
+	h.length === 4 ? '#' + [...h.slice(1).toLowerCase()].map((c) => c + c).join('') : h.toLowerCase();
+
+/** Les valeurs d'un CSS (commentaires déjà retirés) égales à un jeton. */
+export function egalesAUnJeton(css, { couleurs, tailles }) {
+	const trouves = [];
+	for (const m of css.matchAll(/font-size\s*:\s*([0-9]*\.?[0-9]+)rem/g)) {
+		const jeton = tailles[parseFloat(m[1])];
+		if (jeton) trouves.push([`${m[1]}rem`, `var(${jeton})`]);
+	}
+	for (const m of css.matchAll(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g)) {
+		const noms = couleurs[hex6(m[0])];
+		if (noms) trouves.push([m[0], noms.map((n) => `var(${n})`).join(' ou ')]);
+	}
 	return trouves;
 }
 
@@ -330,6 +376,33 @@ if (process.argv.includes('--selftest')) {
 			['b', null],
 		],
 	);
+	const jetons = jetonsDe(
+		`:root {
+	--color-surface: #ffffff;
+	--color-bg: #f2efe9;
+	--color-text-inverse: #f2efe9;
+	--fs-sm: 0.8rem;
+	--radius: 0.5rem;
+}`,
+	);
+	cas(
+		'valeur égale à un jeton : couleur courte ou longue, taille, et les deux noms d’une valeur',
+		egalesAUnJeton(
+			'.a{color:#FFF;background:#ffffff;font-size:.80rem}.b{color:#f2efe9}',
+			jetons,
+		),
+		[
+			['.80rem', 'var(--fs-sm)'],
+			['#FFF', 'var(--color-surface)'],
+			['#ffffff', 'var(--color-surface)'],
+			['#f2efe9', 'var(--color-bg) ou var(--color-text-inverse)'],
+		],
+	);
+	cas(
+		'ni une transparence, ni un jeton hors charte (rayon), ni une taille sans nom',
+		egalesAUnJeton('.a{color:#ffffff80;padding:.5rem;font-size:0.5rem;font-size:1rem}', jetons),
+		[],
+	);
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
 }
@@ -390,6 +463,25 @@ for (const chemin of sources) {
 		continue;
 	}
 	for (const [valeur, par] of trouves) interdits.push(`   ${rel} : ${valeur} → ${par}`);
+}
+const jetons = jetonsDe(readFileSync(join(STYLES, FEUILLE_DES_JETONS), 'utf8'));
+if (!Object.keys(jetons.couleurs).length || !Object.keys(jetons.tailles).length) {
+	console.error(`
+✗ Aucun jeton lu dans ${FEUILLE_DES_JETONS} : contrôle inopérant (INCONNU).
+`);
+	process.exit(2);
+}
+const egales = releves.flatMap(([chemin, css]) =>
+	egalesAUnJeton(css, jetons).map(
+		([valeur, par]) => `   ${relative(RACINE, chemin).split(sep).join('/')} : ${valeur} → ${par}`,
+	),
+);
+if (egales.length) {
+	echec = 1;
+	console.error(`
+✗ ${egales.length} valeur(s) égale(s) à un jeton de la charte, à écrire par lui :`);
+	egales.slice(0, 40).forEach((l) => console.error(l));
+	if (egales.length > 40) console.error(`   … et ${egales.length - 40} de plus`);
 }
 if (interdits.length) {
 	echec = 1;
