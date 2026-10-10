@@ -268,28 +268,6 @@ export interface RelanceSyndicResponse {
 	tickets: Ticket[];
 }
 
-/** L'état d'une visite d'entretien périodique — CALCULÉ au serveur
- *  (`utils/entretien_periodique.etat_visite`), jamais par l'écran. */
-export type EtatVisite = 'non_realisee' | 'a_venir' | 'a_planifier' | 'realisee' | 'annulee';
-
-/** Une visite de l'exercice : une affaire Entretien sous contrat ou à récurrence. */
-export interface VisitePeriodique {
-	id: number;
-	numero: string;
-	titre: string;
-	statut: string;
-	debut: string | null;
-	ferme_le: string | null;
-	prestataire_nom: string | null;
-	contrat_libelle: string | null;
-	etat: EtatVisite;
-}
-
-export interface EntretienPeriodiqueResponse {
-	exercice: number;
-	visites: VisitePeriodique[];
-}
-
 /** Message d'un fil de ticket. Vit ici, pas dans la page : le client TypeScript
  *  est la source unique des types d'API (cf. CLAUDE.md, checklist backend). */
 export interface TicketMessage {

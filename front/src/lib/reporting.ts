@@ -119,7 +119,7 @@ export const REPORT_VUES = [
 	'renouvellements',
 	'relance',
 	//  Les visites d'entretien périodique — sorties de la relance (10/10/2026).
-	'entretien',
+	'periodique',
 ] as const;
 export type ReportVue = (typeof REPORT_VUES)[number];
 

@@ -79,7 +79,7 @@
 	//  variables les servent toutes deux, chacune avec ce qu'elle a de propre.
 	const VUES_AUTONOMES: Partial<Record<ReportVue, string>> = {
 		relance: `Aucune ${TICKET.libelle.toLowerCase()} syndic en cours — rien à imprimer.`,
-		entretien: 'Aucune visite d’entretien périodique cette année — rien à imprimer.',
+		periodique: 'Aucune visite d’entretien périodique cette année — rien à imprimer.',
 	};
 	$: autonome = reportView in VUES_AUTONOMES;
 	let vueAutonome: { recharger(): void } | null = null;
@@ -151,7 +151,7 @@
 			prestataires: 'Reporting CS — Synthèse prestataires',
 			renouvellements: 'Reporting CS — Renouvellement contrats & audits',
 			relance: 'Reporting CS — Relance syndic',
-			entretien: 'Reporting CS — Entretien périodique',
+			periodique: 'Reporting CS — Entretien périodique',
 		};
 		// Rien à imprimer : le dire, plutôt qu'ouvrir la boîte de dialogue sur une
 		// page vide. C'est le cas qu'a rencontré l'utilisateur (04/08/2026) — la vue
@@ -249,7 +249,7 @@
 			<Pastille active={reportView === 'relance'} on:click={() => (reportView = 'relance')}>
 				&#x1F514; Relance syndic
 			</Pastille>
-			<Pastille active={reportView === 'entretien'} on:click={() => (reportView = 'entretien')}>
+			<Pastille active={reportView === 'periodique'} on:click={() => (reportView = 'periodique')}>
 				&#x1F9F0; Entretien périodique
 			</Pastille>
 		</div>
@@ -294,7 +294,7 @@
 			bind:chargement={autonomeChargement}
 			bind:estVide={autonomeVide}
 		/>
-	{:else if reportView === 'entretien'}
+	{:else if reportView === 'periodique'}
 		<VueEntretienPeriodique
 			bind:this={vueAutonome}
 			bind:chargement={autonomeChargement}

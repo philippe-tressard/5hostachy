@@ -19,13 +19,17 @@
 	import { lienTicket } from '$lib/tickets';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
-	/** Le nom de chaque état, et sa teinte. L'ordre est celui des compteurs. */
-	const ETATS: Record<EtatVisite, { libelle: string; badge: string }> = {
-		realisee: { libelle: '✅ Réalisée', badge: 'badge-green' },
-		non_realisee: { libelle: '⚠️ Non réalisée', badge: 'badge-red' },
-		a_venir: { libelle: '⏳ À venir', badge: 'badge-blue' },
-		a_planifier: { libelle: '📅 À planifier', badge: 'badge-orange' },
-		annulee: { libelle: 'Annulée', badge: 'badge-gray' },
+	/** Le nom de chaque état, et sa teinte — posée par `class:`, jamais interpolée :
+	 *  une classe interpolée rend le fichier aveugle à `lint:css-orphelin`. */
+	const ETATS: Record<
+		EtatVisite,
+		{ libelle: string; ton: 'green' | 'red' | 'blue' | 'orange' | 'gray' }
+	> = {
+		realisee: { libelle: '✅ Réalisée', ton: 'green' },
+		non_realisee: { libelle: '⚠️ Non réalisée', ton: 'red' },
+		a_venir: { libelle: '⏳ À venir', ton: 'blue' },
+		a_planifier: { libelle: '📅 À planifier', ton: 'orange' },
+		annulee: { libelle: 'Annulée', ton: 'gray' },
 	};
 	/** Les compteurs : « Annulée » n'en a pas, elle ne dit rien d'un entretien fait. */
 	const COMPTEURS: { etat: EtatVisite; libelle: string }[] = [
@@ -106,6 +110,7 @@
 				</thead>
 				<tbody>
 					{#each visites as v (v.id)}
+						{@const ton = ETATS[v.etat].ton}
 						<tr>
 							<td class="date">{fmtDate(v.debut)}</td>
 							<td>
@@ -119,7 +124,14 @@
 								{#if v.contrat_libelle}<span class="contrat">{v.contrat_libelle}</span>{/if}
 							</td>
 							<td>
-								<span class="badge {ETATS[v.etat].badge}">{ETATS[v.etat].libelle}</span>
+								<span
+									class="badge"
+									class:badge-green={ton === 'green'}
+									class:badge-red={ton === 'red'}
+									class:badge-blue={ton === 'blue'}
+									class:badge-orange={ton === 'orange'}
+									class:badge-gray={ton === 'gray'}>{ETATS[v.etat].libelle}</span
+								>
 								{#if v.etat === 'realisee' && v.ferme_le}
 									<span class="contrat">le {fmtDate(v.ferme_le)}</span>
 								{/if}

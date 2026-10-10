@@ -54,7 +54,7 @@ test('chaque visite de l’année dit si elle a été réalisée', async ({ page
 		if (chemin === '/api/tickets/entretiens-periodiques') return REPONSE;
 		return undefined;
 	});
-	await page.goto('/espace-cs/reporting?vue=entretien');
+	await page.goto('/espace-cs/reporting?vue=periodique');
 	await attendreHydratation(page);
 
 	await expect(page.getByRole('heading', { name: /Entretien périodique — 2026/ })).toBeVisible();
@@ -83,7 +83,7 @@ test('sans visite cette année, la vue le dit au lieu de rester vide', async ({ 
 		if (chemin === '/api/tickets/entretiens-periodiques') return { exercice: 2026, visites: [] };
 		return undefined;
 	});
-	await page.goto('/espace-cs/reporting?vue=entretien');
+	await page.goto('/espace-cs/reporting?vue=periodique');
 	await attendreHydratation(page);
 	await expect(page.getByText('Aucune visite d’entretien périodique en 2026')).toBeVisible();
 });

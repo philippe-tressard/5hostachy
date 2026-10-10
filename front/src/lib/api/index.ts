@@ -10,7 +10,6 @@ import type {
 	ApercuDiffusion,
 	CorrectionEvolution,
 	CorrespondanceAffaire,
-	EntretienPeriodiqueResponse,
 	EpinglesCompte,
 	FluxResponse,
 	Notification,
@@ -24,6 +23,7 @@ import type {
 	TransfertVerse,
 } from './types';
 import type { ExportTelemetrie } from './telemetrie';
+import type { EntretienPeriodiqueResponse } from './prestataires';
 //  Le type des périmètres vit dans `$lib/perimetres` et non dans `./types` : ce
 //  module-là ne doit dépendre de rien pour rester importable depuis `lib/utils.ts`
 //  sans créer de cycle. Il est réexporté ici pour que `from '$lib/api'` suffise.
