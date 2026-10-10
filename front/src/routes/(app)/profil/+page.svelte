@@ -2,7 +2,7 @@
 	import EntetePage from '$lib/components/EntetePage.svelte';
 	import ChangementMotDePasse from '$lib/components/ChangementMotDePasse.svelte';
 	import { clesHeritees, DEFAUTS_NOTIFS } from '$lib/preferences';
-	import { badgesDeRoles, LIBELLES_STATUT, STATUTS_DEMANDABLES } from '$lib/roles';
+	import { LIBELLES_STATUT, STATUTS_DEMANDABLES } from '$lib/roles';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import PreferencesAffichageNotifs from '$lib/components/PreferencesAffichageNotifs.svelte';
 	import { onMount } from 'svelte';
@@ -19,13 +19,12 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import ImageUpload from '$lib/components/ImageUpload.svelte';
 	import { getPageConfig, configStore, siteNomStore, defautsDePage } from '$lib/stores/pageConfig';
-	import { fmtDateShort as fmtDate, fmtDatetimeShort as fmtDatetime } from '$lib/date';
 	import ChargementPartiel from '$lib/components/ChargementPartiel.svelte';
 	import HistoriqueDemandes from '$lib/components/HistoriqueDemandes.svelte';
 	import { STATUT_DEMANDE_BADGE, STATUT_DEMANDE_LABEL } from '$lib/demandes';
 	import { essayer, messagePartiel } from '$lib/chargement';
 	import DroitsRgpd from '$lib/components/DroitsRgpd.svelte';
-	import { etageLabel, lotTypeLabel } from '$lib/utils';
+	import InformationsCompte from '$lib/components/InformationsCompte.svelte';
 	import ChampsEtage from '$lib/components/ChampsEtage.svelte';
 	import EtoileRequis from '$lib/components/EtoileRequis.svelte';
 	import DemarcheArrivant from '$lib/components/DemarcheArrivant.svelte';
@@ -87,7 +86,6 @@
 	//  ⚠️ Le vocabulaire d'une demande vit dans `$lib/demandes` : cette page ET
 	//  `HistoriqueDemandes` le lisent. Je l'avais d'abord emporté avec la table
 	//  extraite — la page s'en sert aussi, quarante lignes plus haut.
-	$: derniereConnexion = $currentUser?.derniere_connexion ?? null;
 
 	// ── Init ──────────────────────────────────────────────────────────────────
 	//  L'initialisation suit le STORE, pas le montage : le layout `(app)` peuple
@@ -249,10 +247,10 @@
 
 <div class="largeur-saisie">
 	<!-- ── Avatar + Infos personnelles ──────────────────────────────────────── -->
-	<section class="card" style="margin-bottom:1.5rem">
+	<section class="card carte-profil">
 		<h2 class="section-title">Informations personnelles</h2>
 
-		<div style="display:flex;justify-content:center;margin-bottom:1.25rem">
+		<div class="avatar-profil">
 			<ImageUpload
 				currentUrl={$currentUser?.photo_url}
 				placeholder="&#x1F464;"
@@ -313,59 +311,14 @@
 	</section>
 
 	<!-- ── Informations résidence ────────────────────────────────────────────── -->
-	<section class="card" style="margin-bottom:1.5rem">
+	<section class="card carte-profil">
 		<h2 class="section-title">Résidence &amp; statut</h2>
 
-		<dl class="info-grid">
-			<dt>Profil d'utilisateur</dt>
-			<dd>{LIBELLES_STATUT[$currentUser?.statut ?? ''] ?? $currentUser?.statut ?? '—'}</dd>
-
-			<dt>Bâtiment</dt>
-			<dd>{$currentUser?.batiment_nom ?? '—'}</dd>
-
-			{#if mesLots.length > 0}
-				<dt>Lot{mesLots.length > 1 ? 's' : ''}</dt>
-				<dd>
-					{#each mesLots as lot (lot.id)}
-						<span style="display:block">
-							{#if lot.batiment_nom}{lot.batiment_nom} —
-							{/if}
-							N° {lot.numero}
-							· {lotTypeLabel(lot.type)}
-							{#if lot.type_appartement} ({lot.type_appartement}){/if}
-							{#if lot.etage != null}· {etageLabel(lot.etage, { suffixe: true })}{/if}
-							{#if lot.superficie} · {lot.superficie} m²{/if}
-						</span>
-					{/each}
-				</dd>
-			{/if}
-
-			<dt>Rôle(s)</dt>
-			<dd style="display:flex;gap:0.35rem;flex-wrap:wrap">
-				{#each badgesDeRoles($currentUser?.roles?.length ? $currentUser.roles : [$currentUser?.role ?? 'résident']) as b (b.label)}
-					<span class="badge {b.cls}">{b.label}</span>
-				{/each}
-			</dd>
-
-			<dt>Statut du compte</dt>
-			<dd>
-				{#if $currentUser?.actif}
-					<span class="badge badge-green">Actif</span>
-				{:else}
-					<span class="badge badge-red">Inactif</span>
-				{/if}
-			</dd>
-
-			<dt>Membre depuis</dt>
-			<dd>{fmtDate($currentUser?.cree_le)}</dd>
-
-			<dt>Dernière connexion</dt>
-			<dd>{fmtDatetime(derniereConnexion)}</dd>
-		</dl>
+		<InformationsCompte lots={mesLots} />
 
 		<!-- Demande de modification -->
 		{#if demandePending}
-			<div style="margin-top:1rem">
+			<div class="bloc-demande">
 				<EncartAvertissement>
 					<strong>Demande en attente</strong> :
 					{#if demandePending.statut_souhaite}
@@ -376,18 +329,14 @@
 					{#if demandePending.batiment_nom_souhaite}
 						déménagement vers {demandePending.batiment_nom_souhaite}
 					{/if}
-					<span
-						class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]}"
-						style="margin-left:.5rem"
-					>
+					<span class="badge {STATUT_DEMANDE_BADGE[demandePending.statut_demande]} etat-demande">
 						{STATUT_DEMANDE_LABEL[demandePending.statut_demande]}
 					</span>
 				</EncartAvertissement>
 			</div>
 		{:else}
 			<button
-				class="btn btn-outline btn-sm"
-				style="margin-top:1rem"
+				class="btn btn-outline btn-sm bloc-demande"
 				on:click={() => (showDemandeForm = !showDemandeForm)}
 			>
 				{showDemandeForm ? 'Annuler' : '✏️ Demander une modification (profil / bâtiment)'}
@@ -395,8 +344,8 @@
 		{/if}
 
 		{#if showDemandeForm && !demandePending}
-			<div class="demande-form" style="margin-top:1rem">
-				<p class="aide" style="margin-bottom:.75rem">
+			<div class="demande-form bloc-demande">
+				<p class="aide intro-demande">
 					Les modifications du profil d'utilisateur et du bâtiment sont soumises à validation du
 					conseil syndical.
 				</p>
@@ -461,25 +410,27 @@
 
 <style>
 	/*  `.section-title` : la charte porte tout (composants.css). Retiree le 28/08/2026 (#607). */
-	.info-grid {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 0.4rem 0.75rem;
-		font-size: var(--fs-base);
-		margin-bottom: 0.25rem;
-	}
-	.info-grid dt {
-		font-weight: 500;
-		color: var(--color-text-muted);
-		white-space: nowrap;
-	}
-	.info-grid dd {
-		margin: 0;
-	}
 	.demande-form {
 		background: var(--color-bg-subtle, #f9fafb);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 1rem;
+	}
+	.carte-profil {
+		margin-bottom: 1.5rem;
+	}
+	.avatar-profil {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 1.25rem;
+	}
+	.bloc-demande {
+		margin-top: 1rem;
+	}
+	.etat-demande {
+		margin-left: 0.5rem;
+	}
+	.intro-demande {
+		margin-bottom: 0.75rem;
 	}
 </style>

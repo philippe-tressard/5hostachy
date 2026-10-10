@@ -63,7 +63,7 @@
 </script>
 
 <!-- Section 1 : Frise contrats -->
-<section class="report-card" style="margin-bottom:1.5rem">
+<section class="report-card carte-espacee">
 	<h3>📋 Contrats prestataires — échéances {ANNEE_COURANTE}</h3>
 	<p class="report-intro">
 		Contrats dont la fin ou le préavis tombe en {ANNEE_COURANTE}. La zone hachurée indique la
@@ -148,13 +148,12 @@
 							</div>
 						{:else}
 							<div
-								class="frise-marker"
+								class="frise-marker marqueur-fin"
 								class:frise-marker-preavis={friseStyle === 'preavis'}
 								class:frise-marker-inconnu={friseStyle === 'inconnu'}
 								class:frise-marker-annee={friseStyle === 'annee'}
 								class:frise-marker-futur={friseStyle === 'futur'}
 								class:frise-marker-reconduit={friseStyle === 'reconduit'}
-								style="left:98%;opacity:.7"
 								title="Fin : {fmtDate(c.dateFin.toISOString())} ({c.dateFin.getFullYear()})"
 							>
 								<span class="frise-marker-label">→ {c.dateFin.getFullYear()}</span>
@@ -164,30 +163,19 @@
 				</div>
 			{/each}
 			<div class="frise-legend">
-				<span
-					><span class="frise-legend-dot" style="background:var(--color-danger)"></span> Préavis en cours</span
-				>
-				<span
-					><span class="frise-legend-dot" style="background:var(--color-warning)"></span> Expire cette
-					année</span
-				>
-				<span
-					><span class="frise-legend-dot" style="background:#8b5cf6"></span> Reconduit tacitement</span
-				>
+				<span><span class="frise-legend-dot point-preavis"></span> Préavis en cours</span>
+				<span><span class="frise-legend-dot point-annee"></span> Expire cette année</span>
+				<span><span class="frise-legend-dot point-reconduit"></span> Reconduit tacitement</span>
 				<span class="frise-legend-hatch">▧ Zone de préavis</span>
-				<span style="font-size:var(--fs-xs);color:var(--color-text-muted)"
-					>→ Fin en {ANNEE_COURANTE + 1}</span
-				>
+				<span class="legende-fin">→ Fin en {ANNEE_COURANTE + 1}</span>
 			</div>
 		</div>
 	{/if}
 
 	<!-- Contrats futurs (hors exercice courant) -->
 	{#if contratsFuturs.length > 0}
-		<div style="margin-top:1.2rem">
-			<h4
-				style="font-size:var(--fs-base);font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)"
-			>
+		<div class="bloc-suivant">
+			<h4 class="titre-bloc">
 				📅 Échéances futures ({contratsFuturs.length})
 			</h4>
 			<div class="frise-compact-list">
@@ -212,10 +200,8 @@
 
 	<!-- Contrats sans dates -->
 	{#if contratsInconnus.length > 0}
-		<div style="margin-top:1.2rem">
-			<h4
-				style="font-size:var(--fs-base);font-weight:600;margin:0 0 .5rem;color:var(--color-text-muted)"
-			>
+		<div class="bloc-suivant">
+			<h4 class="titre-bloc">
 				⚠️ Dates manquantes ({contratsInconnus.length})
 			</h4>
 			<div class="frise-compact-list">
@@ -459,5 +445,34 @@
 		    elle rend une frise. Les deux lignes reprises du fichier d'origine y
 		    étaient inertes, et `svelte-check` l'a dit dès la séparation — un
 		    sélecteur orphelin que le fichier unique masquait. */
+	}
+	.carte-espacee {
+		margin-bottom: 1.5rem;
+	}
+	.marqueur-fin {
+		left: 98%;
+		opacity: 0.7;
+	}
+	.point-preavis {
+		background: var(--color-danger);
+	}
+	.point-annee {
+		background: var(--color-warning);
+	}
+	.point-reconduit {
+		background: #8b5cf6;
+	}
+	.legende-fin {
+		font-size: var(--fs-xs);
+		color: var(--color-text-muted);
+	}
+	.bloc-suivant {
+		margin-top: 1.2rem;
+	}
+	.titre-bloc {
+		font-size: var(--fs-base);
+		font-weight: 600;
+		margin: 0 0 0.5rem;
+		color: var(--color-text-muted);
 	}
 </style>

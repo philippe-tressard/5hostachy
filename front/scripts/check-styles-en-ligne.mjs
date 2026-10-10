@@ -63,14 +63,22 @@ import { fileURLToPath } from 'node:url';
  *  Restent ceux qui la frôlent — modèles d'e-mail, import des lots, comptes,
  *  profil, tâches planifiées, renouvellements de contrats, formulaire d'affaire :
  *  les découper d'abord, une classe ajoutée les ferait déborder.
+ *  08/10/2026 (#1571) : ZÉRO. Les sept derniers fichiers ont d'abord été
+ *  découpés — l'historique des envois d'e-mail, la table des exécutions d'une
+ *  tâche, la correction d'une ligne d'import, les gestes de rôle d'un compte,
+ *  les informations du profil sont devenus des composants —, puis convertis.
+ *  🔴 À zéro, ce n'est plus un suivi de dette : c'est une INTERDICTION. Un style
+ *  dont la valeur vient des données (`style="width:{pct}%"`) reste permis.
  */
-const PLAFOND = 76;
+const PLAFOND = 0;
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 
 /** Les styles en ligne STATIQUES d'une source : sans expression `{…}`. */
 export function stylesEnLigne(source) {
-	const sans = source.replace(/<!--[\s\S]*?-->/g, '');
+	//  Le CSS du composant n'est pas du balisage : un commentaire qui y CITE un
+	//  `style="…"` (le récit d'une conversion) n'est pas un attribut.
+	const sans = source.replace(/<!--[\s\S]*?-->/g, '').replace(/<style[^>]*>[\s\S]*?<\/style>/g, '');
 	return [...sans.matchAll(/\bstyle="([^"]*)"/g)]
 		.map((m) => m[1])
 		.filter((v) => v.trim() && !v.includes('{'));
@@ -90,6 +98,13 @@ if (process.argv.includes('--selftest')) {
 	);
 	cas('un commentaire ne compte pas', stylesEnLigne('<!-- <p style="color:red"></p> -->'), []);
 	cas('un attribut vide ne compte pas', stylesEnLigne('<p style="">a</p>'), []);
+	//  08/10/2026 : deux commentaires CSS qui racontent la conversion (« les styles
+	//  étaient EN LIGNE, `style="…"` ») étaient comptés comme des attributs.
+	cas(
+		'un style cité dans le CSS du composant ne compte pas',
+		stylesEnLigne('<style>\n\t/*  `style="display:flex"` */\n</style>'),
+		[],
+	);
 	console.log(ko ? '== ÉCHECS ==' : '== TOUS OK ==');
 	process.exit(ko);
 }

@@ -9,7 +9,7 @@
 	import { toast } from '$lib/components/Toast.svelte';
 	import { siteNomStore } from '$lib/stores/pageConfig';
 	import BarreImport from '$lib/components/BarreImport.svelte';
-	import PiedFormulaire from '$lib/components/PiedFormulaire.svelte';
+	import CorrectionImportLot from '$lib/components/CorrectionImportLot.svelte';
 	import { parAttribut } from '$lib/table-statuts';
 	import EtatListe from '$lib/components/EtatListe.svelte';
 
@@ -95,12 +95,6 @@
 	let editNotes = '';
 	let saving = false;
 
-	const TYPES_LIEN = [
-		{ value: 'propriétaire', label: 'Copropriétaire résident' },
-		{ value: 'bailleur', label: 'Copropriétaire bailleur' },
-		{ value: 'locataire', label: 'Locataire' },
-		{ value: 'mandataire', label: 'Mandataire (gestion)' },
-	];
 	//  ⚠️ La teinte est ici un CODE COULEUR, pas une classe de badge : ces liens
 	//  se rendent en pastille pleine, et la charte ne porte pas ces quatre-là.
 	const { libelle: TYPE_LIEN_LABEL, couleur: TYPE_LIEN_BADGE } = parAttribut({
@@ -122,14 +116,6 @@
 		} else {
 			editOccupants = [{ user_id: '', type_lien: 'propriétaire' }];
 		}
-	}
-
-	function ajouterOccupant() {
-		editOccupants = [...editOccupants, { user_id: '', type_lien: 'locataire' }];
-	}
-
-	function supprimerOccupant(i: number) {
-		editOccupants = editOccupants.filter((_, idx) => idx !== i);
 	}
 
 	function cancelEdit() {
@@ -258,7 +244,7 @@
 		<p>Importez un fichier .xlsx pour démarrer.</p>
 	</div>
 {:else}
-	<div class="card" style="overflow:auto">
+	<div class="card carte-imports">
 		<table class="table imp-table-dense">
 			<thead>
 				<tr>
@@ -274,16 +260,14 @@
 						class:imp-row-resolu={imp.statut === 'resolu'}
 						class:imp-row-ignore={imp.statut === 'ignore'}
 					>
-						<td style="font-weight:600">{imp.nom_coproprietaire ?? '—'}</td>
+						<td class="nom-copro">{imp.nom_coproprietaire ?? '—'}</td>
 						<td class="text-muted-sm">{imp.no_coproprietaire ?? '—'}</td>
-						<td style="font-size:var(--fs-sm);font-weight:600"
-							>{imp.batiment_nom ?? imp.batiment_id}</td
-						>
-						<td style="font-weight:500">{imp.numero}</td>
+						<td class="batiment-import">{imp.batiment_nom ?? imp.batiment_id}</td>
+						<td class="numero-lot">{imp.numero}</td>
 						<td><span class="badge badge-type">{imp.type_raw}</span></td>
 						<td class="text-muted-sm">{imp.etage_raw ?? '—'}</td>
 						<td class="text-muted-sm">{imp.lot_label ?? '—'}</td>
-						<td style="font-size:var(--fs-sm)">
+						<td class="occupants-cellule">
 							{#if imp.utilisateurs?.length}
 								<div class="occupants-list">
 									{#each imp.utilisateurs as occ (occ.user_id ?? occ.type_lien)}
@@ -294,16 +278,15 @@
 												>{TYPE_LIEN_LABEL[occ.type_lien] ?? occ.type_lien}</span
 											>
 											{#if occ.utilisateur}
-												<span style="color:var(--color-success)">{nomAffiche(occ.utilisateur)}</span
-												>
+												<span class="occupant-lie">{nomAffiche(occ.utilisateur)}</span>
 											{:else}
-												<span style="color:var(--color-warning-texte)">Non lié</span>
+												<span class="non-lie">Non lié</span>
 											{/if}
 										</div>
 									{/each}
 								</div>
 							{:else if imp.nom_coproprietaire}
-								<span style="color:var(--color-warning-texte)">Non lié</span>
+								<span class="non-lie">Non lié</span>
 							{:else}—{/if}
 						</td>
 						<td
@@ -334,9 +317,7 @@
 								</div>
 							{:else if imp.statut === 'resolu'}
 								<div class="action-row">
-									<span class="badge badge-green" style="font-size:var(--fs-xs)"
-										>✓ Lot #{imp.lot_id}</span
-									>
+									<span class="badge badge-green lot-valide">✓ Lot #{imp.lot_id}</span>
 									<button
 										class="btn-icon-edit"
 										aria-label="Lier un occupant"
@@ -352,75 +333,17 @@
 					{#if editId === imp.id}
 						<tr class="imp-edit-row">
 							<td colspan="10">
-								<div class="imp-edit-form card" style="margin:.5rem 0">
-									<h3 style="font-size:var(--fs-base);font-weight:700;margin-bottom:.75rem">
-										Lier : <em
-											>{imp.nom_coproprietaire ?? '—'} — Bât. {imp.batiment_nom ?? imp.batiment_id} n°{imp.numero}
-											({imp.type_raw})</em
-										>
-									</h3>
-									<!-- Lot en base -->
-									<div class="field" style="margin-bottom:.75rem">
-										<label for="imp-lot-{imp.id}">Lot en base</label>
-										<select id="imp-lot-{imp.id}" bind:value={editLot}>
-											<option value="">— Non lié —</option>
-											{#each lots as l (l.id)}
-												<option value={String(l.id)}
-													>{l.batiment_nom ?? `Bât.${l.batiment_id}`} — {l.numero} ({l.type})</option
-												>
-											{/each}
-										</select>
-									</div>
-									<!-- Occupants -->
-									<div class="occupants-editor">
-										<div class="occupants-header">
-											<span style="font-size:var(--fs-md);font-weight:600">Occupants du lot</span>
-											<button
-												type="button"
-												class="btn btn-sm btn-outline"
-												on:click={ajouterOccupant}>+ Ajouter</button
-											>
-										</div>
-										{#each editOccupants as occ, i (occ)}
-											<div class="occupant-row">
-												<select bind:value={occ.type_lien} class="select-role">
-													{#each TYPES_LIEN as tl (tl.value)}
-														<option value={tl.value}>{tl.label}</option>
-													{/each}
-												</select>
-												<select bind:value={occ.user_id} class="select-user">
-													<option value="">— Non lié —</option>
-													{#each utilisateurs as u (u.id)}
-														<option value={String(u.id)}>{nomAffiche(u)} ({u.email})</option>
-													{/each}
-												</select>
-												<button
-													type="button"
-													class="btn-icon-danger"
-													aria-label="Retirer cet occupant"
-													title="Retirer"
-													on:click={() => supprimerOccupant(i)}>&#x1F5D1;️</button
-												>
-											</div>
-										{/each}
-									</div>
-									<!-- Notes -->
-									<div class="field" style="margin-top:.75rem">
-										<label for="imp-notes-{imp.id}">Notes admin</label>
-										<input
-											id="imp-notes-{imp.id}"
-											type="text"
-											bind:value={editNotes}
-											placeholder="Note interne…"
-										/>
-									</div>
-									<PiedFormulaire
-										enCours={saving}
-										soumission={false}
-										on:annule={cancelEdit}
-										on:enregistre={saveEdit}
-									/>
-								</div>
+								<CorrectionImportLot
+									{imp}
+									{lots}
+									{utilisateurs}
+									enCours={saving}
+									bind:lot={editLot}
+									bind:occupants={editOccupants}
+									bind:notes={editNotes}
+									on:annule={cancelEdit}
+									on:enregistre={saveEdit}
+								/>
 							</td>
 						</tr>
 					{/if}
@@ -440,33 +363,6 @@
 		font-weight: 600;
 	}
 
-	.occupants-editor {
-		border: 1px solid var(--color-border, #e5e7eb);
-		border-radius: 6px;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 0.25rem;
-	}
-	.occupants-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.5rem;
-	}
-	.occupant-row {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		margin-bottom: 0.4rem;
-	}
-	.select-role {
-		min-width: 180px;
-		flex-shrink: 0;
-	}
-	.select-user {
-		flex: 1;
-		min-width: 0;
-	}
-
 	.occupants-list {
 		display: flex;
 		flex-direction: column;
@@ -482,13 +378,29 @@
 		font-weight: 600;
 		font-size: var(--fs-2xs);
 	}
-
-	@media (max-width: 767px) {
-		.occupant-row {
-			flex-wrap: wrap;
-		}
-		.select-role {
-			min-width: 140px;
-		}
+	.carte-imports {
+		overflow: auto;
+	}
+	.nom-copro {
+		font-weight: 600;
+	}
+	.batiment-import {
+		font-size: var(--fs-sm);
+		font-weight: 600;
+	}
+	.numero-lot {
+		font-weight: 500;
+	}
+	.occupants-cellule {
+		font-size: var(--fs-sm);
+	}
+	.occupant-lie {
+		color: var(--color-success);
+	}
+	.non-lie {
+		color: var(--color-warning-texte);
+	}
+	.lot-valide {
+		font-size: var(--fs-xs);
 	}
 </style>

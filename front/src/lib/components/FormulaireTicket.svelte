@@ -349,7 +349,7 @@
       l'envoi qui notifie. Il suit la case « Urgent » (#820), qui pose
       `priorite = haute` — pour le résident aussi, désormais. -->
 {#if !modeEdition && !actualite && options.urgente}
-	<div class="alert alert-error largeur-saisie" style="margin-bottom:1rem">
+	<div class="alert alert-error largeur-saisie">
 		{GLYPHE_URGENCE} <strong>Urgent</strong> — Le conseil syndical et le syndic seront notifiés
 		immédiatement. En cas de danger immédiat, composez le
 		<strong>15 (SAMU), 17 (Police) ou 18 (Pompiers)</strong>.

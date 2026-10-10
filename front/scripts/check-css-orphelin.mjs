@@ -284,7 +284,13 @@ const aveugles = tous.filter((f) =>
 //  leur classe d'une TABLE de teintes (`badge {STATUT[…]}`) : un composant de
 //  pastille commun les rendrait mesurables, mais un `.badge` stylé dans une page
 //  cesserait de s'y appliquer — chantier à regarder à l'écran, pas à l'aveugle.
-const PLAFOND_NON_MESURES = 24;
+//
+//  25 le même jour, et pour la même raison qu'au 30/09 : les informations du
+//  profil ont été EXTRAITES de `profil/+page.svelte` (`InformationsCompte`) avec
+//  leurs badges de rôle tirés d'une table (`badge {b.cls}`). La page garde le
+//  badge d'état d'une demande, tiré de sa propre table : aucune interpolation
+//  nouvelle, une dette répartie sur deux fichiers.
+const PLAFOND_NON_MESURES = 25;
 
 const mesures = tous.length - aveugles.length;
 

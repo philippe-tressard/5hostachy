@@ -145,8 +145,10 @@ const RACINE = new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]
 /** En dessous, le motif de lecture ne correspond plus au balisage (cas zéro).
  *  ⚠️ Il SUIT la baisse voulue des styles en ligne (`lint:styles-en-ligne`) :
  *  200 jusqu'au 08/10/2026, 60 quand ceux-ci passent de 394 à 76 (#1571) — on en
- *  lit alors 108, expressions comprises. Le baisser en même temps, jamais à zéro. */
-const PLANCHER_STYLES = 60;
+ *  lit alors 108, expressions comprises. Le baisser en même temps, jamais à zéro.
+ *  20 quand les statiques tombent à zéro (#1571) : ne restent que les 34 dont la
+ *  valeur vient des données (`style="width:{pct}%"`), qu'il lit encore. */
+const PLANCHER_STYLES = 20;
 
 /**
  * Cas zéro du volet C : en dessous, le motif ne lit plus les feuilles de style.

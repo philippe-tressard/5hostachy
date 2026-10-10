@@ -22,7 +22,7 @@
 	import { LIBELLE_STATUT, AIDE_STATUT, CLASSE_STATUT } from '$lib/taches';
 	import ConfigSauvegarde from '$lib/components/ConfigSauvegarde.svelte';
 	import EtatListe from '$lib/components/EtatListe.svelte';
-	import { colonnesVisibles, motifEchec } from '$lib/taches-colonnes';
+	import TableExecutionsTache from '$lib/components/TableExecutionsTache.svelte';
 
 	//  Le bouton dit ce qu'il FAIT, pas le nom de la tâche — voir LIBELLE_ACTION.
 	//  Défaut : « Lancer <nom de la tâche> », qui reste juste là où le bouton
@@ -194,7 +194,7 @@
 	<h2 class="config-section-title">
 		<Icon name="clipboard-list" size={17} />Santé des tâches planifiées
 	</h2>
-	<p class="muted" style="font-size:var(--fs-md)">
+	<p class="muted texte-md">
 		Synthèse : <strong>une ligne par tâche</strong>, portant la
 		<strong>dernière exécution réelle</strong>
 		— quel que soit le nœud qui l'a faite. En dessous,
@@ -216,8 +216,8 @@
 			messageVide="Aucune exécution n'a encore été enregistrée."
 		/>
 	{:else}
-		<div class="card" style="overflow:auto;margin-top:1rem">
-			<table class="table" style="font-size:var(--fs-md)">
+		<div class="card carte-taches">
+			<table class="table texte-md">
 				<thead><tr><th>Tâche</th><th>Nœud</th><th>État</th><th>Dernier rapport</th></tr></thead>
 				<tbody>
 					{#each sante.taches as t (t.tache)}
@@ -256,7 +256,7 @@
 									—
 								{:else if !t.noeud_enregistre}
 									<span
-										style="font-style:italic"
+										class="non-enregistre"
 										title="Cette exécution est antérieure à la migration 0137, qui a ajouté la colonne : on ne sait pas quel nœud l'a faite. Afficher le nœud qui répond aujourd'hui serait faux — le rôle alterne chaque nuit. La colonne se remplit à chaque exécution depuis."
 										>non enregistré</span
 									>
@@ -282,8 +282,7 @@
 									     écran le disait en remplaçant l'état ET la date par ceux du
 									     retardataire — ce qui faisait mentir « Dernier rapport ». -->
 									<span
-										class="badge badge-orange"
-										style="margin-left:.35rem"
+										class="badge badge-orange retard-noeud"
 										title="Ce nœud n'a pas exécuté la tâche dans le délai attendu. La dernière exécution, elle, s'est bien passée sur l'autre nœud."
 									>
 										{t.noeud_en_retard.toUpperCase()} en retard
@@ -350,52 +349,7 @@
 											messageVide="Aucune exécution enregistrée pour cette tâche."
 										/>
 									{:else}
-										<div class="table-wrap">
-											<table class="table" style="font-size:var(--fs-sm);margin:.25rem 0">
-												<thead>
-													<tr>
-														{#each colonnesVisibles(lignes) as c (c.titre)}
-															<th>{c.titre}</th>
-														{/each}
-													</tr>
-												</thead>
-												<tbody>
-													{#each lignes as l (l)}
-														<tr>
-															{#each colonnesVisibles(lignes) as c (c.titre)}
-																<!--  La condition porte sur le RENDU, pas sur le titre : une colonne
-														      sans `valeur` est, par définition, celle dont la cellule est
-														      écrite à la main. Tester le libellé aurait marché aussi, mais
-														      il aurait suffi de renommer « Statut » pour casser le tableau
-														      sans que rien ne lève — et TypeScript l'a refusé, à raison. -->
-																{#if !c.valeur}
-																	<td>
-																		<span
-																			class="badge"
-																			class:badge-red={l.statut === 'erreur' ||
-																				l.statut === 'echouee'}
-																			class:badge-green={l.statut !== 'erreur' &&
-																				l.statut !== 'echouee'}
-																		>
-																			{l.statut ?? '—'}
-																		</span>
-																		<!--  Le motif de l'échec était porté par la carte supprimée
-																		      avec #299 : sans lui, un statut « erreur » ne dit pas
-																		      pourquoi. Sa colonne dépend de la table (`motifEchec`, #1681). -->
-																		{#if motifEchec(l)}<span
-																				title={motifEchec(l)}
-																				style="margin-left:.4rem;cursor:help">⚠️</span
-																			>{/if}
-																	</td>
-																{:else}
-																	<td style={c.style ?? ''}>{c.valeur(l)}</td>
-																{/if}
-															{/each}
-														</tr>
-													{/each}
-												</tbody>
-											</table>
-										</div>
+										<TableExecutionsTache {lignes} />
 									{/if}
 									{#if adminApi.tacheLancable(t.tache)}
 										<!--  Bouton à DROITE, comme dans les deux cartes supprimées avec #299
@@ -412,8 +366,7 @@
 												</span>
 											{/if}
 											<button
-												class="btn btn-primary"
-												style="font-size:var(--fs-sm);padding:.3rem .7rem"
+												class="btn btn-primary btn-lancer"
 												on:click|stopPropagation={() => declencher(t.tache)}
 												disabled={enCours === t.tache}
 												title={t.tache === 'maintenance'
@@ -432,7 +385,7 @@
 			</table>
 		</div>
 		{#if sante.anomalies_recentes.length > 0}
-			<p class="muted" style="margin-top:.75rem;font-size:var(--fs-md)">
+			<p class="muted bilan-anomalies">
 				<strong>{sante.anomalies_recentes.length}</strong> exécution(s) en échec récemment.
 			</p>
 		{/if}
@@ -492,5 +445,26 @@
 	.note-lancement {
 		font-size: var(--fs-xs);
 		margin-right: auto;
+	}
+	.texte-md {
+		font-size: var(--fs-md);
+	}
+	.carte-taches {
+		overflow: auto;
+		margin-top: 1rem;
+	}
+	.non-enregistre {
+		font-style: italic;
+	}
+	.retard-noeud {
+		margin-left: 0.35rem;
+	}
+	.btn-lancer {
+		font-size: var(--fs-sm);
+		padding: 0.3rem 0.7rem;
+	}
+	.bilan-anomalies {
+		margin-top: 0.75rem;
+		font-size: var(--fs-md);
 	}
 </style>
