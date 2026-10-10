@@ -31,7 +31,8 @@ SURCOUCHE = RACINE / "deploiement" / "standard" / "compose.images.yml"
 LISEZMOI = RACINE / "deploiement" / "standard" / "LISEZMOI.md"
 COMPOSE = RACINE / "docker-compose.yml"
 IMAGES = RACINE / ".github" / "workflows" / "images.yml"
-NOTES = RACINE / "scripts" / "ci" / "notes-de-version.sh"
+#: La liste des fichiers de l'archive, et sa fabrication.
+NOTES = RACINE / "scripts" / "ci" / "lib-archive-deploiement.sh"
 
 
 class _Lecteur(yaml.SafeLoader):
@@ -39,6 +40,12 @@ class _Lecteur(yaml.SafeLoader):
 
 
 _Lecteur.add_constructor("!reset", lambda _l, _n: "!reset")
+#  `!override` remplace une liste héritée : on garde la liste, c'est elle qu'on juge.
+_Lecteur.add_constructor("!override", lambda lecteur, noeud: lecteur.construct_sequence(noeud))
+
+#: Les services que la surcouche règle SANS les construire : leur image est
+#: l'officielle, et seule leur configuration change pour une réplique.
+REGLES_SANS_IMAGE = {"postgres"}
 
 
 def _yaml(chemin: Path) -> dict:
@@ -53,11 +60,14 @@ def test_chaque_service_construit_prend_son_image():
     surcouche = _yaml(SURCOUCHE)["services"]
     construits = _construits()
     assert len(construits) >= 4, "le relevé de docker-compose.yml est cassé"
-    assert set(surcouche) == construits, (
+    assert set(surcouche) == construits | REGLES_SANS_IMAGE, (
         f"surcouche : {sorted(surcouche)} ; services construits par la racine : {sorted(construits)}"
+        f" ; réglés sans image : {sorted(REGLES_SANS_IMAGE)}"
     )
     registre = yaml.safe_load(IMAGES.read_text(encoding="utf-8"))["env"]["REGISTRE"]
     for nom, service in surcouche.items():
+        if nom in REGLES_SANS_IMAGE:
+            continue
         assert service.get("build") == "!reset", f"{nom} : la construction n'est pas retirée"
         attendu = re.compile(
             rf"^{re.escape(registre)}/coprofirst-{re.escape(nom)}:\$\{{COPROFIRST_VERSION:\?.+\}}$"
@@ -114,10 +124,53 @@ def test_la_mise_a_jour_sauvegarde_avant_de_toucher_au_service():
     ordre = [
         "pull --quiet",  # images tirées, service intact
         "stop api",  # premier geste qui coupe
-        "integrity_check",  # la sauvegarde est vérifiée…
+        "export_copropriete verifier",  # la sauvegarde est réimportée à côté (PostgreSQL)…
+        "integrity_check",  # … ou vérifiée en place (SQLite)…
         'sed -i "s/^COPROFIRST_VERSION=',  # … avant de poser la version
         "up -d --remove-orphans",
     ]
     positions = [texte.index(m) for m in ordre]
     assert positions == sorted(positions), dict(zip(ordre, positions))
     assert "COPROFIRST_SAUVEGARDES absent" in texte, "pas de mise à jour sans sauvegarde"
+
+
+# ── PostgreSQL sur une réplique (DI-4 sous PostgreSQL) ───────────────────────
+
+
+def test_le_postgresql_d_une_replique_n_est_pas_celui_du_maitre():
+    """Une réplique tient sur un serveur (D15) : ni réplication, ni port, ni IP du maître."""
+    pg = _yaml(SURCOUCHE)["services"]["postgres"]
+    maitre = _yaml(COMPOSE)["services"]["postgres"]
+    assert "image" not in pg and "build" not in pg, (
+        "l'image officielle, telle que la racine la nomme"
+    )
+    assert pg["ports"] == "!reset", "le port de la base ne s'ouvre pas sur le réseau local"
+    montes = {v.split(":")[1] for v in pg["volumes"]}
+    assert "/docker-entrypoint-initdb.d" not in montes, "pas de rôle de réplication"
+    assert "/var/lib/postgresql/data" in montes, "le volume des données reste celui de la racine"
+    hba = next(v.split(":")[0] for v in pg["volumes"] if v.endswith("/pg_hba.conf:ro"))
+    fichier = RACINE / hba.removeprefix("./")
+    assert fichier.exists() and hba.removeprefix("./") in NOTES.read_text(encoding="utf-8"), (
+        "le pg_hba d'une réplique doit exister et partir dans l'archive"
+    )
+    lignes = [li for li in fichier.read_text(encoding="utf-8").splitlines() if li and li[0] != "#"]
+    assert not [li for li in lignes if "replication" in li], lignes
+    assert not re.search(r"192\.168\.", fichier.read_text(encoding="utf-8"))
+    #  Et ce que la surcouche retire existe bien chez le maître : sinon elle ne
+    #  retire plus rien, et ce test non plus ne mesure plus rien.
+    assert any("initdb" in v for v in maitre["volumes"]) and maitre.get("ports")
+
+
+def _corps(texte: str, fonction: str) -> str:
+    m = re.search(rf"^{fonction}\(\) \{{\n(.*?)^\}}", texte, re.S | re.M)
+    assert m, f"{fonction} introuvable"
+    return m.group(1)
+
+
+def test_le_moteur_se_lit_comme_chez_le_maitre():
+    """`moteur_de_url` est une COPIE déclarée : l'archive n'emporte pas `scripts/lib`."""
+    maitre = (RACINE / "scripts" / "lib" / "lib-replication.sh").read_text(encoding="utf-8")
+    replique = MISE_A_JOUR.read_text(encoding="utf-8")
+    assert _corps(replique, "moteur_de_url") == _corps(maitre, "moteur_de_url"), (
+        "les deux lectures du moteur ont divergé — recopier celle de lib-replication.sh"
+    )

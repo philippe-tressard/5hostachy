@@ -1,0 +1,64 @@
+name: Essai de mise à jour
+
+#  Lot DI-4 sous PostgreSQL (#1756) — chantier multi-copropriétés, distribution
+#  (`specs/architecture/multi-coproprietes.md` §4.10, D15).
+#
+#  Éprouve la mise à jour nocturne d'une réplique DE BOUT EN BOUT, sur une
+#  machine jetable (ce runner), sous SQLite ET sous PostgreSQL : installation de
+#  <de> selon le mode d'emploi, mise à jour vers <vers> par `mise-a-jour.sh`,
+#  puis verdict (`scripts/ci/essai-mise-a-jour.sh`). Rien n'est promu :
+#  `replica` n'est pas lue, la cible est imposée.
+#
+#  Se lance à la main, quand deux versions étiquetées le permettent :
+#      gh workflow run essai-mise-a-jour.yml -f de=X.Y.Z -f vers=X.Y.Z
+#  Jamais sur les RPi : les noms de conteneurs y sont ceux de la production.
+on:
+  workflow_dispatch:
+    inputs:
+      de:
+        description: "Version installée au départ (X.Y.Z, sans « v »)"
+        required: true
+        type: string
+      vers:
+        description: "Version à installer (X.Y.Z, sans « v »)"
+        required: true
+        type: string
+
+concurrency:
+  group: essai-mise-a-jour
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+  attestations: read   # `gh attestation verify` : la signature des images
+  packages: read
+
+jobs:
+  essai:
+    name: ${{ inputs.de }} → ${{ inputs.vers }} (${{ matrix.moteur }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        moteur: [sqlite, postgresql]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0   # les tags des deux versions
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+      - name: Installer, mettre à jour, juger
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DE: ${{ inputs.de }}
+          VERS: ${{ inputs.vers }}
+          MOTEUR: ${{ matrix.moteur }}
+        run: |
+          case "$DE$VERS" in *[!0-9.]*) echo "::error::versions attendues en X.Y.Z"; exit 1 ;; esac
+          bash scripts/ci/essai-mise-a-jour.sh "$DE" "$VERS" "$MOTEUR"

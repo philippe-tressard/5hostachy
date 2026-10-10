@@ -44,6 +44,7 @@ dépôt), l'archive `coprofirst-deploiement-X.Y.Z.tar.gz`. Elle contient,
 | `.env.example` | le gabarit de configuration, commenté |
 | `deploiement/standard/LISEZMOI.md` | ce mode d'emploi |
 | `deploiement/standard/mise-a-jour.sh` | la mise à jour nocturne, réversible seule |
+| `deploiement/standard/postgresql/pg_hba.conf` | qui peut se connecter à PostgreSQL, s'il est choisi : l'API seule |
 | `LICENSE` | AGPL-3.0-or-later |
 
 ## Installer
@@ -128,12 +129,43 @@ le temps de redémarrer (crontab de l'utilisateur qui pilote Docker) :
 30 4 * * * /opt/coprofirst/deploiement/standard/mise-a-jour.sh >> /var/log/coprofirst-maj.log 2>&1
 ```
 
+## Choisir PostgreSQL plutôt que SQLite
+
+Par défaut, la base est un fichier **SQLite** : rien à installer. **PostgreSQL**
+— celui du maître depuis le 10/10/2026 — s'allume dans `.env`, **avant le
+premier démarrage** :
+
+```
+COMPOSE_PROFILES=postgresql
+POSTGRES_PASSWORD=<openssl rand -hex 32>
+DATABASE_URL=postgresql+psycopg://coprofirst:<POSTGRES_PASSWORD>@postgres:5432/coprofirst
+```
+
+Le premier démarrage crée la base et y pose le schéma courant. Le serveur
+n'écoute que sur le réseau de Compose : la surcouche retire son port et le
+réglage de réplication du maître (une réplique n'a pas de second nœud).
+
+La mise à jour nocturne le sait : sous PostgreSQL, elle **exporte** la base avant
+d'installer (`…-base.tar.gz`, à côté de l'archive des volumes, dans
+`COPROFIRST_SAUVEGARDES`), la **réimporte dans une base jetable** pour la déclarer
+bonne, et, si la version précédente elle-même ne repart pas, la restaure.
+
+Passer une installation **existante** de SQLite à PostgreSQL est une opération,
+pas un réglage : l'API arrêtée, exporter la base
+(`docker compose … run --rm --no-deps --entrypoint python api -m app.utils.export_copropriete exporter sqlite:////app/data/app.db /backups/vers-postgresql.tar.gz`),
+allumer le profil comme ci-dessus, poser le schéma (`… -m app.utils.schema_initial`),
+importer (`… -m app.utils.export_copropriete importer /backups/vers-postgresql.tar.gz env:DATABASE_URL`),
+puis démarrer. L'import vérifie chaque table et refuse au moindre écart.
+
 ## Sauvegarder
 
-Les données vivent dans des volumes Docker : `app_data` (la base), `uploads` (les
-fichiers), `whatsapp_auth`, et `backups`, où l'application range ses sauvegardes
+Les données vivent dans des volumes Docker : `app_data` (la base SQLite),
+`pg_data` (la base PostgreSQL, si elle est choisie), `uploads` (les fichiers),
+`whatsapp_auth`, et `backups`, où l'application range ses sauvegardes
 planifiées (Administration › Sauvegarde). Copier ces archives **hors de la
 machine** : une sauvegarde qui vit à côté de ce qu'elle protège disparaît avec.
 
-🔴 Ne jamais ouvrir le fichier de la base depuis un autre processus tant que l'API
-tourne, même en lecture : arrêter l'API d'abord (`docker compose stop api`).
+🔴 Sous SQLite, ne jamais ouvrir le fichier de la base depuis un autre processus
+tant que l'API tourne, même en lecture : arrêter l'API d'abord (`docker compose
+stop api`). Sous PostgreSQL, ne jamais copier le volume `pg_data` d'un serveur
+qui tourne : passer par l'export, comme la mise à jour.

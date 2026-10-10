@@ -15,12 +15,16 @@
 #   3. télécharger l'archive de déploiement de la version, tirer ses images,
 #      vérifier leur signature — le service tourne toujours ;
 #   4. arrêter l'API, SAUVEGARDER les volumes dans `COPROFIRST_SAUVEGARDES`,
-#      vérifier la sauvegarde (archive lisible, `PRAGMA integrity_check`) ;
+#      et la vérifier : sous SQLite, `app.db` présent et `PRAGMA integrity_check` ;
+#      sous PostgreSQL (le profil `postgresql`, DI-7), un EXPORT de la base
+#      (`export_copropriete exporter`) réimporté dans une base jetable
+#      (`… verifier`) — les données ne sont pas dans les volumes ;
 #   5. poser les fichiers et la version, `up -d` (l'API migre en démarrant) ;
 #   6. sonder `/api/health` ;
 #   7. en échec : revenir aux fichiers et à l'image précédents (la base migrée
 #      se sert sans migrer, `api/app/utils/revision_base.py`) ; si la santé
-#      reste KO, RESTAURER la sauvegarde (fonction PURE `decider_issue`).
+#      reste KO, RESTAURER la sauvegarde (fonction PURE `decider_issue`) — sous
+#      PostgreSQL : schéma vidé, schéma initial de la version précédente, import.
 #   8. rendre compte : journal, et `POST /admin/maintenance/rapport` (tâche
 #      `mise_a_jour`) — le contrôle de 06:00 en fait un courriel s'il a échoué.
 #
@@ -32,6 +36,13 @@
 #  la machine), COPROFIRST_EPINGLEE=oui (ne pas suivre), COPROFIRST_DELAI_JOURS
 #  (0 pour l'installation pilote, 1 par défaut), COPROFIRST_SIGNATURE
 #  (`exigee` ou `si-possible`, défaut), MAINTENANCE_KEY (pour rendre compte).
+#
+#  ESSAI, jamais en service (lus dans l'ENVIRONNEMENT, pas dans `.env`) :
+#  COPROFIRST_ESSAI_CIBLE=X.Y.Z installe cette version au lieu de celle de
+#  `replica`, sans délai ; COPROFIRST_ESSAI_ARCHIVE=<fichier> prend l'archive de
+#  déploiement sur le disque au lieu de la release. C'est ainsi que
+#  `scripts/ci/essai-mise-a-jour.sh` éprouve tout le déroulé, de bout en bout,
+#  sans rien promouvoir.
 #
 #  Test : bash deploiement/standard/mise-a-jour.sh --selftest
 # =============================================================================
@@ -64,6 +75,18 @@ decider_cible() {
     case "$age" in ''|*[!0-9]*) age=0 ;; esac
     if [ "$age" -lt "$delai" ]; then echo attendre; return; fi
     echo mettre-a-jour
+}
+
+#  Le moteur que `.env` désigne, par l'URL de sa base → sqlite|postgresql|inconnu.
+#  🔒 COPIE DÉCLARÉE de `scripts/lib/lib-replication.sh` : l'archive d'une
+#  réplique n'emporte pas les scripts des RPi (#1755). `test_deploiement_standard`
+#  exige que les deux corps restent identiques.
+moteur_de_url() {
+    case "${1:-}" in
+        sqlite:*)                   echo sqlite ;;
+        postgresql:*|postgresql+*)  echo postgresql ;;
+        *)                          echo inconnu ;;
+    esac
 }
 
 #  $1 santé après la mise à jour (ok|ko) · $2 santé après le retour à l'image
@@ -100,6 +123,10 @@ if [ "${1:-}" = "--selftest" ]; then
     attendu "santé KO → revenir à l'image précédente"   revenir   decider_issue ko ""
     attendu "revenue, santé OK → revenue"               revenue   decider_issue ko ok
     attendu "revenue, santé KO → restaurer"             restaurer decider_issue ko ko
+    echo "== self-test : quel moteur sauvegarder =="
+    attendu "SQLite"                                    sqlite     moteur_de_url "sqlite:////app/data/app.db"
+    attendu "PostgreSQL (psycopg)"                      postgresql moteur_de_url "postgresql+psycopg://u:p@postgres:5432/b"
+    attendu "URL absente → inconnu, jamais SQLite"      inconnu    moteur_de_url ""
     exit "$fail"
 fi
 
@@ -160,12 +187,17 @@ sante() {  # → ok | ko, en sondant jusqu'à SANTE_MAX_S
 }
 
 # ── 1–2. La version à installer, et la décision ───────────────────────────────
-CIBLE=$(curl -fsSL -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
-    | sed -n 's/^[[:space:]]*"version": *"\([^"]*\)".*/\1/p' | head -1 || true)
-PUBLIEE=$(curl -fsSL -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
-    | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
 AGE=""
-[ -n "${PUBLIEE:-}" ] && AGE=$(( ( $(date +%s) - $(date -d "${PUBLIEE:-}" +%s) ) / 86400 ))
+if [ -n "${COPROFIRST_ESSAI_CIBLE:-}" ]; then
+    CIBLE="$COPROFIRST_ESSAI_CIBLE"; AGE=999
+    journal "ESSAI : cible imposée $CIBLE (COPROFIRST_ESSAI_CIBLE), replica n'est pas lue."
+else
+    CIBLE=$(curl -fsSL -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
+        | sed -n 's/^[[:space:]]*"version": *"\([^"]*\)".*/\1/p' | head -1 || true)
+    PUBLIEE=$(curl -fsSL -m 20 "https://api.github.com/repos/$DEPOT/releases/tags/v$CIBLE" 2>/dev/null \
+        | sed -n 's/.*"published_at": *"\([^"]*\)".*/\1/p' | head -1 || true)
+    [ -n "${PUBLIEE:-}" ] && AGE=$(( ( $(date +%s) - $(date -d "${PUBLIEE:-}" +%s) ) / 86400 ))
+fi
 DECISION=$(decider_cible "$COURANTE" "$CIBLE" "$(lire_env COPROFIRST_EPINGLEE)" "$AGE" "$DELAI")
 case "$DECISION" in
     a-jour)    journal "À jour en $COURANTE."; exit 0 ;;
@@ -176,13 +208,19 @@ case "$DECISION" in
 esac
 [ -n "$SAUVEGARDES" ] && [ -d "$SAUVEGARDES" ] && [ -w "$SAUVEGARDES" ] \
     || echouer "COPROFIRST_SAUVEGARDES absent ou non inscriptible : pas de mise à jour sans sauvegarde (D15)."
-journal "Mise à jour $COURANTE → $CIBLE."
+MOTEUR=$(moteur_de_url "$(lire_env DATABASE_URL)")
+[ "$MOTEUR" != inconnu ] || echouer "DATABASE_URL illisible dans .env : on ne sauvegarde pas une base qu'on ne sait pas nommer."
+journal "Mise à jour $COURANTE → $CIBLE (base : $MOTEUR)."
 
 # ── 3. Tout préparer pendant que le service tourne ────────────────────────────
 TRAVAIL=$(mktemp -d)
-curl -fsSL -m 120 -o "$TRAVAIL/archive.tar.gz" \
-    "https://github.com/$DEPOT/releases/download/v$CIBLE/coprofirst-deploiement-$CIBLE.tar.gz" \
-    || echouer "archive de déploiement de $CIBLE introuvable."
+if [ -n "${COPROFIRST_ESSAI_ARCHIVE:-}" ]; then
+    cp "$COPROFIRST_ESSAI_ARCHIVE" "$TRAVAIL/archive.tar.gz" || echouer "archive d'essai $COPROFIRST_ESSAI_ARCHIVE illisible."
+else
+    curl -fsSL -m 120 -o "$TRAVAIL/archive.tar.gz" \
+        "https://github.com/$DEPOT/releases/download/v$CIBLE/coprofirst-deploiement-$CIBLE.tar.gz" \
+        || echouer "archive de déploiement de $CIBLE introuvable."
+fi
 tar -xzf "$TRAVAIL/archive.tar.gz" -C "$TRAVAIL" || echouer "archive de $CIBLE illisible."
 NOUVEAUX="$TRAVAIL/coprofirst-$CIBLE"
 for s in $SERVICES; do
@@ -201,15 +239,27 @@ COPROFIRST_VERSION="$CIBLE" "${COMPOSE[@]}" pull --quiet || echouer "images de $
 IMAGE_API="$REGISTRE/coprofirst-api:$COURANTE"
 ARCHIVE="coprofirst_${COURANTE:-neuve}_vers_${CIBLE}_$(date +%Y%m%d_%H%M%S).tar.gz"
 VOLUMES=(-v "${PROJET}_app_data:/donnees/app_data" -v "${PROJET}_uploads:/donnees/uploads" -v "$SAUVEGARDES:/sortie")
+#  Sous PostgreSQL, la base ne vit pas dans les volumes : elle part dans un
+#  EXPORT à côté, réimporté dans une base jetable pour être déclaré bon (P2-7).
+BASE="${ARCHIVE%.tar.gz}-base.tar.gz"
+PONCTUEL=("${COMPOSE[@]}" run --rm --no-deps -T -v "$SAUVEGARDES:/sortie" --entrypoint python api)
 "${COMPOSE[@]}" stop api >/dev/null
-if ! docker run --rm "${VOLUMES[@]}" --entrypoint tar "$IMAGE_API" -czf "/sortie/$ARCHIVE" -C /donnees . \
-    || ! tar -tzf "$SAUVEGARDES/$ARCHIVE" | grep -qx './app_data/app.db' \
-    || ! docker run --rm -v "$SAUVEGARDES:/sortie:ro" --entrypoint sh "$IMAGE_API" -c \
-        "cd /tmp && tar -xzf /sortie/$ARCHIVE ./app_data/app.db && python -c \"import sqlite3,sys; sys.exit(0 if sqlite3.connect('app_data/app.db').execute('PRAGMA integrity_check').fetchone()[0]=='ok' else 1)\""; then
+sauvegarder() {
+    docker run --rm "${VOLUMES[@]}" --entrypoint tar "$IMAGE_API" -czf "/sortie/$ARCHIVE" -C /donnees . || return 1
+    if [ "$MOTEUR" = postgresql ]; then
+        "${PONCTUEL[@]}" -m app.utils.export_copropriete exporter env:DATABASE_URL "/sortie/$BASE" \
+            && "${PONCTUEL[@]}" -m app.utils.export_copropriete verifier "/sortie/$BASE"
+        return
+    fi
+    tar -tzf "$SAUVEGARDES/$ARCHIVE" | grep -qx './app_data/app.db' \
+        && docker run --rm -v "$SAUVEGARDES:/sortie:ro" --entrypoint sh "$IMAGE_API" -c \
+            "cd /tmp && tar -xzf /sortie/$ARCHIVE ./app_data/app.db && python -c \"import sqlite3,sys; sys.exit(0 if sqlite3.connect('app_data/app.db').execute('PRAGMA integrity_check').fetchone()[0]=='ok' else 1)\""
+}
+if ! sauvegarder; then
     "${COMPOSE[@]}" start api >/dev/null || true
     echouer "sauvegarde avant mise à jour impossible ou invalide : rien n'est changé."
 fi
-journal "Sauvegarde vérifiée : $SAUVEGARDES/$ARCHIVE."
+journal "Sauvegarde vérifiée : $SAUVEGARDES/$ARCHIVE$([ "$MOTEUR" = postgresql ] && echo " + $BASE")."
 
 # ── 5–6. Poser la version, démarrer, sonder ──────────────────────────────────
 PRECEDENT="$DOSSIER/.precedent"
@@ -246,6 +296,15 @@ case "$(decider_issue "$NEUVE" "$RETOUR")" in
         "${COMPOSE[@]}" stop api >/dev/null || true
         docker run --rm "${VOLUMES[@]}" --entrypoint sh "$IMAGE_API" -c \
             "rm -rf /donnees/app_data/* /donnees/uploads/* && tar -xzf /sortie/$ARCHIVE -C /donnees"
+        if [ "$MOTEUR" = postgresql ]; then
+            #  La base de la version PRÉCÉDENTE (fichiers et .env déjà revenus) :
+            #  schéma vidé, schéma initial de cette version, puis l'export d'avant.
+            "${COMPOSE[@]}" exec -T postgres psql -U coprofirst -d coprofirst -q \
+                -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public" \
+                && "${PONCTUEL[@]}" -m app.utils.schema_initial \
+                && "${PONCTUEL[@]}" -m app.utils.export_copropriete importer "/sortie/$BASE" env:DATABASE_URL \
+                || journal "🔴 Restauration de la base PostgreSQL ÉCHOUÉE — l'export d'avant la mise à jour est $SAUVEGARDES/$BASE."
+        fi
         "${COMPOSE[@]}" up -d >/dev/null 2>&1 || true
         journal "Restauration terminée — santé : $(sante)."
         rendre_compte erreur "santé KO en $CIBLE puis en $COURANTE — sauvegarde $ARCHIVE restaurée" "$CIBLE"

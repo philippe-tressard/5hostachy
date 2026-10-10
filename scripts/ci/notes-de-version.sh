@@ -21,29 +21,10 @@
 # =============================================================================
 set -euo pipefail
 
-# ── Ce que l'archive emporte (le mode d'emploi les cite tous) ─────────────────
-#  🔒 test_deploiement_standard.py : chaque fichier du tableau de
-#  `deploiement/standard/LISEZMOI.md` figure ici.
-FICHIERS_DEPLOIEMENT=(
-    docker-compose.yml
-    deploiement/standard/compose.images.yml
-    Caddyfile
-    .env.example
-    deploiement/standard/LISEZMOI.md
-    deploiement/standard/mise-a-jour.sh
-    LICENSE
-)
-
-#  $1 commit · $2 version · $3 dossier de sortie → chemin de l'archive
-archiver_deploiement() {
-    local sortie="$3/coprofirst-deploiement-$2.tar.gz" f
-    #  `git archive` ne refuse pas un chemin absent du commit : il l'omet.
-    for f in "${FICHIERS_DEPLOIEMENT[@]}"; do
-        git cat-file -e "$1:$f" 2>/dev/null || { echo "::error::$f absent de $1" >&2; return 1; }
-    done
-    git archive --format=tar.gz --prefix="coprofirst-$2/" -o "$sortie" "$1" -- "${FICHIERS_DEPLOIEMENT[@]}"
-    echo "$sortie"
-}
+# ── L'archive du déploiement standard : `lib-archive-deploiement.sh` ─────────
+#  (la liste de ses fichiers et sa fabrication), partagée avec l'essai de la
+#  mise à jour nocturne (`essai-mise-a-jour.sh`).
+source "$(dirname "${BASH_SOURCE[0]}")/lib-archive-deploiement.sh"
 
 # ── La composition (PURE sur un dépôt git) ────────────────────────────────────
 #  $1 précédent (vide : première promotion) · $2 commit promu · $3 version

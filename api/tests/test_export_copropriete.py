@@ -210,39 +210,51 @@ def test_on_ne_garde_que_les_derniers_exports(http_admin, monkeypatch):
     )
 
 
-def test_l_import_en_ligne_de_commande_verifie_et_le_dit(tmp_path):
-    """Le geste de DI-7 : une archive, une base cible neuve, et un verdict lisible."""
+def _ligne_de_commande(*arguments: str):
+    """`python -m app.utils.export_copropriete …`, comme l'appellent les scripts d'exploitation."""
     import os
     import subprocess
     import sys
 
-    archive = tmp_path / "e.tar.gz"
-    ex.exporter(_base_peuplee(), archive)
-    cible = f"sqlite:///{(tmp_path / 'cible.db').as_posix()}"
     #  L'enfant écrit en UTF-8 quel que soit le poste (la console Windows est en cp1252).
     env = {**os.environ, "SECRET_KEY": "x" * 40, "PYTHONIOENCODING": "utf-8"}
-    r = subprocess.run(
-        [sys.executable, "-m", "app.utils.export_copropriete", "importer", str(archive), cible],
+    return subprocess.run(
+        [sys.executable, "-m", "app.utils.export_copropriete", *arguments],
         capture_output=True,
         text=True,
         encoding="utf-8",
         env=env,
         cwd=os.getcwd(),
     )
+
+
+def test_l_import_en_ligne_de_commande_verifie_et_le_dit(tmp_path):
+    """Le geste de DI-7 : une archive, une base cible neuve, et un verdict lisible."""
+    archive = tmp_path / "e.tar.gz"
+    ex.exporter(_base_peuplee(), archive)
+    r = _ligne_de_commande("importer", str(archive), f"sqlite:///{(tmp_path / 'c.db').as_posix()}")
     assert r.returncode == 0, r.stderr[-500:]
     assert "Importé et vérifié" in r.stdout
     alteree = tmp_path / "alteree.tar.gz"
     _alterer(archive, alteree, "faq_item", lambda d: d.replace("sous-sol".encode(), b"grenier"))
-    cible2 = f"sqlite:///{(tmp_path / 'cible2.db').as_posix()}"
-    r = subprocess.run(
-        [sys.executable, "-m", "app.utils.export_copropriete", "importer", str(alteree), cible2],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        env=env,
-        cwd=os.getcwd(),
-    )
+    r = _ligne_de_commande("importer", str(alteree), f"sqlite:///{(tmp_path / 'd.db').as_posix()}")
     assert r.returncode != 0 and "IMPORT REFUSÉ" in r.stderr
+
+
+def test_verifier_une_archive_en_ligne_de_commande(tmp_path):
+    """La sauvegarde d'une réplique avant sa mise à jour (DI-4) : réimportée à côté, jamais en place."""
+    archive = tmp_path / "e.tar.gz"
+    ex.exporter(_base_peuplee(), archive)
+    r = _ligne_de_commande("verifier", str(archive))
+    assert r.returncode == 0, r.stderr[-500:]
+    assert "Archive vérifiée" in r.stdout
+    alteree = tmp_path / "alteree.tar.gz"
+    _alterer(archive, alteree, "faq_item", lambda d: d.replace("sous-sol".encode(), b"grenier"))
+    r = _ligne_de_commande("verifier", str(alteree))
+    assert r.returncode != 0 and "ARCHIVE REFUSÉE" in r.stderr
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["alteree.tar.gz", "e.tar.gz"], (
+        "la base jetable de la vérification doit disparaître"
+    )
 
 
 # ── Les clés étrangères ACTIVES (DI-7c, première bascule du 09/10/2026) ─────────

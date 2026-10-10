@@ -406,26 +406,39 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
     return bilan
 
 
+def verifier_archive(archive: Path, dossier: Path) -> Bilan:
+    """Réimporte une archive dans une base NEUVE et jetable de `dossier`, puis l'efface.
+
+    Une archive qui ne se restaure pas lève `ImportRefuse`. C'est la vérification
+    d'une sauvegarde quel que soit le moteur qui l'a produite : la mise à jour
+    nocturne d'une réplique sous PostgreSQL (DI-4) n'a pas d'`app.db` à éprouver.
+    """
+    from app.dialecte import moteur_jetable
+
+    cible = dossier / "verification.db"
+    moteur_cible = moteur_jetable(cible)
+    try:
+        SQLModel.metadata.create_all(moteur_cible)
+        return importer(archive, moteur_cible)
+    finally:
+        moteur_cible.dispose()
+        if cible.exists():
+            os.remove(cible)
+
+
 def verifier_restauration(moteur_source, dossier: Path) -> tuple[dict, Bilan]:
     """Exporte la base (sans fichiers) puis la réimporte dans une base neuve et jetable.
 
     Rend le manifeste et le bilan. Une base qui ne se restaure pas lève
     `ImportRefuse` : c'est précisément ce que ce geste doit dire.
     """
-    from app.dialecte import moteur_jetable
-
     archive = dossier / "verification.tar.gz"
-    cible = dossier / "verification.db"
-    manifeste = exporter(moteur_source, archive)
-    moteur_cible = moteur_jetable(cible)
     try:
-        SQLModel.metadata.create_all(moteur_cible)
-        bilan = importer(archive, moteur_cible)
+        manifeste = exporter(moteur_source, archive)
+        bilan = verifier_archive(archive, dossier)
     finally:
-        moteur_cible.dispose()
-        for f in (archive, cible):
-            if f.exists():
-                os.remove(f)
+        if archive.exists():
+            os.remove(archive)
     return manifeste, bilan
 
 
@@ -454,6 +467,7 @@ def adresse(argument: str) -> str:
 _USAGE = (
     "usage : python -m app.utils.export_copropriete exporter <url-source> <archive>\n"
     "        python -m app.utils.export_copropriete importer <archive> <url-cible> [<fichiers>]\n"
+    "        python -m app.utils.export_copropriete verifier <archive>\n"
     "        (une URL peut s'écrire env:NOM — lue dans l'environnement)"
 )
 
@@ -462,8 +476,21 @@ if __name__ == "__main__":
 
     from sqlmodel import create_engine
 
-    if len(sys.argv) < 4 or sys.argv[1] not in ("exporter", "importer"):
+    _ARITE = {"exporter": 4, "importer": 4, "verifier": 3}
+    if len(sys.argv) < _ARITE.get(sys.argv[1] if len(sys.argv) > 1 else "", 99):
         sys.exit(_USAGE)
+    if sys.argv[1] == "verifier":
+        #  La sauvegarde d'une réplique, avant sa mise à jour (DI-4) : réimportée
+        #  dans une base jetable, à côté, jamais dans la base qui sert.
+        import tempfile
+
+        try:
+            with tempfile.TemporaryDirectory() as _dossier:
+                _bilan = verifier_archive(Path(sys.argv[2]), Path(_dossier))
+        except ImportRefuse as _refus:
+            sys.exit(f"ARCHIVE REFUSÉE : {_refus}")
+        print(f"Archive vérifiée : {_bilan.tables} tables, {_bilan.lignes} lignes.")
+        sys.exit(0)
     if sys.argv[1] == "exporter":
         #  🔴 La base SOURCE doit être au repos : l'appelant arrête l'API avant
         #  (règle d'or, CLAUDE.md). Cette commande lit, elle ne fige rien.

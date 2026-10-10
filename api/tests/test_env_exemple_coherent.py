@@ -95,6 +95,11 @@ AJUSTEMENTS_DECLARES: dict[tuple[str, str], str] = {
     ("lib-env-base.sh", '"$t" > "$REPO/.env"'): (
         "DATABASE_URL de ce nœud (bascule des données DI-7c et son retour)"
     ),
+    #  L'essai de la mise à jour nocturne (DI-4) remplit le `.env` d'une
+    #  installation JETABLE, sur un runner de CI, comme un exploitant le ferait.
+    ("essai-mise-a-jour.sh", '"$1" "$2" >> .env'): (
+        "essai de bout en bout : le .env d'une installation jetable, tirée de .env.example"
+    ),
     ("lib-env-base.sh", "cat > /opt/5hostachy/.env.tmp"): (
         "DATABASE_URL du pair, réécrit en 600 (bascule des données DI-7c et son retour)"
     ),
