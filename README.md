@@ -215,9 +215,10 @@ fonctionner comme service en ligne (AGPL §13). Aucune condition additionnelle.
 
 Les versions publiées jusqu'à la 2.115.0 restent sous leur licence d'origine ;
 l'historique du changement et les mentions de copyright sont dans
-[`NOTICE.md`](NOTICE.md). La licence ne cède aucun droit sur les noms ni sur le
-logo : leur usage suit [`MARQUE.md`](MARQUE.md) — CoproFirst est une demande de
-marque déposée à l'INPI (n° 5307183, 09/10/2026).
+[`NOTICE.md`](NOTICE.md). La licence ne cède aucun droit sur les noms, et le logo
+n'est pas sous l'AGPL ([sa licence](LICENSES/LicenseRef-CoproFirst-Logo.txt)) :
+leur usage suit [`MARQUE.md`](MARQUE.md) — CoproFirst est une demande de marque
+déposée à l'INPI (n° 5307183, 09/10/2026).
 
 Les composants tiers gardent leur propre licence : [`NOTICE.md`](NOTICE.md) §6
 les nomme, dont `libsignal` (GPL-3.0) dans le service de messagerie — tous

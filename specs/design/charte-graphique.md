@@ -335,7 +335,7 @@ function toggleItem(id: number) {
 
 ## Logotype
 
-- **Le logo est celui de la RÉSIDENCE** : il se téléverse dans *Admin › Paramétrage site* (PNG ou JPEG, carré, 512 px), et le site en dérive le menu, l'écran de connexion, l'onglet, l'icône de l'application installée, les documents et les courriels (#1728). Sans logo, le logo neutre de CoproFirst : trois immeubles en Bleu Seine, une fenêtre allumée et la ligne de sol en Or Croissy, sur une tuile blanche arrondie — lisible sur les en-têtes bleu marine des documents. Son dessin vit dans `front/static/favicon.svg` (copie `api/app/utils/logo-neutre.svg`), et ses rendus PNG en dérivent (#1774).
+- **Le logo est celui de la RÉSIDENCE** : il se téléverse dans *Admin › Paramétrage site* (PNG ou JPEG, carré, 512 px), et le site en dérive le menu, l'écran de connexion, l'onglet, l'icône de l'application installée, les documents et les courriels (#1728). Sans logo, le logo neutre de CoproFirst : trois immeubles en Bleu Seine, une fenêtre allumée et la ligne de sol en Or Croissy, sur une tuile blanche arrondie — lisible sur les en-têtes bleu marine des documents. Son dessin vit dans `front/static/favicon.svg` (copie `api/app/utils/logo-neutre.svg`), et ses rendus PNG en dérivent (#1774). Ces fichiers ne sont **pas** sous l'AGPL : licence d'usage propre, `LICENSES/LicenseRef-CoproFirst-Logo.txt`, déclarée dans `REUSE.toml` (`MARQUE.md` §5).
 - **Celui de 5Hostachy** (08/10/2026) : un immeuble au trait bleu marine sur fond blanc, une fenêtre et le sol dorés — sobre et institutionnel.
 - **Nom affiché :** « 5Hostachy » ou « Résidence du Parc »
 - **Déclinaisons à produire :**
