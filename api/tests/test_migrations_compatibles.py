@@ -61,7 +61,14 @@ _RACINE = Path(__file__).resolve().parents[2]
 #: du code qui a CESSÉ d'en dépendre, et pourquoi. Une entrée s'écrit au premier
 #: temps, avec la version de ce lot ; la migration qui retire vient dans un lot
 #: suivant. Une entrée reste après la migration : c'est la trace du retrait.
-CONTRACTIONS: dict[str, tuple[str, str]] = {}
+CONTRACTIONS: dict[str, tuple[str, str]] = {
+    "ticket.non_relancable": (
+        "2.130.5",
+        "la relance syndic propose toute affaire suivie depuis v2.130.2 (#1796) ; "
+        "le champ quitte le modèle, la 0272 lui donne un défaut (#1797)",
+    ),
+    "ticket.non_relancable_motif": ("2.130.5", "le motif du marquage retiré (#1797)"),
+}
 
 #: Les gestes qui retirent quelque chose à l'ancien code.
 RETRAITS = frozenset({"drop_table", "drop_column", "rename_table", "renommer_colonne"})
@@ -303,6 +310,15 @@ def test_aucune_migration_neuve_ne_contracte_en_un_seul_temps():
         for e in ecarts(nom, gestes_contractants(src), CONTRACTIONS, version, modeles)
     ]
     assert not trouves, "\n".join(trouves)
+
+
+def test_une_contraction_annoncee_n_est_plus_declaree_par_un_modele():
+    """Le premier temps lui-même : annoncer une contraction, c'est que le code a CESSÉ
+    d'en dépendre. Un modèle qui déclare encore la cible ferait insérer la colonne par
+    l'ancien code après son retrait — et le contrôle ne le verrait qu'au second temps."""
+    modeles = tables_et_colonnes_des_modeles()
+    encore = sorted(c for c in CONTRACTIONS if c in modeles)
+    assert not encore, f"annoncées dans CONTRACTIONS mais encore déclarées : {encore}"
 
 
 def test_la_borne_historique_est_atteinte():

@@ -298,7 +298,6 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     destinataire_cs: bool = False
     #  🔴 FK redéclarée : le mixin ne la porte pas (cf. `utils/saisi_pour`).
     saisi_pour_user_id: Optional[int] = Field(default=None, foreign_key="utilisateur.id")
-    non_relancable: bool = False
     #  -- Section « Quand » (#1092) ----------------------------------
     #  `debut`/`fin` disent QUAND ÇA SE PASSE et alimentent le calendrier.
     #  `echeance` (« avant quand c'est attendu ») a été RETIRÉE le 23/09/2026
@@ -307,7 +306,6 @@ class Ticket(SaisiPourMixin, AssisteIAMixin, IntervenantMixin, table=True):
     debut: Optional[NaiveDatetime] = None
     fin: Optional[NaiveDatetime] = None
     #  Intervenant, récurrence et équipement : `IntervenantMixin` (#1097).
-    non_relancable_motif: Optional[str] = None
     cree_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     mis_a_jour_le: NaiveDatetime = Field(default_factory=horloge.maintenant)
     ferme_le: Optional[NaiveDatetime] = None

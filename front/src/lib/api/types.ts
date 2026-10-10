@@ -165,8 +165,6 @@ export interface Ticket extends PorteSaisiPourLu {
 	 *   copie à … » annonce — le même, parce que c'est la même personne qui
 	 *   recevra le courriel (12/09/2026). */
 	proprietaire_nom?: string | null;
-	non_relancable?: boolean;
-	non_relancable_motif?: string | null;
 	relance_count?: number;
 	cree_le: string;
 	mis_a_jour_le: string;

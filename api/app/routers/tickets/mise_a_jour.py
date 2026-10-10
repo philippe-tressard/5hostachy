@@ -279,9 +279,9 @@ def update_ticket(
         changes += _appliquer_quand(body, ticket)
 
     # Champs relationnels/destinataires : CS/admin uniquement
-    #  ⚠️ `non_relancable` MANQUAIT à cette liste : un `PATCH` qui ne portait
-    #  que lui n'entrait jamais dans `_appliquer_relations`, et le bouton « ne
-    #  plus relancer » répondait 200 sans rien écrire (#435). Un 200 qui n'écrit
+    #  ⚠️ Un champ absent de cette liste n'entre jamais dans `_appliquer_relations` :
+    #  le bouton « ne plus relancer » (retiré le 10/10/2026, #1797) répondait 200
+    #  sans rien écrire (#435). Un 200 qui n'écrit
     #  rien est pire qu'un 422 : il fabrique la confiance qu'il devrait retirer.
     #  La liste teste la PRÉSENCE et non la non-nullité — sinon effacer un champ
     #  (le remettre à `null`) n'y entrerait pas davantage.
@@ -296,8 +296,6 @@ def update_ticket(
             "saisi_pour_user_id",
             "saisi_pour_nom",
             "saisi_pour_email",
-            "non_relancable",
-            "non_relancable_motif",
             "archive_manuel",
         )
     )
