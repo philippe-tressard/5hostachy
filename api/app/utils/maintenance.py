@@ -5,7 +5,7 @@ import os
 from datetime import timedelta
 from app.utils import horloge
 
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.auth.jetons_rafraichissement import purger as purger_jetons
 from app.utils.noeud import noeud_courant
@@ -13,7 +13,7 @@ from app.utils.requete_liee import requete_liee
 from app.utils.declenchement import AUTOMATIQUE
 from app.utils.llm_journal import limite_conservation
 from app.utils.courriel_journal import CONSERVATION_RELEVES_JOURS
-from app.database import engine
+from app import contexte
 from app.dialecte import chemin_fichier, compacter
 from app.models.core import (
     HistoriqueMaintenance,
@@ -30,7 +30,7 @@ def _supprimer(sql: str, **params) -> int:
     """Un DELETE lié, dans sa propre connexion ; rend le nombre de lignes ôtées.
 
     Les dates passent par `requete_liee`, jamais en chaîne (#1298)."""
-    with engine.connect() as conn:
+    with contexte.moteur().connect() as conn:
         n = conn.execute(requete_liee(sql, **params)).rowcount
         conn.commit()
     return n
@@ -69,7 +69,7 @@ def purger() -> tuple[dict[str, int], list[str]]:
     #  Les jetons de rafraîchissement ont leur propre règle — un jeton échangé
     #  reste jusqu'à son expiration — écrite une fois, pour les deux purges.
     try:
-        with Session(engine) as s:
+        with contexte.nouvelle_session() as s:
             comptes["tokens"] = purger_jetons(s, maintenant)
             s.commit()
     except Exception as exc:
@@ -133,7 +133,7 @@ def purger() -> tuple[dict[str, int], list[str]]:
 
     # Logs WhatsApp : garder les 6 derniers.
     try:
-        with Session(engine) as s:
+        with contexte.nouvelle_session() as s:
             anciens = s.exec(select(WhatsAppLog).order_by(WhatsAppLog.envoye_le.desc())).all()[6:]
             for old in anciens:
                 s.delete(old)
@@ -163,7 +163,7 @@ def run_maintenance(history_id: int | None = None) -> None:
     """
     start = horloge.maintenant()
 
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         entry: HistoriqueMaintenance | None = None
         if history_id:
             entry = session.get(HistoriqueMaintenance, history_id)
@@ -185,7 +185,9 @@ def run_maintenance(history_id: int | None = None) -> None:
 
         # Compactage — après les purges, qu'il récupère (`dialecte.compacter`).
         try:
-            with engine.execution_options(isolation_level="AUTOCOMMIT").connect() as conn:
+            with (
+                contexte.moteur().execution_options(isolation_level="AUTOCOMMIT").connect() as conn
+            ):
                 compacter(conn)
         except Exception as exc:
             erreurs.append(f"VACUUM: {exc}")
@@ -193,7 +195,7 @@ def run_maintenance(history_id: int | None = None) -> None:
         # Taille DB après VACUUM
         taille_db: int | None = None
         try:
-            db_path = chemin_fichier(engine.url)
+            db_path = chemin_fichier(contexte.moteur().url)
             if db_path and os.path.exists(db_path):
                 taille_db = os.path.getsize(db_path)
         except Exception:

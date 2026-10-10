@@ -34,10 +34,10 @@ JOUR = date(2026, 9, 25)
 def moteur(monkeypatch):
     """Un moteur factice qui compte ses rendus, et une mémoire vide."""
     appels: list[str] = []
-    m._CACHE.clear()
+    m._cache().clear()
     monkeypatch.setattr(m, "html_to_pdf", lambda doc: appels.append(doc) or b"%PDF-x")
     yield appels
-    m._CACHE.clear()
+    m._cache().clear()
 
 
 def _generer(dossier, *, jour=JOUR, manuel=MANUEL, logo_png=None, sous_titre=""):
@@ -55,7 +55,7 @@ def _generer(dossier, *, jour=JOUR, manuel=MANUEL, logo_png=None, sous_titre="")
 def test_le_PDF_SURVIT_au_redemarrage(moteur, tmp_path):
     """🔴 Le fait mesuré : mémoire vidée (= redémarrage), aucun rendu refait."""
     premier = _generer(tmp_path)
-    m._CACHE.clear()
+    m._cache().clear()
     assert _generer(tmp_path) == premier
     assert len(moteur) == 1, "le disque n'a pas servi : le premier lecteur repaie 21 s"
 
@@ -63,7 +63,7 @@ def test_le_PDF_SURVIT_au_redemarrage(moteur, tmp_path):
 def test_un_manuel_MODIFIE_n_est_jamais_servi_depuis_le_disque(moteur, tmp_path):
     """Le nom du fichier EST l'empreinte : pas d'invalidation à écrire, donc à oublier."""
     _generer(tmp_path)
-    m._CACHE.clear()
+    m._cache().clear()
     _generer(tmp_path, manuel=MANUEL.replace("Un écran", "Un écran retouché"))
     assert len(moteur) == 2
 
@@ -84,7 +84,7 @@ def test_UN_SEUL_rendu_pour_deux_lecteurs_simultanes(monkeypatch, tmp_path):
         time.sleep(0.3)
         return b"%PDF-x"
 
-    m._CACHE.clear()
+    m._cache().clear()
     monkeypatch.setattr(m, "html_to_pdf", lent)
     depart = threading.Barrier(2)
     resultats: list[bytes] = []
@@ -98,7 +98,7 @@ def test_UN_SEUL_rendu_pour_deux_lecteurs_simultanes(monkeypatch, tmp_path):
         f.start()
     for f in fils:
         f.join()
-    m._CACHE.clear()
+    m._cache().clear()
     assert resultats == [b"%PDF-x", b"%PDF-x"]
     assert len(appels) == 1, f"{len(appels)} rendus pour un seul document"
 
@@ -221,4 +221,4 @@ def test_le_cache_est_BORNE(tmp_path, moteur):
     """
     for jour in range(1, 12):
         _generer(tmp_path, jour=date(2026, 9, jour))
-    assert len(m._CACHE) <= m._CACHE_MAX
+    assert len(m._cache()) <= m._CACHE_MAX

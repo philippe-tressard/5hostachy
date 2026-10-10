@@ -54,21 +54,26 @@ import logging
 import time
 from typing import Optional
 
+from app import contexte
+
 logger = logging.getLogger("hostachy.mes_batiments")
 
 #: Assez court pour qu'un lot ajouté se voie vite, assez long pour ne pas
 #: interroger la base à chaque élément d'une liste de cinquante actualités.
 _TTL_SECONDES = 30.0
 
-_cache: dict[int, tuple[float, frozenset[int]]] = {}
+
+def _cache() -> dict[int, tuple[float, frozenset[int]]]:
+    """Le cache de LA copropriété servie, indexé par `user_id` (#1744, spec §4.5)."""
+    return contexte.etat("mes_batiments")
 
 
 def invalider_cache(user_id: Optional[int] = None) -> None:
     """À appeler après une écriture sur `user_lot` — ou entièrement, sans argument."""
     if user_id is None:
-        _cache.clear()
+        _cache().clear()
     else:
-        _cache.pop(user_id, None)
+        _cache().pop(user_id, None)
 
 
 def batiments_de_l_utilisateur(user) -> frozenset[int]:
@@ -96,18 +101,17 @@ def batiments_de_l_utilisateur(user) -> frozenset[int]:
     if user_id is None:
         return frozenset(connus)
 
-    entree = _cache.get(user_id)
+    entree = _cache().get(user_id)
     if entree is not None and (time.monotonic() - entree[0]) < _TTL_SECONDES:
         return entree[1] | frozenset(connus)
 
     try:
         from sqlmodel import select
 
-        from app.database import SessionLocal
         from app.models.copropriete import Lot
         from app.models.core import UserLot
 
-        with SessionLocal() as session:
+        with contexte.nouvelle_session() as session:
             lignes = session.exec(
                 select(Lot.batiment_id)
                 .join(UserLot, UserLot.lot_id == Lot.id)
@@ -127,5 +131,5 @@ def batiments_de_l_utilisateur(user) -> frozenset[int]:
         )
         return frozenset(connus)
 
-    _cache[user_id] = (time.monotonic(), des_lots)
+    _cache()[user_id] = (time.monotonic(), des_lots)
     return des_lots | frozenset(connus)

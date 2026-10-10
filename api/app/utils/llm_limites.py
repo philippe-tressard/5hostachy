@@ -52,6 +52,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app import contexte
 from app.models.core import ConfigSite
 from app.models.ia import AppelIA
 from app.utils import horloge
@@ -128,7 +129,12 @@ def _refus_du_mois(session: Session, usage: str) -> Optional[str]:
 
 #  ── Le quota par heure et par personne — en mémoire ─────────────────────────
 
-_traces: dict[tuple[str, int], deque[float]] = {}
+
+def _traces() -> dict[tuple[str, int], deque[float]]:
+    """Les places prises dans LA copropriété servie, par (usage, personne) (#1744, §4.5)."""
+    return contexte.etat("llm_limites.traces")
+
+
 _verrou = threading.Lock()
 
 
@@ -143,7 +149,7 @@ def prendre_place(
     """
     instant = time.monotonic() if instant is None else instant
     with _verrou:
-        trace = _traces.setdefault((usage, demandeur), deque())
+        trace = _traces().setdefault((usage, demandeur), deque())
         while trace and instant - trace[0] >= FENETRE_HEURE_S:
             trace.popleft()
         if len(trace) >= limite:
@@ -153,9 +159,9 @@ def prendre_place(
 
 
 def oublier_les_places() -> None:
-    """Vide le compteur horaire — pour les tests, qui partagent le processus."""
+    """Vide le compteur horaire de la copropriété servie — pour les tests, qui partagent le processus."""
     with _verrou:
-        _traces.clear()
+        _traces().clear()
 
 
 def _refus_de_l_heure(session: Session, usage: str, demandeur: Optional[int]) -> Optional[str]:

@@ -36,7 +36,8 @@ depuis `app.seed` : quatre migrations **figées** en dépendent (0104, 0108, 012
 from sqlmodel import Session, select
 
 from app.auth.jwt import hash_password
-from app.database import create_db_and_tables, engine
+from app.database import create_db_and_tables
+from app import contexte
 from app.models.core import (
     Batiment,
     CategorieDocument,
@@ -286,7 +287,7 @@ def seed() -> None:
     """Pose toutes les données de démarrage absentes. Sans effet si tout est là."""
     create_db_and_tables()
 
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         _copropriete_par_defaut(session)
         _admin_initial(session)
         _profils_et_categories(session)

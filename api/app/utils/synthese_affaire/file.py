@@ -79,10 +79,10 @@ def traiter_file(session: Optional[Session] = None) -> dict[str, int]:
     de bon. Une demande qui échoue est journalisée et retentée au passage
     suivant ; elle ne bloque pas les autres.
     """
-    from app.database import SessionLocal
+    from app import contexte
 
     propre = session is None
-    session = session or SessionLocal()
+    session = session or contexte.nouvelle_session()
     compte = {"produites": 0, "perimees": 0, "echecs": 0}
     try:
         limite = horloge.maintenant() - DELAI_DE_GRACE

@@ -285,7 +285,7 @@ def envoyer_relance_syndic(
 
     session.commit()
 
-    #  Pas de session= : la tâche de fond crée sa propre SessionLocal (celle de
+    #  Pas de session= : la tâche de fond crée sa propre session (celle de
     #  l'endpoint est fermée une fois la réponse envoyée).
     background_tasks.add_task(
         send_email_group,

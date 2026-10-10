@@ -28,15 +28,11 @@ from app.utils.visibility import document_visible, profil_admet
 from app.utils.liens import base_site
 from app.utils.liens import nom_site
 from app.utils.recuperer import fichier_ou_404, ou_404
-from app.config import get_settings
 from app.utils.cloche import sonner
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-
-UPLOADS_DIR = get_settings().uploads_dir
-
 
 # La règle d'accès aux documents est `document_visible` (app/utils/visibility.py),
 # avec toutes les autres règles de visibilité. Ce router l'appelle, il ne la redéfinit

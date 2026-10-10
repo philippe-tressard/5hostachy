@@ -28,7 +28,8 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import SQLModel, select
 
-from app.database import SessionLocal, engine
+from app import contexte
+from app.database import engine
 from app.models.copropriete import Batiment, Copropriete, Lot
 from app.models.core import ConfigSite, UserLot, Utilisateur
 from app.models.perimetre import Perimetre
@@ -64,7 +65,7 @@ def arbre_dessai():
     """
     SQLModel.metadata.create_all(engine)
     invalider_cache()
-    with SessionLocal() as s:
+    with contexte.nouvelle_session() as s:
         copro = Copropriete(nom="Essai", adresse="1 rue de l'Essai")
         s.add(copro)
         s.commit()
@@ -248,7 +249,7 @@ def test_cas_zero_un_arbre_vide_ninterdit_rien():
     une copropriété paralysée (`standards/04` §2).
     """
     invalider_cache()
-    with SessionLocal() as s:
+    with contexte.nouvelle_session() as s:
         assert codes_autorises(s, VIGIK) == []
         valider_acces(s, VIGIK, ["n'importe quoi"])
 

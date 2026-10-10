@@ -125,9 +125,8 @@ class TacheRattrapable(NamedTuple):
 
 def taches_rattrapables() -> tuple[TacheRattrapable, ...]:
     """La table des tâches couvertes — imports différés (cycles au démarrage)."""
-    from sqlmodel import Session
 
-    from app.database import engine
+    from app import contexte
     from app.utils.backup import derniere_sauvegarde_reussie, run_backup
     from app.utils.telemetry_aggregation import (
         derniere_agregation_ou_rejeu,
@@ -136,7 +135,7 @@ def taches_rattrapables() -> tuple[TacheRattrapable, ...]:
 
     def _avec_session(lecture):
         def _lire():
-            with Session(engine) as session:
+            with contexte.nouvelle_session() as session:
                 return lecture(session)
 
         return _lire

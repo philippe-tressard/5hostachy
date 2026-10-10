@@ -140,10 +140,10 @@ def purger_comptes_inactifs(
     envoyer: Optional[Envoyer] = None,
 ) -> dict:
     """La tâche permanente. Rend le compte rendu du passage ; ne lève jamais."""
-    from app.database import SessionLocal
+    from app import contexte
 
     propre = session is None
-    session = session or SessionLocal()
+    session = session or contexte.nouvelle_session()
     maintenant = maintenant or horloge.maintenant()
     envoyer = envoyer or _envoyer_avertissement
     rendu = {

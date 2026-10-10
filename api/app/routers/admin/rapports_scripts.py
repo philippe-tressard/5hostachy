@@ -25,6 +25,7 @@ from sqlmodel import Session, select
 from app.utils.declenchement import normaliser
 from app.auth.cle_maintenance import exiger_cle_maintenance
 from app.database import get_session
+from app import contexte
 from app.models.core import HistoriqueEmail, HistoriqueMaintenance
 from app.utils.sante_taches import STATUT_EN_COURS
 
@@ -328,7 +329,6 @@ def maintenance_cles_etrangeres(
     """
     exiger_cle_maintenance(x_maintenance_key)
 
-    from app.database import engine
     from app.utils.diagnostic_cles import compter_orphelins
 
-    return compter_orphelins(engine)
+    return compter_orphelins(contexte.moteur())

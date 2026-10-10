@@ -8,6 +8,7 @@ import jwt
 from jwt.exceptions import PyJWTError
 from passlib.context import CryptContext
 
+from app import contexte
 from app.config import get_settings
 
 settings = get_settings()
@@ -45,7 +46,7 @@ def empreinte_secret(secret: str) -> str:
     même compte —, sans allonger inutilement le jeton.
     """
     return hashlib.blake2s(
-        secret.encode("utf-8"), key=settings.secret_key.encode("utf-8")[:32], digest_size=8
+        secret.encode("utf-8"), key=contexte.courante().secret.encode("utf-8")[:32], digest_size=8
     ).hexdigest()
 
 
@@ -59,7 +60,7 @@ def create_access_token(
     to_encode.update({"exp": expire, "type": "access"})
     if empreinte is not None:
         to_encode["pwd"] = empreinte
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(to_encode, contexte.courante().secret, algorithm=settings.algorithm)
 
 
 def creer_jeton_acces(user_id: int, hashed_password: str) -> str:
@@ -113,12 +114,12 @@ def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = horloge.maintenant() + timedelta(days=settings.refresh_token_expire_days)
     to_encode.update({"exp": expire, "type": "refresh", "jti": secrets.token_urlsafe(16)})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(to_encode, contexte.courante().secret, algorithm=settings.algorithm)
 
 
 def decode_token(token: str) -> Optional[dict]:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, contexte.courante().secret, algorithms=[settings.algorithm])
         return payload
     except PyJWTError:
         return None

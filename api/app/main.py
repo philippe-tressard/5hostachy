@@ -13,7 +13,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from pathlib import Path
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -47,7 +46,8 @@ _logger = _logging.getLogger("hostachy.api")
 
 from app.utils.reponse_utc import UTCJSONResponse
 
-from app.database import _run_migrations, engine
+from app.database import _run_migrations
+from app import contexte
 from app.routers import (
     auth,
     auth_mot_de_passe,
@@ -85,7 +85,6 @@ from app.routers import manuel
 from app.routers import courriels_affaires
 from app.routers import partage
 from app.routers import assistant, config_llm, config_logo, config_services, reglement
-from app.config import get_settings
 from app.seed import seed
 from app.utils.backup import setup_scheduler
 from app.utils.plateforme import NOM_PLATEFORME
@@ -101,10 +100,9 @@ async def lifespan(app: FastAPI):
 
     # Purge des refresh tokens — les échangés restent jusqu'à leur expiration,
     # c'est par eux qu'un jeton rejoué se reconnaît (`auth/jetons_rafraichissement`).
-    from sqlmodel import Session
     from app.auth.jetons_rafraichissement import purger as purger_jetons
 
-    with Session(engine) as _s:
+    with contexte.nouvelle_session() as _s:
         purger_jetons(_s, horloge.maintenant())
         _s.commit()
 
@@ -115,7 +113,7 @@ async def lifespan(app: FastAPI):
     from sqlmodel import select as _select
     from app.models.core import HistoriqueSauvegarde, StatutSauvegarde
 
-    with Session(engine) as _s:
+    with contexte.nouvelle_session() as _s:
         _seuil = horloge.maintenant() - _timedelta(hours=2)
         _orphelines = _s.exec(
             _select(HistoriqueSauvegarde).where(
@@ -186,7 +184,7 @@ async def lifespan(app: FastAPI):
     def _prechauffer_manuel() -> None:
         from app.utils.manuel_pdf import identite_du_manuel, prechauffer
 
-        with Session(engine) as _s:
+        with contexte.nouvelle_session() as _s:
             identite = identite_du_manuel(_s)
         prechauffer(**identite)
 
@@ -252,10 +250,9 @@ async def lifespan(app: FastAPI):
     # Sans ça, si un job APScheduler est interrompu par SIGTERM, le WAL reste dans un état
     # intermédiaire → "database disk image is malformed" au prochain démarrage.
     try:
-        from app.database import engine as _engine
         from app.dialecte import point_de_controle
 
-        with _engine.connect() as _conn:
+        with contexte.moteur().connect() as _conn:
             point_de_controle(_conn)
             _conn.commit()
         _logger.info("WAL checkpoint effectué au shutdown.")
@@ -314,9 +311,8 @@ async def db_operational_error_handler(request: Request, exc: _SAOperationalErro
     """SQLite I/O error, DB locked, pool corrompu → 503 avec log structuré.
     Le pool est purgé ici pour que la prochaine requête reparte sur une connexion saine.
     """
-    from app.database import engine as _engine
 
-    _engine.dispose()
+    contexte.moteur().dispose()
     _logger.error(
         "DB OperationalError sur %s %s — pool purgé : %s",
         request.method,
@@ -423,7 +419,7 @@ app.include_router(reglement.router)
 #  d'intégration continue — ce qui rendait l'application intestable dans son
 #  ensemble, et laissait passer toute rupture d'assemblage (cf.
 #  tests/test_demarrage.py).
-uploads_dir = Path(get_settings().uploads_dir)
+uploads_dir = contexte.courante().racine_fichiers
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
@@ -439,11 +435,10 @@ def health():
     (La docstring nommait `check-stack.sh`, supprimé le 20/09/2026 : elle
     désignait le seul appelant qui ne décidait de rien.)
     """
-    from sqlmodel import Session, text as _text
-    from app.database import engine as _engine
+    from sqlmodel import text as _text
 
     try:
-        with Session(_engine) as _s:
+        with contexte.nouvelle_session() as _s:
             _s.exec(_text("SELECT 1"))  # type: ignore[arg-type]
         return {"status": "ok", "version": API_VERSION}
     except Exception as exc:

@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
 from sqlmodel import create_engine, Session, SQLModel
-from app.config import get_settings
+from app.contexte import courante
 from app.dialecte import (
     activer_cles_etrangeres,
     cles_suspendues,
@@ -13,21 +13,17 @@ from app.dialecte import (
 
 logger = logging.getLogger("hostachy.db")
 
-settings = get_settings()
+#  Le moteur de LA copropriété servie : son URL vient du contexte (#1744), jamais
+#  de `settings`. Ce module le construit ; le reste de l'application le demande à
+#  `contexte.moteur()` / `contexte.nouvelle_session()` — 🔒 test_contexte_source_unique.
+_url_base = courante().url_base
 
 engine = create_engine(
-    settings.database_url,
-    connect_args=options_connexion(settings.database_url),
+    _url_base,
+    connect_args=options_connexion(_url_base),
     echo=False,
     pool_pre_ping=True,  # Teste chaque connexion avant usage → détecte les inodes orphelins (ex: post-VACUUM)
 )
-
-
-# SessionLocal pour les tâches asynchrones et les contextes hors requête HTTP.
-# `engine` est lu à l'APPEL, pas à la définition : un test qui remplace
-# `app.database.engine` obtient des sessions sur sa base.
-def SessionLocal() -> Session:
-    return Session(engine)
 
 
 #  🔴 LES CLÉS ÉTRANGÈRES SONT ACTIVES — 30/08/2026, fin de #546. Les trois

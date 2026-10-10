@@ -4,15 +4,13 @@ Les fichiers sont enregistrés dans /app/uploads/{type}/{uuid}.ext
 et servis en statique via /uploads/*.
 """
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 import logging
 
 from app.auth.deps import get_current_user, require_cs_or_admin
 from app.database import get_session
 from app.models.core import Copropriete, Utilisateur
-from app.config import get_settings
+from app import contexte
 from app.utils.fichiers import (
     FAMILLES,
     enregistrer_fichier_recu,
@@ -36,7 +34,7 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 #  Un routeur nomme désormais une **famille** — « image », « document » —, il ne
 #  décide plus de ce qu'il accepte. `test_televersement_source_unique.py` refuse
 #  qu'une liste MIME ou un plafond en mégaoctets réapparaisse ici.
-UPLOADS_ROOT = Path(get_settings().uploads_dir)
+UPLOADS_ROOT = contexte.courante().racine_fichiers
 
 # ── helpers ────────────────────────────────────────────────────────────────
 

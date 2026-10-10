@@ -26,17 +26,21 @@ la copropriété.
 
 ## Ce qu'il ne voit pas — dit, pour ne pas le croire plus large
 
-- un état modifié **depuis un autre module** (`statuts_lus._cache.clear()`) : il
+- un état modifié **depuis un autre module** (`autre_module._cache.clear()`) : il
   est vu chez son module d'origine dès qu'il y est modifié, ce qui est le cas de
   tous ceux d'aujourd'hui ;
 - un état porté par un **attribut de classe** ou par un objet (un ordonnanceur, un
   limiteur de débit) dont on appelle les méthodes : leur état est celui d'une
   bibliothèque, pas une donnée rangée par l'application.
 
-## Les deux listes
+## Les trois listes
 
-- `A_INDEXER` : la dette. Ces états portent une donnée d'UNE copropriété ; ils
-  passent sous sa clé au lot du contexte (#1744). La liste ne fait que BAISSER.
+- `A_INDEXER` : la dette. Ces états portaient une donnée d'UNE copropriété ; ils
+  sont passés sous sa clé au lot du contexte (#1744, six le 10/10/2026). Elle
+  est VIDE et le reste : son plafond est à zéro.
+- `PAR_COPROPRIETE` : la seule porte — le registre `contexte.etat(nom)`, indexé
+  par l'identifiant de la copropriété. Un module qui tient un cache le lui
+  demande à chaque usage, et ne garde rien à lui.
 - `DU_PROCESSUS` : des états qui ne portent aucune donnée de copropriété, chacun
   avec sa raison. En ajouter un se justifie là, à la vue de la revue.
 
@@ -73,24 +77,20 @@ METHODES_QUI_MODIFIENT = frozenset(
 #: Les décorateurs qui gardent un cache au niveau du module.
 DECORATEURS_DE_CACHE = frozenset({"lru_cache", "cache"})
 
-#: Les états qui portent une donnée d'UNE copropriété, par (module, nom). Un cache
-#: décoré se nomme `fonction()`. 🔴 Liste qui ne fait que BAISSER : elle se solde
-#: au lot du contexte de copropriété (#1744).
-A_INDEXER = {
-    ("utils/statuts_lus.py", "_cache"): "statuts lus d'un utilisateur, indexés par `user_id`",
-    ("utils/mes_batiments.py", "_cache"): "bâtiments d'un utilisateur, indexés par `user_id`",
-    ("utils/perimetres/arbre.py", "_cache"): "l'arbre des périmètres de LA copropriété",
-    ("utils/perimetres/arbre.py", "_cache_pose"): "l'instant où cet arbre a été lu",
-    ("utils/llm_limites.py", "_traces"): (
-        "le quota horaire de l'IA, indexé par (usage, identifiant de la personne)"
-    ),
-    ("utils/manuel_pdf.py", "_CACHE"): (
-        "le PDF du manuel, qui porte le nom, l'adresse et le logo de la résidence"
-    ),
-}
+#: Les états qui portent une donnée d'UNE copropriété sans passer par le contexte,
+#: par (module, nom). Un cache décoré se nomme `fonction()`. 🔴 Soldée au lot du
+#: contexte de copropriété (#1744) : rien ne s'y ajoute.
+A_INDEXER: dict = {}
 
 #: Le plafond de la dette. Il ne fait que BAISSER.
-PLAFOND_A_INDEXER = 6
+PLAFOND_A_INDEXER = 0
+
+#: LA porte des états de copropriété : le registre du contexte, indexé par
+#: l'identifiant de la copropriété. Un module qui tient un cache le demande à
+#: `contexte.etat(nom)` à chaque usage, et ne garde rien à lui (#1744).
+PAR_COPROPRIETE = {
+    ("contexte.py", "_etats"): "les états de processus, un dictionnaire par (copropriété, nom)",
+}
 
 #: Les états qui ne portent aucune donnée de copropriété, avec leur raison.
 DU_PROCESSUS = {
@@ -184,7 +184,7 @@ def releve() -> set[tuple[str, str]]:
 
 def ecarts(trouves: set, a_indexer: dict, du_processus: dict, plafond: int) -> list[str]:
     """Ce qui rend les listes fausses — vide si chaque état est dit, et rien de plus."""
-    declares = set(a_indexer) | set(du_processus)
+    declares = set(a_indexer) | set(du_processus) | set(PAR_COPROPRIETE)
     sortie = [
         f"app/{module} : `{nom}` est un état mutable de module que rien ne déclare. Avec "
         "plusieurs copropriétés dans un processus, il fuirait de l'une à l'autre "
@@ -221,10 +221,15 @@ def test_chaque_etat_de_module_est_declare():
     assert not trouves, "\n".join(trouves)
 
 
+def test_la_porte_des_etats_de_copropriete_est_le_contexte_seul():
+    """Une seconde « porte » serait un état de copropriété qui échappe au contexte."""
+    assert set(PAR_COPROPRIETE) == {("contexte.py", "_etats")}
+
+
 def test_le_releve_voit_les_etats_connus():
     """Cas zéro : un relevé qui ne verrait rien rendrait le contrôle vert pour toujours."""
     trouves = releve()
-    connus = set(A_INDEXER) | set(DU_PROCESSUS)
+    connus = set(A_INDEXER) | set(DU_PROCESSUS) | set(PAR_COPROPRIETE)
     assert len(trouves) >= len(connus), f"le relevé ne trouve que {len(trouves)} état(s)"
     assert connus <= trouves, f"déclarés, pas vus par le relevé : {sorted(connus - trouves)}"
 
@@ -233,11 +238,11 @@ def test_le_controle_refuse_un_etat_de_plus():
     """Les cas fautifs : un état non déclaré, une entrée périmée, un double compte, le plafond."""
     reel = releve()
     assert ecarts(reel | {("utils/neuf.py", "_cache")}, A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER)
-    assert ecarts(
-        reel - {("utils/statuts_lus.py", "_cache")}, A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER
-    )
-    double = dict(DU_PROCESSUS) | {("utils/statuts_lus.py", "_cache"): "dit deux fois"}
-    assert ecarts(reel, A_INDEXER, double, PLAFOND_A_INDEXER)
+    connu = ("utils/pdf_theme.py", "_icones_cache")
+    assert ecarts(reel - {connu}, A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER)
+    assert ecarts(reel - set(PAR_COPROPRIETE), A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER)
+    double = {connu: "dit deux fois"}
+    assert ecarts(reel, double, DU_PROCESSUS, PLAFOND_A_INDEXER + 1)
     assert ecarts(reel, A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER + 1)
     assert ecarts(reel, A_INDEXER, DU_PROCESSUS, PLAFOND_A_INDEXER - 1)
 

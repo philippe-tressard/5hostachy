@@ -59,6 +59,8 @@ import logging
 import time
 from typing import NamedTuple, Optional
 
+from app import contexte
+
 logger = logging.getLogger("hostachy.perimetres")
 
 #: Durée de vie du cache. Le cache est vidé explicitement à chaque écriture
@@ -90,15 +92,17 @@ class Noeud(NamedTuple):
     ordre: int
 
 
-_cache: Optional[dict[str, Noeud]] = None
-_cache_pose: float = 0.0
+def _cache() -> dict:
+    """L'arbre de LA copropriété servie et l'instant où il a été lu (#1744, spec §4.5).
+
+    Clés `arbre` et `pose` ; vide tant que rien n'est lu ou après `invalider_cache`.
+    """
+    return contexte.etat("perimetres.arbre")
 
 
 def invalider_cache() -> None:
     """À appeler après toute écriture dans la table `perimetre`."""
-    global _cache, _cache_pose
-    _cache = None
-    _cache_pose = 0.0
+    _cache().clear()
 
 
 def arbre() -> dict[str, Noeud]:
@@ -109,19 +113,19 @@ def arbre() -> dict[str, Noeud]:
     valide, pas une erreur : une copropriété qui n'a pas encore configuré ses
     périmètres n'en restreint aucun.
     """
-    global _cache, _cache_pose
-    if _cache is not None and (time.monotonic() - _cache_pose) < _TTL_SECONDES:
-        return _cache
+    cache = _cache()
+    lu = cache.get("arbre")
+    if lu is not None and (time.monotonic() - cache["pose"]) < _TTL_SECONDES:
+        return lu
 
     #  Imports différés : ce module est importé par `utils/visibility.py`, lui-même
     #  importé très tôt. Charger la base au moment de l'appel, pas de l'import.
     try:
         from sqlmodel import select
 
-        from app.database import SessionLocal
         from app.models.perimetre import Perimetre
 
-        with SessionLocal() as session:
+        with contexte.nouvelle_session() as session:
             lignes = session.exec(select(Perimetre)).all()
             #  Le parent est exposé par son CODE et non son id : tout le reste du
             #  produit raisonne en codes, et un cache qui mélangerait les deux
@@ -163,9 +167,8 @@ def arbre() -> dict[str, Noeud]:
         )
         return {}
 
-    _cache = construit
-    _cache_pose = time.monotonic()
-    return _cache
+    cache.update(arbre=construit, pose=time.monotonic())
+    return construit
 
 
 # ── Parcours de l'arbre : les trois primitives ────────────────────────────────

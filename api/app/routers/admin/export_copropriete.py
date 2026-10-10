@@ -45,12 +45,12 @@ class VerificationRestauration(BaseModel):
 @router.post("/export-copropriete/verifier", response_model=VerificationRestauration)
 def verifier_restauration(_: Utilisateur = Depends(require_admin)):
     """Exporte la base et la réimporte dans une base jetable : se restaure-t-elle ?"""
-    from app.database import engine
+    from app import contexte
 
     debut = time.monotonic()
     with tempfile.TemporaryDirectory() as dossier:
         try:
-            manifeste, bilan = im.verifier_restauration(engine, Path(dossier))
+            manifeste, bilan = im.verifier_restauration(contexte.moteur(), Path(dossier))
             ecarts, restaurable = bilan.ecarts, True
         except im.ImportRefuse as refus:
             manifeste = {"tables": {}, "ignorees": [], "revision": None}
@@ -72,11 +72,10 @@ class ExportLance(BaseModel):
 
 
 def _exporter(chemin: Path) -> None:
-    from app.database import engine
+    from app import contexte
 
-    settings = get_settings()
     partiel = chemin.with_suffix(".partiel")
-    ex.exporter(engine, partiel, fichiers=Path(settings.uploads_dir))
+    ex.exporter(contexte.moteur(), partiel, fichiers=contexte.courante().racine_fichiers)
     os.replace(partiel, chemin)  # l'archive n'existe sous son nom qu'entière
     anciennes = sorted(chemin.parent.glob(f"{PREFIXE}*.tar.gz"))[:-GARDER]
     for vieille in anciennes:

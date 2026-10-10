@@ -158,11 +158,12 @@ def http_admin(monkeypatch, tmp_path):
     #  non partagée y serait vide.
     monkeypatch.setattr(app.database, "engine", _base_peuplee(partage=True))
 
-    class _Reglages:
-        backup_dir = str(tmp_path / "sauvegardes")
-        uploads_dir = str(tmp_path / "uploads")
+    #  La sauvegarde et la racine des fichiers : celle-ci se demande au contexte
+    #  de copropriété (#1744), qui relit les réglages à chaque appel.
+    from app.config import get_settings
 
-    monkeypatch.setattr(routes, "get_settings", lambda: _Reglages)
+    monkeypatch.setattr(get_settings(), "backup_dir", str(tmp_path / "sauvegardes"))
+    monkeypatch.setattr(get_settings(), "uploads_dir", str(tmp_path / "uploads"))
     with base_http() as moteur:
         http, _ = client_http(moteur, RoleUtilisateur.admin)
         yield http, tmp_path
