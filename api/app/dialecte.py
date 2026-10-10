@@ -212,7 +212,7 @@ def differer_cles_etrangeres(conn) -> None:
     données, le 09/10/2026. SQLite vérifie alors au COMMIT ; PostgreSQL ne
     vérifie plus du tout le temps de la transaction (ses clés ne sont pas
     `DEFERRABLE`), d'où le relevé explicite des orphelins que l'appelant DOIT
-    faire avant de valider (`export_copropriete.lignes_sans_parent`).
+    faire avant de valider (`import_copropriete.lignes_sans_parent`).
     ⚠️ PostgreSQL exige un rôle superutilisateur — celui de l'image l'est.
     """
     if est_fichier(conn):

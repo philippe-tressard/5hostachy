@@ -24,6 +24,7 @@ from sqlmodel import Session, select
 
 from app.models.core import ConfigSite, FaqItem, RoleUtilisateur, Utilisateur
 from app.utils import export_copropriete as ex
+from app.utils import import_copropriete as im
 from tests.aides_base import compte, moteur_memoire
 
 
@@ -53,7 +54,7 @@ def test_l_aller_retour_rend_le_meme_contenu(tmp_path):
     assert manifeste["tables"]["config_site"]["lignes"] == 2
 
     cible = moteur_memoire()
-    bilan = ex.importer(archive, cible)
+    bilan = im.importer(archive, cible)
     assert bilan.ecarts == [] and bilan.lignes >= 5
 
     with Session(cible) as s:
@@ -89,8 +90,8 @@ def test_une_archive_alteree_est_refusee_et_la_cible_reste_vide(tmp_path):
     _alterer(archive, alteree, "faq_item", lambda d: d.replace("sous-sol".encode(), b"grenier"))
 
     cible = moteur_memoire()
-    with pytest.raises(ex.ImportRefuse, match="faq_item"):
-        ex.importer(alteree, cible)
+    with pytest.raises(im.ImportRefuse, match="faq_item"):
+        im.importer(alteree, cible)
     with Session(cible) as s:
         assert s.exec(select(FaqItem)).all() == [], "la transaction annulée laisse la cible vide"
 
@@ -101,8 +102,8 @@ def test_une_ligne_perdue_est_refusee(tmp_path):
     ex.exporter(source, archive)
     amputee = tmp_path / "amputee.tar.gz"
     _alterer(archive, amputee, "config_site", lambda d: d.split(b"\n", 1)[1])
-    with pytest.raises(ex.ImportRefuse, match="config_site : 1 ligne"):
-        ex.importer(amputee, moteur_memoire())
+    with pytest.raises(im.ImportRefuse, match="config_site : 1 ligne"):
+        im.importer(amputee, moteur_memoire())
 
 
 def test_les_fichiers_voyagent_avec_leur_empreinte(tmp_path):
@@ -114,13 +115,13 @@ def test_les_fichiers_voyagent_avec_leur_empreinte(tmp_path):
     assert [f["chemin"] for f in manifeste["fichiers"]] == ["photos/fuite.jpg"]
 
     restaures = tmp_path / "restaures"
-    bilan = ex.importer(archive, moteur_memoire(), fichiers=restaures)
+    bilan = im.importer(archive, moteur_memoire(), fichiers=restaures)
     assert bilan.fichiers == 1
     assert (restaures / "photos" / "fuite.jpg").read_bytes() == b"\xff\xd8\xff photo"
 
 
 def test_verifier_restauration_dit_qu_une_base_se_restaure(tmp_path):
-    manifeste, bilan = ex.verifier_restauration(_base_peuplee(), tmp_path)
+    manifeste, bilan = im.verifier_restauration(_base_peuplee(), tmp_path)
     assert bilan.ecarts == [] and bilan.tables == len(manifeste["tables"])
     assert list(tmp_path.iterdir()) == [], "rien ne reste derrière la vérification"
 
@@ -291,10 +292,10 @@ def test_des_tables_en_cycle_s_importent_clefs_actives(tmp_path):
     )
 
     cible = moteur_memoire(cles_etrangeres=True)
-    bilan = ex.importer(archive, cible)
+    bilan = im.importer(archive, cible)
     assert bilan.ecarts == []
     with cible.connect() as c:
-        assert ex.lignes_sans_parent(c) == []
+        assert im.lignes_sans_parent(c) == []
 
 
 def test_une_ligne_sans_parent_est_refusee_et_la_cible_reste_vide(tmp_path):
@@ -304,8 +305,8 @@ def test_une_ligne_sans_parent_est_refusee_et_la_cible_reste_vide(tmp_path):
     ex.exporter(source, archive)
 
     cible = moteur_memoire(cles_etrangeres=True)
-    with pytest.raises(ex.ImportRefuse, match=r"batiment\.copropriete_id → copropriete \(1\)"):
-        ex.importer(archive, cible)
+    with pytest.raises(im.ImportRefuse, match=r"batiment\.copropriete_id → copropriete \(1\)"):
+        im.importer(archive, cible)
     with Session(cible) as s:
         assert s.exec(select(Utilisateur)).all() == [], "la transaction est annulée"
 
@@ -321,7 +322,7 @@ def test_un_separateur_unicode_dans_un_texte_ne_coupe_pas_la_ligne(tmp_path):
     ex.exporter(source, archive)
 
     cible = moteur_memoire(cles_etrangeres=True)
-    assert ex.importer(archive, cible).ecarts == []
+    assert im.importer(archive, cible).ecarts == []
     with Session(cible) as s:
         relu = s.exec(select(FaqItem).where(FaqItem.question == "Séparateurs ?")).one()
         assert relu.reponse == texte
@@ -339,7 +340,7 @@ def _autre_version(archive, sortie, table, transformer):
     """Réécrit `tables/<table>.jsonl` par `transformer(ligne)`, et son manifeste avec."""
     with tarfile.open(archive, "r:gz") as a:
         membres = {m.name: a.extractfile(m).read() for m in a.getmembers()}
-    lignes = [transformer(li) for li in ex.lignes_jsonl(membres[f"tables/{table}.jsonl"])]
+    lignes = [transformer(li) for li in im.lignes_jsonl(membres[f"tables/{table}.jsonl"])]
     membres[f"tables/{table}.jsonl"] = "".join(
         json.dumps(li, ensure_ascii=False, separators=(",", ":")) + "\n" for li in lignes
     ).encode()
@@ -362,7 +363,7 @@ def test_une_colonne_retiree_du_modele_est_ecartee_et_nommee(tmp_path):
     _autre_version(archive, ancienne, "faq_item", lambda li: {**li, "retiree_depuis": "x"})
 
     cible = moteur_memoire(cles_etrangeres=True)
-    bilan = ex.importer(ancienne, cible)
+    bilan = im.importer(ancienne, cible)
     assert bilan.ecarts == []
     assert bilan.colonnes_ecartees == ["faq_item.retiree_depuis"]
     with Session(cible) as s:
@@ -379,7 +380,7 @@ def test_une_colonne_absente_de_l_archive_recoit_son_defaut(tmp_path):
     )
 
     cible = moteur_memoire(cles_etrangeres=True)
-    bilan = ex.importer(ancienne, cible)
+    bilan = im.importer(ancienne, cible)
     assert bilan.ecarts == []
     assert bilan.colonnes_par_defaut == ["faq_item.ordre"]
     with Session(cible) as s:
@@ -393,5 +394,5 @@ def test_une_archive_alteree_reste_refusee_avant_toute_ecriture(tmp_path):
     ex.exporter(source, archive)
     alteree = tmp_path / "alteree.tar.gz"
     _alterer(archive, alteree, "faq_item", lambda d: d.replace(b'"ordre":0', b'"ordre":7'))
-    with pytest.raises(ex.ImportRefuse, match="faq_item : contenu différent du manifeste"):
-        ex.importer(alteree, moteur_memoire())
+    with pytest.raises(im.ImportRefuse, match="faq_item : contenu différent du manifeste"):
+        im.importer(alteree, moteur_memoire())

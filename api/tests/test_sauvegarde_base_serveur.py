@@ -52,12 +52,12 @@ def test_l_archive_porte_l_export_et_se_dit_reussie(sauvegarde):
 
 
 def test_un_export_qui_ne_se_restaure_pas_fait_echouer_la_sauvegarde(sauvegarde, monkeypatch):
-    from app.utils import export_copropriete
+    from app.utils import import_copropriete
 
     def refuse(*_a, **_k):
-        raise export_copropriete.ImportRefuse("table lot : 3 lignes, 4 annoncées")
+        raise import_copropriete.ImportRefuse("table lot : 3 lignes, 4 annoncées")
 
-    monkeypatch.setattr(export_copropriete, "importer", refuse)
+    monkeypatch.setattr(import_copropriete, "importer", refuse)
     backup.run_backup()
     derniere = _derniere()
     assert derniere.statut == StatutSauvegarde.echouee
