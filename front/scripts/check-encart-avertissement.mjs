@@ -40,6 +40,14 @@ const EMPRUNTS = {
 		'le SURVOL de `.btn-icon-warn`, le badge `.badge-orange` et le badge « président » d’une fiche de membre',
 	],
 	'styles/ecrans.css': [2, 'la carte KPI en alerte, à l’écran et à l’impression'],
+	//  Les deux suivants écrivaient le fond en hexadécimal (`#fdf3e0`), et ce
+	//  contrôle, qui cherche le JETON, ne les voyait pas. Devenus jetons le
+	//  10/10/2026 (#1571), ils se déclarent.
+	'lib/components/Toast.svelte': [1, 'la variante « avertissement » d’un TOAST, pas un encart'],
+	'routes/(app)/sondages/[id]/+page.svelte': [
+		1,
+		'l’engagement de respect, une CASE À COCHER teintée — filet et texte encore hors charte (#1571)',
+	],
 };
 
 /** Le nombre de fonds d'avertissement d'une source. PURE. */
