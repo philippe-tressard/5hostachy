@@ -19,7 +19,7 @@ from app.utils.nature_affaire import (
 from app.utils.perimetres import perimetre_cible_json
 from .actualite import appliquer_acces, diffuser_actualite
 from app.utils.quand import exiger_description
-from app.utils.suivi_actualite import normaliser_suivi
+from app.utils.suivi_actualite import normaliser_suivi, poser_etat_saisi
 
 from app.auth.appartenance import exiger_objet_autorise
 from app.auth.deps import (
@@ -198,6 +198,7 @@ def create_ticket(
     if not bug:  # un bogue n'a pas de mise en avant (#1191)
         appliquer_options(ticket, body, est_cs=est_cs)
     normaliser_suivi(ticket)  # la case ne vaut que pour une actualité
+    poser_etat_saisi(ticket, body.suivi_actualite, est_cs=est_cs)  # Résolu dès l'ouverture
     appliquer_intervenant(ticket, body, session, est_cs=est_cs)
 
     #  🔴 UNE ACTUALITÉ DIFFUSE COMME UNE ACTUALITÉ (#1091, lot 4) : son module

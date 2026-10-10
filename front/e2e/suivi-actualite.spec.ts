@@ -64,12 +64,22 @@ test('le conseil active le suivi d’une actualité en la corrigeant', async ({ 
 		.first()
 		.click();
 	await caseSuivi.check();
-	//  Cochée : l'état part en « Ouvert », montré en lecture.
+	//  Cochée : l'état part en « Ouvert », et se choisit d'un clic.
 	await expect(page.getByRole('button', { name: /Ouvert/ }).first()).toBeVisible();
+
+	//  Choisi dès l'ouverture : une résolution rapide s'enregistre « Résolu » (10/10/2026).
+	await page
+		.getByRole('button', { name: /Résolu/ })
+		.first()
+		.click();
 
 	await page.getByRole('button', { name: 'Enregistrer', exact: true }).first().click();
 	await expect.poll(() => corps).not.toBeNull();
-	expect(corps).toMatchObject({ categorie: 'actualite', suivre_actualite: true });
+	expect(corps).toMatchObject({
+		categorie: 'actualite',
+		suivre_actualite: true,
+		suivi_actualite: 'résolu',
+	});
 });
 
 test('une actualité suivie montre son état, et sa Suite ne propose que trois états', async ({

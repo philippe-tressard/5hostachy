@@ -36,7 +36,7 @@ from app.models.core import (
 )
 from app.schemas import TicketRead, TicketUpdate
 from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
-from app.utils.suivi_actualite import normaliser_suivi
+from app.utils.suivi_actualite import normaliser_suivi, poser_etat_saisi
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.synthese_affaire.file import inscrire_si_eligible
@@ -152,6 +152,7 @@ def update_ticket(
         poser_liens(session, ticket, body.affaires_liees, user)
 
     ancien_statut = ticket.statut
+    suivi_avant = ticket.suivi_actualite  # l'état du suivi d'une actualité, s'il change
     #  L'etat des CANAUX avant modification. La Diffusion est rouverte a
     #  l'edition depuis le 18/08/2026 (arbitrage utilisateur) : le conseil
     #  syndical doit pouvoir decider d'envoyer au syndic un ticket deja saisi.
@@ -265,8 +266,10 @@ def update_ticket(
             #  choisi pour elle. Envoyé dans la même correction, il est retenu.
             if not est_actualite(ticket) and "public_cible" not in body.model_fields_set:
                 ticket.public_cible = None
-    #  Le suivi d'une actualité ne suit pas l'affaire suivie qu'elle devient.
+    #  Le suivi d'une actualité ne suit pas l'affaire suivie qu'elle devient ;
+    #  le sien se corrige comme l'état d'une affaire (10/10/2026).
     normaliser_suivi(ticket)
+    poser_etat_saisi(ticket, body.suivi_actualite, est_cs=is_cs_admin)
     #  APRÈS le contenu : la récurrence dépend de la catégorie FINALE.
     changes += appliquer_intervenant(ticket, body, session, est_cs=is_cs_admin)
     #  La prochaine visite d'un contrat (#1092) — APRÈS l'intervenant (#1445) :
@@ -357,6 +360,14 @@ def update_ticket(
     #  généralisé. La divergence est donc VOULUE et temporaire ; elle est nommée
     #  dans le test, qui vérifie chaque entité séparément.
     etat_a_change = body.statut is not None and body.statut != ancien_statut
+    #  Le suivi d'une actualité laisse la même trace de correction que l'état.
+    if ticket.suivi_actualite != suivi_avant:
+        changes.insert(
+            0,
+            f"Suivi : {STATUT_LABELS.get(suivi_avant or '', 'Aucun')} → "
+            f"{STATUT_LABELS.get(ticket.suivi_actualite or '', 'Aucun')}",
+        )
+        etat_a_change = True
     if changes and etat_a_change:
         #  Le préfixe et son assemblage viennent de `app/utils/corrections.py` :
         #  la chaîne était écrite quatre fois, et le fil avait besoin d'un

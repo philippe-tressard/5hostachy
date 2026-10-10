@@ -113,6 +113,7 @@ export interface SaisieAffaire {
 		brouillon: boolean;
 		suiviKanban: boolean;
 		suiviActualite?: boolean;
+		etatSuivi?: string | null;
 	};
 	perimetreCible: string[];
 	publicCible: string[];
@@ -210,6 +211,7 @@ export function chargeUtileAffaire(
 			//  🔁 Son suivi, optionnel (10/10/2026) : la case du conseil, que le
 			//  serveur lui réserve. L'état se change par une Suite.
 			suivre_actualite: !!s.options.suiviActualite,
+			suivi_actualite: (s.options.suiviActualite && s.options.etatSuivi) || undefined,
 			public_cible: concerneTousLesResidents(s.publicCible) ? [] : s.publicCible,
 			reserve_perimetre: s.reservePerimetre,
 			annonce_hall: s.annonceHall,

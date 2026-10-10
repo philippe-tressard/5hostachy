@@ -91,17 +91,17 @@
 		on:click|stopPropagation={() => onModifier(pub)}
 		><IconeAction glyphe="✏️" icone="pencil" /></button
 	>
-	<!--  🔴 « Suivre cette affaire » (#1094) — le geste qui évite de TOUT
+	<!--  🔴 « Transformer en affaire » (#1094) — le geste qui évite de TOUT
 	      RETAPER quand une actualité dérape. Titre, description, pièces jointes
 	      et périmètre suivent ; on ajoute un statut.
 
-	      🔴 « cette ACTUALITÉ », pas « cette affaire » : le bouton agit SUR une
-	      actualité pour en faire une affaire. Le renommage mécanique du 21/09
-	      avait remplacé le mot des deux côtés de la phrase. -->
+	      🔴 Renommé le 10/10/2026, à l'écran : « Suivre cette actualité » n'était
+	      pas clair, et se confondait avec la case « Activer le suivi », qui garde
+	      l'actualité. Le libellé dit désormais ce que le geste FAIT. -->
 	<button
 		class="btn-icon"
-		aria-label="Suivre cette actualité — en faire une affaire"
-		title="Suivre cette actualité"
+		aria-label="Transformer en affaire"
+		title="Transformer en affaire"
 		on:click|stopPropagation={() => onPromouvoir(pub)}
 		><IconeAction glyphe="🎯" icone="target" /></button
 	>

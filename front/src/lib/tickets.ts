@@ -325,6 +325,7 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 	brouillon: boolean;
 	suiviKanban: boolean;
 	suiviActualite: boolean;
+	etatSuivi: string | null;
 } {
 	return {
 		epingle: ticket?.epingle ?? false,
@@ -338,6 +339,8 @@ export function optionsDuTicket(ticket: Ticket | null | undefined): {
 		suiviKanban: ticket?.suivi_kanban ?? false,
 		//  La case « Activer le suivi » d'une actualité (10/10/2026), par le même pont.
 		suiviActualite: !!ticket?.suivi_actualite,
+		//  …et son état, que le formulaire choisit dès l'ouverture (10/10/2026).
+		etatSuivi: ticket?.suivi_actualite ?? null,
 	};
 }
 
@@ -371,6 +374,7 @@ export function optionsVersTicket(options: {
 	brouillon: boolean;
 	suiviKanban: boolean;
 	suiviActualite?: boolean;
+	etatSuivi?: string | null;
 	//  Ce que le CONSEIL pose dans une Suite (#1207) — Quand, Intervenant,
 	//  Équipement : `SectionsSuiteConseil` l'écrit ici, et il voyage par ce même
 	//  pont plutôt que par une variable de plus dans chaque carte.
@@ -383,6 +387,8 @@ export function optionsVersTicket(options: {
 		suivi_kanban: options.suiviKanban,
 		//  Absente : le corps n'en dit rien, l'actualité garde son suivi.
 		suivre_actualite: options.suiviActualite,
+		//  Absent : le serveur part en « Ouvert », ou garde l'état en cours.
+		suivi_actualite: (options.suiviActualite && options.etatSuivi) || undefined,
 		...(options.planification ?? {}),
 	};
 }
