@@ -59,7 +59,10 @@ test('le conseil active le suivi d’une actualité en la corrigeant', async ({ 
 	//  Facultatif, le Suivi d'une actualité est plié : on l'ouvre, puis on coche.
 	const caseSuivi = page.getByRole('checkbox', { name: 'Activer le suivi' });
 	await expect(caseSuivi).toHaveCount(0);
-	await page.locator('.section-titre-texte', { hasText: /^Suivi/ }).first().click();
+	await page
+		.locator('.section-titre-texte', { hasText: /^Suivi/ })
+		.first()
+		.click();
 	await caseSuivi.check();
 	//  Cochée : l'état part en « Ouvert », montré en lecture.
 	await expect(page.getByRole('button', { name: /Ouvert/ }).first()).toBeVisible();
