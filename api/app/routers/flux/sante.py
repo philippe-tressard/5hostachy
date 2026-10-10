@@ -16,7 +16,6 @@ from sqlmodel import select
 from app.models.core import (
     STATUTS_TICKET_ACTIFS,
     CommandeAcces,
-    ConfigSite,
     ContratEntretien,
     Copropriete,
     DemandeModificationProfil,
@@ -30,6 +29,7 @@ from app.models.core import (
 from app.routers.copropriete import contrat_de_reference
 from app.utils.comptes import nb_comptes_en_attente
 from app.utils.echeance_contrat import echeance_du_contrat
+from app.utils.relance_syndic import conditions_relancable, delai_relance_jours
 from app.utils.visibility import (
     sondage_accessible,
     sondage_clos,
@@ -41,8 +41,6 @@ from .schemas import FluxSante
 from app.utils.categories_ticket import ticket_urgent
 from app.auth.deps import est_moderateur
 
-#: Délai par défaut, en jours, avant qu'un ticket syndic soit relançable.
-_RELANCE_SYNDIC_DEFAUT_J = 30
 #: Bornes de l'agenda : par source, puis au total.
 _MAX_VISITES = 5
 _MAX_PROCHAINS = 12
@@ -184,23 +182,18 @@ def _validations_admin(ctx: ContexteFlux) -> int:
 
 
 def _relances_syndic(ctx: ContexteFlux) -> int:
-    """Tickets syndic éligibles à la relance (pas de modification depuis > délai)."""
+    """Affaires éligibles à la relance du syndic (pas de modification depuis > délai)."""
     if not est_moderateur(ctx.user):
         return 0
 
-    cfg_delai = ctx.session.exec(
-        select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
-    ).first()
-    delai_jours = int(cfg_delai.valeur) if cfg_delai else _RELANCE_SYNDIC_DEFAUT_J
-    seuil = ctx.now - timedelta(days=delai_jours)
+    seuil = ctx.now - timedelta(days=delai_relance_jours(ctx.session))
     return (
         ctx.session.exec(
             select(func.count(Ticket.id)).where(
-                Ticket.destinataire_syndic == True,  # noqa: E712  (colonne SQL, pas un booléen Python)
-                #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
-                #  l'autre, et ne se relance pas (#1091).
-                Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
-                Ticket.non_relancable == False,  # noqa: E712
+                #  La règle de la liste, qu'il annonce : `utils/relance_syndic`. Il
+                #  ne retenait que les affaires déjà adressées au syndic ; la liste
+                #  les propose toutes, et l'envoi les lui adresse (10/10/2026).
+                *conditions_relancable(),
                 Ticket.mis_a_jour_le < seuil,
             )
         ).one()

@@ -17,8 +17,6 @@ from sqlmodel import Session, select
 from app.auth.deps import require_cs_or_admin
 from app.database import get_session
 from app.models.core import (
-    STATUTS_TICKET_ACTIFS,
-    ConfigSite,
     GenreCivilite,
     Ticket,
     TicketEvolution,
@@ -30,6 +28,7 @@ from app.models.courriel import RelanceCourriel
 from app.utils.courriel_entrant import nouveau_jeton
 from app.utils.destinataires import formule_appel, interlocuteurs_syndic
 from app.utils.perimetres import perimetre_label_json
+from app.utils.relance_syndic import conditions_relancable, delai_relance_jours, ids_relancables
 
 from .commun import (
     STATUT_LABELS,
@@ -46,9 +45,6 @@ from app.utils.recuperer import ou_404
 
 router = APIRouter()
 
-#: Délai par défaut, en jours, avant qu'un ticket syndic soit relançable.
-_DELAI_DEFAUT_J = 30
-
 
 class RelanceSyndicRequest(BaseModel):
     ticket_ids: list[int]
@@ -59,13 +55,6 @@ class RelanceSyndicResponse(BaseModel):
     tickets: list[TicketRead]
 
 
-def _delai_jours(session: Session) -> int:
-    cfg = session.exec(
-        select(ConfigSite).where(ConfigSite.cle == "relance_syndic_delai_jours")
-    ).first()
-    return int(cfg.valeur) if cfg else _DELAI_DEFAUT_J
-
-
 @router.get("/relance-syndic", response_model=RelanceSyndicResponse)
 def list_relance_syndic(
     session: Session = Depends(get_session),
@@ -73,23 +62,15 @@ def list_relance_syndic(
 ):
     """Tickets ouverts susceptibles de relance syndic.
 
-    Non résolus ni annulés, hors catégorie « bug » (technique/site, du ressort
-    admin), et non tagués `non_relancable`. Le frontend distingue les tickets
-    éligibles (passé le délai) des candidats (pas encore au délai).
+    Toutes les affaires, sauf résolues, annulées, supprimées ou archivées — la
+    règle vit dans `utils/relance_syndic`. Le frontend distingue les éligibles
+    (passé le délai, cochées d'office) des candidates.
     """
     tickets = session.exec(
-        select(Ticket)
-        .where(
-            Ticket.categorie != "bug",
-            #  ACTIFS, pas « non clos » : une actualité (`publie`) n'est ni l'un ni
-            #  l'autre, et ne se relance pas (#1091).
-            Ticket.statut.in_(STATUTS_TICKET_ACTIFS),
-            Ticket.non_relancable == False,  # noqa: E712
-        )
-        .order_by(Ticket.mis_a_jour_le)
+        select(Ticket).where(*conditions_relancable()).order_by(Ticket.mis_a_jour_le)
     ).all()
     return RelanceSyndicResponse(
-        delai_jours=_delai_jours(session),
+        delai_jours=delai_relance_jours(session),
         tickets=[ticket_read(t, session) for t in tickets],
     )
 
@@ -163,10 +144,14 @@ def list_reponses_relance(
             ids_tous.update(int(i) for i in json.loads(rel.tickets_json or "[]"))
         except (ValueError, TypeError):
             pass
+    #  Seules les affaires ENCORE SUIVIES sont citées : une affaire résolue,
+    #  annulée, archivée ou absorbée n'a plus rien à recevoir de la réponse, et
+    #  une affaire supprimée n'est plus en base (09/10/2026).
+    suivies = ids_relancables(session, ids_tous)
     numeros = {
         t.id: t.numero
         for t in (
-            session.exec(select(Ticket).where(Ticket.id.in_(ids_tous))).all() if ids_tous else []
+            session.exec(select(Ticket).where(Ticket.id.in_(suivies))).all() if suivies else []
         )
     }
 
@@ -177,6 +162,11 @@ def list_reponses_relance(
             ids = [int(i) for i in json.loads(rel.tickets_json or "[]")] if rel else []
         except (ValueError, TypeError):
             ids = []
+        #  Une réponse dont TOUTES les affaires sont closes n'a plus rien à
+        #  reporter : elle quitte la liste avec elles. Une réponse sans affaire
+        #  connue (relance illisible) reste, faute de pouvoir en juger.
+        if ids and not any(i in numeros for i in ids):
+            continue
         sortie.append(
             {
                 "id": rep.id,
@@ -207,14 +197,17 @@ def envoyer_relance_syndic(
     if not body.ticket_ids:
         raise HTTPException(422, "Aucun ticket sélectionné")
 
-    tickets_relance: list[Ticket] = []
-    for tid in body.ticket_ids:
-        t = ou_404(session, Ticket, tid, f"Ticket {tid}")
-        if t.categorie == "bug":
-            raise HTTPException(
-                422, f"Ticket {tid} (catégorie bug) non concerné par la relance syndic"
-            )
-        tickets_relance.append(t)
+    tickets_relance = [ou_404(session, Ticket, tid, f"Ticket {tid}") for tid in body.ticket_ids]
+    #  La MÊME règle que la liste : un écran resté ouvert pendant qu'une affaire
+    #  se résolvait relancerait sinon le syndic sur un dossier clos.
+    admis = ids_relancables(session, {t.id for t in tickets_relance})
+    refuses = [t.numero for t in tickets_relance if t.id not in admis]
+    if refuses:
+        raise HTTPException(
+            422,
+            f"Plus à relancer : {', '.join(refuses)} (résolue, annulée, archivée ou fusionnée)."
+            " Rafraîchissez la liste.",
+        )
 
     now = horloge.maintenant()
     for ticket in tickets_relance:
