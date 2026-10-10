@@ -94,7 +94,16 @@ export default defineConfig({
 				// statiques (js, css, icônes) n'est pas touché. `npm run lint:sw`
 				// vérifie sur le bundle CONSTRUIT que le repli n'est pas réapparu.
 				navigateFallback: null,
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+				// PAS de HTML dans le precache (09/10/2026). Le seul fichier HTML du build
+				// est le manuel (`static/manuel-utilisateur.html`), et le precache le sert
+				// D'ABORD, sans consulter le serveur : un navigateur dont le service worker
+				// n'avait pas été remplacé affichait le manuel v2.38 quand le serveur
+				// servait la v2.58 — même `fetch(…, { cache: 'no-store' })`. Caddy le sert
+				// en `no-cache` exprès (`handle /manuel-utilisateur.html`) : le precache
+				// contredisait cette intention. Le manuel n'est donc plus lisible hors
+				// ligne ; il lit d'ailleurs le nom de la résidence sur le réseau.
+				// `npm run lint:sw` refuse un `.html` dans le precache construit.
+				globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
 				// PAS de mise en cache des réponses d'API — et donc pas de
 				// `runtimeCaching` du tout.
 				//

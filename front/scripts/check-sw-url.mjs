@@ -188,7 +188,40 @@ if (cacheApi.length > 0) {
 	process.exit(1);
 }
 
+// ── Un document HTML dans le precache ─────────────────────────────────────────
+//
+// Le precache sert ses entrées D'ABORD, sans consulter le serveur, jusqu'à ce
+// qu'un nouveau service worker soit ACTIVÉ. Le manuel (`static/manuel-
+// utilisateur.html`) y figurait : le 09/10/2026, un navigateur dont le service
+// worker n'avait pas été remplacé affichait le manuel v2.38 quand le serveur
+// servait la v2.58, même par un `fetch(…, { cache: 'no-store' })`. Caddy le sert
+// en `no-cache` précisément pour qu'il ne soit jamais périmé.
+//
+// Un document se lit à jour ; seules les ressources STATIQUES versionnées (js,
+// css, icônes, polices) se précachent. Cas zéro : un precache sans aucune entrée
+// lue ne prouverait rien — le motif aurait cessé de lire le fichier.
+const entrees = [...sw.matchAll(/url\s*:\s*["']([^"']+)["']/g)].map((m) => m[1]);
+if (entrees.length === 0) {
+	console.error(
+		`\n✗ Aucune entrée lue dans le precache de ${relative(RACINE, SW)} : le motif ne lit` +
+			`\n  plus le fichier. Un contrôle qui ne mesure rien renvoie INCONNU, jamais OK.\n`,
+	);
+	process.exit(1);
+}
+const documents = entrees.filter((u) => /\.html?$/i.test(u));
+if (documents.length > 0) {
+	console.error(
+		`\n✗ Le precache du service worker contient ${documents.length} document(s) HTML :\n\n` +
+			documents.map((u) => `  ${u}`).join('\n') +
+			`\n\n  Le precache les sert sans consulter le serveur : un service worker non` +
+			`\n  remplacé fait lire une version périmée (manuel v2.38 servi pour v2.58).` +
+			`\n  Retirer \`html\` de \`globPatterns\` (front/vite.config.ts).\n`,
+	);
+	process.exit(1);
+}
+
 console.log(
 	`✓ ${fichiers.length} fichiers du bundle analysés — service worker en URL absolue, ` +
-		`sans repli de navigation orphelin, sans cache de réponse d'API.`,
+		`sans repli de navigation orphelin, sans cache de réponse d'API, ` +
+		`${entrees.length} entrées précachées dont aucun document HTML.`,
 );
