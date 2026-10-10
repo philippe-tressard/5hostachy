@@ -28,6 +28,7 @@ from .actualite import diffuser_actualite
 from app.utils.evolutions import TYPES_SAISIS, evolution_modifiable, supprimer_evolution
 from app.utils.perimetre_fil import doit_propager
 from app.utils.suivi_fil import statuts_avant
+from app.utils.suivi_actualite import etat_de_la_suite, refuser_etat
 from app.utils.valeurs import valeur
 from app.utils.nature_affaire import est_actualite
 from app.utils.fichiers import chemins_locaux
@@ -45,7 +46,6 @@ from .suite_sections import (
     appliquer_sections_suite,
     appliquer_statut,
     corriger_suivi,
-    refuser_etat_sans_cycle,
 )
 from .courriels import envoyer_email_externe, envoyer_email_syndic_cs
 from .notifier_auteur import _notifier_auteur
@@ -89,7 +89,7 @@ def get_evolutions(
     evols = evolutions_lisibles(session, ticket, evols, user)
     #  L'état d'avant chaque entrée : la pastille qui, en correction, ramène la
     #  Suite à un commentaire (`suivi_fil.py`) — calculé ici, une fois.
-    avant = statuts_avant(evols, valeur(ticket.statut))
+    avant = statuts_avant(evols, etat_de_la_suite(ticket))
     return [evol_read(e, session, avant.get(e.id)) for e in evols]
 
 
@@ -138,7 +138,7 @@ def update_evolution(
     #  d'abord : il corrige l'entrée, et l'affaire seulement si c'est sa dernière
     #  transition (`utils/suivi_fil.py`). Le reste, comme à l'ajout.
     if body.type is not None:
-        corriger_suivi(session, ticket, evol, body)
+        corriger_suivi(session, ticket, evol, body, user)
     appliquer_sections_suite(session, ticket, evol, body, user)
     if body.affaires_liees:
         ajouter_liens(session, ticket, body.affaires_liees, user)
@@ -150,7 +150,7 @@ def update_evolution(
         .where(TicketEvolution.ticket_id == ticket_id)
         .order_by(TicketEvolution.cree_le)
     ).all()
-    return evol_read(evol, session, statuts_avant(fil, valeur(ticket.statut)).get(evol.id))
+    return evol_read(evol, session, statuts_avant(fil, etat_de_la_suite(ticket)).get(evol.id))
 
 
 @router.delete("/{ticket_id}/evolutions/{evol_id}", status_code=204)
@@ -259,9 +259,9 @@ def add_evolution(
     if body.type == "etat" and not body.nouveau_statut:
         raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
     if body.type == "etat":
-        refuser_etat_sans_cycle(ticket, body.nouveau_statut)
+        refuser_etat(ticket, body.nouveau_statut, est_cs=est_moderateur(user))
 
-    ancien_statut = ticket.statut if body.type == "etat" else None
+    ancien_statut = etat_de_la_suite(ticket) if body.type == "etat" else None
     evol = TicketEvolution(
         ticket_id=ticket_id,
         type=body.type,

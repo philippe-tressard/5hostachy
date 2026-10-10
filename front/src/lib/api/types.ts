@@ -246,6 +246,10 @@ export interface Ticket extends PorteSaisiPourLu {
 	 *   champ d'état créerait deux notions de suivi sur le même objet.
 	 *   Correspondance : `colonneDuTicket()` dans `$lib/kanban`. */
 	suivi_kanban?: boolean;
+	/**  Le suivi d'une ACTUALITÉ (10/10/2026) : `null` sans suivi, sinon « ouvert »,
+	 *   « résolu » ou « annulé » — un repère, `statut` restant « publie »
+	 *   (`$lib/suivi-actualite`). */
+	suivi_actualite?: string | null;
 }
 
 /** Une réponse du syndic à une relance GROUPÉE — jamais ventilée dans les fils.

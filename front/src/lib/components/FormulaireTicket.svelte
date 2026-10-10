@@ -388,6 +388,7 @@
 			bind:statut
 			bind:options
 			bind:equipement
+			etatSuivi={ticket?.suivi_actualite ?? null}
 		/>
 
 		<!--  4 à 13 : ordre, intitulés et séparations hérités de `ChampsCommuns`,

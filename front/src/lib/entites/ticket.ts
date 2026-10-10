@@ -92,7 +92,7 @@ export const TICKET: EntiteDeclaree = {
 			pliee: true,
 			inactivePour: {
 				actualite:
-					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
+					'Une actualité informe : personne n’intervient, elle n’a donc ni équipement, ni intervenant.',
 				resident:
 					'Le conseil syndical désigne l’équipement : on signale ce qu’on voit, pas ce qu’il faut entretenir.',
 				horsBati: 'Seulement pour les catégories du bâti — celles au liseré doré.',
@@ -107,13 +107,14 @@ export const TICKET: EntiteDeclaree = {
 			//  La traçabilité, elle, ne tombe pas : c'est le `PATCH` qui a changé —
 			//  il écrit désormais une CORRECTION, pas une transition de workflow
 			//  (`api/app/routers/tickets/crud.py`).
+			//  🔁 Une ACTUALITÉ a désormais un suivi OPTIONNEL (10/10/2026) : la case
+			//  du conseil, puis Ouvert · Résolu · Annulé par une Suite. La section n'y
+			//  est donc plus éteinte ; facultative, elle s'y plie (`$lib/suivi-actualite`
+			//  et `SectionsSpecifiquesTicket`).
 			id: 'suivi',
 			requis: true,
-			objet: 'Ouvert · En cours · Résolu · Annulé',
-			inactivePour: {
-				actualite:
-					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
-			},
+			objet:
+				'Ouvert · En cours · Résolu · Annulé — pour une actualité, optionnel : Ouvert · Résolu · Annulé',
 		},
 		{
 			id: 'quand',
@@ -142,7 +143,7 @@ export const TICKET: EntiteDeclaree = {
 			//  (`utils/intervenant`).
 			inactivePour: {
 				actualite:
-					'Une actualité informe : personne n’agit, elle n’a donc ni suivi, ni équipement, ni intervenant.',
+					'Une actualité informe : personne n’intervient, elle n’a donc ni équipement, ni intervenant.',
 				resident: 'Le conseil syndical désigne l’intervenant.',
 				horsBati: 'Seulement pour les catégories du bâti — celles au liseré doré.',
 			},

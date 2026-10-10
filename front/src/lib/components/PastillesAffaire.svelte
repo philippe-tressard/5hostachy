@@ -37,11 +37,11 @@
 		STATUT_TICKET_LABELS,
 		categorieTicketEmoji,
 		categorieTicketLabel,
-		estActualite,
 		optionsEnBadge,
 		ticketUrgent,
 	} from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
+	import { etatAffiche } from '$lib/suivi-actualite';
 
 	/** L'affaire — une carte la passe entière, le fil ses seuls champs de ligne. */
 	export let affaire: Ticket;
@@ -51,6 +51,8 @@
 	export let dansLeFil = false;
 
 	$: marqueurs = optionsEnBadge(affaire).filter((o) => !(dansLeFil && o.cle === 'epingle'));
+	//  L'état d'une affaire ; celui d'une actualité seulement si elle est suivie.
+	$: etat = etatAffiche(affaire);
 </script>
 
 <!--  `display: contents` : les pastilles restent les enfants de la ligne qui les
@@ -60,9 +62,9 @@
 	<span class="pa-cat" title={categorieTicketLabel(affaire.categorie)}
 		>{categorieTicketEmoji(affaire.categorie)}</span
 	>
-	{#if !estActualite(affaire)}
-		<span class="badge {STATUT_TICKET_BADGE[affaire.statut] ?? 'badge-gray'}">
-			{STATUT_TICKET_LABELS[affaire.statut] ?? affaire.statut}
+	{#if etat}
+		<span class="badge {STATUT_TICKET_BADGE[etat] ?? 'badge-gray'}">
+			{STATUT_TICKET_LABELS[etat] ?? etat}
 		</span>
 	{/if}
 	<BadgePerimetre perimetre={affaire.perimetre_cible} />

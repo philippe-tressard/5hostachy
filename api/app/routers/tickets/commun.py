@@ -39,6 +39,7 @@ from app.utils.archivage import est_archivable, perime_le, seuil_archivage_jours
 from app.utils.lecture import lire_objet
 from app.utils.corrections_texte import expliciter_ancienne
 from app.utils.photos import parse_photos
+from app.utils.suivi_actualite import poser_suivi
 
 #: Libellé lisible de chaque état — e-mails, notifications, fil d'évolutions.
 #:
@@ -416,7 +417,8 @@ def trier_par_activite(session: Session, tickets: list[Ticket]) -> list[Ticket]:
 #: Il n'y a pas de quatrième ligne pour 🔒 « visible du seul périmètre » : un
 #: ticket l'est DÉJÀ (`ticket_visible` n'ouvre pas à la copropriété, #339).
 #: | `suivi_kanban` | `ticket.suivi_kanban` — le ticket paraît au tableau (#833) |
-OPTIONS_TICKET = ("epingle", "urgente", "confidentiel", "suivi_kanban")
+#: | `suivre_actualite` | `ticket.suivi_actualite` — « ouvert » coché, vide décoché (10/10/2026) |
+OPTIONS_TICKET = ("epingle", "urgente", "confidentiel", "suivi_kanban", "suivre_actualite")
 
 #: Les options qui appartiennent au CONSEIL, pas à l'auteur.
 #:
@@ -446,7 +448,8 @@ OPTIONS_TICKET = ("epingle", "urgente", "confidentiel", "suivi_kanban")
 #: conseil, comme l'épinglage ordonne sa liste. Un résident décrit sa situation
 #: — c'est le sens d'`urgente` —, il n'inscrit pas une carte au tableau de suivi
 #: de quelqu'un d'autre.
-OPTIONS_RESERVEES_AU_CS = ("epingle", "confidentiel", "suivi_kanban")
+#: `suivre_actualite` aussi (10/10/2026) : « activable uniquement par le CS ».
+OPTIONS_RESERVEES_AU_CS = ("epingle", "confidentiel", "suivi_kanban", "suivre_actualite")
 
 
 def appliquer_options(ticket: Ticket, body, *, est_cs: bool) -> list[str]:
@@ -476,6 +479,12 @@ def appliquer_options(ticket: Ticket, body, *, est_cs: bool) -> list[str]:
                 ticket.priorite = nouvelle
                 changees.append(option)
             continue
+        if option == "suivre_actualite":
+            #  Pas de colonne booléenne : la case pose l'ÉTAT du suivi, et la
+            #  décocher l'efface (`utils/suivi_actualite`).
+            if poser_suivi(ticket, valeur):
+                changees.append(option)
+            continue
         if getattr(ticket, option) != valeur:
             setattr(ticket, option, valeur)
             changees.append(option)
@@ -493,4 +502,5 @@ def options_du_ticket(ticket: Ticket) -> dict[str, bool]:
         "urgente": str(ticket.priorite) == "haute",
         "confidentiel": bool(ticket.confidentiel),
         "suivi_kanban": bool(ticket.suivi_kanban),
+        "suivre_actualite": bool(ticket.suivi_actualite),
     }

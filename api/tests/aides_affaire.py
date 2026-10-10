@@ -68,7 +68,8 @@ def _corriger(session, user, ticket_id, **champs):
 
 
 def _suite(session, user, ticket_id, **champs):
+    #  `type` se remplace : une Suite d'ÉTAT passe par la même aide.
     corps = TicketEvolutionCreate(
-        type="commentaire", contenu="<p>Point d'étape.</p>", notifier=False, **champs
+        **{"type": "commentaire", "contenu": "<p>Point d'étape.</p>", "notifier": False, **champs}
     )
     return evolutions.add_evolution(ticket_id, corps, BackgroundTasks(), session=session, user=user)

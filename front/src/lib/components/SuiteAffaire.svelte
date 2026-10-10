@@ -51,11 +51,11 @@
 	import { demanderFusion } from '$lib/fusion-affaires';
 	import {
 		STATUT_TICKET_LABELS,
-		STATUT_TICKET_OPTIONS,
 		estActualite,
 		optionsDuTicket,
 		optionsVersTicket,
 	} from '$lib/tickets';
+	import { etatDeLaSuite, etatsDeLaSuite } from '$lib/suivi-actualite';
 
 	export let ticket: Ticket;
 	/** L'entrée CORRIGÉE — `null` pour une Suite neuve. */
@@ -75,8 +75,10 @@
 	$: correction = evol !== null;
 	//  Ce qui distingue l'actualité, écrit ICI et nulle part ailleurs : pas de
 	//  cycle, pas d'aperçu (son module compose son message), ses canaux par défaut,
-	//  et le groupe fermé quand elle ne parle qu'au conseil.
+	//  et le groupe fermé quand elle ne parle qu'au conseil. Son SUIVI, optionnel
+	//  (10/10/2026), s'avance ici comme celui d'une affaire : `$lib/suivi-actualite`.
 	$: actu = estActualite(ticket);
+	$: etatCourant = etatDeLaSuite(ticket);
 	$: whatsappInterdit = actu
 		? motifWhatsappInterdit(reserveAuConseil(ticket.public_cible), 'actualité')
 		: motifWhatsappInterdit(ticketLuDuSeulConseil(ticket), 'ticket');
@@ -100,7 +102,8 @@
 	//  🔀 Une Suite qui CLÔT demande s'il faut absorber les affaires liées encore
 	//  ouvertes (#1704) — jamais une correction : la clôture a déjà eu lieu.
 	async function soumettre(charge: ChargeUtileEvolution) {
-		const fusionner = correction ? [] : await demanderFusion(ticket, charge.nouveau_statut);
+		//  Une actualité ne fusionne pas : son suivi est un repère, pas une clôture.
+		const fusionner = correction || actu ? [] : await demanderFusion(ticket, charge.nouveau_statut);
 		if (fusionner === null) return;
 		dispatch('submit', fusionner.length ? { ...charge, fusionner } : charge);
 	}
@@ -115,9 +118,9 @@
 	initialFichiers={fichiersDepuisUrls(evol?.fichiers_urls)}
 	initialPerimetre={evol?.perimetre_cible ?? []}
 	demanderApercu={correction || actu ? null : apercu}
-	statutOptions={actu ? [] : STATUT_TICKET_OPTIONS}
+	statutOptions={etatsDeLaSuite(ticket, $isCS)}
 	statutLabels={STATUT_TICKET_LABELS}
-	currentStatut={evol ? (evol.statut_avant ?? ticket.statut) : ticket.statut}
+	currentStatut={evol ? (evol.statut_avant ?? etatCourant) : etatCourant}
 	initialStatut={evol?.type === 'etat' ? (evol.nouveau_statut ?? '') : ''}
 	entite={TICKET}
 	affaireLiable={$isCS ? ticket.id : null}

@@ -59,7 +59,7 @@ NON_BRANCHEES: dict[str, str] = {}
 #: à partir de l'objet : l'appelant dit « ticket », l'actualité suit la sienne
 #: (#1091, 23/09/2026). Branchées si — et seulement si — leur type parent l'est,
 #: et si `_regle_de` rend bien leur nom. Le test vérifie les deux.
-CHOISIES_PAR_L_OBJET: dict[str, str] = {"actualite": "ticket"}
+CHOISIES_PAR_L_OBJET: dict[str, str] = {"actualite": "ticket", "actualite_suivie": "ticket"}
 
 
 def _appelants() -> dict[str, list[str]]:

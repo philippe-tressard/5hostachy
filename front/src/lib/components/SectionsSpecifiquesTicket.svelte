@@ -23,7 +23,12 @@
 	import SectionWorkflow from '$lib/components/SectionWorkflow.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { isCS } from '$lib/stores/auth';
-	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS } from '$lib/tickets';
+	import { LEGENDE_CARNET, STATUT_TICKET_OPTIONS, estActualite } from '$lib/tickets';
+	import {
+		AIDE_SUIVI_ACTUALITE,
+		ETAT_SUIVI_DEFAUT,
+		SUIVI_ACTUALITE_OPTIONS,
+	} from '$lib/suivi-actualite';
 	import SectionEquipement from '$lib/components/SectionEquipement.svelte';
 	import type { Etat, IdSection } from '$lib/entites/types';
 	import { sectionPresente } from '$lib/entites/types';
@@ -51,12 +56,26 @@
 	 *   Trois liaisons distinctes obligeraient chaque hôte à défaire puis refaire
 	 *   le même objet — et le premier qui en oublierait une la remettrait à son
 	 *   défaut sans que personne le voie. */
-	export let options = { epingle: false, urgente: false, brouillon: false, suiviKanban: false };
+	export let options = {
+		epingle: false,
+		urgente: false,
+		brouillon: false,
+		suiviKanban: false,
+		suiviActualite: false,
+	};
 	/**  Les sections ÉTEINTES par la nature de l'affaire, avec leur motif
 	 *   (`$lib/formulaire-affaire`, 23/09/2026) : grisées, pliées, sans champ. */
 	export let inactives: Partial<Record<IdSection, string>> = {};
 	/** L'équipement concerné (#1097) — une valeur de `TypeEquipement`, ou `''`. */
 	export let equipement = '';
+	/** L'état du suivi d'une actualité déjà suivie — `null` sinon (10/10/2026). */
+	export let etatSuivi: string | null = null;
+
+	//  🔁 Une ACTUALITÉ a un suivi OPTIONNEL : une case du conseil, puis ses trois
+	//  états, en lecture — ils se changent par une Suite. Facultatif, il se plie ;
+	//  coché, il se déplie d'office (une valeur autre que le défaut).
+	$: actualite = estActualite({ categorie });
+	$: suiviCoche = actualite && options.suiviActualite;
 </script>
 
 <!--  2. NATURE — la catégorie de l'affaire, et elle seule.
@@ -146,15 +165,27 @@
 	      lecture, et le serveur refait le contrôle (liste blanche CS). -->
 <SectionWorkflow
 	idTitre="ticket-workflow-titre"
-	options={STATUT_TICKET_OPTIONS}
-	valeur={statut}
-	lecture={!$isCS}
-	pliable={pliageDe(TICKET, 'suivi')}
-	requis={requisDe(TICKET, 'suivi')}
+	options={actualite ? (suiviCoche ? SUIVI_ACTUALITE_OPTIONS : []) : STATUT_TICKET_OPTIONS}
+	valeur={actualite ? (suiviCoche ? (etatSuivi ?? ETAT_SUIVI_DEFAUT) : '') : statut}
+	lecture={actualite || !$isCS}
+	pliable={actualite ? !suiviCoche : pliageDe(TICKET, 'suivi')}
+	requis={!actualite && requisDe(TICKET, 'suivi')}
 	inactive={inactives.suivi ?? ''}
 	on:choisir={(e) => (statut = e.detail)}
 >
-	{#if !$isCS}
+	{#if actualite}
+		{#if $isCS}
+			<div class="field champ-large">
+				<label class="checkbox-field">
+					<input type="checkbox" bind:checked={options.suiviActualite} />
+					<span>Activer le suivi</span>
+				</label>
+				<p class="aide">{AIDE_SUIVI_ACTUALITE}</p>
+			</div>
+		{:else}
+			<p class="aide">Seul le conseil syndical suit une actualité.</p>
+		{/if}
+	{:else if !$isCS}
 		<p class="aide">
 			{modeEdition
 				? `Seul le conseil syndical fait avancer le suivi d’une ${TICKET.libelle.toLowerCase()}.`

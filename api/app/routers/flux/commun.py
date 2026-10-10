@@ -105,6 +105,7 @@ CHAMPS_PASTILLES = (
     "numero",
     "categorie",
     "statut",
+    "suivi_actualite",  # l'état d'une actualité suivie (10/10/2026)
     "priorite",
     "debut",
     "perimetre_cible",

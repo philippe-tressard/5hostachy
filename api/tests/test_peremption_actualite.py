@@ -173,7 +173,9 @@ def test_l_archivage_manuel_prime_toujours():
 #: Tous les types déclarés, sauf celui qui périme. Lu dans `REGLES` et non
 #: recopié : la liste écrite à la main nommait `evenement`, parti le 23/09/2026
 #: (#1092), et ce cas-là sautait à chaque exécution sans que rien le dise.
-_TYPES_QUI_NE_PERIMENT_PAS = sorted(t for t in REGLES if t != "actualite")
+#: Une actualité suivie (10/10/2026) reste une actualité : elle périme aussi.
+_REGLES_D_ACTUALITE = ("actualite", "actualite_suivie")
+_TYPES_QUI_NE_PERIMENT_PAS = sorted(t for t in REGLES if t not in _REGLES_D_ACTUALITE)
 
 
 def test_la_liste_des_autres_types_n_est_pas_vide():

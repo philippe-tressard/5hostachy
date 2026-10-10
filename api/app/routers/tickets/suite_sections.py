@@ -29,11 +29,11 @@ from sqlmodel import Session, select
 
 from app.auth.deps import est_moderateur
 from app.models.core import STATUTS_TICKET_CLOS, Ticket, TicketEvolution, Utilisateur
-from app.models.tickets import STATUTS_TICKET_SANS_CYCLE
 from app.utils import horloge
 from app.utils.evolutions import TYPES_SAISIS
 from app.utils.intervenant import appliquer_intervenant
 from app.utils.nature_affaire import est_actualite
+from app.utils import suivi_actualite
 from app.utils.prochaine_visite import apres_cloture
 from app.utils.synthese_affaire.file import inscrire_si_eligible
 from app.utils.valeurs import valeur
@@ -49,13 +49,6 @@ def _tracer(evol: TicketEvolution, lignes: list[str]) -> None:
     """Ce qui a changé s'écrit dans la Suite même : la trace est au fil."""
     if lignes:
         evol.contenu = (evol.contenu or "") + f"<p><em>{' ; '.join(lignes)}</em></p>"
-
-
-def refuser_etat_sans_cycle(ticket: Ticket, statut: Any) -> None:
-    """Une actualité n'a pas de cycle (#1091) : une Suite y parle, elle ne la
-    fait pas avancer — et `publie` ne s'atteint par aucune transition."""
-    if est_actualite(ticket) or statut in STATUTS_TICKET_SANS_CYCLE:
-        raise HTTPException(422, "Une actualité n'a pas d'état de suivi")
 
 
 def appliquer_sections_suite(
@@ -110,7 +103,15 @@ def appliquer_sections_suite(
 def appliquer_statut(
     session: Session, ticket: Ticket, evol: TicketEvolution, statut: str, ferme_le: datetime
 ) -> None:
-    """L'affaire prend `statut`, avec tout ce qu'un changement d'état emporte."""
+    """L'affaire prend `statut`, avec tout ce qu'un changement d'état emporte.
+
+    Une actualité n'a pas de cycle (#1091) : c'est son SUIVI qui change, s'il
+    est activé (10/10/2026) — un repère, qui n'emporte rien d'autre.
+    """
+    if est_actualite(ticket):
+        suivi_actualite.appliquer_etat(ticket, statut, ferme_le)
+        session.add(ticket)
+        return
     lue_avant = destinataires_par_defaut(ticket)
     statut_avant = ticket.statut
     ticket.statut = statut
@@ -126,7 +127,9 @@ def appliquer_statut(
     inscrire_si_eligible(session, ticket, statut_avant=statut_avant)
 
 
-def corriger_suivi(session: Session, ticket: Ticket, evol: TicketEvolution, body: Any) -> None:
+def corriger_suivi(
+    session: Session, ticket: Ticket, evol: TicketEvolution, body: Any, user: Utilisateur
+) -> None:
     """Corrige l'état que porte la Suite — la règle vit dans `utils/suivi_fil.py`.
 
     La Suite garde sa date : une clôture qu'elle porte est datée d'elle.
@@ -136,13 +139,13 @@ def corriger_suivi(session: Session, ticket: Ticket, evol: TicketEvolution, body
     if body.type == "etat":
         if not body.nouveau_statut:
             raise HTTPException(422, "nouveau_statut requis pour un changement d'état")
-        refuser_etat_sans_cycle(ticket, body.nouveau_statut)
+        suivi_actualite.refuser_etat(ticket, body.nouveau_statut, est_cs=est_moderateur(user))
     fil = session.exec(
         select(TicketEvolution)
         .where(TicketEvolution.ticket_id == ticket.id)
         .order_by(TicketEvolution.cree_le)
     ).all()
-    statut_affaire = valeur(ticket.statut)
+    statut_affaire = suivi_actualite.etat_de_la_suite(ticket)
     demande = valeur(body.nouveau_statut) if body.nouveau_statut else None
     avant = statuts_avant(fil, statut_affaire).get(evol.id, statut_affaire)
     resultat_avant = resultat(evol, avant)

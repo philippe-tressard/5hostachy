@@ -107,7 +107,13 @@ export interface SaisieAffaire {
 	assisteIA: boolean;
 	categorie: string;
 	statut: string;
-	options: { epingle: boolean; urgente: boolean; brouillon: boolean; suiviKanban: boolean };
+	options: {
+		epingle: boolean;
+		urgente: boolean;
+		brouillon: boolean;
+		suiviKanban: boolean;
+		suiviActualite?: boolean;
+	};
 	perimetreCible: string[];
 	publicCible: string[];
 	reservePerimetre: boolean;
@@ -193,14 +199,17 @@ export function chargeUtileAffaire(
 		frequence_valeur: entretien && s.frequenceType ? nombreOuNull(s.frequenceValeur) : null,
 	});
 	if (actualite) {
-		//  Pas de suivi : ni état ni kanban — effacés s'ils venaient d'une
-		//  affaire suivie. À qui l'on parle, l'Accès, l'affiche, oui — et 🛡️
+		//  Pas de cycle : ni état ni kanban — effacés s'ils venaient d'une
+		//  affaire suivie (son suivi, optionnel, est un repère à part). À qui l'on parle, l'Accès, l'affiche, oui — et 🛡️
 		//  « Confidentielle », en tête de Destinataires pour les deux natures
 		//  depuis le 25/09/2026 (le serveur l'honorait déjà : `ticket_visible`).
 		Object.assign(charge, {
 			epingle: s.options.epingle,
 			confidentiel: s.options.brouillon,
 			suivi_kanban: false,
+			//  🔁 Son suivi, optionnel (10/10/2026) : la case du conseil, que le
+			//  serveur lui réserve. L'état se change par une Suite.
+			suivre_actualite: !!s.options.suiviActualite,
 			public_cible: concerneTousLesResidents(s.publicCible) ? [] : s.publicCible,
 			reserve_perimetre: s.reservePerimetre,
 			annonce_hall: s.annonceHall,
@@ -239,6 +248,7 @@ export function pertesAuChangement(avant: Ticket, apres: SaisieAffaire): string[
 	//  et ceux que l'écran montre sont ceux qui partent.
 	if (etait === 'actualite') {
 		if (avant.reserve_perimetre) pertes.push('la réserve au périmètre (🔒)');
+		if (avant.suivi_actualite) pertes.push('le suivi de l’actualité');
 	} else {
 		pertes.push('l’état de suivi');
 		if (avant.suivi_kanban) pertes.push('l’inscription au kanban');

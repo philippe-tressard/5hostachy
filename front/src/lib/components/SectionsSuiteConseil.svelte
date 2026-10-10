@@ -48,6 +48,7 @@
 		urgente: boolean;
 		brouillon: boolean;
 		suiviKanban: boolean;
+		suiviActualite?: boolean;
 		planification?: Record<string, unknown>;
 	};
 

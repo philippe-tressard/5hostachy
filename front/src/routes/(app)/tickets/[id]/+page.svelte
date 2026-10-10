@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { etatAffiche } from '$lib/suivi-actualite';
 	import { confirmer, SUPPRESSION } from '$lib/confirmation';
 	import { estAbsent, messageErreur } from '$lib/erreurs';
 	import { demanderFusion } from '$lib/fusion-affaires';
@@ -75,6 +76,9 @@
 
 	$: statutBadge = STATUT_TICKET_BADGE[ticket?.statut ?? ''] ?? 'badge-gray';
 	$: statutLabel = STATUT_LABELS[ticket?.statut ?? ''] ?? ticket?.statut ?? '';
+	//  Le suivi d'une actualité, s'il est activé (10/10/2026) — en lecture : il
+	//  s'avance par une Suite, pas par les boutons d'une affaire.
+	$: suiviActu = ticket && estActualite(ticket) ? etatAffiche(ticket) : null;
 	//  `canReply` valait `statut !== 'fermé'` — le seul état qui interdisait de
 	//  répondre, et il n'existe plus (#415, migration 0149). La condition n'est
 	//  pas transposée à `clos` : elle fermerait la discussion sur les tickets
@@ -277,8 +281,9 @@
 				{/if}
 			</svelte:fragment>
 
-			<!--  Une ACTUALITÉ n'a pas de suivi (#1091) : ni état, ni « Changer le
-			      statut ». Le serveur refuse d'ailleurs toute transition (422). -->
+			<!--  Une ACTUALITÉ n'a pas de cycle (#1091) : ni état, ni « Changer le
+			      statut ». Son suivi optionnel (10/10/2026) se lit ici, et s'avance
+			      par une Suite. -->
 			<svelte:fragment slot="workflow">
 				{#if !estActualite(ticket)}
 					<div class="ticket-meta">
@@ -304,6 +309,12 @@
 							</div>
 						</div>
 					{/if}
+				{:else if suiviActu}
+					<div class="ticket-meta">
+						<span class="badge {STATUT_TICKET_BADGE[suiviActu] ?? 'badge-gray'}"
+							>{STATUT_LABELS[suiviActu] ?? suiviActu}</span
+						>
+					</div>
 				{/if}
 			</svelte:fragment>
 

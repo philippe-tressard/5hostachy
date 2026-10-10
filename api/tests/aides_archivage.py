@@ -25,6 +25,7 @@ MODELES = {
     "ticket": Ticket,
     #  Une affaire de catégorie « Actualité » (#1091) : même modèle, autre règle.
     "actualite": Ticket,
+    "actualite_suivie": Ticket,
     "annonce": PetiteAnnonce,
     "idee": Idee,
     "sondage": Sondage,
