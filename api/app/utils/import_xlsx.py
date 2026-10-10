@@ -25,7 +25,7 @@ from typing import Callable, Optional
 
 from sqlmodel import Session, select
 
-from app.database import engine
+from app import contexte
 
 #: Les porteurs d'accès qui ne sont PAS des résidents — parkings publics, accès
 #: de la mairie, prestataire d'entretien. Une ligne à leur nom n'a personne à
@@ -119,7 +119,7 @@ def importer_fichier(chemin: str, remplacer: bool, traiter: Traitement) -> dict:
         raise FileNotFoundError(f"Fichier introuvable : {chemin}")
 
     rows = _lignes(str(path))
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         stats = traiter(rows, session, remplacer)
         session.commit()
     return stats

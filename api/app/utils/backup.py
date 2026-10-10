@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from app.utils.declenchement import AUTOMATIQUE
 from app.config import get_settings
-from app.database import engine
+from app import contexte
 from app.dialecte import chemin_fichier, point_de_controle, verifier_integrite
 from app.models.core import ConfigSauvegarde, HistoriqueSauvegarde, StatutSauvegarde
 
@@ -86,7 +86,7 @@ UPLOADS = "/app/uploads"
 def _integrite() -> str:
     """Le verdict du moteur, « ok » si sain — une erreur de lecture n'est pas « ok »."""
     try:
-        with engine.connect() as connexion:
+        with contexte.moteur().connect() as connexion:
             return verifier_integrite(connexion)
     except Exception as exc:
         return f"contrôle d'intégrité en échec : {exc}"
@@ -117,7 +117,7 @@ def _exporter_et_verifier(export: Path, dossier: Path) -> None:
     from app.utils.export_copropriete import exporter
     from app.utils.import_copropriete import verifier_archive
 
-    exporter(engine, export)
+    exporter(contexte.moteur(), export)
     verifier_archive(export, dossier)
 
 
@@ -140,7 +140,7 @@ def run_backup(history_id: int | None = None):
     sommes de pages.
     Met à jour l'entrée HistoriqueSauvegarde correspondante.
     """
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         entry: HistoriqueSauvegarde | None = None
         if history_id:
             entry = session.get(HistoriqueSauvegarde, history_id)
@@ -155,7 +155,7 @@ def run_backup(history_id: int | None = None):
             filename = nom_archive(horloge.maintenant())
             dest = os.path.join(settings.backup_dir, filename)
 
-            fichier = chemin_fichier(settings.database_url)
+            fichier = chemin_fichier(contexte.courante().url_base)
             db_path = str(fichier) if fichier else ""
 
             #  🔴 Une base SERVEUR (PostgreSQL, DI-7b, #1781) n'a pas de fichier à
@@ -180,7 +180,7 @@ def run_backup(history_id: int | None = None):
             # WAL checkpoint avant copie : garantit que app.db contient
             # toutes les transactions committées (le WAL peut être en avance)
             if os.path.exists(db_path):
-                with engine.connect() as _conn:
+                with contexte.moteur().connect() as _conn:
                     point_de_controle(_conn, "FULL")
 
                 # Validation d'intégrité AVANT de sauvegarder : ne jamais écraser
@@ -261,7 +261,7 @@ def setup_scheduler():
     #  Les tâches `cron` (heure=2, minute=0…) s'entendent à l'heure de Paris.
     scheduler = BackgroundScheduler(timezone=horloge.TZ_PARIS)
 
-    with Session(engine) as session:
+    with contexte.nouvelle_session() as session:
         cfg: ConfigSauvegarde | None = session.exec(select(ConfigSauvegarde)).first()
 
     # Si la config existe et est désactivée, on ne programme rien

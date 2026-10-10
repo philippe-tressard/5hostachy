@@ -371,9 +371,9 @@ def _session_ou_neuve(session: Session | None) -> tuple[Session, bool]:
     """
     if session is not None:
         return session, False
-    from app.database import SessionLocal
+    from app import contexte
 
-    return SessionLocal(), True
+    return contexte.nouvelle_session(), True
 
 
 async def send_email(

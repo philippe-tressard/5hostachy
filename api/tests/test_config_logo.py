@@ -10,12 +10,12 @@ détournés.
 from __future__ import annotations
 
 import io
-from types import SimpleNamespace
 
 import pytest
 from PIL import Image
 from sqlmodel import Session
 
+from app.config import get_settings
 from app.models.core import ConfigSite, RoleUtilisateur
 from app.utils import logo
 from app.utils.images import carre_png
@@ -36,7 +36,8 @@ def _pixel_central(png: bytes) -> tuple:
 
 @pytest.fixture
 def moteur(tmp_path, monkeypatch):
-    monkeypatch.setattr(logo, "get_settings", lambda: SimpleNamespace(uploads_dir=str(tmp_path)))
+    #  La racine des fichiers se demande au contexte de copropriété (#1744).
+    monkeypatch.setattr(get_settings(), "uploads_dir", str(tmp_path))
     with base_http() as m:
         yield m
 

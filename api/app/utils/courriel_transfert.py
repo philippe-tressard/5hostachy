@@ -135,11 +135,11 @@ def compte_a_l_adresse(session: Session, adresse: str | None) -> Utilisateur | N
 
 def domaines_du_site(session: Session) -> set[str]:
     """Les domaines d'où le site écrit : un message qui en vient est déjà dans l'affaire."""
-    from app.config import get_settings
+    from app import contexte
     from app.utils.email import _get_smtp_config
     from app.utils.smtp import adresses_a_tester
 
-    adresses = [*adresses_a_tester(_get_smtp_config(session)), get_settings().mail_from]
+    adresses = [*adresses_a_tester(_get_smtp_config(session)), contexte.courante().expediteur]
     return {domaine_de(a) for a in adresses} - {""}
 
 

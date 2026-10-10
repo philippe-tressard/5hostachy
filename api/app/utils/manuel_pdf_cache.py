@@ -39,11 +39,11 @@ NOM_DOSSIER = "cache-manuel-pdf"
 
 def dossier_par_defaut() -> Path | None:
     """Le dossier du cache, à côté de la base ; `None` pour une base en mémoire."""
-    from app.config import get_settings
+    from app import contexte
 
     from app.dialecte import chemin_fichier
 
-    fichier = chemin_fichier(get_settings().database_url)
+    fichier = chemin_fichier(contexte.courante().url_base)
     return fichier.parent / NOM_DOSSIER if fichier else None
 
 

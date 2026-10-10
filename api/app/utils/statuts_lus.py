@@ -26,19 +26,24 @@ import logging
 import time
 from typing import Optional
 
+from app import contexte
 from app.utils.valeurs import valeur
 
 logger = logging.getLogger(__name__)
 
 _TTL_SECONDES = 30.0
-_cache: dict[int, tuple[float, frozenset[str]]] = {}
+
+
+def _cache() -> dict[int, tuple[float, frozenset[str]]]:
+    """Le cache de LA copropriété servie, indexé par `user_id` (#1744, spec §4.5)."""
+    return contexte.etat("statuts_lus")
 
 
 def invalider_cache(user_id: Optional[int] = None) -> None:
     if user_id is None:
-        _cache.clear()
+        _cache().clear()
     else:
-        _cache.pop(user_id, None)
+        _cache().pop(user_id, None)
 
 
 def statuts_lus(user) -> frozenset[str]:
@@ -49,15 +54,14 @@ def statuts_lus(user) -> frozenset[str]:
     if propre != "aidant" or user_id is None:
         return statuts
 
-    entree = _cache.get(user_id)
+    entree = _cache().get(user_id)
     if entree is not None and (time.monotonic() - entree[0]) < _TTL_SECONDES:
         return statuts | entree[1]
     try:
-        from app.database import SessionLocal
         from app.models.core import Utilisateur
         from app.utils.delegations_actives import delegations_de_l_aidant
 
-        with SessionLocal() as session:
+        with contexte.nouvelle_session() as session:
             herites = frozenset(
                 str(valeur(m.statut))
                 for d in delegations_de_l_aidant(session, user_id)
@@ -70,5 +74,5 @@ def statuts_lus(user) -> frozenset[str]:
         #  seul titre — le sens fermé, jamais l'ouvert.
         logger.error("Délégations de l'aidant %s illisibles (%s)", user_id, exc)
         return statuts
-    _cache[user_id] = (time.monotonic(), herites)
+    _cache()[user_id] = (time.monotonic(), herites)
     return statuts | herites

@@ -301,13 +301,13 @@ def relever() -> dict[str, int]:
     exception y tuerait le job pour de bon. Elle journalise, et rend un compte
     que le journal montre — un tuyau muet est un tuyau qu'on croit vivant.
     """
-    from app.database import SessionLocal
+    from app import contexte
 
     comptes = {ACCEPTE: 0, RELANCE: 0, REFUSE: 0, IGNORE: 0}
     #: Vrai si la relève n'a PAS pu avoir lieu — à distinguer d'une boîte vide.
     echec = False
     derniere_erreur: Exception | None = None
-    session = SessionLocal()
+    session = contexte.nouvelle_session()
     try:
         cfg = config_imap(session)
         if not service_actif(cfg, SERVICE_REPONSES_COURRIEL):

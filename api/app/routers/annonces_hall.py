@@ -13,7 +13,6 @@ import os
 import uuid
 from datetime import datetime
 from app.utils import horloge
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -62,15 +61,15 @@ from app.routers.annonces_hall_sources import router as _router_sources  # noqa:
 
 router.include_router(_router_sources)
 
-from app.config import get_settings
+from app import contexte
 
 #  🔴 La racine venait d'un chemin écrit en dur, ici comme à cinq autres
-#  endroits (#1026). Elle se lit dans `Settings.uploads_dir`, seule lecture de
-#  la variable d'environnement : un fichier écrit hors du volume n'est ni
+#  endroits (#1026). Elle se demande au contexte de copropriété (`contexte.courante()`,
+#  #1744), seul lecteur de la variable d'environnement : un fichier écrit hors du volume n'est ni
 #  répliqué vers le standby par `bascule.sh`, ni sauvegardé par `backup.py` — il
 #  est perdu à la première bascule, sans aucun signal.
-PDF_DIR = Path(get_settings().uploads_dir) / "annonces-hall"
-UPLOADS_ROOT = os.path.realpath(get_settings().uploads_dir)
+PDF_DIR = contexte.courante().racine_fichiers / "annonces-hall"
+UPLOADS_ROOT = os.path.realpath(contexte.courante().racine_fichiers)
 
 
 #  Les schémas vivent dans `annonces_hall_schemas` (02/09/2026, plafond de

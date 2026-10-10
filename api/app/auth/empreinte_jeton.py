@@ -34,7 +34,7 @@ import hashlib
 import hmac
 import re
 
-from app.config import get_settings
+from app import contexte
 
 #: Ce qu'une empreinte a l'air d'être : 64 caractères hexadécimaux. Aucun jeton
 #: brut n'a cette forme — un jeton de rafraîchissement est un JWT (il contient
@@ -50,7 +50,7 @@ def empreinte(brut: str, cle: str | None = None) -> str:
     :param cle: la clé du serveur ; `None` = celle de la configuration. La
         migration la passe explicitement, pour ne dépendre que de ce qu'elle lit.
     """
-    secret = (cle if cle is not None else get_settings().secret_key).encode("utf-8")
+    secret = (cle if cle is not None else contexte.courante().secret).encode("utf-8")
     return hmac.new(secret, brut.encode("utf-8"), hashlib.sha256).hexdigest()
 
 

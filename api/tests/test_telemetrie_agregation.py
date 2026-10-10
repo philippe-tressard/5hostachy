@@ -46,7 +46,7 @@ def _utc(jour: int, heure: int = 10, mois: int = 9) -> datetime:
 @pytest.fixture()
 def jeu(monkeypatch):
     moteur = moteur_memoire(partage=True)
-    monkeypatch.setattr(telemetry_aggregation, "engine", moteur)
+    monkeypatch.setattr("app.database.engine", moteur)
     monkeypatch.setattr(horloge, "maintenant", lambda: MAINTENANT)
     with Session(moteur) as s:
         g = compte(s, prefixe="gestionnaire", roles_json="admin")
