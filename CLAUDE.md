@@ -12,7 +12,7 @@ Les références canoniques sont dans `.claude/skills/` (voir le tableau ci-dess
 
 ## Stack
 
-- **Backend** : FastAPI + SQLModel + SQLite WAL + Alembic (`api/`)
+- **Backend** : FastAPI + SQLModel + Alembic (`api/`) — **PostgreSQL 17 en production depuis le 10/10/2026** (DI-7, répliqué vers le standby) ; SQLite WAL pour une installation simple, les tests et le retour arrière de 7 jours (`retour-sqlite.sh`)
 - **Documents imprimables** : HTML/CSS → PDF via WeasyPrint (libs système dans `api/Dockerfile`)
 - **Frontend** : SvelteKit v2 + TypeScript strict + Vite + PWA (`front/`)
 - **Infra** : Docker Compose + Caddy + Raspberry Pi 5

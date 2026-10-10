@@ -236,6 +236,42 @@ class Bilan:
     lignes: int = 0
     fichiers: int = 0
     ecarts: list[str] = field(default_factory=list)
+    #: « table.colonne » que l'archive porte et que le modèle n'a plus (retirée) :
+    #: écartées, jamais une erreur (#1799).
+    colonnes_ecartees: list[str] = field(default_factory=list)
+    #: « table.colonne » que le modèle porte et que l'archive n'a pas (ajoutée
+    #: depuis) : la base leur donne leur défaut.
+    colonnes_par_defaut: list[str] = field(default_factory=list)
+
+
+def _verifier_contre_manifeste(table, lignes: list[dict], attendu: dict) -> None:
+    """L'archive est-elle INTÈGRE ? Ses lignes contre son propre manifeste, avant toute projection.
+
+    Comparer après coup la base relue au manifeste ne marche plus dès qu'une
+    colonne a été retirée ou ajoutée au modèle : l'empreinte du manifeste couvre
+    les colonnes de la version qui a exporté (#1799).
+    """
+    if len(lignes) != attendu["lignes"]:
+        raise ImportRefuse(
+            f"{table.name} : {len(lignes)} ligne(s), le manifeste en annonce {attendu['lignes']}"
+        )
+    if empreinte_table(table, lignes) != attendu["empreinte"]:
+        raise ImportRefuse(f"{table.name} : contenu différent du manifeste (archive altérée)")
+
+
+def _colonnes_communes(table, lignes: list[dict], bilan: Bilan) -> set[str]:
+    """Les colonnes que l'archive ET le modèle courant portent ; les autres sont nommées au bilan."""
+    du_modele = {c.name for c in table.columns}
+    if not lignes:
+        return du_modele
+    de_l_archive = set().union(*lignes)
+    bilan.colonnes_ecartees += [f"{table.name}.{c}" for c in sorted(de_l_archive - du_modele)]
+    bilan.colonnes_par_defaut += [f"{table.name}.{c}" for c in sorted(du_modele - de_l_archive)]
+    return de_l_archive & du_modele
+
+
+def _projeter(ligne: dict, colonnes: set[str]) -> dict:
+    return {k: v for k, v in ligne.items() if k in colonnes}
 
 
 def _recaler_sequences(connexion) -> None:
@@ -314,16 +350,27 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
             #  ordre d'écriture ne satisfait leurs clés ligne à ligne. Elles se
             #  vérifient donc À LA FIN, par le relevé ci-dessous (DI-7c, 09/10/2026).
             differer_cles_etrangeres(connexion)
+            ecrites: dict[str, tuple[list[dict], set[str]]] = {}
             for t in tables():
                 if t.name not in manifeste["tables"]:
                     continue
                 lignes = lignes_jsonl(archive.extractfile(f"tables/{t.name}.jsonl").read())
+                _verifier_contre_manifeste(t, lignes, manifeste["tables"][t.name])
+                communes = _colonnes_communes(t, lignes, bilan)
                 if lignes:
                     colonnes = {c.name: c for c in t.columns}
                     connexion.execute(
                         t.insert(),
-                        [{k: valeur_typee(colonnes[k], v) for k, v in li.items()} for li in lignes],
+                        [
+                            {
+                                k: valeur_typee(colonnes[k], v)
+                                for k, v in li.items()
+                                if k in communes
+                            }
+                            for li in lignes
+                        ],
                     )
+                ecrites[t.name] = (lignes, communes)
                 bilan.tables += 1
                 bilan.lignes += len(lignes)
             _recaler_sequences(connexion)
@@ -331,13 +378,19 @@ def importer(archive_chemin: Path, moteur, *, fichiers: Path | None = None) -> B
             if orphelines:
                 raise ImportRefuse("clés sans parent : " + "; ".join(orphelines))
             relu, _ignorees, _rev = lire(connexion)
-            for nom, attendu in manifeste["tables"].items():
-                obtenu = relu.get(nom, [])
-                if len(obtenu) != attendu["lignes"]:
+            #  La base relue se compare à l'archive PROJETÉE sur les colonnes que
+            #  les deux portent : une colonne retirée du modèle n'a pas été écrite,
+            #  une colonne ajoutée a reçu son défaut — ni l'une ni l'autre n'est un écart.
+            for nom, (lignes, communes) in ecrites.items():
+                obtenu = [_projeter(li, communes) for li in relu.get(nom, [])]
+                attendu = [_projeter(li, communes) for li in lignes]
+                if len(obtenu) != len(attendu):
                     bilan.ecarts.append(
-                        f"{nom} : {len(obtenu)} ligne(s), l'archive en annonce {attendu['lignes']}"
+                        f"{nom} : {len(obtenu)} ligne(s), l'archive en annonce {len(attendu)}"
                     )
-                elif empreinte_table(par_nom[nom], obtenu) != attendu["empreinte"]:
+                elif empreinte_table(par_nom[nom], obtenu) != empreinte_table(
+                    par_nom[nom], attendu
+                ):
                     bilan.ecarts.append(f"{nom} : contenu différent de l'archive (empreinte)")
             if bilan.ecarts:
                 raise ImportRefuse("; ".join(bilan.ecarts))
@@ -434,3 +487,9 @@ if __name__ == "__main__":
     print(
         f"Importé et vérifié : {_bilan.tables} tables, {_bilan.lignes} lignes, {_bilan.fichiers} fichiers."
     )
+    if _bilan.colonnes_ecartees:
+        print(f"Colonnes retirées du modèle, écartées : {', '.join(_bilan.colonnes_ecartees)}.")
+    if _bilan.colonnes_par_defaut:
+        print(
+            f"Colonnes absentes de l'archive, à leur défaut : {', '.join(_bilan.colonnes_par_defaut)}."
+        )

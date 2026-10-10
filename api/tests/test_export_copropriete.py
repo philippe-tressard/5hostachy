@@ -313,3 +313,73 @@ def test_un_separateur_unicode_dans_un_texte_ne_coupe_pas_la_ligne(tmp_path):
     with Session(cible) as s:
         relu = s.exec(select(FaqItem).where(FaqItem.question == "Séparateurs ?")).one()
         assert relu.reponse == texte
+
+
+# ── Une archive d'une AUTRE version du modèle (#1799) ───────────────────────────
+#
+#  Une sauvegarde est relue par un code plus récent : une colonne a pu être
+#  retirée du modèle (contraction, `non_relancable` en v2.130.4) ou ajoutée. Une
+#  archive d'une version antérieure est COHÉRENTE avec son propre manifeste :
+#  ces tests la fabriquent ainsi, manifeste recalculé.
+
+
+def _autre_version(archive, sortie, table, transformer):
+    """Réécrit `tables/<table>.jsonl` par `transformer(ligne)`, et son manifeste avec."""
+    with tarfile.open(archive, "r:gz") as a:
+        membres = {m.name: a.extractfile(m).read() for m in a.getmembers()}
+    lignes = [transformer(li) for li in ex.lignes_jsonl(membres[f"tables/{table}.jsonl"])]
+    membres[f"tables/{table}.jsonl"] = "".join(
+        json.dumps(li, ensure_ascii=False, separators=(",", ":")) + "\n" for li in lignes
+    ).encode()
+    manifeste = json.loads(membres["manifeste.json"])
+    par_nom = {t.name: t for t in ex.tables()}
+    manifeste["tables"][table]["empreinte"] = ex.empreinte_table(par_nom[table], lignes)
+    membres["manifeste.json"] = json.dumps(manifeste, ensure_ascii=False).encode()
+    with tarfile.open(sortie, "w:gz") as b:
+        for nom, donnees in membres.items():
+            info = tarfile.TarInfo(nom)
+            info.size = len(donnees)
+            b.addfile(info, io.BytesIO(donnees))
+
+
+def test_une_colonne_retiree_du_modele_est_ecartee_et_nommee(tmp_path):
+    source = _base_peuplee()
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+    ancienne = tmp_path / "ancienne.tar.gz"
+    _autre_version(archive, ancienne, "faq_item", lambda li: {**li, "retiree_depuis": "x"})
+
+    cible = moteur_memoire(cles_etrangeres=True)
+    bilan = ex.importer(ancienne, cible)
+    assert bilan.ecarts == []
+    assert bilan.colonnes_ecartees == ["faq_item.retiree_depuis"]
+    with Session(cible) as s:
+        assert len(s.exec(select(FaqItem)).all()) == 1
+
+
+def test_une_colonne_absente_de_l_archive_recoit_son_defaut(tmp_path):
+    source = _base_peuplee()
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+    ancienne = tmp_path / "ancienne.tar.gz"
+    _autre_version(
+        archive, ancienne, "faq_item", lambda li: {k: v for k, v in li.items() if k != "ordre"}
+    )
+
+    cible = moteur_memoire(cles_etrangeres=True)
+    bilan = ex.importer(ancienne, cible)
+    assert bilan.ecarts == []
+    assert bilan.colonnes_par_defaut == ["faq_item.ordre"]
+    with Session(cible) as s:
+        assert s.exec(select(FaqItem)).one().ordre == FaqItem().ordre
+
+
+def test_une_archive_alteree_reste_refusee_avant_toute_ecriture(tmp_path):
+    """Recalculer le manifeste est la forme d'une AUTRE version ; l'altérer sans, une fraude."""
+    source = _base_peuplee()
+    archive = tmp_path / "export.tar.gz"
+    ex.exporter(source, archive)
+    alteree = tmp_path / "alteree.tar.gz"
+    _alterer(archive, alteree, "faq_item", lambda d: d.replace(b'"ordre":0', b'"ordre":7'))
+    with pytest.raises(ex.ImportRefuse, match="faq_item : contenu différent du manifeste"):
+        ex.importer(alteree, moteur_memoire())

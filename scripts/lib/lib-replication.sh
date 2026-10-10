@@ -108,6 +108,24 @@ verdict_paire_replication() {
     echo NOEUDS
 }
 
+# ── PURE : point 4 du pré-check — la base SQLite de l'actif est-elle saine ? ──
+#  $1 moteur de l'actif (moteur_configure) · $2 fichiers WAL+SHM présents ·
+#  $3 lignes « disk I/O error » de l'API sur 1 h → OK|FAIL|INCONNU|SANS_OBJET
+#  Sous PostgreSQL l'API n'ouvre plus la base-fichier : WAL et SHM ABSENTS sont
+#  alors la norme, et ce point rendait FAIL sur une base saine (10/10/2026,
+#  première MEP après la bascule des données). La santé de la base y est le point 22.
+verdict_base_sqlite_saine() {
+    case "${1:-}" in
+        postgresql) echo SANS_OBJET; return ;;
+        sqlite) ;;
+        *) echo INCONNU; return ;;
+    esac
+    case "${2:-}" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+    [ "$2" -lt 2 ] && { echo FAIL; return; }   # WAL/SHM déliés = signature de corruption
+    case "${3:-}" in ''|*[!0-9]*) echo INCONNU; return ;; esac
+    [ "$3" -eq 0 ] && echo OK || echo FAIL
+}
+
 # ── PURE : le point 22 du pré-check de MEP ───────────────────────────────────
 #  Les champs collectés sur l'actif puis sur le standby (mêmes noms que C37) :
 #  $1-$5 actif (present recovery flux retard recepteur) · $6-$10 standby (idem)
@@ -177,6 +195,12 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "standby réplique déconnectée"              DECONNECTEE   verdict_noeud_replication standby 1 t "" "" "" "$M"
     t "standby qui s'est PROMU"                   INVERSE       verdict_noeud_replication standby 1 f 0 -1 "" "$M"
     t "conteneur arrêté"                          ABSENT        verdict_noeud_replication standby 0 "" "" "" "" "$M"
+    t "point 4, SQLite sain"                      OK            verdict_base_sqlite_saine sqlite 2 0
+    t "point 4, WAL délié"                        FAIL          verdict_base_sqlite_saine sqlite 0 0
+    t "point 4, disk I/O error"                   FAIL          verdict_base_sqlite_saine sqlite 2 3
+    t "point 4, sous PostgreSQL"                  SANS_OBJET    verdict_base_sqlite_saine postgresql 0 0
+    t "point 4, moteur illisible → jamais OK"     INCONNU       verdict_base_sqlite_saine inconnu 2 0
+    t "point 4, relevé vide → jamais OK"          INCONNU       verdict_base_sqlite_saine sqlite "" 0
     t "psql illisible → INCONNU, jamais OK"       ILLISIBLE     verdict_noeud_replication actif 1 "" "" "" "" "$M"
     t "compte illisible → INCONNU"                ILLISIBLE     verdict_noeud_replication actif 1 f x 0 "" "$M"
     echo "== la paire =="

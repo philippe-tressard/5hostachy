@@ -133,20 +133,24 @@ if [ -n "$MODE_POST_MEP" ]; then
   precheck_points_post
 fi
 
-# 4 — DB saine, SANS ouvrir app.db ni sudo
+# 4 — DB saine, sans ouvrir la base ni sudo. Sous PostgreSQL : sans objet, c'est
+#     le point 22 (décision : `verdict_base_sqlite_saine`, lib-replication).
+. "$RACINE_DEPOT/scripts/lib/lib-replication.sh"
+MOTEUR4=$(sur "$ACTIF" "$(declare -f moteur_de_url moteur_configure); moteur_configure /opt/5hostachy")
 WAL=$(sur "$ACTIF" 'docker run --rm -v 5hostachy_app_data:/data:ro python:3.12-slim \
       ls /data/app.db-wal /data/app.db-shm 2>/dev/null | wc -l')
 IO=$(sur "$ACTIF" 'docker logs hostachy_api --since 1h 2>&1 | grep -c "disk I/O error"; true')
-if [ -z "$WAL" ]; then V4=INCONNU
-elif [ "$WAL" -lt 2 ]; then V4=FAIL          # WAL/SHM unlinkés = signature de corruption
-else V4=$(verdict_compte "${IO:-}" 0); fi
-rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "wal+shm=${WAL:-?}  io=${IO:-?}"
+V4=$(verdict_base_sqlite_saine "${MOTEUR4:-}" "${WAL:-}" "${IO:-}")
+case "$V4" in
+  SANS_OBJET) rapporter 4 OK "Base saine" "sans objet — l'application est sous PostgreSQL (point 22)" ;;
+  *) rapporter 4 "$V4" "Base saine (WAL présent, 0 disk I/O error)" "moteur=${MOTEUR4:-?}  wal+shm=${WAL:-?}  io=${IO:-?}" ;;
+esac
 
 # 22 — Réplication PostgreSQL (DI-7b, #1781) : un primaire sur l'actif, une
 #      réplique qui reçoit le journal sur le standby. Sans objet tant que la
 #      production est sous SQLite. Collecte et décision : `lib-replication.sh`,
 #      les mêmes que C37 — un pré-check qui jugerait autrement divergerait.
-. "$RACINE_DEPOT/scripts/lib/lib-replication.sh"
+#  (lib-replication.sh est chargé au point 4.)
 #  Séparés par « | » : `read` fusionne les blancs consécutifs (tabulation
 #  comprise), et un champ vide décalerait les suivants.
 champs_replication() {  # $1 = nœud → « present|recovery|flux|retard|recepteur| »
