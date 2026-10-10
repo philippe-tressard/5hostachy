@@ -197,8 +197,8 @@ repartir_constats() {
 
 rapporter_verdicts() { # repo self — après repartir_constats
     local repo="${1:-}" self="${2:-}"
-    local etat=/var/tmp/hostachy-reliability-rapport sig prec="" prec_t=0
-    local statut=succes actif=$REP_ACTIF cible="http://localhost" ip cle details maintenant
+    local etat=${RAPPORT_ECRAN_ETAT:-/var/tmp/hostachy-reliability-rapport} sig prec="" prec_t=0
+    local statut=succes actif=$REP_ACTIF cible="http://localhost" ip cle details erreur maintenant
     local porte=$REP_PORTE retenus=$REP_RETENUS propres=$REP_PROPRES communs=$REP_COMMUNS
     local nf=$REP_NF nw=$REP_NW
     command -v rapport_payload >/dev/null 2>&1 \
@@ -216,29 +216,32 @@ rapporter_verdicts() { # repo self — après repartir_constats
     #  On signe ce que l'écran montrera de CE nœud : un constat que le pair
     #  rapporte lui-même ne doit pas relancer notre rapport.
     sig=$(printf '%s|%s' "$porte" "$retenus" | tr -d '0-9' | md5sum | cut -c1-32)
+    #  Ce que l'écran montrera, calculé une fois pour le rapport ET le battement.
+    #  Les FAIL vont AUSSI dans `erreur` : c'est ce que liste « Anomalies
+    #  récentes », et un échec critique doit y figurer comme ceux des autres tâches.
+    details=$(printf '{"fail":%d,"warn":%d,"constats":%s,"communs":%s,"porte_communs":%s}' \
+        "$nf" "$nw" "$(constats_json "$propres")" "$(constats_json "$communs")" \
+        "$([ "$porte" = oui ] && echo true || echo false)")
+    erreur=$(printf '%s\n%s\n' "$propres" "$communs" | sed -n 's/^\[FAIL\] //p' | paste -sd'|' - | sed 's/|/ | /g')
     [ -r "$etat" ] && read -r prec prec_t < "$etat"
     if [ "$(decision_rapport_ecran "$sig" "$prec" "$(( $(date +%s) - ${prec_t:-0} ))")" = taire ]; then
-        #  Rien de neuf : on dit seulement qu'on a tourné (« dernier contrôle »).
-        #  Sans ce battement, l'écran affichait l'heure du dernier CHANGEMENT, et
-        #  on a cru le contrôleur mort (27/09/2026). Un 404 = plus de ligne à
-        #  prolonger : on oublie, et le passage suivant renvoie un rapport complet.
-        rapport_battement "$cible" "$cle" reliability "$self"
+        #  Rien de neuf : on dit qu'on a tourné (« dernier contrôle »). Sans ce
+        #  battement, l'écran affichait l'heure du dernier CHANGEMENT, et on a cru
+        #  le contrôleur mort (27/09/2026). Il porte aussi les constats du passage
+        #  (#1805) : la signature ignore les chiffres, et l'écran gardait ceux du
+        #  premier relevé jusqu'à 23 h. Un 404 = plus de ligne à prolonger : on
+        #  oublie, et le passage suivant renvoie un rapport complet.
+        rapport_battement "$cible" "$cle" reliability "$self" "$details" "$erreur"
         [ "$RAPPORT_HTTP" = 404 ] && rm -f "$etat"
         return 0
     fi
 
     [ "$nw" -gt 0 ] && statut=avertissement
     [ "$nf" -gt 0 ] && statut=erreur
-    details=$(printf '{"fail":%d,"warn":%d,"constats":%s,"communs":%s,"porte_communs":%s}' \
-        "$nf" "$nw" "$(constats_json "$propres")" "$(constats_json "$communs")" \
-        "$([ "$porte" = oui ] && echo true || echo false)")
     maintenant=$(date -u +%Y-%m-%dT%H:%M:%S)
     RAPPORT_HTTP=""
-    #  Les FAIL vont AUSSI dans `erreur` : c'est ce que liste « Anomalies
-    #  récentes », et un échec critique doit y figurer comme ceux des autres tâches.
     rapport_envoyer "$cible" "$cle" \
-        "$(rapport_payload reliability "$self" applicative "$statut" 0 "$details" \
-            "$(printf '%s\n%s\n' "$propres" "$communs" | sed -n 's/^\[FAIL\] //p' | paste -sd'|' - | sed 's/|/ | /g')" \
+        "$(rapport_payload reliability "$self" applicative "$statut" 0 "$details" "$erreur" \
             "$maintenant" "$maintenant")" \
         "Rapport des contrôles"
     #  Mémorisé seulement s'il a ABOUTI : un envoi perdu se retente au passage
@@ -321,6 +324,29 @@ if [ "${BASH_SOURCE[0]}" = "$0" ] && [ "${1:-}" = "--selftest" ]; then
     t "actif rpi1 : le FAIL commun, son WARN et la parité" "1|2" "$REP_NF|$REP_NW"
     t "…ligne du courriel intacte" "[FAIL] Site public KO" "$(printf '%s' "$REP_FAIL_LINES" | head -1)"
     rm -rf "$tmp"
+    #  #1805 — le battement porte les constats du passage. Le 10/10/2026, l'écran
+    #  disait « 1 erreur sur 965 requêtes » sous « dernier contrôle 13:21 », quand
+    #  le contrôle en comptait 3 sur 1904 : seuls les CHIFFRES avaient changé, la
+    #  signature les ignore, et le battement ne portait que l'heure.
+    tmp=$(mktemp -d)
+    rapport_cle() { echo k; }
+    rapport_envoyer() { ENVOIS=$((ENVOIS + 1)); RAPPORT_HTTP=201; }
+    rapport_battement() { BATTEMENT_DETAILS="${5:-}"; BATTEMENT_ERREUR="${6-absent}"; RAPPORT_HTTP=200; }
+    ENVOIS=0 BATTEMENT_DETAILS="" BATTEMENT_ERREUR=jamais
+    passage() {
+        REP_ACTIF=rpi1 REP_PORTE=oui REP_RETENUS="P:$1" REP_PROPRES="$1" REP_COMMUNS=""         REP_NF=$2 REP_NW=$3 RAPPORT_ECRAN_ETAT="$tmp/etat" rapporter_verdicts "$tmp" rpi1
+    }
+    passage "[WARN] 1 erreur(s) sur 965 requêtes" 0 1
+    passage "[WARN] 3 erreur(s) sur 1904 requêtes" 0 1
+    t "chiffres seuls changés : pas de second rapport" 1 "$ENVOIS"
+    t "…mais le battement porte le relevé du passage" 1       "$(printf '%s' "$BATTEMENT_DETAILS" | grep -c '3 erreur(s) sur 1904')"
+    t "…sans erreur, le battement dit « aucune » (vide), pas « inconnue »" "" "$BATTEMENT_ERREUR"
+    passage "[FAIL] Site public KO (HTTP 503)" 1 0
+    passage "[FAIL] Site public KO (HTTP 502)" 1 0
+    t "un FAIL dont seul le code change → l'erreur suit" "Site public KO (HTTP 502)" "$BATTEMENT_ERREUR"
+    unset -f rapport_cle rapport_envoyer rapport_battement passage
+    rm -rf "$tmp"
+
     #  La charge complète est du JSON valide — le 422 du 16/08 venait de là.
     ch=$(rapport_payload reliability rpi1 applicative avertissement 0 \
         "$(printf '{"fail":%d,"warn":%d,"constats":%s}' 0 1 "$(constats_json $'[WARN] l\'actif\tvu')")" "" x x)

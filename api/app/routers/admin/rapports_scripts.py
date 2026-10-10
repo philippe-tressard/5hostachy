@@ -110,6 +110,11 @@ def maintenance_dernier_rapport(
     return {"tache": tache, "noeuds": par_noeud, "genere_le": horloge.maintenant()}
 
 
+def _details_en_base(details: Optional[dict]) -> Optional[str]:
+    """La colonne `details` : du JSON lisible (accents gardés), ou rien."""
+    return json.dumps(details, ensure_ascii=False) if details else None
+
+
 def enregistrer_rapport(session: Session, body: RapportMaintenance) -> HistoriqueMaintenance:
     """Une EXÉCUTION, une ligne : le rapport de fin reprend celle de son battement.
 
@@ -148,7 +153,7 @@ def enregistrer_rapport(session: Session, body: RapportMaintenance) -> Historiqu
     entry.tokens_supprimes = body.tokens_supprimes
     entry.taille_db_octets = body.taille_db_octets
     entry.duree_secondes = body.duree_secondes
-    entry.details = json.dumps(body.details, ensure_ascii=False) if body.details else None
+    entry.details = _details_en_base(body.details)
     entry.erreur = body.erreur
     entry.cree_le = body.cree_le or horloge.maintenant()
     entry.terminee_le = body.terminee_le
@@ -173,6 +178,10 @@ def maintenance_rapport(
 class BattementTache(BaseModel):
     tache: str
     noeud: str
+    #  #1805 : les constats DU PASSAGE. Absents (script pas encore redéployé),
+    #  la ligne garde les siens ; présents, ils la remplacent avec `erreur`.
+    details: Optional[dict] = None
+    erreur: Optional[str] = None
 
 
 @router.post("/maintenance/battement")
@@ -194,6 +203,14 @@ def maintenance_battement(
     contrôle ». Un UPDATE d'une ligne par quart d'heure et par nœud, dans le
     process de l'API — jamais une ouverture de la base par un tiers.
 
+    🔴 Il porte aussi les constats du passage (#1805, 10/10/2026). La signature
+    qui décide du rapport ignore les CHIFFRES — « disque à 61 % » puis « 62 % »
+    n'est pas un changement —, si bien que le texte de la ligne restait celui du
+    premier relevé jusqu'à 23 h : l'écran disait « 1 erreur sur 965 requêtes »
+    sous « dernier contrôle 13:21 », quand le contrôle en comptait 3 sur 1904.
+    `details` et `erreur` vont ensemble : un `erreur` vide dit « plus d'échec »,
+    il ne s'écrit donc que quand les constats l'accompagnent.
+
     404 quand il n'y a rien à prolonger : le script efface alors sa mémoire, et
     le passage suivant envoie un rapport complet.
     """
@@ -210,6 +227,9 @@ def maintenance_battement(
         "Aucun rapport à prolonger pour ce nœud",
     )
     ligne.terminee_le = horloge.maintenant()
+    if body.details is not None:
+        ligne.details = _details_en_base(body.details)
+        ligne.erreur = body.erreur
     session.add(ligne)
     session.commit()
     return {"tache": ligne.tache, "noeud": ligne.noeud, "terminee_le": ligne.terminee_le}

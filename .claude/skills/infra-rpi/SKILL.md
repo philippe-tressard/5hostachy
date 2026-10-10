@@ -218,7 +218,10 @@ l'heure du dernier **changement**, et « rapport de 17:06 » lu à 17:29 a fait 
 le contrôleur mort. Le passage qui n'a rien de neuf envoie désormais un
 **battement** (`POST /admin/maintenance/battement`) : il avance `terminee_le`
 (« dernier contrôle ») de la ligne existante, sans en créer — `cree_le` reste
-« constats depuis ». Et chaque nœud contrôlant les deux, tout s'affichait deux fois :
+« constats depuis ». Il porte aussi les constats et l'erreur **du passage**, qui
+remplacent ceux de la ligne (#1805) : la signature ignore les chiffres, et l'écran
+a affiché « 1 erreur sur 965 requêtes » quand le contrôle en comptait 3 sur 1904.
+Et chaque nœud contrôlant les deux, tout s'affichait deux fois :
 `portee_constat` range chaque ligne — celle qui ne nomme que ce nœud sous lui, celle
 qui ne nomme que le pair est laissée au pair, les communes sont dites par l'**actif**
 seul (`porte_communs`). Pair muet → ce nœud porte tout.

@@ -13,7 +13,8 @@
   ⚠️ Deux heures par nœud, et elles ne disent pas la même chose (#1396). Le script
   n'envoie un RAPPORT que quand l'ensemble des constats change (la table n'en garde
   que vingt par tâche) : `cree_le` est donc « constats depuis ». Entre deux, chaque
-  passage envoie un BATTEMENT qui avance `terminee_le` : « dernier contrôle ». On
+  passage envoie un BATTEMENT qui avance `terminee_le` : « dernier contrôle » — et
+  qui remplace les constats par ceux du passage, chiffres compris (#1805). On
   n'affichait que la première, et le 27/09 on a cru le contrôleur mort — « rapport
   de 17:06 » lu à 17:29.
 

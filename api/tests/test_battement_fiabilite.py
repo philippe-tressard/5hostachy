@@ -10,6 +10,7 @@ chasserait tout le reste en cinq heures.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 import pytest
@@ -70,3 +71,46 @@ def test_rien_a_prolonger_rend_404(session):
     with pytest.raises(HTTPException) as err:
         maintenance_battement(BattementTache(tache="reliability", noeud="rpi1"), None, session)
     assert err.value.status_code == 404
+
+
+#  #1805 (10/10/2026) — l'écran disait « 1 erreur sur 965 requêtes » à 13:21
+#  quand le contrôle en comptait 3 sur 1904 : la signature des constats ignore
+#  les chiffres, et le battement ne portait que l'heure. Il porte désormais les
+#  constats du passage, qui remplacent ceux de la ligne prolongée.
+AVANT = {"fail": 0, "warn": 1, "constats": ["[WARN] 1 erreur(s) sur 965 requêtes"]}
+APRES = {"fail": 0, "warn": 1, "constats": ["[WARN] 3 erreur(s) sur 1904 requêtes"]}
+
+
+def test_le_battement_rafraichit_les_CHIFFRES_des_constats(session):
+    ligne = _ligne("rpi1", DEPUIS)
+    ligne.details = json.dumps(AVANT, ensure_ascii=False)
+    ligne.erreur = "Site public KO (HTTP 502)"
+    session.add(ligne)
+    session.commit()
+    maintenance_battement(
+        BattementTache(
+            tache="reliability", noeud="rpi1", details=APRES, erreur="Site public KO (HTTP 503)"
+        ),
+        None,
+        session,
+    )
+    lignes = session.exec(select(HistoriqueMaintenance)).all()
+    assert len(lignes) == 1, "le rafraîchissement a créé une ligne"
+    assert json.loads(lignes[0].details) == APRES, (
+        "l'écran garderait les chiffres du premier relevé"
+    )
+    assert lignes[0].erreur == "Site public KO (HTTP 503)", "« Anomalies récentes » resterait figé"
+    assert lignes[0].cree_le == DEPUIS, "« constats depuis » ne doit pas bouger"
+
+
+def test_un_battement_SANS_constats_garde_ceux_de_la_ligne(session):
+    """Un nœud dont le script n'est pas encore redéployé n'efface rien."""
+    ligne = _ligne("rpi1", DEPUIS)
+    ligne.details = json.dumps(AVANT, ensure_ascii=False)
+    ligne.erreur = "Site public KO (HTTP 502)"
+    session.add(ligne)
+    session.commit()
+    maintenance_battement(BattementTache(tache="reliability", noeud="rpi1"), None, session)
+    session.refresh(ligne)
+    assert json.loads(ligne.details) == AVANT
+    assert ligne.erreur == "Site public KO (HTTP 502)"

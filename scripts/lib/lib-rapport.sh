@@ -155,15 +155,29 @@ except Exception as e:
 # API en marche : un process tiers qui ouvre `app.db`, la règle d'or enfreinte
 # chaque dimanche. Il les DEMANDE désormais à l'API, qui les fait dans son
 # process et rend les comptes.
+#  PURE. La charge du battement. Avec `details` (fragment JSON déjà formé), elle
+#  porte aussi `erreur`, VIDE compris : l'API remplace alors les deux, et un
+#  `erreur` absent laisserait affiché un échec résolu (#1805).
+battement_payload() { # $1=tâche $2=nœud [$3=details $4=erreur]
+    local base
+    base=$(printf '"tache":"%s","noeud":"%s"' "$(rapport_echapper "${1:-}")" "$(rapport_echapper "${2:-}")")
+    if [ -n "${3:-}" ]; then
+        printf '{%s,"details":%s,"erreur":"%s"}' "$base" "$3" "$(rapport_echapper "${4:-}")"
+    else
+        printf '{%s}' "$base"
+    fi
+}
+
 #  « J'ai tourné, et rien n'a changé » : prolonge le dernier rapport du nœud sans
-#  créer de ligne (#1396). Le code HTTP reste lisible dans RAPPORT_HTTP — un 404
-#  dit qu'il n'y a rien à prolonger, et l'appelant renverra un rapport complet.
-rapport_battement() { # $1=url_base $2=clé $3=tâche $4=nœud
+#  créer de ligne (#1396), et rafraîchit ses constats s'ils sont fournis — leurs
+#  chiffres ont pu bouger (#1805). Le code HTTP reste lisible dans RAPPORT_HTTP —
+#  un 404 dit qu'il n'y a rien à prolonger, et l'appelant renverra un rapport complet.
+rapport_battement() { # $1=url_base $2=clé $3=tâche $4=nœud [$5=details $6=erreur]
     RAPPORT_HTTP=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
         -X POST "${1:-}/api/admin/maintenance/battement" \
         -H "Content-Type: application/json" \
         -H "x-maintenance-key: ${2:-}" \
-        -d "$(printf '{"tache":"%s","noeud":"%s"}' "$(rapport_echapper "${3:-}")" "$(rapport_echapper "${4:-}")")" \
+        -d "$(battement_payload "${3:-}" "${4:-}" "${5:-}" "${6:-}")" \
         2>/dev/null) || RAPPORT_HTTP="000"
     [ "$RAPPORT_HTTP" = "200" ] || log "  ⚠ Battement ${3:-} non enregistré sur ${1:-} (HTTP $RAPPORT_HTTP)"
     return 0
@@ -253,6 +267,11 @@ ligne2')"
         '{"tache":"t","noeud":"","portee":"applicative","statut":"succes","tokens_supprimes":0,"taille_db_octets":null,"duree_secondes":0,"details":null,"erreur":"","cree_le":null,"terminee_le":null}' \
         "$(rapport_payload t)"
 
+    #  #1805 — le battement des contrôles porte leurs constats et leur erreur.
+    check "battement sans constats : la tâche et le nœud seuls"         '{"tache":"reliability","noeud":"rpi1"}' "$(battement_payload reliability rpi1)"
+    check "battement avec constats : details tel quel, erreur échappée"         '{"tache":"reliability","noeud":"rpi1","details":{"warn":1},"erreur":"KO \"503\""}'         "$(battement_payload reliability rpi1 '{"warn":1}' 'KO "503"')"
+    check "battement avec constats sans échec : erreur vide, pas absente"         '{"tache":"reliability","noeud":"rpi1","details":{"warn":1},"erreur":""}'         "$(battement_payload reliability rpi1 '{"warn":1}' '')"
+
     #  Le battement de début (#1367) : une fin vide part en null.
     check "battement : fin vide → null" \
         '{"tache":"maintenance","noeud":"rpi1","portee":"hygiene_locale","statut":"en_cours","tokens_supprimes":0,"taille_db_octets":null,"duree_secondes":0,"details":null,"erreur":"","cree_le":"D","terminee_le":null}' \
@@ -292,6 +311,13 @@ ligne' 'anti\slash'; do
             echo "PASS  details échappé → JSON valide"
         else
             echo "FAIL  details échappé refusé — rapport_echapper insuffisant"; st_fail=1
+        fi
+        #  #1805 — le battement, avec une erreur multiligne à guillemets.
+        if printf '%s' "$(battement_payload reliability rpi1 "$propre" 'KO "503"
+puis \502')" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["details"]["cache"]' 2>/dev/null; then
+            echo "PASS  battement avec constats → JSON valide"
+        else
+            echo "FAIL  battement avec constats → JSON INVALIDE"; st_fail=1
         fi
     else
         # standards/04 §1 : un contrôle qui ne peut pas s'exécuter rend INCONNU.
