@@ -13,7 +13,7 @@
  *  Ce test-ci tient l'autre moitié du contrat : ce que l'écran envoie vraiment,
  *  et qu'il dit « modifiée » sans message d'erreur.
  */
-import { attendreHydratation, expect, simulerApi, test } from './aides';
+import { attendreHydratation, choisirPastille, expect, simulerApi, test } from './aides';
 
 const ACTUALITE = {
 	id: 50,
@@ -59,7 +59,7 @@ test('une actualité corrigée en Étude & travaux part « Ouvert », et s’enr
 	await page.goto('/tickets');
 	await attendreHydratation(page);
 	await page.getByRole('button', { name: 'Modifier', exact: true }).first().click();
-	await page.getByRole('radio', { name: /Étude & travaux/ }).check({ force: true });
+	await choisirPastille(page, /Étude & travaux/);
 	await page.getByRole('button', { name: 'Enregistrer', exact: true }).first().click();
 	//  Changer de nature se confirme (`alerteCorrection`).
 	await page.getByRole('dialog').getByRole('button', { name: 'Enregistrer' }).click();

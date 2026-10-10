@@ -24,7 +24,7 @@
  *  Sa FORME est reprise ci-dessous, anonymisée.
  */
 import type { Page } from '@playwright/test';
-import { attendreHydratation, expect, simulerApi, test } from './aides';
+import { attendreHydratation, choisirPastille, expect, simulerApi, test } from './aides';
 
 const QUESTION = {
 	id: 50,
@@ -85,7 +85,7 @@ async function corrigerEnEtude(page: Page) {
 	await attendreHydratation(page);
 	await page.locator('.carte-liste').first().getByText(QUESTION.titre).click();
 	await page.getByRole('button', { name: 'Modifier', exact: true }).first().click();
-	await page.getByRole('radio', { name: /Étude & travaux/ }).check({ force: true });
+	await choisirPastille(page, /Étude & travaux/);
 	await expect(pastille(page, /Conseil syndical/)).toHaveClass(/active/);
 }
 

@@ -266,6 +266,19 @@ export async function boiteStable(cible: Locator) {
 	return boite!;
 }
 
+/**
+ * **Choisir une pastille de choix comme au doigt** — on clique la PASTILLE
+ * visible (`label.pastille`) qui porte le radio, puis on vérifie qu'il est
+ * coché. Jamais `radio.check({ force: true })` : le radio est masqué à 1 px, et
+ * il sortait de la fenêtre du profil bureau depuis la v2.131.0 (#1810). Écrite
+ * ici : deux specs la prennent (correction d'une actualité en affaire).
+ */
+export async function choisirPastille(page: Page, nom: RegExp | string) {
+	const radio = page.getByRole('radio', { name: nom });
+	await page.locator('label.pastille', { has: radio }).click();
+	await expect(radio).toBeChecked();
+}
+
 export type Evenement = { page: string; action: string; detail?: string };
 
 /**
