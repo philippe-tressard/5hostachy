@@ -331,7 +331,7 @@ def test_un_separateur_unicode_dans_un_texte_ne_coupe_pas_la_ligne(tmp_path):
 # ── Une archive d'une AUTRE version du modèle (#1799) ───────────────────────────
 #
 #  Une sauvegarde est relue par un code plus récent : une colonne a pu être
-#  retirée du modèle (contraction, `non_relancable` en v2.130.4) ou ajoutée. Une
+#  retirée du modèle (contraction, `non_relancable` en v2.130.5) ou ajoutée. Une
 #  archive d'une version antérieure est COHÉRENTE avec son propre manifeste :
 #  ces tests la fabriquent ainsi, manifeste recalculé.
 
