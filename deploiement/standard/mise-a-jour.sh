@@ -157,13 +157,18 @@ SIGNATURE=$(lire_env COPROFIRST_SIGNATURE); SIGNATURE=${SIGNATURE:-si-possible}
 DELAI=$(lire_env COPROFIRST_DELAI_JOURS); DELAI=${DELAI:-1}
 
 rendre_compte() {  # $1 statut (succes|erreur) · $2 erreur (vide si succès) · $3 vers
-    local cle erreur corps
+    local cle erreur corps message
     cle=$(lire_env MAINTENANCE_KEY)
     [ -n "$cle" ] || { journal "(MAINTENANCE_KEY absente : rien rendu à l'administration)"; return 0; }
     #  Le message ne porte que des versions et des chemins : on retire les
-    #  guillemets plutôt que d'échapper du JSON à la main.
+    #  guillemets plutôt que d'échapper du JSON à la main. En deux temps : un
+    #  guillemet dans une substitution elle-même entre guillemets égare
+    #  `verifier-variables-shell.py`, qui perdait alors la suite du script.
     erreur=null
-    [ -n "$2" ] && erreur="\"$(printf '%s' "$2" | tr -d '"\\')\""
+    if [ -n "$2" ]; then
+        message=$(printf '%s' "$2" | tr -d '"\\')
+        erreur="\"$message\""
+    fi
     corps=$(printf '{"tache":"mise_a_jour","statut":"%s","erreur":%s,"duree_secondes":%d,"details":{"de":"%s","vers":"%s"}}' \
         "$1" "$erreur" "$(( $(date +%s) - DEBUT ))" "$COURANTE" "$3")
     curl -fsS -m 20 -o /dev/null -X POST http://localhost/api/admin/maintenance/rapport \
@@ -189,7 +194,7 @@ sante() {  # → ok | ko, en sondant jusqu'à SANTE_MAX_S
 # ── 1–2. La version à installer, et la décision ───────────────────────────────
 AGE=""
 if [ -n "${COPROFIRST_ESSAI_CIBLE:-}" ]; then
-    CIBLE="$COPROFIRST_ESSAI_CIBLE"; AGE=999
+    CIBLE="${COPROFIRST_ESSAI_CIBLE:-}"; AGE=999
     journal "ESSAI : cible imposée $CIBLE (COPROFIRST_ESSAI_CIBLE), replica n'est pas lue."
 else
     CIBLE=$(curl -fsSL -m 20 "https://raw.githubusercontent.com/$DEPOT/replica/front/package.json" 2>/dev/null \
@@ -215,7 +220,7 @@ journal "Mise à jour $COURANTE → $CIBLE (base : $MOTEUR)."
 # ── 3. Tout préparer pendant que le service tourne ────────────────────────────
 TRAVAIL=$(mktemp -d)
 if [ -n "${COPROFIRST_ESSAI_ARCHIVE:-}" ]; then
-    cp "$COPROFIRST_ESSAI_ARCHIVE" "$TRAVAIL/archive.tar.gz" || echouer "archive d'essai $COPROFIRST_ESSAI_ARCHIVE illisible."
+    cp "${COPROFIRST_ESSAI_ARCHIVE:-}" "$TRAVAIL/archive.tar.gz" || echouer "archive d'essai ${COPROFIRST_ESSAI_ARCHIVE:-} illisible."
 else
     curl -fsSL -m 120 -o "$TRAVAIL/archive.tar.gz" \
         "https://github.com/$DEPOT/releases/download/v$CIBLE/coprofirst-deploiement-$CIBLE.tar.gz" \
