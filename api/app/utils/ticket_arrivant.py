@@ -118,7 +118,7 @@ def creer_ticket_arrivant(
         return None
 
     ticket = Ticket(
-        numero=generer_numero(),
+        numero=generer_numero(session),
         titre=TITRE,
         description=corps_demarches(nom_complet, batiment, ancien, demarches),
         categorie="acces_accueil",

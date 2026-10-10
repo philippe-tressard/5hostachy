@@ -78,8 +78,27 @@ def pieces_du_ticket(ticket) -> list[str]:
     return parse_photos(ticket.photos_urls) + parse_photos(ticket.fichiers_urls)
 
 
-def generer_numero() -> str:
-    return "TK-" + "".join(random.choices(string.digits, k=6))
+#: Tirages avant de renoncer. Avec n affaires, un tirage tombe sur un numéro pris
+#: avec la chance n/10⁶ : vingt échecs de suite n'arrivent pas avant que l'espace
+#: des numéros soit presque plein — et ce jour-là, il faut le DIRE.
+ESSAIS_NUMERO = 20
+
+
+def generer_numero(session: Session) -> str:
+    """Un numéro `TK-` + six chiffres, LIBRE dans la base (#1802).
+
+    La colonne `ticket.numero` est unique : un tirage sans vérification faisait
+    échouer la création d'une affaire en 500 à chaque collision. La question se
+    pose ici, pour les cinq créations qui l'appellent. Les affaires ajoutées mais
+    pas encore écrites (une création en lot) sont vues, la requête vidant la
+    session d'abord. Deux créations simultanées tirant le même numéro libre
+    restent possibles ; c'est la contrainte unique qui les départage.
+    """
+    for _ in range(ESSAIS_NUMERO):
+        numero = "TK-" + "".join(random.choices(string.digits, k=6))
+        if session.exec(select(Ticket.id).where(Ticket.numero == numero)).first() is None:
+            return numero
+    raise RuntimeError(f"Aucun numéro d'affaire libre en {ESSAIS_NUMERO} tirages.")
 
 
 # ── Configuration du site ────────────────────────────────────────────────────
