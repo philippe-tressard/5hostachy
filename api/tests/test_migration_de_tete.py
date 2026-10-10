@@ -85,6 +85,9 @@ def downgrade():
 
 #: L'une explose ; l'autre ajoute sa colonne sans garde — sa première exécution
 #: passe, la seconde lève, comme au redémarrage après une migration interrompue.
+#: Le message dépend du moteur : « duplicate column » sous SQLite, « already
+#: exists » sous PostgreSQL. La suite PostgreSQL ne jouait pas ce test tant que la
+#: tête était historique (`conftest`) : la 0272 l'y a fait entrer (#1797).
 FORGEES = {
     "explose": 'raise RuntimeError("migration forgée")',
     "non idempotente": 'op.add_column("utilisateur", sa.Column("forgee", sa.Integer()))',
@@ -100,7 +103,5 @@ def test_le_controle_sait_ECHOUER(corps, tmp_path, monkeypatch):
     monkeypatch.setattr(aides_migrations, "VERSIONS", versions)
 
     assert _tete() == "9999", "le graphe forgé n'est pas celui que le test lit"
-    #  « duplicate column » est le mot de SQLite, « already exists » celui de
-    #  PostgreSQL : depuis 0272, la tête se rejoue aussi là (#1747).
     with pytest.raises(Exception, match="migration forgée|duplicate column|already exists"):
         test_la_migration_de_tete_se_defait_et_se_rejoue()
