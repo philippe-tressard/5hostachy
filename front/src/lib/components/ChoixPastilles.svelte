@@ -72,8 +72,6 @@
 		marqueAide?: string;
 		/** En tête, pleine ligne, suivie d'un filet — voir `Pastille.enTete`. */
 		enTete?: boolean;
-		/** Combien d'objets ce choix donnerait — voir `Pastille.compte`. */
-		compte?: number;
 	}[] = [];
 
 	//  Les entrées EN TÊTE d'abord, puis un filet, puis les autres : l'ordre
@@ -93,8 +91,19 @@
 	 * être soumis.
 	 */
 	export let tous: string | false = 'Tous';
-	/** Le compte de l'entrée « Tous » — ce que la rangée donne sans filtre. */
-	export let compteTous: number | null = null;
+	/**  🔢 UN FILTRE DE LISTE DIT COMBIEN IL MONTRE — le standard (10/10/2026,
+	 *   maquette J arbitrée à l'écran) : le nombre d'éléments que la liste
+	 *   affiche, filtres et recherche appliqués, en vignette `Compte` sur la
+	 *   pastille RETENUE seulement (« Tous » compris) — `Pastille` en décide.
+	 *
+	 *   UN nombre, et non un par entrée : celui des pastilles non retenues
+	 *   chargeait la rangée (dix vignettes pour deux filtres), et celui de la
+	 *   retenue est la longueur de la liste, que l'écran connaît déjà — la lire
+	 *   là, c'est ne pas pouvoir mentir sur ce qu'on voit.
+	 *
+	 *   `null` : un choix de formulaire, qui ne filtre rien. Une rangée qui
+	 *   filtre une liste le passe — 🔒 `npm run lint:compte-filtres`. */
+	export let compte: number | null = null;
 
 	/**  Rendre la description sous le libellé ?
 	 *
@@ -215,9 +224,7 @@
 			<!--  Jamais en radio : « Tous » n'est pas une valeur du modèle, c'est
 			      l'absence de filtre. Le mode radio est réservé au choix exclusif
 			      et obligatoire d'un formulaire, où ce vide n'existe pas. -->
-			<Pastille active={valeur === ''} compte={compteTous} on:click={() => (valeur = '')}
-				>{tous}</Pastille
-			>
+			<Pastille active={valeur === ''} {compte} on:click={() => (valeur = '')}>{tous}</Pastille>
 		{/if}
 		<!--  ⚠️ DEUX branches, et non un `{#if}` autour du `slot=` : Svelte exige
 		      qu'un attribut `slot` soit enfant DIRECT du composant. Enveloppé dans une
@@ -234,7 +241,7 @@
 					marquee={!!o.marquee}
 					marqueAide={o.marqueAide}
 					enTete={!!o.enTete}
-					compte={o.compte ?? null}
+					{compte}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}
@@ -247,7 +254,7 @@
 					marquee={!!o.marquee}
 					marqueAide={o.marqueAide}
 					enTete={!!o.enTete}
-					compte={o.compte ?? null}
+					{compte}
 					radio={radio ? { nom: radio, valeur: o.val } : null}
 					on:click={() => (valeur = o.val)}
 					on:change={() => (valeur = o.val)}

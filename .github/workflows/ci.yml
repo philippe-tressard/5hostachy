@@ -2055,6 +2055,13 @@ jobs:
         working-directory: front
         run: npm run lint:vignette-compte
 
+      # Une rangée de pastilles qui filtre une liste dit combien elle montre, sur
+      # sa pastille retenue seulement (10/10/2026, maquette J) : la prop `compte`
+      # oubliée ne casse rien, la rangée part simplement sans son nombre.
+      - name: Rangées de filtres avec leur compte
+        working-directory: front
+        run: npm run lint:compte-filtres
+
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
       # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle

@@ -37,6 +37,10 @@
 	 *   exactement à prendre le périmètre le plus large. */
 	export let libelleTout = '';
 
+	/**  Combien la liste filtrée montre — porté par la pastille retenue, comme
+	 *   toute rangée de filtres (`ChoixPastilles.compte`). `null` : rien. */
+	export let compte: number | null = null;
+
 	const dispatch = createEventDispatcher<{ changer: string | null }>();
 
 	//  ⚠️ Le magasin est cité EXPRÈS dans `relire` : `perimetreParDefaut()` lit un
@@ -64,12 +68,13 @@
 	      `radiogroup` sans `<input type="radio">` promet une navigation par flèches
 	      qui n'existe pas. Mieux vaut un groupe honnête (`ux-patterns`). -->
 	<div class="filtre-perimetre" role="group" aria-label="Filtrer par périmètre">
-		<Pastille active={choisi === null} on:click={() => choisir(null)}>
+		<Pastille active={choisi === null} {compte} on:click={() => choisir(null)}>
 			{libelleRacine}
 		</Pastille>
 		{#each niveau1 as noeud (noeud.code)}
 			<Pastille
 				active={choisi === noeud.code}
+				{compte}
 				icone={noeud.icone ?? ''}
 				privatif={noeud.privatif}
 				on:click={() => choisir(noeud.code)}

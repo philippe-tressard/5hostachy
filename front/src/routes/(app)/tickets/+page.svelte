@@ -421,6 +421,7 @@
 		bind:inclureArchives
 		etat={$moteur}
 		tickets={ticketList}
+		affichees={filtered.length}
 	/>
 {/if}
 

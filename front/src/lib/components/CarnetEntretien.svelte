@@ -130,12 +130,13 @@
 	<!--  Le filtre est le composant STANDARD : il prend ses pastilles dans
 	      l'arborescence administrée, donc un périmètre créé demain y apparaît
 	      sans qu'on touche à cet écran. -->
-	<FiltrePerimetre bind:choisi={perimetreChoisi} on:changer={charger} />
+	<FiltrePerimetre bind:choisi={perimetreChoisi} compte={entreesVues.length} on:changer={charger} />
 	{#if annees.length > 1}
 		<ChoixPastilles
 			options={annees}
 			bind:valeur={anneeChoisie}
 			tous="Toutes"
+			compte={entreesVues.length}
 			libelle="Année"
 			libelleDevant
 		/>

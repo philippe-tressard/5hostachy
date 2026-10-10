@@ -138,23 +138,6 @@ export function filtrerAffaires(
 	);
 }
 
-/**
- *  Ce que donnerait chaque entrée d'un filtre, LES AUTRES RETENUS — le nombre
- *  qu'affiche sa pastille (10/10/2026, maquette B arbitrée à l'écran). La clé
- *  vide est « Tous ». Le compte passe par `filtrerAffaires`, jamais par une
- *  seconde règle : une pastille qui annonce 4 doit en montrer 4 au clic.
- */
-export function comptesParFiltre(
-	tickets: Ticket[],
-	criteres: Parameters<typeof filtrerAffaires>[1],
-	cle: 'statut' | 'nature',
-	valeurs: readonly string[],
-): Record<string, number> {
-	return Object.fromEntries(
-		['', ...valeurs].map((v) => [v, filtrerAffaires(tickets, { ...criteres, [cle]: v }).length]),
-	);
-}
-
 /** Combien d'affaires ARCHIVÉES la recherche a trouvées — pour les proposer. */
 export function archiveesTrouvees(
 	tickets: Ticket[],

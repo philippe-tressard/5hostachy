@@ -18,24 +18,25 @@
   Archives ») ; il retombe donc à faux quand la recherche s'efface, sinon la
   recherche suivante inclurait les Archives sans que rien ne le dise.
 
-  🔢 Chaque pastille reçoit son NOMBRE (10/10/2026) : ce que donnerait ce
-  choix, les autres filtres et la recherche retenus — `comptesParFiltre`, qui
-  passe par `filtrerAffaires`. La vignette est `Compte`, celle des Archives.
-  Seule la pastille RETENUE le montre (maquette J, même jour : dix vignettes
-  chargeaient la rangée) — c'est `Pastille` qui en décide. Son compte est
-  celui de la liste : le bilan de recherche le lit au même endroit.
+  🔢 La pastille RETENUE de chaque rangée dit combien la liste montre
+  (10/10/2026, maquette J — le standard de `ChoixPastilles.compte`). Le nombre
+  vient de la PAGE, qui tient la liste : c'est sa longueur, pas un recalcul
+  qui pourrait diverger. Le bilan de recherche le lit au même endroit.
 -->
 <script lang="ts">
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import ChampRecherche from '$lib/components/ChampRecherche.svelte';
 	import { OPTIONS_FILTRE_NATURE } from '$lib/tickets';
 	import type { Ticket } from '$lib/api';
-	import { archiveesTrouvees, comptesParFiltre, type EtatRecherche } from '$lib/recherche-affaires';
+	import { archiveesTrouvees, type EtatRecherche } from '$lib/recherche-affaires';
 
 	/** Les états présents dans la liste — calculés par la page, qui la connaît. */
 	export let optionsStatut: { value: string; label: string; statuts: readonly string[] }[] = [];
-	/** Toutes les affaires chargées : les comptes se calculent dessus. */
+	/** Toutes les affaires chargées : les archivées trouvées se comptent dessus. */
 	export let tickets: Ticket[] = [];
+	/** Combien la liste en montre — porté par la pastille retenue de chaque
+	 *  rangée, et lu par le bilan de recherche. */
+	export let affichees = 0;
 	export let nature = '';
 	export let statut = '';
 	export let recherche = '';
@@ -47,21 +48,6 @@
 
 	$: if (!recherche.trim()) inclureArchives = false;
 
-	$: criteres = { resultats: etat.resultats, inclureArchives, statut, nature, optionsStatut };
-	$: comptesNature = comptesParFiltre(
-		tickets,
-		criteres,
-		'nature',
-		OPTIONS_FILTRE_NATURE.map((o) => o.val),
-	);
-	$: comptesStatut = comptesParFiltre(
-		tickets,
-		criteres,
-		'statut',
-		optionsStatut.map((o) => o.value),
-	);
-	/** Combien la liste en montre — le compte de la nature retenue. */
-	$: affichees = comptesNature[nature] ?? 0;
 	/** Combien d'archivées la recherche a trouvées, et que la liste tait. */
 	$: archivees = archiveesTrouvees(tickets, etat.resultats);
 </script>
@@ -80,23 +66,19 @@
       l'écran) : « Nature » et « Suivi » se confondaient ; la recherche a sa ligne. -->
 <div class="filters filters--groupes">
 	<ChoixPastilles
-		options={OPTIONS_FILTRE_NATURE.map((o) => ({ ...o, compte: comptesNature[o.val] }))}
+		options={OPTIONS_FILTRE_NATURE}
 		bind:valeur={nature}
 		tous="Tous"
-		compteTous={comptesNature['']}
+		compte={affichees}
 		libelle="Nature"
 		libelleDevant
 	/>
 	<span class="filter-sep"></span>
 	<ChoixPastilles
-		options={optionsStatut.map((s) => ({
-			val: s.value,
-			label: s.label,
-			compte: comptesStatut[s.value],
-		}))}
+		options={optionsStatut.map((s) => ({ val: s.value, label: s.label }))}
 		bind:valeur={statut}
 		tous="Tous"
-		compteTous={comptesStatut['']}
+		compte={affichees}
 		libelle="Suivi"
 		libelleDevant
 	/>

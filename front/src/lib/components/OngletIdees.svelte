@@ -26,6 +26,7 @@
 	import ListeEtArchives from '$lib/components/ListeEtArchives.svelte';
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import { STATUTS_IDEE } from '$lib/idees';
+	import { enCours } from '$lib/archives';
 
 	export let idees: Idee[] = [];
 	export let chargement = false;
@@ -88,6 +89,7 @@
 	options={STATUTS_IDEE.map((s) => ({ val: s.value, label: s.label }))}
 	bind:valeur={filtreStatut}
 	tous="Toutes"
+	compte={enCours(idees).length}
 	libelle="Filtrer les idées par état"
 />
 

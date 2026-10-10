@@ -62,6 +62,7 @@ Ce bloc n'énonce que les décisions et renvoie à la section qui les développe
 | 15 | **Un seul sélecteur de fichiers** (`FichiersUpload`), 44 px au doigt | §0 bis |
 | 16 | **Le manuel montre la VRAIE pastille**, phrase au survol recalculée par le site — jamais une couleur propre au manuel | skill `user-manual` |
 | 17 | **Un seul bloc déplié à la fois, partout** (30/09/2026, « sans exception, formulaires compris ») — cartes, années d'archives, colonnes vides du kanban, sections de formulaire, réponses, `<details>`. Deux exceptions arbitrées : une section **modifiée** reste ouverte, une carte **en correction** aussi. Une seule mécanique : `$lib/accordeon` (`basculer`, `membre`, `listeMembre`, et l'écouteur des `<details>` posé par le layout) ; le bloc ouvert voit son **haut ramené à l'écran** quand le repli d'un voisin l'en a fait sortir (`amenerEnVue`, signalé dans Admin › IA : « on se trouve à la fin de la section ouverte ») ; 🔒 `npm run lint:accordeon` refuse un état d'ouverture en `Set`, `e2e/accordeon` éprouve formulaire et `<details>` | `$lib/accordeon` |
+| 18 | **Une rangée de filtres dit combien elle montre — sur la pastille RETENUE seulement** (10/10/2026, maquette J arbitrée à l'écran parmi dix) : le nombre est la longueur de la liste affichée, en vignette `Compte` inversée ; les autres pastilles n'en portent pas. Partout, sans exception — 🔒 `npm run lint:compte-filtres` | §5 |
 
 ### ⚠️ Les trois pièges que ces onze arbitrages ont révélés
 
@@ -1103,6 +1104,34 @@ explicite du lien, pas un défaut.
 - Sélection multiple : toggle + reset auto vers défaut si aucun actif
 
 Pages implémentées : `tickets` (filtre de nature, 23/09/2026) — le calendrier y est un filtre depuis #1092
+
+### 🔢 Le compteur d'une rangée de filtres — le STANDARD (10/10/2026)
+
+Arbitré à l'écran : un nombre dans CHAQUE pastille (maquette B, v2.130.0) puis
+cinq variantes plus discrètes, et c'est la **J** qui a été retenue — *« compteur
+uniquement pour la pastille retenue »*, à appliquer à toute nouvelle demande.
+
+- **Quoi** : la pastille **retenue** — « Tous » compris — porte le nombre
+  d'éléments que la liste **affiche**, filtres et recherche appliqués. Les autres
+  pastilles n'en portent **aucun**. Deux rangées sur une même liste montrent
+  donc le même nombre, chacune sur sa retenue.
+- **Comment** : `compte={<liste affichée>.length}` sur `ChoixPastilles` (ou
+  `FiltrePerimetre`) — UN nombre pour la rangée, jamais un par entrée. C'est
+  `Pastille` qui décide qu'il ne se voit que sur la retenue (`Compte surAplat`).
+  Un composant de filtres qui enveloppe la rangée reçoit le nombre de la page
+  (`affichees`, `affiches`) : c'est la page qui tient la liste.
+- **Lequel** : la liste **principale** — ce qui est rangé aux Archives a sa propre
+  vignette en dessous, et ne compte pas (`enCours` de `$lib/archives`, sur le
+  `archivee` que le serveur calcule).
+- **Le style** : la vignette `Compte` des Archives, inversée sur l'aplat Bleu
+  Seine — chiffres à chasse fixe, sans animation (`emil-design-eng` : ce qu'on
+  voit à chaque clic ne s'anime pas).
+- **Ce qui n'en porte pas** : un choix de FORMULAIRE (mode `radio`, ou entrée vide
+  qui est une valeur — « Aucune », « Inchangé »), une bascule de VUE (Nouvelle /
+  Archives, onglets de reporting), une liste déroulante (`PastilleDeroulante`).
+- 🔒 `npm run lint:compte-filtres` refuse une rangée de filtres sans `compte` ;
+  ses exceptions — des choix de formulaire — sont déclarées avec leur raison.
+  `e2e/compte-filtres-affaires` éprouve le rendu.
 
 ## 5 bis. La RECHERCHE libre — Affaires (27/09/2026)
 

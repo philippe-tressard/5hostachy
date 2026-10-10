@@ -41,6 +41,7 @@
 	import ChoixPastilles from '$lib/components/ChoixPastilles.svelte';
 	import PastilleDeroulante from '$lib/components/PastilleDeroulante.svelte';
 	import { CATEGORIES_ANNONCE, TRIS_ANNONCE, TYPES_ANNONCE } from '$lib/annonces';
+	import { enCours } from '$lib/archives';
 	import { annonces as annoncesApi, type PetiteAnnonce } from '$lib/api';
 	import { messageErreur, tenter } from '$lib/erreurs';
 	import { toast } from '$lib/components/Toast.svelte';
@@ -202,6 +203,7 @@
 		options={TYPES_ANNONCE}
 		bind:valeur={filtreType}
 		tous="Tous types"
+		compte={enCours(filtrees).length}
 		libelle="Filtrer les annonces par type"
 		defilante={false}
 	/>

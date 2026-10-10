@@ -56,3 +56,14 @@ export const ICONE_HISTORIQUE = '\u{1F4CB}';
  * | `TITRE_HISTORIQUE` | le FIL d'UN objet | `RubriqueHistorique` |
  */
 export const TITRE_HISTORIQUE = `${ICONE_HISTORIQUE} Historique`;
+
+/**
+ * Les éléments **en cours** d'une liste — ceux que le serveur n'a pas archivés.
+ *
+ * Lu sur `archivee`, que le SERVEUR calcule (`app/utils/archivage.py`) : un
+ * écran ne recalcule jamais ce champ. `ListeEtArchives` en fait sa liste
+ * principale, et la pastille retenue d'un filtre en donne le nombre
+ * (`ChoixPastilles.compte`) : les Archives ont leur propre vignette, en dessous.
+ */
+export const enCours = <T extends { archivee?: boolean }>(liste: T[] | null | undefined): T[] =>
+	(liste ?? []).filter((x) => !x.archivee);
