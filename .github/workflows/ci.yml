@@ -2047,6 +2047,13 @@ jobs:
         working-directory: front
         run: npm run lint:nombre-saisi
 
+      # Le nombre d'objets en vignette est `Compte.svelte` (10/10/2026) : le
+      # badge des Archives était écrit deux fois, et avait déjà dérivé, quand
+      # les pastilles de filtre d'Affaires s'apprêtaient à en écrire un troisième.
+      - name: Vignettes de compte rendues par un seul composant
+        working-directory: front
+        run: npm run lint:vignette-compte
+
       # 🔴 La note d'un prestataire était rendue CINQ fois, et l'une d'elles
       # colorait TOUTE note en orange : un 1/5 y paraissait comme un 3,5. La
       # teinte dit d'un coup d'œil si l'on est content de quelqu'un — là, elle

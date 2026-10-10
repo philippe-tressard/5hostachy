@@ -69,8 +69,10 @@ import { fileURLToPath } from 'node:url';
  *  08/10/2026 (#1571) : 120 tailles. Les deux titres de l'espace CS portaient
  *  chacun `font-size:1rem` en ligne ; passés en une classe, la valeur s'écrit
  *  une fois. Une redite retirée, pas une valeur convertie.
+ *  10/10/2026 : 167 couleurs. Le badge de compte des Archives, écrit deux
+ *  fois, devient `Compte` — son blanc passe par `--color-surface`.
  */
-const PLAFOND = { couleurs: 168, tailles: 120 };
+const PLAFOND = { couleurs: 167, tailles: 120 };
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 

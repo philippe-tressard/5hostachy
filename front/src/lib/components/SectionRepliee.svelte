@@ -23,6 +23,8 @@
   section ne connaît aucune API et ne doit pas en connaître.
 -->
 <script lang="ts">
+	import Compte from '$lib/components/Compte.svelte';
+
 	/** L'intitulé, emoji compris — c'est l'appelant qui nomme sa section. */
 	export let titre: string;
 	/**  Le compteur affiché à droite du titre. `null` = rien : une section dont le
@@ -49,7 +51,7 @@
 		aria-expanded={ouvert}
 	>
 		<span class="sr-titre">{titre}</span>
-		{#if compte !== null}<span class="sr-compte">{compte}</span>{/if}
+		{#if compte !== null}<Compte n={compte} />{/if}
 		<span class="sr-chevron">{ouvert ? '▲' : '▼'}</span>
 	</button>
 	{#if ouvert}
@@ -135,18 +137,6 @@
 	}
 	.sr-titre {
 		flex: 1;
-	}
-	.sr-compte {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-primary);
-		color: #fff;
-		font-size: var(--fs-xs);
-		font-weight: 700;
-		padding: 0.15rem 0.5rem;
-		border-radius: 12px;
-		min-width: 1.5rem;
 	}
 	.sr-chevron {
 		font-size: var(--fs-sm);

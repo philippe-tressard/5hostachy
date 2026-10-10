@@ -35,13 +35,14 @@
 
   ## Le style voyage avec le balisage
 
-  Les bandeaux d'année redéclarent leur compteur et leur chevron plutôt que
-  d'emprunter ceux de `SectionRepliee` : Svelte scope les styles au composant qui
+  Les bandeaux d'année redéclarent leur chevron plutôt que d'emprunter
+  celui de `SectionRepliee` — leur compteur, lui, est `Compte`, le même objet : Svelte scope les styles au composant qui
   rend le balisage, et compter sur celui d'un autre est exactement ce qui a fait
   partir les pastilles nues en production (v2.67.11).
 -->
 <script lang="ts" generics="T">
 	import SectionRepliee from '$lib/components/SectionRepliee.svelte';
+	import Compte from '$lib/components/Compte.svelte';
 	import { TITRE_ARCHIVES } from '$lib/archives';
 	import { basculer } from '$lib/accordeon';
 
@@ -140,7 +141,7 @@
 						aria-expanded={anneeDepliee === annee}
 					>
 						<span class="archives-annee-libelle">{annee}</span>
-						<span class="archives-compte">{objets.length}</span>
+						<Compte n={objets.length} />
 						<span class="archives-chevron">{anneeDepliee === annee ? '▲' : '▼'}</span>
 					</button>
 					{#if anneeDepliee === annee}
@@ -159,18 +160,6 @@
 		color: var(--color-text-muted);
 		font-size: var(--fs-base);
 		margin: 0.5rem 0 0;
-	}
-	.archives-compte {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-primary);
-		color: white;
-		font-size: var(--fs-2xs);
-		font-weight: 700;
-		padding: 0.15rem 0.5rem;
-		border-radius: 12px;
-		min-width: 1.5rem;
 	}
 	.archives-chevron {
 		font-size: var(--fs-sm);

@@ -33,6 +33,7 @@
 -->
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
+	import Compte from '$lib/components/Compte.svelte';
 
 	/** Pastille retenue — fond plein. */
 	export let active = false;
@@ -121,6 +122,11 @@
 	 *   lecteur d'écran, que le fond plein ne lui dit pas. Laissé à `undefined`,
 	 *   l'attribut n'est pas rendu : un choix exclusif n'est pas un interrupteur. */
 	export let bascule = false;
+
+	/**  Combien d'objets ce choix donnerait — en vignette `Compte` après le
+	 *   libellé (10/10/2026, filtres d'Affaires, maquette B). `null` : rien,
+	 *   la pastille reste telle qu'elle était chez tous les autres appelants. */
+	export let compte: number | null = null;
 </script>
 
 <!--  ⚠️ `$$slots.detail` et non une prop : c'est le SEUL moyen pour Svelte de
@@ -155,6 +161,7 @@
 			<span class="pastille-libelle"><slot /></span>
 			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
+		{#if compte !== null}<Compte n={compte} surAplat={active} />{/if}
 	</label>
 {:else}
 	<button
@@ -174,6 +181,7 @@
 			<span class="pastille-libelle"><slot /></span>
 			{#if $$slots.detail}<span class="pastille-detail clamp-3"><slot name="detail" /></span>{/if}
 		</span>
+		{#if compte !== null}<Compte n={compte} surAplat={active} />{/if}
 		{#if chevron}<span class="pastille-chevron" aria-hidden="true">›</span>{/if}
 		{#if marquee && marqueAide}<span class="sr-only"> — {marqueAide}</span>{/if}
 	</button>
@@ -271,8 +279,11 @@
 		border-style: dashed;
 		border-color: #fff;
 	}
+	/*  `:not(.active)` (10/10/2026) : sans lui, le survol — plus spécifique
+	    que `.active` — rendait le texte SOMBRE sur l'aplat Bleu Seine de la
+	    pastille qu'on vient de retenir, tant que la souris restait dessus. */
 	@media (hover: hover) and (pointer: fine) {
-		.pastille:hover {
+		.pastille:not(.active):hover {
 			border-color: var(--color-primary);
 			color: var(--color-text);
 		}

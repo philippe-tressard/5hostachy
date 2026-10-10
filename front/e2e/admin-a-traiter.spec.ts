@@ -46,9 +46,9 @@ test('Admin › À traiter : trois sections en accordéon, Télémétrie en gest
 	//  Les comptes sont vides : c'est la section suivante, la première qui a
 	//  quelque chose à montrer, qui s'ouvre.
 	await expect(entete('Comptes en attente')).toHaveAttribute('aria-expanded', 'false');
-	await expect(entete('Comptes en attente').locator('.sr-compte')).toHaveText('0');
+	await expect(entete('Comptes en attente').locator('.compte')).toHaveText('0');
 	await expect(entete("Commandes d'accès")).toHaveAttribute('aria-expanded', 'true');
-	await expect(entete("Commandes d'accès").locator('.sr-compte')).toHaveText('2');
+	await expect(entete("Commandes d'accès").locator('.compte')).toHaveText('2');
 	await expect(entete('Demandes de profil')).toHaveAttribute('aria-expanded', 'false');
 	await expect(page.getByRole('cell', { name: '#7' })).toBeVisible();
 
