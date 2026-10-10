@@ -13,16 +13,16 @@ Idempotente : la colonne n'est posée que si elle manque.
 
 ⚠️ Les noms de table et de colonne sont des CONSTANTES du fichier.
 
-Revision ID: 0272
-Revises: 0271
+Revision ID: 0274
+Revises: 0273
 """
 
 import sqlalchemy as sa
 
 from alembic import op
 
-revision = "0272"
-down_revision = "0271"
+revision = "0274"
+down_revision = "0273"
 branch_labels = None
 depends_on = None
 
