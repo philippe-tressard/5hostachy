@@ -53,7 +53,7 @@ test('Nouvelle actualité : « Tous » est actif, l’étoile de Destinataires e
 	await page.getByRole('button', { name: /Nouvelle affaire/ }).click();
 	//  Une actualité est une affaire de catégorie « Actualité », choisie en tête.
 	await page
-		.getByText(/Information, sans suivi/)
+		.getByText(/Information — suivi optionnel/)
 		.first()
 		.click();
 

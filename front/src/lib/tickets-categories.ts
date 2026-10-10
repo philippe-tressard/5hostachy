@@ -211,7 +211,7 @@ export const CATEGORIES_TICKET: readonly CategorieTicket[] = [
 		label: 'Actualité',
 		emoji: '\u{1F4F0}',
 		//  Une INFORMATION, pas une demande : personne n'agit, elle périme (#1091).
-		description: 'Information, sans suivi',
+		description: 'Information — suivi optionnel',
 		reserveCS: true,
 		enTete: true,
 	},
